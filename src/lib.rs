@@ -343,7 +343,8 @@ mod test {
     //#[cfg(feature = "cairo_1_tests")]
     #[test]
     fn test_writes() {
-        let program_data = include_bytes!("../starknet_programs/cairo1/test_writes.casm");
+        let program_data =
+            include_bytes!("../starknet_programs/cairo2/test_contract_blockifier.casm");
 
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
@@ -385,35 +386,46 @@ mod test {
         };
 
         // first write
-        let first_write = invoke("write_foo", vec![42.into(), keccak_from_str("foo")], 0.into())
-            .execute(&mut state, &block_context, 99999999999)
-            .unwrap();
+        //let first_write = invoke(
+        //    "test_storage_read_write",
+        //    vec![keccak_from_str("foo"), 42.into()],
+        //    0.into(),
+        //)
+        //.execute(&mut state, &block_context, 99999999999)
+        //.unwrap();
 
-        assert_eq!(state.cache.storage_writes.len(), 1);
-        assert!(first_write.revert_error.is_none());
+        //assert_eq!(state.cache.storage_writes.len(), 1);
+        //assert!(first_write.revert_error.is_none() && !first_write.call_info.unwrap().failure_flag);
 
         // second write
         let second_write = invoke(
-            "call_other",
+            "test_call_contract",
             vec![
-                keccak_from_str("write_foo"),
-                25.into(),
-                keccak_from_str("foo"),
+                address.0.clone(),
+                keccak_from_str("test_storage_read_write"),
+                2.into(),               // inner calldata length
+                keccak_from_str("foo"), // address
+                25.into(),              // value
             ],
-            1.into(),
+            0.into(),
         )
         .execute(&mut state, &block_context, 99999999999)
         .unwrap();
 
-        assert_eq!(state.cache.storage_writes.len(), 2);
-        assert!(second_write.revert_error.is_none());
+        dbg!(&second_write);
+
+        assert_eq!(state.cache.storage_writes.len(), 1);
+        assert!(
+            second_write.revert_error.is_none() && !second_write.call_info.unwrap().failure_flag
+        );
+        assert!(false);
 
         // read storage
         let read = invoke("get_foo", vec![], 2.into())
             .execute(&mut state, &block_context, 99999999999)
             .unwrap();
 
-        dbg!(&second_write);
+        //dbg!(&second_write);
         assert_eq!(read.call_info.unwrap().retdata, vec![25.into()]);
     }
 
