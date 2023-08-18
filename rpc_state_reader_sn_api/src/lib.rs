@@ -9,9 +9,36 @@ use std::env;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "contract_class_version")]
 pub enum ContractClass {
+    #[serde(rename = "0.0.0")]
     Deprecated(starknet_api::deprecated_contract_class::ContractClass),
+    #[serde(rename = "0.1.0")]
+    #[serde(deserialize_with = "deser_compiled_class")]
     Compiled(starknet_api::state::ContractClass),
+}
+
+// For some reason, for compiled contracts the call returns a "entry_points_by_type" field, but the
+// compiled class' one is "entry_point_by_type".
+fn deser_compiled_class<'de, D>(
+    deserializer: D,
+) -> Result<starknet_api::state::ContractClass, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+    let abi = serde_json::from_value(value["abi"].clone()).map_err(serde::de::Error::custom)?;
+    let entry_point_by_type = serde_json::from_value(value["entry_points_by_type"].clone())
+        .map_err(serde::de::Error::custom)?;
+    let sierra_program = serde_json::from_value(value["sierra_program"].clone())
+        .map_err(serde::de::Error::custom)?;
+
+    Ok(starknet_api::state::ContractClass {
+        abi,
+        entry_point_by_type,
+        sierra_program,
+    })
 }
 
 /// Starknet chains supported in Infura.
@@ -318,26 +345,34 @@ impl RpcState {
 
 #[cfg(test)]
 mod tests {
+    use starknet_api::{core::ClassHash, hash::StarkFelt, serde_utils::bytes_from_hex_str};
+
     use super::*;
 
-    // #[test]
-    // fn test_get_contract_class_cairo1() {
-    //     let rpc_state = RpcState::new(
-    //         RpcChain::MainNet,
-    //         BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-    //     );
-    //     // This belongs to
-    //     // https://starkscan.co/class/0x0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216
-    //     // which is cairo1.0
+    fn hash_from_str(hex: &str) -> ClassHash {
+        let bytes = if hex.starts_with("0x") {
+            bytes_from_hex_str::<32, true>(hex).unwrap()
+        } else {
+            bytes_from_hex_str::<32, false>(hex).unwrap()
+        };
+        ClassHash(StarkFelt::new(bytes).unwrap())
+    }
 
-    //     let class_hash = felt_str!(
-    //         "0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216",
-    //         16
-    //     );
-    //     rpc_state
-    //         .get_contract_class(&class_hash.to_be_bytes())
-    //         .unwrap();
-    // }
+    #[test]
+    fn test_get_contract_class_cairo1() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+
+        let class_hash =
+            hash_from_str("0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216");
+        // This belongs to
+        // https://starkscan.co/class/0x0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216
+        // which is cairo1.0
+
+        rpc_state.get_contract_class(&class_hash);
+    }
 
     // #[test]
     // fn test_get_contract_class_cairo0() {
