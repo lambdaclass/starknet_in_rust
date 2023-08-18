@@ -17,29 +17,6 @@ pub enum ContractClass {
     Compiled(starknet_api::state::ContractClass),
 }
 
-// For some reason, for compiled contracts the call returns a "entry_points_by_type" field, but the
-// compiled class' one is "entry_point_by_type".
-fn deser_compiled_class<'de, D>(
-    deserializer: D,
-) -> Result<starknet_api::state::ContractClass, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
-
-    let abi = serde_json::from_value(value["abi"].clone()).map_err(serde::de::Error::custom)?;
-    let entry_point_by_type = serde_json::from_value(value["entry_points_by_type"].clone())
-        .map_err(serde::de::Error::custom)?;
-    let sierra_program = serde_json::from_value(value["sierra_program"].clone())
-        .map_err(serde::de::Error::custom)?;
-
-    Ok(starknet_api::state::ContractClass {
-        abi,
-        entry_point_by_type,
-        sierra_program,
-    })
-}
-
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy)]
 pub enum RpcChain {
