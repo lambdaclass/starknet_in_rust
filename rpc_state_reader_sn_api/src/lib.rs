@@ -273,28 +273,27 @@ impl RpcState {
             "id": 1
         });
 
-        let response: serde_json::Map<String, serde_json::Value> = self
+        let mut response = self
             .rpc_call_no_deserialize(&params)
             .unwrap()
-            .into_json()
+            .into_json::<serde_json::Value>()
             .unwrap();
+        let result = response["result"].as_object_mut().unwrap();
 
         // Set contract_class_version if it doesn't exist
-        if !response.contains_key("contract_class_version") {
+        if !result.contains_key("contract_class_version") {
             let version_0 = serde_json::Value::String("0.0.0".to_string());
-            response.insert("contract_class_version".to_string(), version_0);
+            result.insert("contract_class_version".to_string(), version_0);
         }
-        let version = response["contract_class_version"];
+        let version = result["contract_class_version"].clone();
 
         // Fix entry_point_by_type key in version > 0 cases
         if version != "0.0.0" {
-            let value = response.remove("entry_point_by_type").unwrap();
-            response.insert("entry_point_by_type".to_string(), value);
+            let value = result.remove("entry_points_by_type").unwrap(); // plural "points"
+            result.insert("entry_point_by_type".to_string(), value); // singular "point"
         }
 
-        serde_json::from_value(response["result"])
-
-        response.result
+        serde_json::from_value(serde_json::Value::Object(result.clone())).unwrap()
     }
 
     pub fn get_class_hash_at(
