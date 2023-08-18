@@ -14,7 +14,6 @@ pub enum ContractClass {
     #[serde(rename = "0.0.0")]
     Deprecated(starknet_api::deprecated_contract_class::ContractClass),
     #[serde(rename = "0.1.0")]
-    #[serde(deserialize_with = "deser_compiled_class")]
     Compiled(starknet_api::state::ContractClass),
 }
 
@@ -141,6 +140,8 @@ pub struct RpcBlockInfo {
     pub sequencer_address: ContractAddress,
 }
 
+type RpcResponse = ureq::Response;
+
 impl RpcState {
     pub fn new(chain: RpcChain, block: BlockValue) -> Self {
         if env::var("INFURA_API_KEY").is_err() {
@@ -158,16 +159,22 @@ impl RpcState {
         &self,
         params: &serde_json::Value,
     ) -> Result<T, RpcError> {
-        let response = ureq::post(&format!(
+        Self::deserialize_call(self.rpc_call_no_deserialize(params)?)
+    }
+
+    fn rpc_call_no_deserialize(&self, params: &serde_json::Value) -> Result<RpcResponse, RpcError> {
+        ureq::post(&format!(
             "https://{}.infura.io/v3/{}",
             self.chain, self.api_key
         ))
         .set("Content-Type", "application/json")
         .set("accept", "application/json")
         .send_json(params)
-        .map_err(|err| RpcError::Request(err.to_string()))?
-        .into_string()
-        .map_err(|err| {
+        .map_err(|err| RpcError::Request(err.to_string()))
+    }
+
+    fn deserialize_call<T: for<'a> Deserialize<'a>>(response: RpcResponse) -> Result<T, RpcError> {
+        let response = response.into_string().map_err(|err| {
             RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string())
         })?;
         serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
@@ -289,7 +296,26 @@ impl RpcState {
             "id": 1
         });
 
-        let response: RpcResponseProgram = self.rpc_call(&params).unwrap();
+        let response: serde_json::Map<String, serde_json::Value> = self
+            .rpc_call_no_deserialize(&params)
+            .unwrap()
+            .into_json()
+            .unwrap();
+
+        // Set contract_class_version if it doesn't exist
+        if !response.contains_key("contract_class_version") {
+            let version_0 = serde_json::Value::String("0.0.0".to_string());
+            response.insert("contract_class_version".to_string(), version_0);
+        }
+        let version = response["contract_class_version"];
+
+        // Fix entry_point_by_type key in version > 0 cases
+        if version != "0.0.0" {
+            let value = response.remove("entry_point_by_type").unwrap();
+            response.insert("entry_point_by_type".to_string(), value);
+        }
+
+        serde_json::from_value(response["result"])
 
         response.result
     }
@@ -374,21 +400,17 @@ mod tests {
         rpc_state.get_contract_class(&class_hash);
     }
 
-    // #[test]
-    // fn test_get_contract_class_cairo0() {
-    //     let rpc_state = RpcState::new(
-    //         RpcChain::MainNet,
-    //         BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-    //     );
+    #[test]
+    fn test_get_contract_class_cairo0() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
 
-    //     let class_hash = felt_str!(
-    //         "025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
-    //         16
-    //     );
-    //     rpc_state
-    //         .get_contract_class(&class_hash.to_be_bytes())
-    //         .unwrap();
-    // }
+        let class_hash =
+            hash_from_str("025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
+        rpc_state.get_contract_class(&class_hash);
+    }
 
     // #[test]
     // fn test_get_class_hash_at() {
