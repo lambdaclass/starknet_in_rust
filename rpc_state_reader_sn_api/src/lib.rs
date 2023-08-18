@@ -1,10 +1,10 @@
-use cairo_vm::felt::Felt252;
+use cairo_vm::felt::{felt_str, Felt252};
 use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
-use starknet_api::{core::ContractAddress, state::StorageKey};
+use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
 use std::env;
 use thiserror::Error;
 
@@ -103,6 +103,15 @@ impl<'de> DeserializeAs<'de, Felt252> for FeltHex {
 struct RpcResponseFelt252 {
     #[serde_as(as = "FeltHex")]
     result: Felt252,
+}
+
+pub struct RpcBlockInfo {
+    /// The sequence number of the last block created.
+    pub block_number: u64,
+    /// Timestamp of the beginning of the last block creation attempt.
+    pub block_timestamp: u64,
+    /// The sequencer address of this block.
+    pub sequencer_address: ContractAddress,
 }
 
 impl RpcState {
@@ -217,32 +226,33 @@ impl RpcState {
         }
     }
 
-    // pub fn get_block_info(
-    //     &self,
-    //     starknet_os_config: starknet_in_rust::definitions::block_context::StarknetOsConfig,
-    // ) -> starknet_in_rust::state::BlockInfo {
-    //     let get_block_info_params = ureq::json!({
-    //         "jsonrpc": "2.0",
-    //         "method": "starknet_getBlockWithTxHashes",
-    //         "params": [self.block.to_value()],
-    //         "id": 1
-    //     });
+    pub fn get_block_info(&self) -> RpcBlockInfo {
+        let get_block_info_params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getBlockWithTxHashes",
+            "params": [self.block.to_value()],
+            "id": 1
+        });
 
-    //     let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
+        let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
+        let sequencer_address =
+            felt_str!(block_info["result"]["sequencer_address"].to_string()).to_be_bytes();
 
-    //     starknet_in_rust::state::BlockInfo {
-    //         block_number: block_info["result"]["block_number"]
-    //             .to_string()
-    //             .parse::<u64>()
-    //             .unwrap(),
-    //         block_timestamp: block_info["result"]["timestamp"]
-    //             .to_string()
-    //             .parse::<u64>()
-    //             .unwrap(),
-    //         gas_price: *starknet_os_config.gas_price() as u64,
-    //         sequencer_address: starknet_os_config.fee_token_address().clone(),
-    //     }
-    // }
+        RpcBlockInfo {
+            block_number: block_info["result"]["block_number"]
+                .to_string()
+                .parse::<u64>()
+                .unwrap(),
+            block_timestamp: block_info["result"]["timestamp"]
+                .to_string()
+                .parse::<u64>()
+                .unwrap(),
+            sequencer_address: ContractAddress::try_from(
+                StarkHash::new(sequencer_address).unwrap(),
+            )
+            .unwrap(),
+        }
+    }
 
     pub fn get_contract_class(&self, class_hash: &starknet_api::core::ClassHash) -> ContractClass {
         let params = ureq::json!({
@@ -305,13 +315,6 @@ impl RpcState {
         resp.result
     }
 }
-
-//     fn get_compiled_class_hash(
-//         &self,
-//         _class_hash: &ClassHash,
-//     ) -> Result<CompiledClassHash, StateError> {
-//         todo!()
-//     }
 
 #[cfg(test)]
 mod tests {
