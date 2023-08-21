@@ -15,7 +15,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
 use starknet::core::types::{ContractClass as SNContractClass, FieldElement};
-use starknet_api::core::EntryPointSelector;
+use starknet_api::core::{ClassHash, EntryPointSelector};
 use starknet_api::deprecated_contract_class::{self, EntryPointOffset};
 use starknet_api::hash::StarkFelt;
 use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
@@ -102,26 +102,33 @@ struct RpcResponseContractClass {
 }
 
 // We use this new struct to cast the string that contains a [`Felt252`] in hex to a [`Felt252`]
-struct FeltHex;
+struct StarkFeltHex;
 
-impl<'de> DeserializeAs<'de, Felt252> for FeltHex {
-    fn deserialize_as<D>(deserializer: D) -> Result<Felt252, D::Error>
+impl<'de> DeserializeAs<'de, StarkFelt> for StarkFeltHex {
+    fn deserialize_as<D>(deserializer: D) -> Result<StarkFelt, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let value = String::deserialize(deserializer)?;
-        match value.starts_with("0x") {
-            true => Ok(Felt252::parse_bytes(value[2..].as_bytes(), 16).unwrap()),
-            false => Ok(Felt252::parse_bytes(value.as_bytes(), 16).unwrap()),
-        }
+        let string = String::deserialize(deserializer)?;
+
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice({
+            if string.starts_with("0x") {
+                string[2..].as_bytes()
+            } else {
+                string.as_bytes()
+            }
+        });
+
+        Ok(StarkFelt::new(bytes).unwrap())
     }
 }
 
 #[serde_as]
 #[derive(Debug, Deserialize)]
-struct RpcResponseFelt252 {
-    #[serde_as(as = "FeltHex")]
-    result: Felt252,
+struct RpcResponseFelt {
+    #[serde_as(as = "StarkFeltHex")]
+    result: StarkFelt,
 }
 
 pub struct RpcBlockInfo {
@@ -330,8 +337,8 @@ impl RpcState {
 
     pub fn get_class_hash_at(
         &self,
-        contract_address: &starknet_api::core::ContractAddress,
-    ) -> starknet_api::core::ClassHash {
+        contract_address: &ContractAddress,
+    ) -> ClassHash {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getClassHashAt",
@@ -339,26 +346,26 @@ impl RpcState {
             "id": 1
         });
 
-        let response: starknet_api::core::ClassHash = self.rpc_call(&params).unwrap();
+        let response: RpcResponseFelt = self.rpc_call(&params).unwrap();
 
-        response
+        ClassHash(response.result)
     }
 
-    pub fn get_nonce_at(&self, contract_address: &ContractAddress) -> Felt252 {
-        let contract_address = Felt252::from_bytes_be(contract_address.0.key().bytes());
+    pub fn get_nonce_at(&self, contract_address: &ContractAddress) -> StarkFelt {
+        let contract_address = contract_address.0.key();
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getNonce",
-            "params": [self.block.to_value(), format!("0x{}", contract_address.to_str_radix(16))],
+            "params": [self.block.to_value(), format!("0x{}", contract_address)],
             "id": 1
         });
 
-        let resp: RpcResponseFelt252 = self.rpc_call(&params).unwrap();
+        let resp: RpcResponseFelt = self.rpc_call(&params).unwrap();
 
         resp.result
     }
 
-    fn get_storage_at(&self, contract_address: &ContractAddress, key: &StorageKey) -> Felt252 {
+    fn get_storage_at(&self, contract_address: &ContractAddress, key: &StorageKey) -> StarkFelt {
         let contract_address = Felt252::from_bytes_be(contract_address.0.key().bytes());
         let key = Felt252::from_bytes_be(key.0.key().bytes());
         let params = ureq::json!({
@@ -371,7 +378,7 @@ impl RpcState {
             "id": 1
         });
 
-        let resp: RpcResponseFelt252 = self.rpc_call(&params).unwrap();
+        let resp: RpcResponseFelt = self.rpc_call(&params).unwrap();
 
         resp.result
     }
@@ -446,7 +453,7 @@ mod tests {
     use starknet_api::{
         core::{ClassHash, PatriciaKey},
         hash::StarkFelt,
-        serde_utils::bytes_from_hex_str,
+        serde_utils::bytes_from_hex_str, stark_felt,
     };
 
     use super::*;
@@ -529,7 +536,7 @@ mod tests {
         // this test.
         let address =
             contract_address!("07185f2a350edcc7ea072888edb4507247de23e710cbd56084c356d265626bea");
-        assert_eq!(rpc_state.get_nonce_at(&address), felt_str!("0", 16));
+        assert_eq!(rpc_state.get_nonce_at(&address), stark_felt!("0x0"));
     }
 
     #[test]
@@ -542,7 +549,7 @@ mod tests {
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
         let key = StorageKey(patricia_key!(0u128));
 
-        assert_eq!(rpc_state.get_storage_at(&address, &key), felt_str!("0", 16));
+        assert_eq!(rpc_state.get_storage_at(&address, &key), stark_felt!("0x0"));
     }
 
     #[test]
