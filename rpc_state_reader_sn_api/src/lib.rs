@@ -1,21 +1,37 @@
+use blockifier::execution::contract_class::{
+    ContractClass as BlockifierContractClass, ContractClassV0, ContractClassV0Inner,
+    ContractClassV1, ContractClassV1Inner,
+};
+use cairo_lang_starknet::abi::Contract;
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet::contract_class::{
+    ContractClass as SierraContractClass, ContractEntryPoints,
+};
 use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::types::program::Program;
 use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
+use starknet::core::types::{ContractClass as SNContractClass, FieldElement};
+use starknet_api::core::EntryPointSelector;
+use starknet_api::deprecated_contract_class::{self, EntryPointOffset};
+use starknet_api::hash::StarkFelt;
 use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
+use std::collections::HashMap;
 use std::env;
+use std::sync::Arc;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(tag = "contract_class_version")]
-pub enum ContractClass {
-    #[serde(rename = "0.0.0")]
-    Deprecated(starknet_api::deprecated_contract_class::ContractClass),
-    #[serde(rename = "0.1.0")]
-    Compiled(starknet_api::state::ContractClass),
-}
+//#[derive(Debug, Clone, Deserialize)]
+//#[serde(tag = "contract_class_version")]
+//pub enum ContractClass {
+//    #[serde(rename = "0.0.0")]
+//    Deprecated(blockifier::execution::contract_class::ContractClassV0),
+//    #[serde(rename = "0.1.0")]
+//    Compiled(starknet_api::state::ContractClass),
+//}
 
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy)]
@@ -81,8 +97,8 @@ impl BlockValue {
 }
 
 #[derive(Debug, Deserialize)]
-struct RpcResponseProgram {
-    result: ContractClass,
+struct RpcResponseContractClass {
+    result: SNContractClass,
 }
 
 // We use this new struct to cast the string that contains a [`Felt252`] in hex to a [`Felt252`]
@@ -265,7 +281,10 @@ impl RpcState {
         }
     }
 
-    pub fn get_contract_class(&self, class_hash: &starknet_api::core::ClassHash) -> ContractClass {
+    pub fn get_contract_class(
+        &self,
+        class_hash: &starknet_api::core::ClassHash,
+    ) -> BlockifierContractClass {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getClass",
@@ -273,27 +292,40 @@ impl RpcState {
             "id": 1
         });
 
-        let mut response = self
-            .rpc_call_no_deserialize(&params)
+        let response = self
+            .rpc_call::<RpcResponseContractClass>(&params)
             .unwrap()
-            .into_json::<serde_json::Value>()
-            .unwrap();
-        let result = response["result"].as_object_mut().unwrap();
+            .result;
 
-        // Set contract_class_version if it doesn't exist
-        if !result.contains_key("contract_class_version") {
-            let version_0 = serde_json::Value::String("0.0.0".to_string());
-            result.insert("contract_class_version".to_string(), version_0);
+        match response {
+            SNContractClass::Legacy(compressed_legacy_cc) => {
+                let as_str = utils::decode_reader(compressed_legacy_cc.program).unwrap();
+                let program = Program::from_bytes(as_str.as_bytes(), None).unwrap();
+                let entry_points_by_type = utils::map_entry_points_by_type_legacy(
+                    compressed_legacy_cc.entry_points_by_type,
+                );
+                let inner = Arc::new(ContractClassV0Inner {
+                    program,
+                    entry_points_by_type,
+                });
+                BlockifierContractClass::V0(ContractClassV0(inner))
+            }
+            SNContractClass::Sierra(flattened_sierra_cc) => {
+                let middle_sierra: utils::MiddleSierraContractClass = {
+                    let v = serde_json::to_value(flattened_sierra_cc).unwrap();
+                    serde_json::from_value(v).unwrap()
+                };
+                let sierra_cc = SierraContractClass {
+                    sierra_program: middle_sierra.sierra_program,
+                    contract_class_version: middle_sierra.contract_class_version,
+                    entry_points_by_type: middle_sierra.entry_points_by_type,
+                    sierra_program_debug_info: None,
+                    abi: None,
+                };
+                let casm_cc = CasmContractClass::from_contract_class(sierra_cc, false).unwrap();
+                BlockifierContractClass::V1(casm_cc.try_into().unwrap())
+            }
         }
-        let version = result["contract_class_version"].clone();
-
-        // Fix entry_point_by_type key in version > 0 cases
-        if version != "0.0.0" {
-            let value = result.remove("entry_points_by_type").unwrap(); // plural "points"
-            result.insert("entry_point_by_type".to_string(), value); // singular "point"
-        }
-
-        serde_json::from_value(serde_json::Value::Object(result.clone())).unwrap()
     }
 
     pub fn get_class_hash_at(
@@ -345,19 +377,103 @@ impl RpcState {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use starknet_api::{core::ClassHash, hash::StarkFelt, serde_utils::bytes_from_hex_str};
+mod utils {
+    use std::io::{self, Read};
+
+    use cairo_lang_utils::bigint::BigUintAsHex;
+    use starknet::core::types::{
+        EntryPointsByType, LegacyContractEntryPoint, LegacyEntryPointsByType, SierraEntryPoint,
+    };
 
     use super::*;
 
-    fn hash_from_str(hex: &str) -> ClassHash {
-        let bytes = if hex.starts_with("0x") {
-            bytes_from_hex_str::<32, true>(hex).unwrap()
-        } else {
-            bytes_from_hex_str::<32, false>(hex).unwrap()
+    #[derive(Debug, Deserialize)]
+    pub struct MiddleSierraContractClass {
+        pub sierra_program: Vec<BigUintAsHex>,
+        pub contract_class_version: String,
+        pub entry_points_by_type: ContractEntryPoints,
+    }
+
+    // FIXME: change type to use
+    type EntryPointType = starknet_api::deprecated_contract_class::EntryPointType;
+    type EntryPoint = starknet_api::deprecated_contract_class::EntryPoint;
+
+    pub(crate) fn map_entry_points_by_type_legacy(
+        entry_points_by_type: LegacyEntryPointsByType,
+    ) -> HashMap<EntryPointType, Vec<EntryPoint>> {
+        let entry_types_to_points = HashMap::from([
+            (
+                EntryPointType::Constructor,
+                entry_points_by_type.constructor,
+            ),
+            (EntryPointType::External, entry_points_by_type.external),
+            (EntryPointType::L1Handler, entry_points_by_type.l1_handler),
+        ]);
+
+        let to_contract_entry_point = |entrypoint: &LegacyContractEntryPoint| -> EntryPoint {
+            let felt: StarkFelt = StarkHash::new(entrypoint.selector.to_bytes_be()).unwrap();
+            EntryPoint {
+                offset: EntryPointOffset(entrypoint.offset as usize),
+                selector: EntryPointSelector(felt),
+            }
         };
-        ClassHash(StarkFelt::new(bytes).unwrap())
+
+        let mut entry_points_by_type_map = HashMap::new();
+        for (entry_point_type, entry_points) in entry_types_to_points.into_iter() {
+            let values = entry_points
+                .iter()
+                .map(to_contract_entry_point)
+                .collect::<Vec<_>>();
+            entry_points_by_type_map.insert(entry_point_type, values);
+        }
+
+        entry_points_by_type_map
+    }
+
+    use flate2::bufread;
+    // Uncompresses a Gz Encoded vector of bytes and returns a string or error
+    // Here &[u8] implements BufRead
+    pub(crate) fn decode_reader(bytes: Vec<u8>) -> io::Result<String> {
+        let mut gz = bufread::GzDecoder::new(&bytes[..]);
+        let mut s = String::new();
+        gz.read_to_string(&mut s)?;
+        Ok(s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use starknet_api::{
+        core::{ClassHash, PatriciaKey},
+        hash::StarkFelt,
+        serde_utils::bytes_from_hex_str,
+    };
+
+    use super::*;
+
+    /// A utility macro to create a [`PatriciaKey`] from a hex string / unsigned integer representation.
+    /// Imported from starknet_api
+    macro_rules! patricia_key {
+        ($s:expr) => {
+            PatriciaKey::try_from(StarkHash::try_from($s).unwrap()).unwrap()
+        };
+    }
+
+    /// A utility macro to create a [`ClassHash`] from a hex string / unsigned integer representation.
+    /// Imported from starknet_api
+    macro_rules! class_hash {
+        ($s:expr) => {
+            ClassHash(StarkHash::try_from($s).unwrap())
+        };
+    }
+
+    /// A utility macro to create a [`ContractAddress`] from a hex string / unsigned integer
+    /// representation.
+    /// Imported from starknet_api
+    macro_rules! contract_address {
+        ($s:expr) => {
+            ContractAddress(patricia_key!($s))
+        };
     }
 
     #[test]
@@ -368,7 +484,7 @@ mod tests {
         );
 
         let class_hash =
-            hash_from_str("0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216");
+            class_hash!("0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216");
         // This belongs to
         // https://starkscan.co/class/0x0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216
         // which is cairo1.0
@@ -384,66 +500,50 @@ mod tests {
         );
 
         let class_hash =
-            hash_from_str("025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
+            class_hash!("025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
         rpc_state.get_contract_class(&class_hash);
     }
 
-    // #[test]
-    // fn test_get_class_hash_at() {
-    //     let rpc_state = RpcState::new(
-    //         RpcChain::MainNet,
-    //         BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-    //     );
-    //     let address = Address(felt_str!(
-    //         "00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9",
-    //         16
-    //     ));
-    //     assert_eq!(
-    //         rpc_state.get_class_hash_at(&address).unwrap(),
-    //         felt_str!(
-    //             "025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
-    //             16
-    //         )
-    //         .to_be_bytes()
-    //     );
-    // }
+    #[test]
+    fn test_get_class_hash_at() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+        let address =
+            contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
 
-    // #[test]
-    // fn test_get_nonce_at() {
-    //     let rpc_state = RpcState::new(
-    //         RpcChain::TestNet,
-    //         BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-    //     );
-    //     // Contract deployed by xqft which will not be used again, so nonce changes will not break
-    //     // this test.
-    //     let address = Address(felt_str!(
-    //         "07185f2a350edcc7ea072888edb4507247de23e710cbd56084c356d265626bea",
-    //         16
-    //     ));
-    //     assert_eq!(
-    //         rpc_state.get_nonce_at(&address).unwrap(),
-    //         felt_str!("0", 16)
-    //     );
-    // }
+        assert_eq!(
+            rpc_state.get_class_hash_at(&address),
+            class_hash!("025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918")
+        );
+    }
 
-    // #[test]
-    // fn test_get_storage_at() {
-    //     let rpc_state = RpcState::new(
-    //         RpcChain::MainNet,
-    //         BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-    //     );
-    //     let storage_entry = (
-    //         Address(felt_str!(
-    //             "00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9",
-    //             16
-    //         )),
-    //         [0; 32],
-    //     );
-    //     assert_eq!(
-    //         rpc_state.get_storage_at(&storage_entry).unwrap(),
-    //         felt_str!("0", 16)
-    //     );
-    // }
+    #[test]
+    fn test_get_nonce_at() {
+        let rpc_state = RpcState::new(
+            RpcChain::TestNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+        // Contract deployed by xqft which will not be used again, so nonce changes will not break
+        // this test.
+        let address =
+            contract_address!("07185f2a350edcc7ea072888edb4507247de23e710cbd56084c356d265626bea");
+        assert_eq!(rpc_state.get_nonce_at(&address), felt_str!("0", 16));
+    }
+
+    #[test]
+    fn test_get_storage_at() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+        let address =
+            contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
+        let key = StorageKey(patricia_key!(0u128));
+
+        assert_eq!(rpc_state.get_storage_at(&address, &key), felt_str!("0", 16));
+    }
 
     #[test]
     fn test_get_transaction() {
