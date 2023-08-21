@@ -291,7 +291,6 @@ impl InvokeFunction {
         }
 
         let mut transactional_state = state.create_transactional();
-
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
 
