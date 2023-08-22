@@ -13,7 +13,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 /// A [StateReader] that holds all the data in memory.
 ///
@@ -80,10 +80,10 @@ impl InMemoryStateReader {
         compiled_class_hash: &CompiledClassHash,
     ) -> Result<CompiledClass, StateError> {
         if let Some(compiled_class) = self.casm_contract_classes.get(compiled_class_hash) {
-            return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
+            return Ok(CompiledClass::Casm(Arc::new(compiled_class.clone())));
         }
         if let Some(compiled_class) = self.class_hash_to_contract_class.get(compiled_class_hash) {
-            return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
+            return Ok(CompiledClass::Deprecated(Arc::new(compiled_class.clone())));
         }
         Err(StateError::NoneCompiledClass(*compiled_class_hash))
     }
@@ -128,7 +128,7 @@ impl StateReader for InMemoryStateReader {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // Deprecated contract classes dont have a compiled_class_hash, we dont need to fetch it
         if let Some(compiled_class) = self.class_hash_to_contract_class.get(class_hash) {
-            return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
+            return Ok(CompiledClass::Deprecated(Arc::new(compiled_class.clone())));
         }
         let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
         if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {

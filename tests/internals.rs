@@ -777,7 +777,7 @@ fn deploy_fib_syscall() -> Deploy {
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let casm_class = CasmContractClass::from_contract_class(sierra_contract_class, true).unwrap();
-    let contract_class = CompiledClass::Casm(Box::new(casm_class));
+    let contract_class = CompiledClass::Casm(Arc::new(casm_class));
 
     let contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]

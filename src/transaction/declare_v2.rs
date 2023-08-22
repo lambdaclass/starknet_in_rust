@@ -528,7 +528,7 @@ mod tests {
             .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
-            CompiledClass::Casm(casm) => *casm,
+            CompiledClass::Casm(casm) => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -597,7 +597,7 @@ mod tests {
             .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
-            CompiledClass::Casm(casm) => *casm,
+            CompiledClass::Casm(casm) => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -668,7 +668,7 @@ mod tests {
             .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
-            CompiledClass::Casm(casm) => *casm,
+            CompiledClass::Casm(casm) => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -737,7 +737,7 @@ mod tests {
             .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
-            CompiledClass::Casm(casm) => *casm,
+            CompiledClass::Casm(casm) => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 

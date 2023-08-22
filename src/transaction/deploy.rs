@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractClass, EntryPointType,
@@ -80,7 +82,7 @@ impl Deploy {
             contract_address,
             contract_address_salt,
             contract_hash,
-            contract_class: CompiledClass::Deprecated(Box::new(contract_class)),
+            contract_class: CompiledClass::Deprecated(Arc::new(contract_class)),
             constructor_calldata,
             tx_type: TransactionType::Deploy,
             skip_validate: false,
@@ -114,7 +116,7 @@ impl Deploy {
             contract_address_salt,
             contract_hash,
             constructor_calldata,
-            contract_class: CompiledClass::Deprecated(Box::new(contract_class)),
+            contract_class: CompiledClass::Deprecated(Arc::new(contract_class)),
             tx_type: TransactionType::Deploy,
             skip_validate: false,
             skip_execute: false,
@@ -153,7 +155,7 @@ impl Deploy {
             CompiledClass::Casm(contract_class) => {
                 state.set_compiled_class(
                     &Felt252::from_bytes_be(&self.contract_hash),
-                    *contract_class,
+                    contract_class.as_ref().clone(),
                 )?;
             }
             CompiledClass::Deprecated(contract_class) => {
@@ -350,7 +352,7 @@ mod tests {
 
         assert_eq!(
             state.get_contract_class(&class_hash_bytes).unwrap(),
-            CompiledClass::Deprecated(Box::new(contract_class))
+            CompiledClass::Deprecated(Arc::new(contract_class))
         );
 
         assert_eq!(
