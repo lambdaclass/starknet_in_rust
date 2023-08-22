@@ -18,6 +18,7 @@ use starknet::core::types::{ContractClass as SNContractClass, FieldElement};
 use starknet_api::core::{ClassHash, EntryPointSelector};
 use starknet_api::deprecated_contract_class::{self, EntryPointOffset};
 use starknet_api::hash::StarkFelt;
+use starknet_api::serde_utils::{NonPrefixedBytesAsHex, PrefixedBytesAsHex};
 use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
 use std::collections::HashMap;
 use std::env;
@@ -101,7 +102,7 @@ struct RpcResponseContractClass {
     result: SNContractClass,
 }
 
-// We use this new struct to cast the string that contains a [`Felt252`] in hex to a [`Felt252`]
+// We use this new struct to cast the string that contains a [`StarkFelt`] in hex to a [`StarkFelt`]
 struct StarkFeltHex;
 
 impl<'de> DeserializeAs<'de, StarkFelt> for StarkFeltHex {
@@ -109,18 +110,8 @@ impl<'de> DeserializeAs<'de, StarkFelt> for StarkFeltHex {
     where
         D: Deserializer<'de>,
     {
-        let string = String::deserialize(deserializer)?;
-
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice({
-            if string.starts_with("0x") {
-                string[2..].as_bytes()
-            } else {
-                string.as_bytes()
-            }
-        });
-
-        Ok(StarkFelt::new(bytes).unwrap())
+        let bytes: PrefixedBytesAsHex<32> = PrefixedBytesAsHex::deserialize(deserializer)?;
+        Ok(bytes.try_into().unwrap())
     }
 }
 
@@ -335,10 +326,7 @@ impl RpcState {
         }
     }
 
-    pub fn get_class_hash_at(
-        &self,
-        contract_address: &ContractAddress,
-    ) -> ClassHash {
+    pub fn get_class_hash_at(&self, contract_address: &ContractAddress) -> ClassHash {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getClassHashAt",
@@ -352,11 +340,10 @@ impl RpcState {
     }
 
     pub fn get_nonce_at(&self, contract_address: &ContractAddress) -> StarkFelt {
-        let contract_address = contract_address.0.key();
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getNonce",
-            "params": [self.block.to_value(), format!("0x{}", contract_address)],
+            "params": [self.block.to_value(), contract_address.0.key().clone().to_string()],
             "id": 1
         });
 
@@ -453,7 +440,7 @@ mod tests {
     use starknet_api::{
         core::{ClassHash, PatriciaKey},
         hash::StarkFelt,
-        serde_utils::bytes_from_hex_str, stark_felt,
+        stark_felt,
     };
 
     use super::*;
