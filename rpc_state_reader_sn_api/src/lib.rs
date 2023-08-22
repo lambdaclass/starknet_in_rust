@@ -26,15 +26,6 @@ use std::env;
 use std::sync::Arc;
 use thiserror::Error;
 
-//#[derive(Debug, Clone, Deserialize)]
-//#[serde(tag = "contract_class_version")]
-//pub enum ContractClass {
-//    #[serde(rename = "0.0.0")]
-//    Deprecated(blockifier::execution::contract_class::ContractClassV0),
-//    #[serde(rename = "0.1.0")]
-//    Compiled(starknet_api::state::ContractClass),
-//}
-
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy)]
 pub enum RpcChain {
@@ -438,6 +429,7 @@ mod utils {
     use starknet::core::types::{
         EntryPointsByType, LegacyContractEntryPoint, LegacyEntryPointsByType, SierraEntryPoint,
     };
+    use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
 
     use super::*;
 
@@ -447,10 +439,6 @@ mod utils {
         pub contract_class_version: String,
         pub entry_points_by_type: ContractEntryPoints,
     }
-
-    // FIXME: change type to use
-    type EntryPointType = starknet_api::deprecated_contract_class::EntryPointType;
-    type EntryPoint = starknet_api::deprecated_contract_class::EntryPoint;
 
     pub(crate) fn map_entry_points_by_type_legacy(
         entry_points_by_type: LegacyEntryPointsByType,
