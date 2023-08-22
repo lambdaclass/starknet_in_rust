@@ -57,10 +57,19 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 ### Installation
 
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
+
+#### Linux (x86-64)
 ```bash
 $ make deps
 $ make build
 ```
+
+#### OSX (Apple Silicon)
+```bash
+$ make deps-macos
+$ make build
+```
+
 Check the [Makefile](/Makefile) for additional targets.
 
 #### RPC State Reader
