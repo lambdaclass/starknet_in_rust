@@ -2934,6 +2934,7 @@ name = "rpc_state_reader"
 version = "0.3.1"
 dependencies = [
  "cairo-lang-starknet",
+ "cairo-vm",
  "dotenv",
  "serde",
  "serde_json",
@@ -3189,6 +3190,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_json_pythonic"
+version = "0.1.2"
+source = "git+https://github.com/xJonathanLEI/serde_json_pythonic?tag=v0.1.2#4e4b08bab95309be8672b4efd346bea900040e15"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
+]
+
+[[package]]
 name = "serde_spanned"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3418,7 +3429,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "serde_json_pythonic",
+ "serde_json_pythonic 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_with 2.3.3",
  "sha3",
  "starknet-crypto 0.6.0",
@@ -3615,6 +3626,7 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
+ "serde_json_pythonic 0.1.2 (git+https://github.com/xJonathanLEI/serde_json_pythonic?tag=v0.1.2)",
  "sha3",
  "starknet",
  "starknet-crypto 0.5.1",
