@@ -827,20 +827,23 @@ mod blockifier_transaction_tests {
 
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
-        let rpc_state = RpcStateReader(RpcState::new(network, block));
+        let rpc_reader = RpcStateReader(RpcState::new(network, block));
 
-        let chain_id = rpc_state.0.get_chain_name();
+        // Get values for block context before giving ownership of the reader
+        let chain_id = rpc_reader.0.get_chain_name();
         let RpcBlockInfo {
             block_number,
             block_timestamp,
             sequencer_address,
-        } = rpc_state.0.get_block_info();
+        } = rpc_reader.0.get_block_info();
 
+        // Get trnasaction before giving ownership of the reader
         let tx_hash = TransactionHash(stark_felt!(tx_hash));
-        let sn_api_tx = rpc_state.0.get_transaction(&tx_hash);
+        let sn_api_tx = rpc_reader.0.get_transaction(&tx_hash);
 
+        // Create state from RPC reader
         let global_cache = GlobalContractCache::default();
-        let mut state = CachedState::new(rpc_state, global_cache);
+        let mut state = CachedState::new(rpc_reader, global_cache);
 
         let fee_token_address =
             contract_address!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7");
@@ -875,6 +878,7 @@ mod blockifier_transaction_tests {
             max_recursion_depth: 50,
         };
 
+        // Map starknet_api transaction to blockifier's
         let blockifier_tx = match sn_api_tx {
             Transaction::Invoke(tx) => {
                 let invoke = InvokeTransaction { tx, tx_hash };
@@ -919,5 +923,6 @@ mod blockifier_transaction_tests {
         dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
         dbg!(vm_resources); // Ok with explorer
         dbg!(inner_calls.len()); // Ok with explorer
+        assert!(false);
     }
 }
