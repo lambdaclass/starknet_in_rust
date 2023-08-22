@@ -2,6 +2,7 @@ use blockifier::execution::contract_class::{
     ContractClass as BlockifierContractClass, ContractClassV0, ContractClassV0Inner,
     ContractClassV1, ContractClassV1Inner,
 };
+use blockifier::execution::entry_point::CallInfo;
 use cairo_lang_starknet::abi::Contract;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::{
@@ -172,39 +173,101 @@ impl RpcState {
     }
 }
 
-// #[derive(Debug)]
-// pub struct TransactionTrace {
-//     pub validate_invocation: CallInfo,
-//     pub function_invocation: CallInfo,
-//     pub fee_transfer_invocation: CallInfo,
-//     pub signature: Vec<Felt252>,
-// }
+#[derive(Debug)]
+pub struct TransactionTrace {
+    pub validate_invocation: RpcCallInfo,
+    pub function_invocation: RpcCallInfo,
+    pub fee_transfer_invocation: RpcCallInfo,
+    pub signature: Vec<StarkFelt>,
+}
 
-// impl<'de> Deserialize<'de> for TransactionTrace {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: Deserializer<'de>,
-//     {
-//         let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+pub struct RpcExecutionResources {
+    pub n_steps: usize,
+    pub n_memory_holes: usize,
+    pub builtin_instance_counter: HashMap<String, usize>,
+}
 
-//         let validate_invocation = value["validate_invocation"].clone();
-//         let function_invocation = value["function_invocation"].clone();
-//         let fee_transfer_invocation = value["fee_transfer_invocation"].clone();
-//         let signature_value = value["signature"].clone();
-//         // let signature = parse_felt_array(signature_value.as_array().unwrap());
-//         let signature = vec![];
+#[derive(Debug)]
+pub struct RpcCallInfo {
+    pub execution_resources: RpcExecutionResources,
+    pub retdata: Option<Vec<StarkFelt>>,
+    pub calldata: Option<Vec<StarkFelt>>,
+    pub internal_calls: Vec<RpcCallInfo>,
+}
 
-//         Ok(TransactionTrace {
-//             validate_invocation: serde_json::from_value(validate_invocation)
-//                 .map_err(serde::de::Error::custom)?,
-//             function_invocation: serde_json::from_value(function_invocation)
-//                 .map_err(serde::de::Error::custom)?,
-//             fee_transfer_invocation: serde_json::from_value(fee_transfer_invocation)
-//                 .map_err(serde::de::Error::custom)?,
-//             signature,
-//         })
-//     }
-// }
+impl<'de> Deserialize<'de> for RpcCallInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        // Parse execution_resources
+        let execution_resources_value = value["execution_resources"].clone();
+
+        let execution_resources = RpcExecutionResources {
+            n_steps: serde_json::from_value(execution_resources_value["n_steps"].clone())
+                .map_err(serde::de::Error::custom)?,
+            n_memory_holes: serde_json::from_value(
+                execution_resources_value["n_memory_holes"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+            builtin_instance_counter: serde_json::from_value(
+                execution_resources_value["builtin_instance_counter"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+        };
+
+        // Parse retdata
+        let retdata_value = value["result"].clone();
+        let retdata = serde_json::from_value(retdata_value).unwrap();
+
+        // Parse calldata
+        let calldata_value = value["calldata"].clone();
+        let calldata = serde_json::from_value(calldata_value).unwrap();
+
+        // Parse internal calls
+        let internal_calls_value = value["internal_calls"].clone();
+        let mut internal_calls = vec![];
+
+        for call in internal_calls_value.as_array().unwrap() {
+            internal_calls
+                .push(serde_json::from_value(call.clone()).map_err(serde::de::Error::custom)?);
+        }
+
+        Ok(RpcCallInfo {
+            execution_resources,
+            retdata,
+            calldata,
+            internal_calls,
+        })
+    }
+}
+
+impl<'de> Deserialize<'de> for TransactionTrace {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        let validate_invocation = value["validate_invocation"].clone();
+        let function_invocation = value["function_invocation"].clone();
+        let fee_transfer_invocation = value["fee_transfer_invocation"].clone();
+        let signature_value = value["signature"].clone();
+
+        Ok(TransactionTrace {
+            validate_invocation: serde_json::from_value(validate_invocation)
+                .map_err(serde::de::Error::custom)?,
+            function_invocation: serde_json::from_value(function_invocation)
+                .map_err(serde::de::Error::custom)?,
+            fee_transfer_invocation: serde_json::from_value(fee_transfer_invocation)
+                .map_err(serde::de::Error::custom)?,
+            signature: serde_json::from_value(signature_value).map_err(serde::de::Error::custom)?,
+        })
+    }
+}
 
 #[cfg(test)]
 impl RpcState {
@@ -214,18 +277,18 @@ impl RpcState {
     /// - actual fee
     /// - events
     /// - return data
-    // pub fn get_transaction_trace(&self, hash: Felt252) -> TransactionTrace {
-    //     let chain_name = self.get_chain_name();
-    //     let response = ureq::get(&format!(
-    //         "https://{}.starknet.io/feeder_gateway/get_transaction_trace",
-    //         chain_name
-    //     ))
-    //     .query("transactionHash", &format!("0x{}", hash.to_str_radix(16)))
-    //     .call()
-    //     .unwrap();
+    pub fn get_transaction_trace(&self, hash: ClassHash) -> TransactionTrace {
+        let chain_name = self.get_chain_name();
+        let response = ureq::get(&format!(
+            "https://{}.starknet.io/feeder_gateway/get_transaction_trace",
+            chain_name
+        ))
+        .query("transactionHash", &hash.0.to_string())
+        .call()
+        .unwrap();
 
-    //     serde_json::from_str(&response.into_string().unwrap()).unwrap()
-    // }
+        serde_json::from_str(&response.into_string().unwrap()).unwrap()
+    }
 
     /// Requests the given transaction to the Feeder Gateway API.
     pub fn get_transaction(&self, hash: &str) -> starknet_api::transaction::Transaction {
@@ -260,8 +323,8 @@ impl RpcState {
         });
 
         let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
-        let sequencer_address =
-            felt_str!(block_info["result"]["sequencer_address"].to_string()).to_be_bytes();
+        let sequencer_address: StarkFelt =
+            serde_json::from_value(block_info["result"]["sequencer_address"].clone()).unwrap();
 
         RpcBlockInfo {
             block_number: block_info["result"]["block_number"]
@@ -272,10 +335,7 @@ impl RpcState {
                 .to_string()
                 .parse::<u64>()
                 .unwrap(),
-            sequencer_address: ContractAddress::try_from(
-                StarkHash::new(sequencer_address).unwrap(),
-            )
-            .unwrap(),
+            sequencer_address: ContractAddress(sequencer_address.try_into().unwrap()),
         }
     }
 
@@ -550,196 +610,145 @@ mod tests {
         rpc_state.get_transaction(tx_hash);
     }
 
-    // #[test]
-    // fn test_get_block_info() {
-    //     let rpc_state = RpcState::new(
-    //         RpcChain::MainNet,
-    //         BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-    //     );
+    #[test]
+    fn test_get_block_info() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
 
-    //     let gas_price_str = "13563643256";
-    //     let gas_price_u128 = gas_price_str.parse::<u128>().unwrap();
-
-    //     let fee_token_address = Address(felt_str!(
-    //         "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-    //         16
-    //     ));
-
-    //     let get_block_info_params = ureq::json!({
-    //         "jsonrpc": "2.0",
-    //         "method": "starknet_getBlockWithTxHashes",
-    //         "params": [rpc_state.block.to_value()],
-    //         "id": 1
-    //     });
-    //     let network: StarknetChainId = rpc_state.chain.into();
-    //     let starknet_os_config =
-    //         starknet_in_rust::definitions::block_context::StarknetOsConfig::new(
-    //             network.to_felt(),
-    //             fee_token_address.clone(),
-    //             gas_price_u128,
-    //         );
-    //     let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
-
-    //     let block_info = starknet_in_rust::state::BlockInfo {
-    //         block_number: block_info["result"]["block_number"]
-    //             .to_string()
-    //             .parse::<u64>()
-    //             .unwrap(),
-    //         block_timestamp: block_info["result"]["timestamp"]
-    //             .to_string()
-    //             .parse::<u64>()
-    //             .unwrap(),
-    //         gas_price: gas_price_u128 as u64,
-    //         sequencer_address: fee_token_address,
-    //     };
-
-    //     assert_eq!(rpc_state.get_block_info(starknet_os_config,), block_info);
-    // }
+        rpc_state.get_block_info();
+    }
 
     // Tested with the following query to the Feeder Gateway API:
     // https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
-    // #[test]
-    // fn test_get_transaction_trace() {
-    //     let state_reader = RpcState::new(
-    //         RpcChain::TestNet2,
-    //         BlockValue::Number(serde_json::to_value(838683).unwrap()),
-    //     );
+    #[test]
+    fn test_get_transaction_trace() {
+        let rpc_state = RpcState::new(
+            RpcChain::TestNet2,
+            BlockValue::Number(serde_json::to_value(838683).unwrap()),
+        );
 
-    //     let tx_hash_str = "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc";
-    //     let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
+        let tx_hash =
+            class_hash!("19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc");
 
-    //     let tx_trace = state_reader.get_transaction_trace(tx_hash);
+        let tx_trace = rpc_state.get_transaction_trace(tx_hash);
 
-    //     assert_eq!(
-    //         tx_trace.signature,
-    //         vec![
-    //             felt_str!(
-    //                 "ffab1c47d8d5e5b76bdcc4af79e98205716c36b440f20244c69599a91ace58",
-    //                 16
-    //             ),
-    //             felt_str!(
-    //                 "6aa48a0906c9c1f7381c1a040c043b649eeac1eea08f24a9d07813f6b1d05fe",
-    //                 16
-    //             ),
-    //         ]
-    //     );
+        assert_eq!(
+            tx_trace.signature,
+            vec![
+                stark_felt!("ffab1c47d8d5e5b76bdcc4af79e98205716c36b440f20244c69599a91ace58"),
+                stark_felt!("6aa48a0906c9c1f7381c1a040c043b649eeac1eea08f24a9d07813f6b1d05fe"),
+            ]
+        );
 
-    //     assert_eq!(
-    //         tx_trace.validate_invocation.calldata,
-    //         vec![
-    //             felt_str!("1", 16),
-    //             felt_str!(
-    //                 "690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
-    //                 16
-    //             ),
-    //             felt_str!(
-    //                 "1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573",
-    //                 16
-    //             ),
-    //             felt_str!("0", 16),
-    //             felt_str!("9", 16),
-    //             felt_str!("9", 16),
-    //             felt_str!("4", 16),
-    //             felt_str!("4254432d55534443", 16),
-    //             felt_str!("f02e7324ecbd65ce267", 16),
-    //             felt_str!("5754492d55534443", 16),
-    //             felt_str!("8e13050d06d8f514c", 16),
-    //             felt_str!("4554482d55534443", 16),
-    //             felt_str!("f0e4a142c3551c149d", 16),
-    //             felt_str!("4a50592d55534443", 16),
-    //             felt_str!("38bd34c31a0a5c", 16),
-    //         ]
-    //     );
-    //     assert_eq!(tx_trace.validate_invocation.retdata, vec![]);
-    //     assert_eq!(
-    //         tx_trace.validate_invocation.execution_resources,
-    //         ExecutionResources {
-    //             n_steps: 790,
-    //             n_memory_holes: 51,
-    //             builtin_instance_counter: HashMap::from([
-    //                 ("range_check_builtin".to_string(), 20),
-    //                 ("ecdsa_builtin".to_string(), 1),
-    //                 ("pedersen_builtin".to_string(), 2),
-    //             ]),
-    //         }
-    //     );
-    //     assert_eq!(tx_trace.validate_invocation.internal_calls.len(), 1);
+        assert_eq!(
+            tx_trace.validate_invocation.calldata,
+            Some(vec![
+                stark_felt!("1"),
+                stark_felt!("690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232"),
+                stark_felt!("1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573"),
+                stark_felt!("0"),
+                stark_felt!("9"),
+                stark_felt!("9"),
+                stark_felt!("4"),
+                stark_felt!("4254432d55534443"),
+                stark_felt!("f02e7324ecbd65ce267"),
+                stark_felt!("5754492d55534443"),
+                stark_felt!("8e13050d06d8f514c"),
+                stark_felt!("4554482d55534443"),
+                stark_felt!("f0e4a142c3551c149d"),
+                stark_felt!("4a50592d55534443"),
+                stark_felt!("38bd34c31a0a5c"),
+            ])
+        );
+        assert_eq!(tx_trace.validate_invocation.retdata, Some(vec![]));
+        assert_eq!(
+            tx_trace.validate_invocation.execution_resources,
+            RpcExecutionResources {
+                n_steps: 790,
+                n_memory_holes: 51,
+                builtin_instance_counter: HashMap::from([
+                    ("range_check_builtin".to_string(), 20),
+                    ("ecdsa_builtin".to_string(), 1),
+                    ("pedersen_builtin".to_string(), 2),
+                ]),
+            }
+        );
+        assert_eq!(tx_trace.validate_invocation.internal_calls.len(), 1);
 
-    //     assert_eq!(
-    //         tx_trace.function_invocation.calldata,
-    //         vec![
-    //             felt_str!("1", 16),
-    //             felt_str!(
-    //                 "690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232",
-    //                 16
-    //             ),
-    //             felt_str!(
-    //                 "1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573",
-    //                 16
-    //             ),
-    //             felt_str!("0", 16),
-    //             felt_str!("9", 16),
-    //             felt_str!("9", 16),
-    //             felt_str!("4", 16),
-    //             felt_str!("4254432d55534443", 16),
-    //             felt_str!("f02e7324ecbd65ce267", 16),
-    //             felt_str!("5754492d55534443", 16),
-    //             felt_str!("8e13050d06d8f514c", 16),
-    //             felt_str!("4554482d55534443", 16),
-    //             felt_str!("f0e4a142c3551c149d", 16),
-    //             felt_str!("4a50592d55534443", 16),
-    //             felt_str!("38bd34c31a0a5c", 16),
-    //         ]
-    //     );
-    //     assert_eq!(tx_trace.function_invocation.retdata, vec![0.into()]);
-    //     assert_eq!(
-    //         tx_trace.function_invocation.execution_resources,
-    //         ExecutionResources {
-    //             n_steps: 2808,
-    //             n_memory_holes: 136,
-    //             builtin_instance_counter: HashMap::from([
-    //                 ("range_check_builtin".to_string(), 49),
-    //                 ("pedersen_builtin".to_string(), 14),
-    //             ]),
-    //         }
-    //     );
-    //     assert_eq!(tx_trace.function_invocation.internal_calls.len(), 1);
-    //     assert_eq!(
-    //         tx_trace.function_invocation.internal_calls[0]
-    //             .internal_calls
-    //             .len(),
-    //         1
-    //     );
-    //     assert_eq!(
-    //         tx_trace.function_invocation.internal_calls[0].internal_calls[0]
-    //             .internal_calls
-    //             .len(),
-    //         7
-    //     );
+        assert_eq!(
+            tx_trace.function_invocation.calldata,
+            Some(vec![
+                stark_felt!("1"),
+                stark_felt!("690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232"),
+                stark_felt!("1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573"),
+                stark_felt!("0"),
+                stark_felt!("9"),
+                stark_felt!("9"),
+                stark_felt!("4"),
+                stark_felt!("4254432d55534443"),
+                stark_felt!("f02e7324ecbd65ce267"),
+                stark_felt!("5754492d55534443"),
+                stark_felt!("8e13050d06d8f514c"),
+                stark_felt!("4554482d55534443"),
+                stark_felt!("f0e4a142c3551c149d"),
+                stark_felt!("4a50592d55534443"),
+                stark_felt!("38bd34c31a0a5c"),
+            ])
+        );
+        assert_eq!(
+            tx_trace.function_invocation.retdata,
+            Some(vec![0u128.into()])
+        );
+        assert_eq!(
+            tx_trace.function_invocation.execution_resources,
+            RpcExecutionResources {
+                n_steps: 2808,
+                n_memory_holes: 136,
+                builtin_instance_counter: HashMap::from([
+                    ("range_check_builtin".to_string(), 49),
+                    ("pedersen_builtin".to_string(), 14),
+                ]),
+            }
+        );
+        assert_eq!(tx_trace.function_invocation.internal_calls.len(), 1);
+        assert_eq!(
+            tx_trace.function_invocation.internal_calls[0]
+                .internal_calls
+                .len(),
+            1
+        );
+        assert_eq!(
+            tx_trace.function_invocation.internal_calls[0].internal_calls[0]
+                .internal_calls
+                .len(),
+            7
+        );
 
-    //     assert_eq!(
-    //         tx_trace.fee_transfer_invocation.calldata,
-    //         vec![
-    //             felt_str!(
-    //                 "1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8",
-    //                 16
-    //             ),
-    //             felt_str!("2b0322a23ba4", 16),
-    //             felt_str!("0", 16),
-    //         ]
-    //     );
-    //     assert_eq!(tx_trace.fee_transfer_invocation.retdata, vec![1.into()]);
-    //     assert_eq!(
-    //         tx_trace.fee_transfer_invocation.execution_resources,
-    //         ExecutionResources {
-    //             n_steps: 586,
-    //             n_memory_holes: 42,
-    //             builtin_instance_counter: HashMap::from([
-    //                 ("range_check_builtin".to_string(), 21),
-    //                 ("pedersen_builtin".to_string(), 4),
-    //             ]),
-    //         }
-    //     );
-    //     assert_eq!(tx_trace.fee_transfer_invocation.internal_calls.len(), 1);
-    // }
+        assert_eq!(
+            tx_trace.fee_transfer_invocation.calldata,
+            Some(vec![
+                stark_felt!("1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8"),
+                stark_felt!("2b0322a23ba4"),
+                stark_felt!("0"),
+            ])
+        );
+        assert_eq!(
+            tx_trace.fee_transfer_invocation.retdata,
+            Some(vec![1u128.into()])
+        );
+        assert_eq!(
+            tx_trace.fee_transfer_invocation.execution_resources,
+            RpcExecutionResources {
+                n_steps: 586,
+                n_memory_holes: 42,
+                builtin_instance_counter: HashMap::from([
+                    ("range_check_builtin".to_string(), 21),
+                    ("pedersen_builtin".to_string(), 4),
+                ]),
+            }
+        );
+        assert_eq!(tx_trace.fee_transfer_invocation.internal_calls.len(), 1);
+    }
 }
