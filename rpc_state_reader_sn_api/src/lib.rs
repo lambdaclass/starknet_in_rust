@@ -16,7 +16,8 @@ use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
 use starknet::core::types::{ContractClass as SNContractClass, FieldElement};
-use starknet_api::core::{ClassHash, EntryPointSelector};
+use starknet_api::block::{BlockNumber, BlockTimestamp};
+use starknet_api::core::{ChainId, ClassHash, EntryPointSelector};
 use starknet_api::deprecated_contract_class::{self, EntryPointOffset};
 use starknet_api::hash::StarkFelt;
 use starknet_api::serde_utils::{NonPrefixedBytesAsHex, PrefixedBytesAsHex};
@@ -116,9 +117,9 @@ struct RpcResponseFelt {
 
 pub struct RpcBlockInfo {
     /// The sequence number of the last block created.
-    pub block_number: u64,
+    pub block_number: BlockNumber,
     /// Timestamp of the beginning of the last block creation attempt.
-    pub block_timestamp: u64,
+    pub block_timestamp: BlockTimestamp,
     /// The sequencer address of this block.
     pub sequencer_address: ContractAddress,
 }
@@ -297,12 +298,12 @@ impl RpcState {
         starknet_api::transaction::Transaction::Invoke(sn_api_invoke)
     }
 
-    fn get_chain_name(&self) -> String {
-        match self.chain {
+    pub fn get_chain_name(&self) -> ChainId {
+        ChainId(match self.chain {
             RpcChain::MainNet => "alpha-mainnet".to_string(),
             RpcChain::TestNet => "alpha4".to_string(),
             RpcChain::TestNet2 => "alpha4-2".to_string(),
-        }
+        })
     }
 
     pub fn get_block_info(&self) -> RpcBlockInfo {
@@ -318,14 +319,18 @@ impl RpcState {
             serde_json::from_value(block_info["result"]["sequencer_address"].clone()).unwrap();
 
         RpcBlockInfo {
-            block_number: block_info["result"]["block_number"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
-            block_timestamp: block_info["result"]["timestamp"]
-                .to_string()
-                .parse::<u64>()
-                .unwrap(),
+            block_number: BlockNumber(
+                block_info["result"]["block_number"]
+                    .to_string()
+                    .parse::<u64>()
+                    .unwrap(),
+            ),
+            block_timestamp: BlockTimestamp(
+                block_info["result"]["timestamp"]
+                    .to_string()
+                    .parse::<u64>()
+                    .unwrap(),
+            ),
             sequencer_address: ContractAddress(sequencer_address.try_into().unwrap()),
         }
     }
@@ -738,5 +743,128 @@ mod tests {
             }
         );
         assert_eq!(tx_trace.fee_transfer_invocation.internal_calls.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod blockifier_transaction_tests {
+    use blockifier::{
+        block_context::BlockContext,
+        execution::contract_class::ContractClass,
+        state::{
+            cached_state::{CachedState, GlobalContractCache},
+            state_api::{StateReader, StateResult},
+        },
+        transaction::objects::TransactionExecutionInfo,
+    };
+    use starknet_api::{
+        block::BlockTimestamp,
+        contract_address,
+        core::{ChainId, CompiledClassHash, Nonce, PatriciaKey},
+        patricia_key,
+    };
+
+    use super::*;
+
+    struct RpcStateReader(RpcState);
+
+    impl StateReader for RpcStateReader {
+        fn get_storage_at(
+            &mut self,
+            contract_address: ContractAddress,
+            key: StorageKey,
+        ) -> StateResult<StarkFelt> {
+            Ok(self.0.get_storage_at(&contract_address, &key))
+        }
+
+        fn get_nonce_at(&mut self, contract_address: ContractAddress) -> StateResult<Nonce> {
+            Ok(Nonce(self.0.get_nonce_at(&contract_address)))
+        }
+
+        fn get_class_hash_at(
+            &mut self,
+            contract_address: ContractAddress,
+        ) -> StateResult<ClassHash> {
+            Ok(self.0.get_class_hash_at(&contract_address))
+        }
+
+        /// Returns the contract class of the given class hash.
+        fn get_compiled_contract_class(
+            &mut self,
+            class_hash: &ClassHash,
+        ) -> StateResult<ContractClass> {
+            Ok(self.0.get_contract_class(class_hash))
+        }
+
+        /// Returns the compiled class hash of the given class hash.
+        fn get_compiled_class_hash(
+            &mut self,
+            class_hash: ClassHash,
+        ) -> StateResult<CompiledClassHash> {
+            Ok(CompiledClassHash(
+                self.0
+                    .get_class_hash_at(&ContractAddress(class_hash.0.try_into().unwrap()))
+                    .0,
+            ))
+        }
+    }
+
+    fn test_tx(
+        tx_hash: &str,
+        network: RpcChain,
+        block_number: u64,
+        gas_price: u128,
+    ) -> TransactionExecutionInfo {
+        let tx_hash = tx_hash.strip_prefix("0x").unwrap();
+
+        // Instantiate the RPC StateReader and the CachedState
+        let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
+        let rpc_state = RpcStateReader(RpcState::new(network, block));
+        let global_cache = GlobalContractCache::default();
+        let mut state = CachedState::new(rpc_state, global_cache);
+
+        let fee_token_address =
+            contract_address!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7");
+
+        let chain_id = rpc_state.0.get_chain_name();
+        let RpcBlockInfo {
+            block_number,
+            block_timestamp,
+            sequencer_address,
+        } = rpc_state.0.get_block_info();
+
+        const N_STEPS_FEE_WEIGHT: f64 = 0.01;
+        let vm_resource_fee_cost = Arc::new(HashMap::from([
+            ("n_steps".to_string(), N_STEPS_FEE_WEIGHT),
+            ("output_builtin".to_string(), 0.0),
+            ("pedersen_builtin".to_string(), N_STEPS_FEE_WEIGHT * 32.0),
+            ("range_check_builtin".to_string(), N_STEPS_FEE_WEIGHT * 16.0),
+            ("ecdsa_builtin".to_string(), N_STEPS_FEE_WEIGHT * 2048.0),
+            ("bitwise_builtin".to_string(), N_STEPS_FEE_WEIGHT * 64.0),
+            ("ec_op_builtin".to_string(), N_STEPS_FEE_WEIGHT * 1024.0),
+            ("poseidon_builtin".to_string(), N_STEPS_FEE_WEIGHT * 32.0),
+            (
+                "segment_arena_builtin".to_string(),
+                N_STEPS_FEE_WEIGHT * 10.0,
+            ),
+            ("keccak_builtin".to_string(), N_STEPS_FEE_WEIGHT * 2048.0), // 2**11
+        ]));
+
+        let block_context = BlockContext {
+            chain_id,
+            block_number,
+            block_timestamp,
+            sequencer_address,
+            fee_token_address,
+            vm_resource_fee_cost,
+            gas_price,
+            invoke_tx_max_n_steps: 1_000_000,
+            validate_max_n_steps: 1_000_000,
+            max_recursion_depth: 50,
+        };
+
+        let tx = rpc_state.0.get_transaction(tx_hash);
+
+        tx.execute(&mut state, &block_context, 0).unwrap()
     }
 }
