@@ -21,6 +21,7 @@ use starknet_api::core::{ChainId, ClassHash, EntryPointSelector};
 use starknet_api::deprecated_contract_class::{self, EntryPointOffset};
 use starknet_api::hash::StarkFelt;
 use starknet_api::serde_utils::{NonPrefixedBytesAsHex, PrefixedBytesAsHex};
+use starknet_api::transaction::{Transaction, TransactionHash};
 use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
 use std::collections::HashMap;
 use std::env;
@@ -283,7 +284,7 @@ impl RpcState {
     }
 
     /// Requests the given transaction to the Feeder Gateway API.
-    pub fn get_transaction(&self, hash: &str) -> starknet_api::transaction::Transaction {
+    pub fn get_transaction(&self, hash: &TransactionHash) -> Transaction {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getTransactionByHash",
@@ -598,9 +599,11 @@ mod tests {
             RpcChain::MainNet,
             BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
-        let tx_hash = "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955";
+        let tx_hash = TransactionHash(stark_felt!(
+            "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
+        ));
 
-        rpc_state.get_transaction(tx_hash);
+        rpc_state.get_transaction(&tx_hash);
     }
 
     #[test]
@@ -755,13 +758,18 @@ mod blockifier_transaction_tests {
             cached_state::{CachedState, GlobalContractCache},
             state_api::{StateReader, StateResult},
         },
-        transaction::objects::TransactionExecutionInfo,
+        transaction::{
+            account_transaction::AccountTransaction,
+            objects::TransactionExecutionInfo,
+            transactions::{ExecutableTransaction, InvokeTransaction},
+        },
     };
     use starknet_api::{
         block::BlockTimestamp,
         contract_address,
         core::{ChainId, CompiledClassHash, Nonce, PatriciaKey},
-        patricia_key,
+        patricia_key, stark_felt,
+        transaction::TransactionHash,
     };
 
     use super::*;
@@ -820,11 +828,6 @@ mod blockifier_transaction_tests {
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
         let rpc_state = RpcStateReader(RpcState::new(network, block));
-        let global_cache = GlobalContractCache::default();
-        let mut state = CachedState::new(rpc_state, global_cache);
-
-        let fee_token_address =
-            contract_address!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7");
 
         let chain_id = rpc_state.0.get_chain_name();
         let RpcBlockInfo {
@@ -832,6 +835,15 @@ mod blockifier_transaction_tests {
             block_timestamp,
             sequencer_address,
         } = rpc_state.0.get_block_info();
+
+        let tx_hash = TransactionHash(stark_felt!(tx_hash));
+        let sn_api_tx = rpc_state.0.get_transaction(&tx_hash);
+
+        let global_cache = GlobalContractCache::default();
+        let mut state = CachedState::new(rpc_state, global_cache);
+
+        let fee_token_address =
+            contract_address!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7");
 
         const N_STEPS_FEE_WEIGHT: f64 = 0.01;
         let vm_resource_fee_cost = Arc::new(HashMap::from([
@@ -863,8 +875,49 @@ mod blockifier_transaction_tests {
             max_recursion_depth: 50,
         };
 
-        let tx = rpc_state.0.get_transaction(tx_hash);
+        let blockifier_tx = match sn_api_tx {
+            Transaction::Invoke(tx) => {
+                let invoke = InvokeTransaction { tx, tx_hash };
+                AccountTransaction::Invoke(invoke)
+            }
+            _ => unimplemented!(),
+        };
 
-        tx.execute(&mut state, &block_context, 0).unwrap()
+        blockifier_tx
+            .execute(&mut state, &block_context, true, true)
+            .unwrap()
+    }
+
+    /// - Transaction Hash: `0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5`
+    /// - Network: `mainnet`
+    /// - Type: `Invoke`
+    /// - Contract: StarkGate `0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7`
+    /// - Entrypoint: `transfer(recipient, amount)`
+    /// - Fee discrepancy: test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
+    /// - Link to Explorer: https://starkscan.co/tx/0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5
+    #[test]
+    fn test_invoke_0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5() {
+        let TransactionExecutionInfo {
+            execute_call_info,
+            actual_fee,
+            actual_resources,
+            ..
+        } = test_tx(
+            "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+            RpcChain::MainNet,
+            90_006,
+            13563643256,
+        );
+
+        let CallInfo {
+            vm_resources,
+            inner_calls,
+            ..
+        } = execute_call_info.unwrap();
+
+        dbg!(actual_resources);
+        dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
+        dbg!(vm_resources); // Ok with explorer
+        dbg!(inner_calls.len()); // Ok with explorer
     }
 }
