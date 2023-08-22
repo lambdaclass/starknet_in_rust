@@ -16,7 +16,7 @@ use starknet_in_rust::{
 use std::env;
 use thiserror::Error;
 
-#[cfg(test)]
+// #[cfg(test)]
 use ::{
     cairo_vm::felt::felt_str,
     starknet_in_rust::{
@@ -60,7 +60,7 @@ impl fmt::Display for RpcChain {
 /// In order to use it an Infura API key is necessary.
 pub struct RpcState {
     /// Enum with one of the supported Infura chains/
-    chain: RpcChain,
+    pub chain: RpcChain,
     /// Infura API key.
     api_key: String,
     /// Struct that holds information on the block where we are going to use to read the state.
@@ -192,7 +192,7 @@ impl<'de> Deserialize<'de> for TransactionTrace {
     }
 }
 
-#[cfg(test)]
+// #[cfg(test)]
 impl RpcState {
     /// Requests the transaction trace to the Feeder Gateway API.
     /// It's useful for testing the transaction outputs like:
