@@ -288,7 +288,7 @@ impl RpcState {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getTransactionByHash",
-            "params": [format!("0x{}", hash)],
+            "params": [hash.to_string()],
             "id": 1
         });
         let response: serde_json::Value = self.rpc_call(&params).unwrap();
