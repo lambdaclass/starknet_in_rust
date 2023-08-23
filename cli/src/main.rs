@@ -313,8 +313,7 @@ pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
             Arc::new(InMemoryStateReader::default()),
-            Some(HashMap::new()),
-            None,
+            HashMap::new(),
         )),
     });
 

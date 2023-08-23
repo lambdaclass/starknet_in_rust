@@ -10,7 +10,9 @@ use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::{
         cached_state::CachedState,
         in_memory_state_reader::InMemoryStateReader,
@@ -58,8 +60,11 @@ fn test_erc20_cairo2() {
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class);
-    contract_class_cache.insert(erc20_class_hash, test_contract_class);
+    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.insert(
+        erc20_class_hash,
+        CompiledClass::Casm(Arc::new(test_contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -70,7 +75,7 @@ fn test_erc20_cairo2() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let name_ = Felt252::from_bytes_be(b"some-token");
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");

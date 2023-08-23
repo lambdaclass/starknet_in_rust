@@ -40,7 +40,7 @@ impl StarknetState {
         let block_context = context.unwrap_or_default();
         let state_reader = Arc::new(InMemoryStateReader::default());
 
-        let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
+        let state = CachedState::new(state_reader, HashMap::new());
 
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
@@ -330,6 +330,7 @@ mod tests {
         },
         execution::{CallType, OrderedL2ToL1Message},
         hash_utils::calculate_contract_address,
+        services::api::contract_classes::compiled_class::CompiledClass,
         state::state_cache::StorageEntry,
         utils::{calculate_sn_keccak, felt_to_hash},
     };
@@ -399,11 +400,10 @@ mod tests {
             starknet_state
                 .state
                 .contract_classes
-                .unwrap()
                 .get(&class_hash)
                 .unwrap()
                 .to_owned(),
-            contract_class
+            CompiledClass::Deprecated(Arc::new(contract_class))
         );
     }
 
@@ -419,7 +419,10 @@ mod tests {
         // hack store account contract
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+        );
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -440,11 +443,12 @@ mod tests {
         state_reader
             .address_to_storage_mut()
             .insert(storage_entry.clone(), storage.clone());
-        state_reader
-            .class_hash_to_contract_class_mut()
-            .insert(class_hash, contract_class.clone());
+        state_reader.class_hash_to_compiled_class_mut().insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+        );
 
-        let state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+        let state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
         //* --------------------------------------------
         //*    Create starknet state with previous data

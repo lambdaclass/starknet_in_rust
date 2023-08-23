@@ -19,11 +19,7 @@ use std::{
     sync::Arc,
 };
 
-// K: class_hash V: ContractClass
-pub type ContractClassCache = HashMap<ClassHash, ContractClass>;
-pub type CasmClassCache = HashMap<ClassHash, CasmContractClass>;
-
-pub const UNINITIALIZED_CLASS_HASH: &ClassHash = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
 
 /// Represents a cached state of contract classes with optional caches.
 #[derive(Default, Clone, Debug, Eq, Getters, MutGetters, PartialEq)]
@@ -32,60 +28,51 @@ pub struct CachedState<T: StateReader> {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) cache: StateCache,
     #[get = "pub"]
-    pub(crate) contract_classes: Option<ContractClassCache>,
-    #[get = "pub"]
-    pub(crate) casm_contract_classes: Option<CasmClassCache>,
+    pub(crate) contract_classes: HashMap<ClassHash, CompiledClass>,
 }
 
 impl<T: StateReader> CachedState<T> {
     /// Constructor, creates a new cached state.
-    pub fn new(
-        state_reader: Arc<T>,
-        contract_class_cache: Option<ContractClassCache>,
-        casm_class_cache: Option<CasmClassCache>,
-    ) -> Self {
+    pub fn new(state_reader: Arc<T>, contract_classes: HashMap<ClassHash, CompiledClass>) -> Self {
         Self {
             cache: StateCache::default(),
-            contract_classes: contract_class_cache,
             state_reader,
-            casm_contract_classes: casm_class_cache,
+            contract_classes,
         }
     }
 
     /// Creates a CachedState for testing purposes.
     pub fn new_for_testing(
         state_reader: Arc<T>,
-        contract_classes: Option<ContractClassCache>,
         cache: StateCache,
-        casm_contract_classes: Option<CasmClassCache>,
+        contract_classes: HashMap<ClassHash, CompiledClass>,
     ) -> Self {
         Self {
             cache,
             contract_classes,
             state_reader,
-            casm_contract_classes,
         }
     }
 
     /// Sets the contract classes cache.
     pub fn set_contract_classes(
         &mut self,
-        contract_classes: ContractClassCache,
+        contract_classes: HashMap<ClassHash, CompiledClass>,
     ) -> Result<(), StateError> {
-        if self.contract_classes.is_some() {
+        if !self.contract_classes.is_empty() {
             return Err(StateError::AssignedContractClassCache);
         }
-        self.contract_classes = Some(contract_classes);
+        self.contract_classes = contract_classes;
         Ok(())
     }
 
-    /// Returns the casm classes.
-    #[allow(dead_code)]
-    pub(crate) fn get_casm_classes(&mut self) -> Result<&CasmClassCache, StateError> {
-        self.casm_contract_classes
-            .as_ref()
-            .ok_or(StateError::MissingCasmClassCache)
-    }
+    // /// Returns the casm classes.
+    // #[allow(dead_code)]
+    // pub(crate) fn get_casm_classes(&mut self) -> Result<&CasmClassCache, StateError> {
+    //     self.casm_contract_classes
+    //         .as_ref()
+    //         .ok_or(StateError::MissingCasmClassCache)
+    // }
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
@@ -172,37 +159,24 @@ impl<T: StateReader> StateReader for CachedState<T> {
         if class_hash == UNINITIALIZED_CLASS_HASH {
             return Err(StateError::UninitiaizedClassHash);
         }
+
         // I: FETCHING FROM CACHE
-        // I: DEPRECATED CONTRACT CLASS
-        // deprecated contract classes dont have compiled class hashes, so we only have one case
-        if let Some(compiled_class) = self
-            .contract_classes
-            .as_ref()
-            .and_then(|x| x.get(class_hash))
-        {
-            return Ok(CompiledClass::Deprecated(Arc::new(compiled_class.clone())));
+        if let Some(compiled_class) = self.contract_classes.get(class_hash) {
+            return Ok(compiled_class.clone());
         }
-        // I: CASM CONTRACT CLASS : COMPILED_CLASS_HASH
-        if let Some(compiled_class) = self
-            .casm_contract_classes
-            .as_ref()
-            .and_then(|x| x.get(class_hash))
-        {
-            return Ok(CompiledClass::Casm(Arc::new(compiled_class.clone())));
-        }
+
         // I: CASM CONTRACT CLASS : CLASS_HASH
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = &mut self
-                .casm_contract_classes
-                .as_ref()
-                .and_then(|m| m.get(compiled_class_hash))
-            {
-                return Ok(CompiledClass::Casm(Arc::new(casm_class.clone())));
+            if let Some(casm_class) = self.contract_classes.get(compiled_class_hash) {
+                return Ok(casm_class.clone());
             }
         }
+
         // II: FETCHING FROM STATE_READER
+        // TODO: Should this modify the cache?
+        // TODO: Related: Isn't this exact method available in `impl<T: StateReader> State for CachedState`?
         self.state_reader.get_contract_class(class_hash)
     }
 }
@@ -214,15 +188,13 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &ClassHash,
         contract_class: &ContractClass,
     ) -> Result<(), StateError> {
-        match self.contract_classes.as_mut() {
-            Some(x) => {
-                x.insert(*class_hash, contract_class.clone());
-            }
-            None => {
-                self.contract_classes = Some(HashMap::new());
-                self.set_contract_class(class_hash, contract_class)?;
-            }
-        }
+        // TODO: Could this method's signature use `CompiledClass` instead of `ContractClass`? Or
+        //   even better, could the entire trait use `Arc<CompiledClass>`?
+        self.contract_classes.insert(
+            *class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+        );
+
         Ok(())
     }
 
@@ -291,11 +263,11 @@ impl<T: StateReader> State for CachedState<T> {
         casm_class: CasmContractClass,
     ) -> Result<(), StateError> {
         let compiled_class_hash = compiled_class_hash.to_be_bytes();
+        self.contract_classes.insert(
+            compiled_class_hash,
+            CompiledClass::Casm(Arc::new(casm_class)),
+        );
 
-        self.casm_contract_classes
-            .as_mut()
-            .ok_or(StateError::MissingCasmClassCache)?
-            .insert(compiled_class_hash, casm_class);
         Ok(())
     }
 
@@ -437,45 +409,32 @@ impl<T: StateReader> State for CachedState<T> {
         if class_hash == UNINITIALIZED_CLASS_HASH {
             return Err(StateError::UninitiaizedClassHash);
         }
+
         // I: FETCHING FROM CACHE
-        // I: DEPRECATED CONTRACT CLASS
         // deprecated contract classes dont have compiled class hashes, so we only have one case
-        if let Some(compiled_class) = self
-            .contract_classes
-            .as_ref()
-            .and_then(|x| x.get(class_hash))
-        {
-            return Ok(CompiledClass::Deprecated(Arc::new(compiled_class.clone())));
+        if let Some(compiled_class) = self.contract_classes.get(class_hash) {
+            return Ok(compiled_class.clone());
         }
-        // I: CASM CONTRACT CLASS : COMPILED_CLASS_HASH
-        if let Some(compiled_class) = self
-            .casm_contract_classes
-            .as_ref()
-            .and_then(|x| x.get(class_hash))
-        {
-            return Ok(CompiledClass::Casm(Arc::new(compiled_class.clone())));
-        }
+
         // I: CASM CONTRACT CLASS : CLASS_HASH
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = &mut self
-                .casm_contract_classes
-                .as_ref()
-                .and_then(|m| m.get(compiled_class_hash))
-            {
-                return Ok(CompiledClass::Casm(Arc::new(casm_class.clone())));
+            if let Some(casm_class) = self.contract_classes.get(compiled_class_hash) {
+                return Ok(casm_class.clone());
             }
         }
+
         // II: FETCHING FROM STATE_READER
         let contract = self.state_reader.get_contract_class(class_hash)?;
         match contract {
-            CompiledClass::Casm(ref class) => {
+            CompiledClass::Casm(ref casm_class) => {
                 // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
                 let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
-                self.casm_contract_classes
-                    .as_mut()
-                    .and_then(|m| m.insert(compiled_class_hash, class.as_ref().clone()));
+                self.set_compiled_class(
+                    &Felt252::from_bytes_be(&compiled_class_hash),
+                    casm_class.as_ref().clone(),
+                )?;
             }
             CompiledClass::Deprecated(ref contract) => {
                 self.set_contract_class(class_hash, &contract.clone())?
@@ -503,7 +462,6 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
-            HashMap::new(),
         );
 
         let contract_address = Address(4242.into());
@@ -522,7 +480,7 @@ mod tests {
             .address_to_storage_mut()
             .insert(storage_entry, storage_value);
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         assert_eq!(
             cached_state.get_class_hash_at(&contract_address).unwrap(),
@@ -545,20 +503,18 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
-            HashMap::new(),
         );
         let contract_class =
             ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
                 .unwrap();
 
         state_reader
-            .class_hash_to_contract_class
-            .insert([1; 32], contract_class);
+            .class_hash_to_compiled_class
+            .insert([1; 32], CompiledClass::Deprecated(Arc::new(contract_class)));
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         cached_state.set_contract_classes(HashMap::new()).unwrap();
-        assert!(cached_state.contract_classes.is_some());
 
         assert_eq!(
             cached_state.get_contract_class(&[1; 32]).unwrap(),
@@ -573,7 +529,7 @@ mod tests {
     #[test]
     fn cached_state_storage_test() {
         let mut cached_state =
-            CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+            CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let storage_entry: StorageEntry = (Address(31.into()), [0; 32]);
         let value = Felt252::new(10);
@@ -595,7 +551,7 @@ mod tests {
 
         let contract_address = Address(32123.into());
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(state_reader, HashMap::new());
 
         assert!(cached_state
             .deploy_contract(contract_address, [10; 32])
@@ -611,7 +567,7 @@ mod tests {
         let storage_key = [18; 32];
         let value = Felt252::new(912);
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(state_reader, HashMap::new());
 
         // set storage_key
         cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
@@ -629,27 +585,6 @@ mod tests {
         assert_eq!(new_result.unwrap(), new_value);
     }
 
-    /// This test ensures that an error is thrown when trying to set contract classes twice.
-    #[test]
-    fn set_contract_classes_twice_error_test() {
-        let state_reader = InMemoryStateReader::new(
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        );
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
-
-        cached_state.set_contract_classes(HashMap::new()).unwrap();
-        let result = cached_state
-            .set_contract_classes(HashMap::new())
-            .unwrap_err();
-
-        assert_matches!(result, StateError::AssignedContractClassCache);
-    }
-
     /// This test ensures that an error is thrown if a contract address is out of range.
     #[test]
     fn deploy_contract_address_out_of_range_error_test() {
@@ -659,12 +594,11 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
-            HashMap::new(),
         );
 
         let contract_address = Address(0.into());
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         let result = cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -685,12 +619,11 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
-            HashMap::new(),
         );
 
         let contract_address = Address(42.into());
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -714,12 +647,11 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
-            HashMap::new(),
         );
 
         let contract_address = Address(32123.into());
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -744,12 +676,11 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
-            HashMap::new(),
         );
 
         let address_one = Address(Felt252::one());
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         let state_diff = StateDiff {
             address_to_class_hash: HashMap::from([(
@@ -784,7 +715,7 @@ mod tests {
     #[test]
     fn count_actual_storage_changes_test() {
         let state_reader = InMemoryStateReader::default();
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         let address_one = Address(1.into());
         let address_two = Address(2.into());

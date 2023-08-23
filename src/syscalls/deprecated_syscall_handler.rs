@@ -730,7 +730,7 @@ mod tests {
             ]
         );
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -766,7 +766,7 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -808,7 +808,7 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -847,7 +847,7 @@ mod tests {
         );
     }
 
-    /// Tests the correct behavior of a storage read operation within a blockchain.  
+    /// Tests the correct behavior of a storage read operation within a blockchain.
     #[test]
     fn test_bl_storage_read_hint_ok() {
         let mut vm = vm!();
@@ -876,7 +876,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -911,7 +911,7 @@ mod tests {
         assert_matches!(get_big_int(&vm, relocatable!(2, 2)), Ok(response) if response == storage_value );
     }
 
-    /// Tests the correct behavior of a storage write operation within a blockchain.  
+    /// Tests the correct behavior of a storage write operation within a blockchain.
     #[test]
     fn test_bl_storage_write_hint_ok() {
         let mut vm = vm!();
@@ -941,7 +941,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_WRITE.to_string(), ids_data);
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -980,7 +980,7 @@ mod tests {
         assert_eq!(write, Felt252::new(45));
     }
 
-    /// Tests the correct behavior of a deploy operation within a blockchain.  
+    /// Tests the correct behavior of a deploy operation within a blockchain.
     #[test]
     fn test_bl_deploy_ok() {
         let mut vm = vm!();
@@ -1015,7 +1015,7 @@ mod tests {
         let hint_data = HintProcessorData::new_default(DEPLOY.to_string(), ids_data);
 
         // Create SyscallHintProcessor
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -1071,7 +1071,7 @@ mod tests {
         );
     }
 
-    /// Tests the correct behavior of a storage deploy and invoke operations within a blockchain.  
+    /// Tests the correct behavior of a storage deploy and invoke operations within a blockchain.
     #[test]
     fn test_deploy_and_invoke() {
         /*
@@ -1113,7 +1113,7 @@ mod tests {
         );
 
         // Create SyscallHintProcessor
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),

@@ -131,7 +131,6 @@ impl ExecutionEntryPoint {
                 let mut tmp_state = CachedState::new(
                     state.state_reader.clone(),
                     state.contract_classes.clone(),
-                    state.casm_contract_classes.clone(),
                 );
                 tmp_state.cache = state.cache.clone();
 

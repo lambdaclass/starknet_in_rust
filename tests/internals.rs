@@ -41,7 +41,7 @@ use starknet_in_rust::{
     execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
     state::in_memory_state_reader::InMemoryStateReader,
     state::{
-        cached_state::{CachedState, ContractClassCache},
+        cached_state::CachedState,
         state_api::{State, StateReader},
         state_cache::StateCache,
         state_cache::StorageEntry,
@@ -188,14 +188,14 @@ fn create_account_tx_test_state(
                 state_reader.address_to_storage_mut().extend(stored);
             }
             for (class_hash, contract_class) in class_hash_to_class {
-                state_reader
-                    .class_hash_to_contract_class_mut()
-                    .insert(class_hash, contract_class);
+                state_reader.class_hash_to_compiled_class_mut().insert(
+                    class_hash,
+                    CompiledClass::Deprecated(Arc::new(contract_class)),
+                );
             }
             Arc::new(state_reader)
         },
-        Some(HashMap::new()),
-        Some(HashMap::new()),
+        HashMap::new(),
     );
 
     Ok((block_context, cached_state))
@@ -204,38 +204,37 @@ fn create_account_tx_test_state(
 fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    let state_cache = ContractClassCache::new();
-
-    CachedState::new(
-        Arc::new(in_memory_state_reader),
-        Some(state_cache),
-        Some(HashMap::new()),
-    )
+    CachedState::new(Arc::new(in_memory_state_reader), HashMap::new())
 }
 
 fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    let contract_classes_cache = ContractClassCache::from([
+    let contract_classes_cache = HashMap::from([
         (
             felt_to_hash(&TEST_CLASS_HASH.clone()),
-            ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+            CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+            )),
         ),
         (
             felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
-            ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            )),
         ),
         (
             felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
-            ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            )),
         ),
     ]);
 
     CachedState::new_for_testing(
         Arc::new(in_memory_state_reader),
-        Some(contract_classes_cache),
         state_cache_after_invoke_tx(fee),
-        Some(HashMap::new()),
+        contract_classes_cache,
     )
 }
 
@@ -372,18 +371,23 @@ fn initial_in_memory_state_reader() -> InMemoryStateReader {
         HashMap::from([
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
-                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                CompiledClass::Deprecated(Arc::new(
+                    ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                )),
             ),
             (
                 felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                CompiledClass::Deprecated(Arc::new(
+                    ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                )),
             ),
             (
                 felt_to_hash(&TEST_CLASS_HASH),
-                ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                CompiledClass::Deprecated(Arc::new(
+                    ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                )),
             ),
         ]),
-        HashMap::new(),
         HashMap::new(),
     )
 }
@@ -525,10 +529,6 @@ fn test_create_account_tx_test_state() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -542,21 +542,21 @@ fn test_create_account_tx_test_state() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -875,10 +875,6 @@ fn test_declare_tx() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -892,21 +888,21 @@ fn test_declare_tx() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -963,10 +959,6 @@ fn test_declarev2_tx() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -980,21 +972,21 @@ fn test_declarev2_tx() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -1309,10 +1301,6 @@ fn test_invoke_tx_state() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -1326,21 +1314,21 @@ fn test_invoke_tx_state() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -1362,10 +1350,6 @@ fn test_invoke_tx_state() {
     let expected_final_state = expected_state_after_tx(result.actual_fee);
 
     assert_eq!(&state.cache(), &expected_final_state.cache());
-    assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_final_state.casm_contract_classes()
-    );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_final_state.state_reader.address_to_class_hash
@@ -1390,10 +1374,6 @@ fn test_invoke_with_declarev2_tx() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -1407,21 +1387,21 @@ fn test_invoke_with_declarev2_tx() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -1488,19 +1468,11 @@ fn test_deploy_account() {
 
     assert_eq!(&state.cache(), &state_before.cache());
     assert_eq!(&state.contract_classes(), &state_before.contract_classes());
-    assert_eq!(
-        &state.casm_contract_classes(),
-        &state_before.casm_contract_classes()
-    );
 
     let tx_info = deploy_account_tx
         .execute(&mut state, &block_context)
         .unwrap();
 
-    assert_eq!(
-        state.casm_contract_classes(),
-        state_after.casm_contract_classes()
-    );
     assert_eq!(state.cache(), state_after.cache());
 
     let expected_validate_call_info = expected_validate_call_info(
@@ -1599,22 +1571,26 @@ fn expected_deploy_account_states() -> (
             HashMap::from([
                 (
                     felt_to_hash(&0x110.into()),
-                    ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                    CompiledClass::Deprecated(Arc::new(
+                        ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                    )),
                 ),
                 (
                     felt_to_hash(&0x111.into()),
-                    ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                    CompiledClass::Deprecated(Arc::new(
+                        ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                    )),
                 ),
                 (
                     felt_to_hash(&0x1010.into()),
-                    ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                    CompiledClass::Deprecated(Arc::new(
+                        ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                    )),
                 ),
             ]),
             HashMap::new(),
-            HashMap::new(),
         )),
-        Some(ContractClassCache::new()),
-        Some(HashMap::new()),
+        HashMap::new(),
     );
     state_before.set_storage_at(
         &(
