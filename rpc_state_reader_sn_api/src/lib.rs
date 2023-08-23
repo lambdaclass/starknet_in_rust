@@ -2,7 +2,7 @@ use blockifier::execution::contract_class::{
     ContractClass as BlockifierContractClass, ContractClassV0, ContractClassV0Inner,
     ContractClassV1, ContractClassV1Inner,
 };
-use blockifier::execution::entry_point::CallInfo;
+use blockifier::execution::entry_point::{CallInfo, ExecutionResources};
 use cairo_lang_starknet::abi::Contract;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::{
@@ -10,6 +10,7 @@ use cairo_lang_starknet::contract_class::{
 };
 use cairo_vm::felt::{felt_str, Felt252};
 use cairo_vm::types::program::Program;
+use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
 use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
@@ -21,7 +22,9 @@ use starknet_api::core::{ChainId, ClassHash, EntryPointSelector};
 use starknet_api::deprecated_contract_class::{self, EntryPointOffset};
 use starknet_api::hash::StarkFelt;
 use starknet_api::serde_utils::{NonPrefixedBytesAsHex, PrefixedBytesAsHex};
-use starknet_api::transaction::{Transaction, TransactionHash};
+use starknet_api::transaction::{
+    InvokeTransaction, InvokeTransactionV0, Transaction, TransactionHash,
+};
 use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
 use std::collections::HashMap;
 use std::env;
@@ -183,7 +186,7 @@ pub struct RpcExecutionResources {
 
 #[derive(Debug)]
 pub struct RpcCallInfo {
-    pub execution_resources: RpcExecutionResources,
+    pub execution_resources: VmExecutionResources,
     pub retdata: Option<Vec<StarkFelt>>,
     pub calldata: Option<Vec<StarkFelt>>,
     pub internal_calls: Vec<RpcCallInfo>,
@@ -199,7 +202,7 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         // Parse execution_resources
         let execution_resources_value = value["execution_resources"].clone();
 
-        let execution_resources = RpcExecutionResources {
+        let execution_resources = VmExecutionResources {
             n_steps: serde_json::from_value(execution_resources_value["n_steps"].clone())
                 .map_err(serde::de::Error::custom)?,
             n_memory_holes: serde_json::from_value(
@@ -270,7 +273,7 @@ impl RpcState {
     /// - actual fee
     /// - events
     /// - return data
-    pub fn get_transaction_trace(&self, hash: ClassHash) -> TransactionTrace {
+    pub fn get_transaction_trace(&self, hash: TransactionHash) -> TransactionTrace {
         let chain_name = self.get_chain_name();
         let response = ureq::get(&format!(
             "https://{}.starknet.io/feeder_gateway/get_transaction_trace",
@@ -291,12 +294,20 @@ impl RpcState {
             "params": [hash.to_string()],
             "id": 1
         });
-        let response: serde_json::Value = self.rpc_call(&params).unwrap();
-        let it: starknet_api::transaction::InvokeTransactionV1 =
-            serde_json::from_value(response["result"].clone()).unwrap();
-        let sn_api_invoke: starknet_api::transaction::InvokeTransaction =
-            starknet_api::transaction::InvokeTransaction::V1(it);
-        starknet_api::transaction::Transaction::Invoke(sn_api_invoke)
+        let result = self.rpc_call::<serde_json::Value>(&params).unwrap()["result"].clone();
+
+        match result["type"].as_str().unwrap() {
+            "INVOKE" => match result["version"].as_str().unwrap() {
+                "0x0" => Transaction::Invoke(InvokeTransaction::V0(
+                    serde_json::from_value(result).unwrap(),
+                )),
+                "0x1" => Transaction::Invoke(InvokeTransaction::V1(
+                    serde_json::from_value(result).unwrap(),
+                )),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
     }
 
     pub fn get_chain_name(&self) -> ChainId {
@@ -410,21 +421,43 @@ impl RpcState {
     }
 
     fn get_storage_at(&self, contract_address: &ContractAddress, key: &StorageKey) -> StarkFelt {
-        let contract_address = Felt252::from_bytes_be(contract_address.0.key().bytes());
-        let key = Felt252::from_bytes_be(key.0.key().bytes());
+        let contract_address = contract_address.0.key();
+        let key = key.0.key();
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getStorageAt",
-            "params": [format!("0x{}", contract_address.to_str_radix(16)), format!(
-                "0x{}",
-                key.to_str_radix(16)
-            ), self.block.to_value()],
+            "params": [contract_address.to_string(),
+            key.to_string(), self.block.to_value()],
             "id": 1
         });
 
         let resp: RpcResponseFelt = self.rpc_call(&params).unwrap();
 
         resp.result
+    }
+
+    /// Requests the given transaction to the Feeder Gateway API.
+    pub fn get_transaction_receipt(&self, hash: &TransactionHash) -> Transaction {
+        let params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getTransactionReceipt",
+            "params": [hash.to_string()],
+            "id": 1
+        });
+        let result = self.rpc_call::<serde_json::Value>(&params).unwrap()["result"].clone();
+
+        match result["type"].as_str().unwrap() {
+            "INVOKE" => match result["version"].as_str().unwrap() {
+                "0x0" => Transaction::Invoke(InvokeTransaction::V0(
+                    serde_json::from_value(result).unwrap(),
+                )),
+                "0x1" => Transaction::Invoke(InvokeTransaction::V1(
+                    serde_json::from_value(result).unwrap(),
+                )),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -625,8 +658,9 @@ mod tests {
             BlockValue::Number(serde_json::to_value(838683).unwrap()),
         );
 
-        let tx_hash =
-            class_hash!("19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc");
+        let tx_hash = TransactionHash(stark_felt!(
+            "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc"
+        ));
 
         let tx_trace = rpc_state.get_transaction_trace(tx_hash);
 
@@ -661,7 +695,7 @@ mod tests {
         assert_eq!(tx_trace.validate_invocation.retdata, Some(vec![]));
         assert_eq!(
             tx_trace.validate_invocation.execution_resources,
-            RpcExecutionResources {
+            VmExecutionResources {
                 n_steps: 790,
                 n_memory_holes: 51,
                 builtin_instance_counter: HashMap::from([
@@ -699,7 +733,7 @@ mod tests {
         );
         assert_eq!(
             tx_trace.function_invocation.execution_resources,
-            RpcExecutionResources {
+            VmExecutionResources {
                 n_steps: 2808,
                 n_memory_holes: 136,
                 builtin_instance_counter: HashMap::from([
@@ -736,7 +770,7 @@ mod tests {
         );
         assert_eq!(
             tx_trace.fee_transfer_invocation.execution_resources,
-            RpcExecutionResources {
+            VmExecutionResources {
                 n_steps: 586,
                 n_memory_holes: 42,
                 builtin_instance_counter: HashMap::from([
@@ -822,7 +856,7 @@ mod blockifier_transaction_tests {
         network: RpcChain,
         block_number: u64,
         gas_price: u128,
-    ) -> TransactionExecutionInfo {
+    ) -> (TransactionExecutionInfo, TransactionTrace) {
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
         // Instantiate the RPC StateReader and the CachedState
@@ -837,9 +871,11 @@ mod blockifier_transaction_tests {
             sequencer_address,
         } = rpc_reader.0.get_block_info();
 
-        // Get trnasaction before giving ownership of the reader
+        // Get transaction before giving ownership of the reader
         let tx_hash = TransactionHash(stark_felt!(tx_hash));
         let sn_api_tx = rpc_reader.0.get_transaction(&tx_hash);
+
+        let trace = rpc_reader.0.get_transaction_trace(tx_hash);
 
         // Create state from RPC reader
         let global_cache = GlobalContractCache::default();
@@ -875,7 +911,7 @@ mod blockifier_transaction_tests {
             gas_price,
             invoke_tx_max_n_steps: 1_000_000,
             validate_max_n_steps: 1_000_000,
-            max_recursion_depth: 50,
+            max_recursion_depth: 500,
         };
 
         // Map starknet_api transaction to blockifier's
@@ -887,9 +923,12 @@ mod blockifier_transaction_tests {
             _ => unimplemented!(),
         };
 
-        blockifier_tx
-            .execute(&mut state, &block_context, true, true)
-            .unwrap()
+        (
+            blockifier_tx
+                .execute(&mut state, &block_context, true, true)
+                .unwrap(),
+            trace,
+        )
     }
 
     /// - Transaction Hash: `0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5`
@@ -901,17 +940,19 @@ mod blockifier_transaction_tests {
     /// - Link to Explorer: https://starkscan.co/tx/0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5
     #[test]
     fn test_invoke_0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5() {
-        let TransactionExecutionInfo {
-            execute_call_info,
-            actual_fee,
-            actual_resources,
-            ..
-        } = test_tx(
+        let (tx_info, trace) = test_tx(
             "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
             RpcChain::MainNet,
             90_006,
             13563643256,
         );
+
+        let TransactionExecutionInfo {
+            execute_call_info,
+            actual_fee,
+            actual_resources,
+            ..
+        } = tx_info;
 
         let CallInfo {
             vm_resources,
@@ -920,9 +961,59 @@ mod blockifier_transaction_tests {
         } = execute_call_info.unwrap();
 
         dbg!(actual_resources);
-        dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
-        dbg!(vm_resources); // Ok with explorer
-        dbg!(inner_calls.len()); // Ok with explorer
-        assert!(false);
+        //dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
+        //dbg!(execute_call_info.unwrap().vm_resources); // Ok with explorer
+        //dbg!(execute_call_info.unwrap().inner_calls.len()); // Ok with explorer
+        //dbg!(trace.function_invocation.execution_resources);
+        //dbg!(trace.function_invocation.internal_calls.len());
+        //dbg!(execute_call_info);
+
+        assert_eq!(vm_resources, trace.function_invocation.execution_resources);
+        assert_eq!(inner_calls.len(), trace.function_invocation.internal_calls.len());
+
+        assert_eq!(actual_fee.0, 67749104314311);
+    }
+
+    /// - Transaction Hash: `0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf`
+    /// - Network: `testnet`
+    /// - Type: `Invoke`
+    /// - Contract: Fibonacci `0x012d37c39a385cf56801b57626e039147abce1183ce55e419e4296398b81d9e2`
+    /// - Entrypoint: `fib(first_element, second_element, n)`
+    /// - Fee discrepancy: test=7252831227950, explorer=7207614784695, diff=45216443255 (0.06%)
+    /// - Link to Explorer: https://testnet.starkscan.co/tx/0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf
+    #[test]
+    fn test_invoke_0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf() {
+        let (tx_info, trace) = test_tx(
+            "0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf",
+            RpcChain::TestNet,
+            838683,
+            2917470325,
+        );
+
+        let TransactionExecutionInfo {
+            execute_call_info,
+            actual_fee,
+            actual_resources,
+            ..
+        } = tx_info;
+
+        let CallInfo {
+            vm_resources,
+            inner_calls,
+            ..
+        } = execute_call_info.unwrap();
+
+        assert_eq!(vm_resources, trace.function_invocation.execution_resources);
+        assert_eq!(inner_calls.len(), trace.function_invocation.internal_calls.len());
+
+        assert_eq!(actual_fee.0, 7207614784695);
+
+        dbg!(actual_resources);
+        //dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
+        //dbg!(execute_call_info.unwrap().vm_resources); // Ok with explorer
+        //dbg!(execute_call_info.unwrap().inner_calls.len()); // Ok with explorer
+        //dbg!(trace.function_invocation.execution_resources);
+        //dbg!(trace.function_invocation.internal_calls.len());
+        //dbg!(execute_call_info);
     }
 }

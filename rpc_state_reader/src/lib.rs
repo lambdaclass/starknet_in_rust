@@ -841,7 +841,7 @@ mod transaction_tests {
         let result = test_tx(
             "0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf",
             RpcChain::TestNet,
-            838683,
+            838684,
             2917470325,
         );
 
@@ -849,6 +849,7 @@ mod transaction_tests {
         dbg!(&result.actual_fee); // test=7252831227950, explorer=7207614784695, diff=45216443255 (0.06%)
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
         dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
+        assert!(false);
     }
 
     /// - Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
