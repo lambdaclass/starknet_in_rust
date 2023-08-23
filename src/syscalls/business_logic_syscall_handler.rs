@@ -101,15 +101,15 @@ lazy_static! {
         map.insert("fee_transfer", map["entry_point"] + 100 * STEP);
         map.insert("transaction", 2 * map["entry_point"] + map["fee_transfer"] + 100 * STEP);
 
-        map.insert("call_contract", SYSCALL_BASE + 10 * STEP + map["entry_point"]);
-        map.insert("deploy", SYSCALL_BASE + 200 * STEP + map["entry_point"]);
-        map.insert("get_execution_info", SYSCALL_BASE + 10 * STEP);
+        map.insert("call_contract", 10 * STEP + map["entry_point"]);
+        map.insert("deploy", 200 * STEP + map["entry_point"]);
+        map.insert("get_execution_info", 10 * STEP);
         map.insert("library_call", map["call_contract"]);
-        map.insert("replace_class", SYSCALL_BASE + 50 * STEP);
-        map.insert("storage_read", SYSCALL_BASE + 50 * STEP);
-        map.insert("storage_write", SYSCALL_BASE + 50 * STEP);
-        map.insert("emit_event", SYSCALL_BASE + 10 * STEP);
-        map.insert("send_message_to_l1", SYSCALL_BASE + 50 * STEP);
+        map.insert("replace_class",   50 * STEP);
+        map.insert("storage_read",   50 * STEP);
+        map.insert("storage_write",  50 * STEP);
+        map.insert("emit_event",  10 * STEP);
+        map.insert("send_message_to_l1",  50 * STEP);
         map.insert("get_block_timestamp", 0);
         map.insert("keccak", 0);
 
