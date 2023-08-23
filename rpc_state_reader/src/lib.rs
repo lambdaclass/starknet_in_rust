@@ -793,17 +793,17 @@ mod transaction_tests {
     /// - Link to Explorer: https://starkscan.co/tx/0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5
     #[test]
     fn test_invoke_0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5() {
-        let result = test_tx(
+        let _result = test_tx(
             "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
             RpcChain::MainNet,
             90_006,
             13563643256,
         );
 
-        dbg!(&result.actual_resources);
-        dbg!(&result.actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
-        dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
-        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
+        // dbg!(&result.actual_resources);
+        // dbg!(&result.actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
+        // dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
+        // dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
     }
 
     /// - Transaction Hash: `0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955`

@@ -160,6 +160,7 @@ impl InvokeFunction {
             return Ok(None);
         }
 
+        dbg!("run validate entry point");
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
@@ -195,6 +196,7 @@ impl InvokeFunction {
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
     ) -> Result<ExecutionResult, TransactionError> {
+        dbg!("run execute entrypoint");
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
@@ -227,6 +229,7 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        dbg!("apply");
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
@@ -238,6 +241,7 @@ impl InvokeFunction {
         } = if self.skip_execute {
             ExecutionResult::default()
         } else {
+            dbg!("else");
             self.run_execute_entrypoint(
                 state,
                 block_context,
@@ -276,6 +280,7 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        dbg!("is invoke");
         if !self.skip_nonce_check {
             self.handle_nonce(state)?;
         }
@@ -283,6 +288,7 @@ impl InvokeFunction {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
+
         let (fee_transfer_info, actual_fee) = charge_fee(
             state,
             &tx_exec_info.actual_resources,

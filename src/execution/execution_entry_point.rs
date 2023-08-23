@@ -106,6 +106,7 @@ impl ExecutionEntryPoint {
     where
         T: StateReader,
     {
+        dbg!("execute");
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
         let contract_class = state
@@ -361,6 +362,7 @@ impl ExecutionEntryPoint {
             _ => return Err(TransactionError::NotARelocatableValue),
         };
 
+        //dbg!(&tx_execution_context);
         let syscall_handler = DeprecatedBLSyscallHandler::new(
             tx_execution_context.clone(),
             state,
@@ -421,6 +423,7 @@ impl ExecutionEntryPoint {
 
         let retdata = runner.get_return_values()?;
 
+        dbg!(&runner.hint_processor.syscall_handler.events);
         self.build_call_info_deprecated::<S>(
             previous_cairo_usage,
             resources_manager,

@@ -252,6 +252,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
+        dbg!("emit event");
         let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
             Ok(DeprecatedSyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
@@ -259,13 +260,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 
         let keys_len = request.keys_len;
         let data_len = request.data_len;
+        dbg!(keys_len);
+        dbg!(data_len);
         let order = self.tx_execution_context.n_emitted_events;
+        dbg!(order);
         let keys: Vec<Felt252> = get_integer_range(vm, request.keys, keys_len)?;
         let data: Vec<Felt252> = get_integer_range(vm, request.data, data_len)?;
         self.events.push(OrderedEvent::new(order, keys, data));
 
         // Update events count.
         self.tx_execution_context.n_emitted_events += 1;
+        dbg!(self.tx_execution_context.n_emitted_events);
         Ok(())
     }
 
