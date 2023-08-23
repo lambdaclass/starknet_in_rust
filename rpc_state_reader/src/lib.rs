@@ -508,7 +508,7 @@ mod tests {
     fn test_get_block_info() {
         let rpc_state = RpcState::new(
             RpcChain::MainNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+            BlockValue::Number(serde_json::to_value(168204).unwrap()),
         );
 
         let gas_price_str = "13563643256";
