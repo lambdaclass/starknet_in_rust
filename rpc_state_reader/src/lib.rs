@@ -73,8 +73,6 @@ enum RpcError {
     RpcCall(String),
     #[error("Request failed with error: {0}")]
     Request(String),
-    #[error("Failed to cast from: {0} to: {1} with error: {2}")]
-    Cast(String, String, String),
 }
 
 /// [`BlockValue`] is an Enum that represent which block we are going to use to retrieve information.
@@ -139,23 +137,17 @@ impl RpcState {
         }
     }
 
-    fn rpc_call<T: for<'a> Deserialize<'a>>(
-        &self,
-        params: &serde_json::Value,
-    ) -> Result<T, RpcError> {
-        let response = ureq::post(&format!(
+    fn rpc_call<T: for<'a> Deserialize<'a>>(&self, params: impl ToString) -> Result<T, RpcError> {
+        ureq::post(&format!(
             "https://{}.infura.io/v3/{}",
             self.chain, self.api_key
         ))
         .set("Content-Type", "application/json")
         .set("accept", "application/json")
-        .send_json(params)
+        .send_string(&params.to_string())
         .map_err(|err| RpcError::Request(err.to_string()))?
-        .into_string()
-        .map_err(|err| {
-            RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string())
-        })?;
-        serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
+        .into_json()
+        .map_err(|err| RpcError::RpcCall(err.to_string()))
     }
 }
 
@@ -215,13 +207,11 @@ impl RpcState {
 
     /// Requests the given transaction to the Feeder Gateway API.
     pub fn get_transaction(&self, hash: &str) -> Transaction {
-        let params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getTransactionByHash",
-            "params": [format!("0x{}", hash)],
-            "id": 1
-        });
-        let response: serde_json::Value = self.rpc_call(&params).unwrap();
+        let response: serde_json::Value = self.rpc_call(
+            format!(
+                "{{\"jsonrpc\":\"2.0\",\"method\":\"starknet_getTransactionByHash\",\"params\":[\"0x{hash}\"],\"id\":1}}"
+            )
+        ).unwrap();
 
         match response["result"]["type"].as_str().unwrap() {
             "INVOKE" => {
@@ -323,14 +313,12 @@ impl RpcState {
         &self,
         starknet_os_config: starknet_in_rust::definitions::block_context::StarknetOsConfig,
     ) -> starknet_in_rust::state::BlockInfo {
-        let get_block_info_params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getBlockWithTxHashes",
-            "params": [self.block.to_value()],
-            "id": 1
-        });
-
-        let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
+        let block_info: serde_json::Value = self.rpc_call(
+            format!(
+                "{{\"jsonrpc\":\"2.0\",\"method\":\"starknet_getBlockWithTxHashes\",\"params\":[{}],\"id\":1}}",
+                self.block.to_value(),
+            )
+        ).unwrap();
 
         starknet_in_rust::state::BlockInfo {
             block_number: block_info["result"]["block_number"]
@@ -349,63 +337,49 @@ impl RpcState {
 
 impl StateReader for RpcState {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        let params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getClass",
-            "params": [self.block.to_value(), format!("0x{}", Felt252::from_bytes_be(class_hash).to_str_radix(16))],
-            "id": 1
-        });
-
         let response: RpcResponseProgram = self
-            .rpc_call(&params)
+            .rpc_call(format!(
+                "{{\"jsonrpc\":\"2.0\",\"method\":\"starknet_getClass\",\"params\":[{},\"0x{}\"],\"id\":1}}",
+                self.block.to_value(),
+                Felt252::from_bytes_be(class_hash).to_str_radix(16)
+            ))
             .map_err(|err| StateError::CustomError(err.to_string()))?;
 
         Ok(CompiledClass::from(response.result))
     }
 
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        let params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getClassHashAt",
-            "params": [self.block.to_value(), format!("0x{}", contract_address.0.to_str_radix(16))],
-            "id": 1
-        });
-
         let resp: RpcResponseFelt252 = self
-            .rpc_call(&params)
+            .rpc_call(format!(
+                "{{\"jsonrpc\":\"2.0\",\"method\":\"starknet_getClassHashAt\",\"params\":[{},\"0x{}\"],\"id\":1}}",
+                self.block.to_value(),
+                contract_address.0.to_str_radix(16)
+            ))
             .map_err(|err| StateError::CustomError(err.to_string()))?;
 
         Ok(resp.result.to_be_bytes())
     }
 
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
-        let params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getNonce",
-            "params": [self.block.to_value(), format!("0x{}", contract_address.0.to_str_radix(16))],
-            "id": 1
-        });
-
         let resp: RpcResponseFelt252 = self
-            .rpc_call(&params)
+            .rpc_call(format!(
+                "{{\"jsonrpc\":\"2.0\",\"method\":\"starknet_getNonce\",\"params\":[{},\"0x{}\"],\"id\":1}}",
+                self.block.to_value(),
+                contract_address.0.to_str_radix(16)
+            ))
             .map_err(|err| StateError::CustomError(err.to_string()))?;
 
         Ok(resp.result)
     }
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        let params = ureq::json!({
-            "jsonrpc": "2.0",
-            "method": "starknet_getStorageAt",
-            "params": [format!("0x{}", storage_entry.0 .0.to_str_radix(16)), format!(
-                "0x{}",
-                Felt252::from_bytes_be(&storage_entry.1).to_str_radix(16)
-            ), self.block.to_value()],
-            "id": 1
-        });
-
         let resp: RpcResponseFelt252 = self
-            .rpc_call(&params)
+            .rpc_call(format!(
+                "{{\"jsonrpc\":\"2.0\",\"method\":\"starknet_getStorageAt\",\"params\":[\"0x{}\",\"0x{}\",{}],\"id\":1}}",
+                storage_entry.0 .0.to_str_radix(16),
+                Felt252::from_bytes_be(&storage_entry.1).to_str_radix(16),
+                self.block.to_value()
+            ))
             .map_err(|err| StateError::CustomError(err.to_string()))?;
 
         Ok(resp.result)
@@ -558,7 +532,7 @@ mod tests {
                 fee_token_address.clone(),
                 gas_price_u128,
             );
-        let block_info: serde_json::Value = rpc_state.rpc_call(&get_block_info_params).unwrap();
+        let block_info: serde_json::Value = rpc_state.rpc_call(get_block_info_params).unwrap();
 
         let block_info = starknet_in_rust::state::BlockInfo {
             block_number: block_info["result"]["block_number"]
