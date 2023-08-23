@@ -11,7 +11,7 @@ with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
 
 [workspace]
-members = ["cli", "fuzzer", "rpc_state_reader"]
+members = ["cli", "fuzzer", "rpc_state_reader", "rpc_state_reader_sn_api"]
 
 [workspace.dependencies]
 cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
@@ -29,8 +29,8 @@ cairo-lang-utils = "2.1.0-rc4"
 cairo-lang-starknet = { workspace = true }
 cairo-lang-casm = { workspace = true }
 cairo-lang-runner = { workspace = true }
-cairo-lang-sierra = { workspace = true }
-cairo-lang-utils = { workspace = true }
+cairo-lang-sierra.workspace = true
+cairo-lang-utils.workspace = true
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 getset = "0.1.2"
 lazy_static = "1.4.0"

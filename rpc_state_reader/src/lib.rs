@@ -804,6 +804,7 @@ mod transaction_tests {
         dbg!(&result.actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
         dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
+        assert!(false);
     }
 
     /// - Transaction Hash: `0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955`
