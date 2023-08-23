@@ -128,10 +128,8 @@ impl ExecutionEntryPoint {
                 })
             }
             CompiledClass::Casm(contract_class) => {
-                let mut tmp_state = CachedState::new(
-                    state.state_reader.clone(),
-                    state.contract_classes.clone(),
-                );
+                let mut tmp_state =
+                    CachedState::new(state.state_reader.clone(), state.contract_classes.clone());
                 tmp_state.cache = state.cache.clone();
 
                 match self._execute(
