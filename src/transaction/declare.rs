@@ -546,7 +546,10 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(Arc::new(state_reader), Arc::new(RwLock::new(contract_class_cache)));
+        let _state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(contract_class_cache)),
+        );
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -612,7 +615,10 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(Arc::new(state_reader), Arc::new(RwLock::new(contract_class_cache)));
+        let _state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(contract_class_cache)),
+        );
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -677,7 +683,10 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(RwLock::new(contract_class_cache)));
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(contract_class_cache)),
+        );
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -756,7 +765,10 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(RwLock::new(contract_class_cache)));
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(contract_class_cache)),
+        );
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -863,7 +875,10 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(RwLock::new(contract_class_cache)));
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(contract_class_cache)),
+        );
 
         //* ---------------------------------------
         //*    Test declare with previous data

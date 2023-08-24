@@ -13,6 +13,7 @@ use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::{
     collections::{HashMap, HashSet},
+    mem,
     sync::{Arc, RwLock},
 };
 
@@ -425,6 +426,36 @@ impl<T: StateReader> State for CachedState<T> {
         }
         Ok(contract)
     }
+}
+
+pub fn merge_caches(
+    shared: &RwLock<HashMap<ClassHash, CompiledClass>>,
+    mut private: HashMap<ClassHash, CompiledClass>,
+) {
+    // FIXME: Parallel invocation of `merge_caches()` may cause data loss. Example:
+    //   - Thread A: Invokes `merge_caches()`. Starts copying data from `shared` into its `private`.
+    //   - Thread B: Invokes `merge_caches()`. Starts copying data from `shared` into its `private`.
+    //   - Thread A: Updates the shared cache. It now contains A's specific entries.
+    //   - Thread B: Updates the shared cache. It now contains only B's specific entries, since it
+    //     lost A's ones.
+
+    // Extend private to contain all of shared's entries. Using a readonly lock will avoid blocking
+    // the other potential cache readers.
+    {
+        let shared_lock = shared.read().unwrap();
+        private.extend(shared_lock.iter().map(|(k, v)| (*k, v.clone())));
+    }
+
+    // Swap the active cache to apply the changes. This will delay `private`'s destructor, which
+    // will run after the write lock has been dropped.
+    {
+        let mut shared_lock = shared.write().unwrap();
+        mem::swap(&mut *shared_lock, &mut private);
+    }
+}
+
+pub fn take_cache() {
+    todo!()
 }
 
 #[cfg(test)]
