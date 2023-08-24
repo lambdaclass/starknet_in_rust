@@ -354,6 +354,7 @@ pub struct TransactionExecutionContext {
     pub(crate) nonce: Felt252,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
+    pub(crate) use_cairo_native: bool,
 }
 
 impl TransactionExecutionContext {
@@ -365,6 +366,7 @@ impl TransactionExecutionContext {
         nonce: Felt252,
         n_steps: u64,
         version: Felt252,
+        use_cairo_native: bool,
     ) -> Self {
         let nonce = if version == 0.into() || version == *QUERY_VERSION_BASE {
             0.into()
@@ -382,6 +384,7 @@ impl TransactionExecutionContext {
             version,
             n_sent_messages: 0,
             _n_steps: n_steps,
+            use_cairo_native,
         }
     }
 
@@ -402,6 +405,7 @@ impl TransactionExecutionContext {
             nonce,
             n_sent_messages: 0,
             _n_steps: n_steps,
+            use_cairo_native: false,
         }
     }
 }

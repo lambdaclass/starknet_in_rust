@@ -440,6 +440,9 @@ impl ExecutionEntryPoint {
         class_hash: [u8; 32],
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError> {
+        if tx_execution_context.use_cairo_native {
+            dbg!("Use cairo native");
+        }
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         // fetch selected entry point

@@ -104,6 +104,7 @@ fn delegate_l1_handler() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
+        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     assert!(exec_entry_point

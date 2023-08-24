@@ -238,6 +238,7 @@ impl Deploy {
             Felt252::zero(),
             block_context.invoke_tx_max_n_steps,
             self.version.clone(),
+            false,
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();

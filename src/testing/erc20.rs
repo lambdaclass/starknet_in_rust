@@ -115,6 +115,7 @@ fn test_erc20_cairo2() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         1.into(),
+        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

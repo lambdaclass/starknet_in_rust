@@ -500,6 +500,7 @@ mod tests {
             nonce: 263.into(),
             n_sent_messages: 52,
             _n_steps: 100000,
+            use_cairo_native: false,
         };
         syscall_handler_hint_processor
             .syscall_handler
@@ -824,6 +825,7 @@ mod tests {
             nonce: 263.into(),
             n_sent_messages: 52,
             _n_steps: 10000,
+            use_cairo_native: false,
         };
         syscall_handler_hint_processor
             .syscall_handler

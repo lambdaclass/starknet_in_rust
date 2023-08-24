@@ -116,6 +116,7 @@ pub fn execute_entry_point(
         10.into(),
         call_config.block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
+        false,
     );
 
     let ExecutionResult { call_info, .. } = exec_entry_point.execute(

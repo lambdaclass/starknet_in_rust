@@ -261,6 +261,7 @@ impl DeclareV2 {
             self.nonce.clone(),
             n_steps,
             self.version.clone(),
+            false,
         )
     }
 
