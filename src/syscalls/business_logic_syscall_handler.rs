@@ -57,8 +57,8 @@ use lazy_static::lazy_static;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use num_traits::{One, ToPrimitive, Zero};
 
-const STEP: u128 = 100;
-const SYSCALL_BASE: u128 = 100 * STEP;
+const STEP: u128 = 0;
+const SYSCALL_BASE: u128 = 0;
 const KECCAK_ROUND_COST: u128 = 180000;
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)

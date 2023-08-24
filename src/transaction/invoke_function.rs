@@ -294,6 +294,7 @@ impl InvokeFunction {
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
 
+        dbg!(&tx_exec_info.actual_resources);
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
             block_context.starknet_os_config.gas_price,

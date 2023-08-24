@@ -931,6 +931,46 @@ mod blockifier_transaction_tests {
         )
     }
 
+    #[test]
+    fn test_recent_tx() {
+        let (tx_info, trace) = test_tx(
+            "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+            RpcChain::MainNet,
+            169928,
+            2280457869
+        );
+
+        let TransactionExecutionInfo {
+            execute_call_info,
+            actual_fee,
+            actual_resources,
+            ..
+        } = tx_info;
+
+        let CallInfo {
+            vm_resources,
+            inner_calls,
+            ..
+        } = execute_call_info.unwrap();
+
+        dbg!(actual_resources);
+        assert!(false);
+        //dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
+        //dbg!(execute_call_info.unwrap().vm_resources); // Ok with explorer
+        //dbg!(execute_call_info.unwrap().inner_calls.len()); // Ok with explorer
+        //dbg!(trace.function_invocation.execution_resources);
+        //dbg!(trace.function_invocation.internal_calls.len());
+        //dbg!(execute_call_info);
+
+        assert_eq!(vm_resources, trace.function_invocation.execution_resources);
+        assert_eq!(
+            inner_calls.len(),
+            trace.function_invocation.internal_calls.len()
+        );
+
+        assert_eq!(actual_fee.0, 5728510166928);
+    }
+
     /// - Transaction Hash: `0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5`
     /// - Network: `mainnet`
     /// - Type: `Invoke`
@@ -969,7 +1009,10 @@ mod blockifier_transaction_tests {
         //dbg!(execute_call_info);
 
         assert_eq!(vm_resources, trace.function_invocation.execution_resources);
-        assert_eq!(inner_calls.len(), trace.function_invocation.internal_calls.len());
+        assert_eq!(
+            inner_calls.len(),
+            trace.function_invocation.internal_calls.len()
+        );
 
         assert_eq!(actual_fee.0, 67749104314311);
     }
@@ -1004,7 +1047,10 @@ mod blockifier_transaction_tests {
         } = execute_call_info.unwrap();
 
         assert_eq!(vm_resources, trace.function_invocation.execution_resources);
-        assert_eq!(inner_calls.len(), trace.function_invocation.internal_calls.len());
+        assert_eq!(
+            inner_calls.len(),
+            trace.function_invocation.internal_calls.len()
+        );
 
         assert_eq!(actual_fee.0, 7207614784695);
 

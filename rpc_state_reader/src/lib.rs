@@ -748,13 +748,15 @@ mod transaction_tests {
         network: RpcChain,
         block_number: u64,
         gas_price: u128,
-    ) -> TransactionExecutionInfo {
+    ) -> (TransactionExecutionInfo, TransactionTrace) {
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
         let rpc_state = Arc::new(RpcState::new(network, block));
         let mut state = CachedState::new(rpc_state.clone(), None, None);
+
+        let trace = rpc_state.get_transaction_trace(felt_str!(tx_hash, 16));
 
         let fee_token_address = Address(felt_str!(
             "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
@@ -781,7 +783,7 @@ mod transaction_tests {
 
         let tx = rpc_state.get_transaction(tx_hash);
 
-        tx.execute(&mut state, &block_context, 0).unwrap()
+        (tx.execute(&mut state, &block_context, 0).unwrap(), trace)
     }
 
     /// - Transaction Hash: `0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5`
@@ -793,7 +795,7 @@ mod transaction_tests {
     /// - Link to Explorer: https://starkscan.co/tx/0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5
     #[test]
     fn test_invoke_0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5() {
-        let result = test_tx(
+        let (result, _) = test_tx(
             "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
             RpcChain::MainNet,
             90_006,
@@ -816,7 +818,7 @@ mod transaction_tests {
     /// - Link to Explorer: https://starkscan.co/tx/0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955
     #[test]
     fn test_invoke_mainnet_0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955() {
-        let result = test_tx(
+        let (result, _) = test_tx(
             "0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955",
             RpcChain::MainNet,
             90_002,
@@ -838,7 +840,7 @@ mod transaction_tests {
     /// - Link to Explorer: https://testnet.starkscan.co/tx/0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf
     #[test]
     fn test_0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf() {
-        let result = test_tx(
+        let (result, _) = test_tx(
             "0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf",
             RpcChain::TestNet,
             838684,
@@ -861,7 +863,7 @@ mod transaction_tests {
     /// - Link to Explorer: https://testnet-2.starkscan.co/tx/0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
     #[test]
     fn test_invoke_testnet2_0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc() {
-        let result = test_tx(
+        let (result, _) = test_tx(
             "0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc",
             RpcChain::TestNet2,
             123001,
@@ -882,7 +884,7 @@ mod transaction_tests {
     /// - Link to explorer: https://testnet.starkscan.co/tx/0x02e31c976f649ba05da82e4c6a054a9a41961adda4c3dea26e6b523f4f18b382
     #[test]
     fn test_0x02e31c976f649ba05da82e4c6a054a9a41961adda4c3dea26e6b523f4f18b382() {
-        let result = test_tx(
+        let (result, _) = test_tx(
             "0x02e31c976f649ba05da82e4c6a054a9a41961adda4c3dea26e6b523f4f18b382",
             RpcChain::TestNet,
             846582,
@@ -903,7 +905,7 @@ mod transaction_tests {
     /// - Link to explorer: https://starkscan.co/tx/0x026a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c
     #[test]
     fn test_0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c() {
-        let result = test_tx(
+        let (result, _) = test_tx(
             "0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c",
             RpcChain::MainNet,
             155054,
@@ -931,4 +933,46 @@ mod transaction_tests {
     //     dbg!(&result.call_info.clone().unwrap().execution_resources);
     //     dbg!(&result.call_info.unwrap().internal_calls.len());
     // }
+
+    #[test]
+    fn test_recent_tx() {
+        let (tx_info, trace) = test_tx(
+            "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+            RpcChain::MainNet,
+            169928,
+            2280457869,
+        );
+
+        let TransactionExecutionInfo {
+            call_info,
+            actual_fee,
+            actual_resources,
+            revert_error,
+            ..
+        } = tx_info;
+
+        assert_eq!(revert_error, None);
+
+        let CallInfo {
+            execution_resources,
+            internal_calls,
+            ..
+        } = call_info.unwrap();
+
+        dbg!(actual_resources);
+        //dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
+        //dbg!(execute_call_info.unwrap().vm_resources); // Ok with explorer
+        //dbg!(execute_call_info.unwrap().inner_calls.len()); // Ok with explorer
+        //dbg!(trace.function_invocation.execution_resources);
+        //dbg!(trace.function_invocation.internal_calls.len());
+        //dbg!(execute_call_info);
+
+        assert_eq!(execution_resources, trace.function_invocation.execution_resources);
+        assert_eq!(
+            internal_calls.len(),
+            trace.function_invocation.internal_calls.len()
+        );
+
+        assert_eq!(actual_fee, 5728510166928);
+    }
 }
