@@ -21,7 +21,7 @@ flate2 = "1.0.25"
 serde_with = "3.0.0"
 dotenv = "0.15.0"
 cairo-vm = "0.8.5"
-blockifier = "0.2.0-rc0"
+blockifier = { path = "../../blockifier.git/v0_2_0-rc0/crates/blockifier/" }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
