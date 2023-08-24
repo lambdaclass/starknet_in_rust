@@ -29,6 +29,8 @@ pub struct CachedState<T: StateReader> {
     pub(crate) cache: StateCache,
     #[get = "pub"]
     pub(crate) contract_classes: ContractClassesCache,
+    // TODO: Should the private cache be updated with the contracts that already exist in the shared
+    // level? It should keep the contracts used by the transaction closer.
     pub(crate) contract_classes_private: HashMap<ClassHash, CompiledClass>,
 }
 
