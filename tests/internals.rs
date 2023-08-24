@@ -1607,6 +1607,13 @@ fn expected_deploy_account_states() -> (
     );
 
     let mut state_after = state_before.clone();
+
+    // Make the contract cache independent (otherwise tests will fail because the initial state's
+    // cache will not be empty anymore).
+    state_after
+        .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+        .unwrap();
+
     state_after.cache_mut().nonce_initial_values_mut().insert(
         Address(felt_str!(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
