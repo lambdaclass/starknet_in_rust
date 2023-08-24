@@ -305,7 +305,10 @@ impl Deploy {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{Arc, RwLock},
+    };
 
     use super::*;
     use crate::{
@@ -317,7 +320,7 @@ mod tests {
     fn invoke_constructor_test() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         // Set contract_class
         let contract_class =
@@ -365,7 +368,7 @@ mod tests {
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         let contract_class =
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
@@ -394,7 +397,7 @@ mod tests {
     fn deploy_contract_without_constructor_should_fail() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         let contract_path = "starknet_programs/amm.json";
         let contract_class = ContractClass::from_path(contract_path).unwrap();

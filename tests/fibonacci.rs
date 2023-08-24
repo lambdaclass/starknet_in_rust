@@ -18,7 +18,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::{collections::HashMap, path::PathBuf};
 
 #[test]
@@ -67,7 +67,10 @@ fn integration_test() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -165,7 +168,10 @@ fn integration_test_cairo1() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
 
     // Create an execution entry point
     let calldata = [0.into(), 1.into(), 12.into()].to_vec();

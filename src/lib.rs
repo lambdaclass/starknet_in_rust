@@ -1,7 +1,10 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use crate::{
     execution::{
@@ -61,7 +64,7 @@ pub fn simulate_transaction<S: StateReader>(
     ignore_max_fee: bool,
     skip_nonce_check: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
-    let mut cache_state = CachedState::new(Arc::new(state), HashMap::new());
+    let mut cache_state = CachedState::new(Arc::new(state), Arc::new(RwLock::new(HashMap::new())));
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         let tx_for_simulation = transaction.create_for_simulation(
@@ -89,7 +92,8 @@ where
     T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(Arc::new(state), HashMap::new());
+    let mut cached_state =
+        CachedState::<T>::new(Arc::new(state), Arc::new(RwLock::new(HashMap::new())));
 
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
@@ -177,7 +181,8 @@ where
     T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(Arc::new(state), HashMap::new());
+    let mut cached_state =
+        CachedState::<T>::new(Arc::new(state), Arc::new(RwLock::new(HashMap::new())));
 
     // Check if the contract is deployed.
     cached_state.get_class_hash_at(l1_handler.contract_address())?;
@@ -209,7 +214,7 @@ pub fn execute_transaction<S: StateReader>(
 mod test {
     use std::collections::HashMap;
     use std::path::PathBuf;
-    use std::sync::Arc;
+    use std::sync::{Arc, RwLock};
 
     use crate::core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash};
     use crate::definitions::constants::INITIAL_GAS_COST;
@@ -327,7 +332,10 @@ mod test {
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(contract_class_cache)),
+        );
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
         let retdata = call_contract(
@@ -368,7 +376,7 @@ mod test {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -379,14 +387,19 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
         let contract_classes = HashMap::from([(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         )]);
-        state.set_contract_classes(contract_classes).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(contract_classes)))
+            .unwrap();
 
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
@@ -421,7 +434,10 @@ mod test {
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(contract_class_cache)),
+        );
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
         let invoke = InvokeFunction::new(
@@ -681,7 +697,7 @@ mod test {
     #[test]
     fn test_simulate_deploy() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         state
             .set_contract_class(
@@ -723,7 +739,7 @@ mod test {
     #[test]
     fn test_simulate_declare() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let state = CachedState::new(state_reader, HashMap::new());
+        let state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         let block_context = &Default::default();
 
@@ -760,7 +776,7 @@ mod test {
     #[test]
     fn test_simulate_invoke() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         state
             .set_contract_class(
@@ -824,7 +840,7 @@ mod test {
     #[test]
     fn test_simulate_deploy_account() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         state
             .set_contract_class(
@@ -937,7 +953,7 @@ mod test {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -948,10 +964,15 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -980,7 +1001,7 @@ mod test {
     #[test]
     fn test_deploy_and_invoke_simulation() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let state = CachedState::new(state_reader, HashMap::new());
+        let state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         let block_context = &Default::default();
 

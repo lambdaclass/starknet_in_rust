@@ -309,7 +309,10 @@ impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{Arc, RwLock},
+    };
 
     use super::*;
     use crate::{
@@ -330,7 +333,10 @@ mod tests {
     #[test]
     fn write_get_caller_address_response() {
         // Initialize a VM and syscall handler
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 

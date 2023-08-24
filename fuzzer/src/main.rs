@@ -19,7 +19,7 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address},
 };
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
@@ -130,7 +130,10 @@ fn main() {
             //*    Create state with previous data
             //* ---------------------------------------
 
-            let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+            let mut state = CachedState::new(
+                Arc::new(state_reader),
+                Arc::new(RwLock::new(contract_class_cache)),
+            );
 
             //* ------------------------------------
             //*    Create execution entry point

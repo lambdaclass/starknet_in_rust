@@ -3,7 +3,10 @@ pub mod state;
 pub mod state_error;
 pub mod type_utils;
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use cairo_vm::felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
@@ -158,7 +161,7 @@ pub fn create_account_tx_test_state(
             }
             Arc::new(state_reader)
         },
-        HashMap::new(),
+        Arc::new(RwLock::new(HashMap::new())),
     );
 
     Ok((block_context, cached_state))

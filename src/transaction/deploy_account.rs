@@ -385,7 +385,11 @@ impl DeployAccount {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf, sync::Arc};
+    use std::{
+        collections::HashMap,
+        path::PathBuf,
+        sync::{Arc, RwLock},
+    };
 
     use super::*;
     use crate::{
@@ -406,7 +410,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut _state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut _state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -438,7 +445,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -488,7 +498,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,

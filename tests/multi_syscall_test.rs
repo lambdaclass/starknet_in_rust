@@ -14,6 +14,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
+use std::sync::RwLock;
 use std::{collections::HashMap, sync::Arc, vec};
 
 #[test]
@@ -39,7 +40,10 @@ fn test_multiple_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache.clone());
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache.clone())),
+    );
 
     // Create an execution entry point
     let calldata = [].to_vec();
@@ -60,7 +64,7 @@ fn test_multiple_syscall() {
         assert_eq!(call_info.retdata, vec![caller_address.clone().0])
     }
 
-    // Block for get_contact_address.
+    // Block for get_contract_address.
     {
         let call_info = test_syscall(
             "contract_address",

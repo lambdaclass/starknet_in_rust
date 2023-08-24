@@ -24,7 +24,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
@@ -41,7 +41,7 @@ impl StarknetState {
         let block_context = context.unwrap_or_default();
         let state_reader = Arc::new(InMemoryStateReader::default());
 
-        let state = CachedState::new(state_reader, HashMap::new());
+        let state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
@@ -403,6 +403,8 @@ mod tests {
             starknet_state
                 .state
                 .contract_classes
+                .read()
+                .unwrap()
                 .get(&class_hash)
                 .unwrap()
                 .to_owned(),
@@ -451,7 +453,10 @@ mod tests {
             CompiledClass::Deprecated(Arc::new(contract_class.clone())),
         );
 
-        let state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(contract_class_cache)),
+        );
 
         //* --------------------------------------------
         //*    Create starknet state with previous data

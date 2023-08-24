@@ -7,21 +7,17 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum StateError {
-    #[error("Missing ContractClassCache")]
-    MissingContractClassCache,
-    #[error("ContractClassCache must be None")]
-    AssignedContractClassCache,
     #[error("Missing key in StorageUpdate Map")]
     EmptyKeyInStorage,
     #[error("Try to create a CarriedState from a None parent")]
     ParentCarriedStateIsNone,
     #[error("Cache already initialized")]
     StateCacheAlreadyInitialized,
-    #[error("No contract state assigned for contact address: {0:?}")]
+    #[error("No contract state assigned for contract address: {0:?}")]
     NoneContractState(Address),
-    #[error("No class hash assigned for contact address: {0:?}")]
+    #[error("No class hash assigned for contract address: {0:?}")]
     NoneClassHash(Address),
-    #[error("No nonce assigned for contact address: {0:?}")]
+    #[error("No nonce assigned for contract address: {0:?}")]
     NoneNonce(Address),
     #[error("No storage value assigned for entry: {0:?}")]
     NoneStorage(StorageEntry),
@@ -33,20 +29,16 @@ pub enum StateError {
     ContractAddressUnavailable(Address),
     #[error(transparent)]
     ContractClass(#[from] ContractClassError),
-    #[error("Missing CasmClassCache")]
-    MissingCasmClassCache,
     #[error("Constructor calldata is empty")]
-    ConstructorCalldataEmpty(),
+    ConstructorCalldataEmpty,
     #[error("Error in ExecutionEntryPoint")]
-    ExecutionEntryPoint(),
+    ExecutionEntryPoint,
     #[error("No compiled class found for compiled_class_hash {0:?}")]
     NoneCompiledClass(ClassHash),
     #[error("No compiled class hash found for class_hash {0:?}")]
     NoneCompiledHash(ClassHash),
     #[error("Missing casm class for hash {0:?}")]
     MissingCasmClass(ClassHash),
-    #[error("No class hash declared in class_hash_to_contract_class")]
-    MissingClassHash(),
     #[error("Uninitializes class_hash")]
     UninitiaizedClassHash,
     #[error(transparent)]

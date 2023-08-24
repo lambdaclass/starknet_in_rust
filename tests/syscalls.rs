@@ -34,7 +34,7 @@ use std::{
     collections::{HashMap, HashSet},
     iter::empty,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -121,7 +121,10 @@ fn test_contract<'a>(
 
         contract_class_cache
     };
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
@@ -1109,7 +1112,10 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt, Felt252::one()].to_vec();
@@ -1211,7 +1217,10 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -1315,7 +1324,10 @@ fn deploy_cairo1_and_invoke() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -1455,7 +1467,10 @@ fn send_messages_to_l1_different_contract_calls() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();

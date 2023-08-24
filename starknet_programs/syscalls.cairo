@@ -72,10 +72,10 @@ func test_call_contract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_ch
     let (value) = lib_state.read();
     assert value = 10;
 
-    let (call_contact_address) = ISyscallsLib.stateful_get_contract_address(
+    let (call_contract_address) = ISyscallsLib.stateful_get_contract_address(
         contract_address=contract_address
     );
-    assert call_contact_address = contract_address;
+    assert call_contract_address = contract_address;
 
     return ();
 }
@@ -181,11 +181,11 @@ func test_library_call{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
     let (value) = lib_state.read();
     assert value = 11;
 
-    let self_contact_address = get_contract_address();
-    let call_contact_address = ISyscallsLib.library_call_stateful_get_contract_address(
+    let self_contract_address = get_contract_address();
+    let call_contract_address = ISyscallsLib.library_call_stateful_get_contract_address(
         class_hash=0x0202020202020202020202020202020202020202020202020202020202020202
     );
-    assert self_contact_address = call_contact_address;
+    assert self_contract_address = call_contract_address;
 
     return ();
 }
@@ -255,7 +255,7 @@ func test_deploy_with_constructor{syscall_ptr: felt*}(
     // Set constructor.
     let (ptr) = alloc();
     assert [ptr] = constructor;
-    
+
     let contract_address = deploy(
         class_hash,
         contract_address_salt,
@@ -276,7 +276,7 @@ func test_deploy_and_call_contract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin
     // Set constructor.
     let (ptr) = alloc();
     assert [ptr] = constructor;
-    
+
     // Deploy contract
     let (contract_address) = deploy(
         class_hash,

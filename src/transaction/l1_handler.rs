@@ -208,7 +208,7 @@ impl L1Handler {
 mod test {
     use std::{
         collections::{HashMap, HashSet},
-        sync::Arc,
+        sync::{Arc, RwLock},
     };
 
     use crate::services::api::contract_classes::{
@@ -257,7 +257,7 @@ mod test {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -268,10 +268,15 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(

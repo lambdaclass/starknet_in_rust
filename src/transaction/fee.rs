@@ -185,7 +185,10 @@ pub fn charge_fee<S: StateReader>(
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{Arc, RwLock},
+    };
 
     use crate::{
         definitions::block_context::BlockContext,
@@ -196,7 +199,10 @@ mod tests {
 
     #[test]
     fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_error() {
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
@@ -222,7 +228,10 @@ mod tests {
 
     #[test]
     fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
             ..Default::default()

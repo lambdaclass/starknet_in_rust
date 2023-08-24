@@ -410,7 +410,10 @@ mod tests {
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{Arc, RwLock},
+    };
 
     #[test]
     fn test_invoke_apply_without_fees() {
@@ -441,7 +444,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -452,10 +455,15 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -513,7 +521,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -524,10 +532,15 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -581,7 +594,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -592,10 +605,15 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -643,7 +661,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -654,10 +672,15 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -711,7 +734,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -722,10 +745,15 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -752,7 +780,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let nonce = Felt252::zero();
 
         state_reader
@@ -784,10 +812,15 @@ mod tests {
             skip_nonce_check: false,
         };
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -833,7 +866,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -844,10 +877,15 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -894,7 +932,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -905,10 +943,15 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -960,7 +1003,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -971,10 +1014,15 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(HashMap::new())),
+        );
 
         // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        state
+            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
+            .unwrap();
 
         state
             .set_contract_class(
@@ -1119,7 +1167,10 @@ mod tests {
 
         casm_contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
 
-        let mut state = CachedState::new(Arc::new(state_reader), casm_contract_class_cache);
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(RwLock::new(casm_contract_class_cache)),
+        );
 
         let state_before_execution = state.clone();
 

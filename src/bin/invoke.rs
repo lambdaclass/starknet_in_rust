@@ -1,4 +1,8 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
@@ -106,7 +110,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
                 .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             Arc::new(state_reader)
         },
-        HashMap::new(),
+        Arc::new(RwLock::new(HashMap::new())),
     );
 
     cached_state

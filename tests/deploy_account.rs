@@ -24,7 +24,7 @@ use starknet_in_rust::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 
 lazy_static! {
@@ -34,7 +34,7 @@ lazy_static! {
 #[test]
 fn internal_deploy_account() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
     state.set_contract_classes(Default::default()).unwrap();
 
@@ -117,7 +117,7 @@ fn internal_deploy_account() {
 #[test]
 fn internal_deploy_account_cairo1() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::default());
+    let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::default())));
 
     state.set_contract_classes(Default::default()).unwrap();
 

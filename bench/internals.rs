@@ -19,7 +19,11 @@ use starknet_in_rust::{
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::{collections::HashMap, hint::black_box, sync::Arc};
+use std::{
+    collections::HashMap,
+    hint::black_box,
+    sync::{Arc, RwLock},
+};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
@@ -63,7 +67,7 @@ fn deploy_account() {
     const RUNS: usize = 500;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
     state
         .set_contract_class(
@@ -102,7 +106,7 @@ fn declare() {
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let state = CachedState::new(state_reader, HashMap::new());
+    let state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
     let block_context = &Default::default();
 
@@ -134,7 +138,7 @@ fn deploy() {
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
     state
         .set_contract_class(
@@ -172,7 +176,7 @@ fn invoke() {
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
 
     state
         .set_contract_class(

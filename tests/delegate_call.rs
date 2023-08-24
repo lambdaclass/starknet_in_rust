@@ -14,7 +14,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::Address,
 };
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::{collections::HashMap, path::PathBuf};
 
 #[test]
@@ -83,7 +83,10 @@ fn delegate_call() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
 
     //* ------------------------------------
     //*    Create execution entry point

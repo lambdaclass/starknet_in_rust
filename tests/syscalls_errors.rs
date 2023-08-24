@@ -15,7 +15,7 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use assert_matches::assert_matches;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
@@ -101,7 +101,10 @@ fn test_contract<'a>(
 
         contract_class_cache
     };
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        Arc::new(RwLock::new(contract_class_cache)),
+    );
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));

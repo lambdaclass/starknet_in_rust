@@ -34,7 +34,7 @@ use starknet_in_rust::{
 use std::{
     collections::HashMap,
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
 };
 
 #[derive(Parser)]
@@ -318,7 +318,7 @@ pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
             Arc::new(InMemoryStateReader::default()),
-            HashMap::new(),
+            Arc::new(RwLock::new(HashMap::new())),
         )),
     });
 

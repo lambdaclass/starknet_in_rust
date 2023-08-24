@@ -55,7 +55,7 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
 const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
@@ -195,7 +195,7 @@ fn create_account_tx_test_state(
             }
             Arc::new(state_reader)
         },
-        HashMap::new(),
+        Arc::new(RwLock::new(HashMap::new())),
     );
 
     Ok((block_context, cached_state))
@@ -204,7 +204,10 @@ fn create_account_tx_test_state(
 fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    CachedState::new(Arc::new(in_memory_state_reader), HashMap::new())
+    CachedState::new(
+        Arc::new(in_memory_state_reader),
+        Arc::new(RwLock::new(HashMap::new())),
+    )
 }
 
 fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
@@ -234,7 +237,7 @@ fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
     CachedState::new_for_testing(
         Arc::new(in_memory_state_reader),
         state_cache_after_invoke_tx(fee),
-        contract_classes_cache,
+        Arc::new(RwLock::new(contract_classes_cache)),
     )
 }
 
@@ -525,8 +528,8 @@ fn test_create_account_tx_test_state() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        *state.contract_classes().read().unwrap(),
+        *expected_initial_state.contract_classes().read().unwrap()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -871,8 +874,8 @@ fn test_declare_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        *state.contract_classes().read().unwrap(),
+        *expected_initial_state.contract_classes().read().unwrap()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -955,8 +958,8 @@ fn test_declarev2_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        *state.contract_classes().read().unwrap(),
+        *expected_initial_state.contract_classes().read().unwrap()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -1297,8 +1300,8 @@ fn test_invoke_tx_state() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        *state.contract_classes().read().unwrap(),
+        *expected_initial_state.contract_classes().read().unwrap()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -1370,8 +1373,8 @@ fn test_invoke_with_declarev2_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        *state.contract_classes().read().unwrap(),
+        *expected_initial_state.contract_classes().read().unwrap()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -1467,7 +1470,10 @@ fn test_deploy_account() {
     let (state_before, state_after) = expected_deploy_account_states();
 
     assert_eq!(&state.cache(), &state_before.cache());
-    assert_eq!(&state.contract_classes(), &state_before.contract_classes());
+    assert_eq!(
+        *state.contract_classes().read().unwrap(),
+        *state_before.contract_classes().read().unwrap()
+    );
 
     let tx_info = deploy_account_tx
         .execute(&mut state, &block_context)
@@ -1590,7 +1596,7 @@ fn expected_deploy_account_states() -> (
             ]),
             HashMap::new(),
         )),
-        HashMap::new(),
+        Arc::new(RwLock::new(HashMap::new())),
     );
     state_before.set_storage_at(
         &(
