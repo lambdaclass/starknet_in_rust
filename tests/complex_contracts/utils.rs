@@ -12,14 +12,19 @@ use starknet_in_rust::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::{cached_state::CachedState, state_api::State},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{error::TransactionError, Deploy},
     utils::{calculate_sn_keccak, Address},
 };
 use starknet_in_rust::{ContractEntryPoint, EntryPointType};
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 pub struct CallConfig<'a> {
     pub state: &'a mut CachedState<InMemoryStateReader>,
@@ -156,7 +161,10 @@ pub fn deploy(
         )?,
     };
     let class_hash = internal_deploy.class_hash();
-    state.set_contract_class(&class_hash, &contract_class)?;
+    state.set_contract_class(
+        &class_hash,
+        &CompiledClass::Deprecated(Arc::new(contract_class)),
+    )?;
 
     let tx_execution_info = internal_deploy.apply(state, block_context)?;
 

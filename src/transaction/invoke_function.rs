@@ -458,7 +458,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -527,7 +530,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -592,7 +598,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =
@@ -651,7 +660,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -716,7 +728,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =
@@ -775,7 +790,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let block_context = BlockContext::default();
@@ -832,7 +850,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let mut block_context = BlockContext::default();
@@ -890,7 +911,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         internal_invoke_function
@@ -953,7 +977,10 @@ mod tests {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =

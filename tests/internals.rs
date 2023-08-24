@@ -1688,13 +1688,17 @@ fn expected_deploy_account_states() -> (
     state_after
         .set_contract_class(
             &felt_to_hash(&0x1010.into()),
-            &ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            &CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            )),
         )
         .unwrap();
     state_after
         .set_contract_class(
             &felt_to_hash(&0x111.into()),
-            &ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            &CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            )),
         )
         .unwrap();
 
@@ -2010,7 +2014,7 @@ fn test_library_call_with_declare_v2() {
         .insert(address.clone(), nonce);
 
     state
-        .set_compiled_class(&Felt252::from_bytes_be(&class_hash), contract_class)
+        .set_contract_class(&class_hash, &CompiledClass::Casm(Arc::new(contract_class)))
         .unwrap();
 
     let create_execute_extrypoint = |selector: &BigUint,

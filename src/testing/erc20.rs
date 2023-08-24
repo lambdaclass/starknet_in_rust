@@ -142,7 +142,10 @@ fn test_erc20_cairo2() {
         serde_json::from_slice(program_data_account).unwrap();
 
     state
-        .set_compiled_class(&felt_str!("1"), contract_class_account)
+        .set_contract_class(
+            &felt_str!("1").to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(contract_class_account)),
+        )
         .unwrap();
 
     let contract_address_salt =
@@ -181,7 +184,10 @@ fn test_erc20_cairo2() {
         serde_json::from_slice(program_data_account).unwrap();
 
     state
-        .set_compiled_class(&felt_str!("1"), contract_class_account)
+        .set_contract_class(
+            &felt_str!("1").to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(contract_class_account)),
+        )
         .unwrap();
 
     let contract_address_salt = felt_str!("123123123123123");

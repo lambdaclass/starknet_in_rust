@@ -211,7 +211,9 @@ mod test {
         sync::Arc,
     };
 
-    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+    use crate::services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    };
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
@@ -272,7 +274,10 @@ mod test {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let mut block_context = BlockContext::default();

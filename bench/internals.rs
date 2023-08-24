@@ -11,7 +11,9 @@ use starknet_in_rust::{
         constants::{TRANSACTION_VERSION, VALIDATE_ENTRY_POINT_SELECTOR},
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
@@ -64,7 +66,10 @@ fn deploy_account() {
     let mut state = CachedState::new(state_reader, HashMap::new());
 
     state
-        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+        .set_contract_class(
+            &CLASS_HASH_BYTES,
+            &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+        )
         .unwrap();
 
     let block_context = &Default::default();
@@ -132,7 +137,10 @@ fn deploy() {
     let mut state = CachedState::new(state_reader, HashMap::new());
 
     state
-        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+        .set_contract_class(
+            &CLASS_HASH_BYTES,
+            &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+        )
         .unwrap();
 
     let block_context = &Default::default();
@@ -167,7 +175,10 @@ fn invoke() {
     let mut state = CachedState::new(state_reader, HashMap::new());
 
     state
-        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+        .set_contract_class(
+            &CLASS_HASH_BYTES,
+            &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+        )
         .unwrap();
 
     let block_context = &Default::default();

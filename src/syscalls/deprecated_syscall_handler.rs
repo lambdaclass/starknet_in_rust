@@ -227,6 +227,7 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
+    use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::{
         add_segments, allocate_selector, any_box,
@@ -1034,7 +1035,10 @@ mod tests {
             .syscall_handler
             .starknet_storage_state
             .state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         // Execute Deploy hint
@@ -1133,7 +1137,10 @@ mod tests {
             .syscall_handler
             .starknet_storage_state
             .state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         // Execute Deploy hint

@@ -29,6 +29,8 @@ use num_traits::Zero;
 
 use super::fee::charge_fee;
 use super::{verify_version, Transaction};
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use std::sync::Arc;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
@@ -281,7 +283,10 @@ impl Declare {
             self.skip_fee_transfer,
         )?;
 
-        state.set_contract_class(&self.class_hash, &self.contract_class)?;
+        state.set_contract_class(
+            &self.class_hash,
+            &CompiledClass::Deprecated(Arc::new(self.contract_class.clone())),
+        )?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 

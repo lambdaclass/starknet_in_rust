@@ -1,5 +1,6 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::execution::execution_entry_point::ExecutionResult;
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -201,8 +202,10 @@ impl StarknetState {
         let contract_hash = deploy.contract_hash;
         let mut tx = Transaction::Deploy(deploy);
 
-        self.state
-            .set_contract_class(&contract_hash, &contract_class)?;
+        self.state.set_contract_class(
+            &contract_hash,
+            &CompiledClass::Deprecated(Arc::new(contract_class)),
+        )?;
 
         let tx_execution_info = self.execute_tx(&mut tx, remaining_gas)?;
         Ok((contract_address, tx_execution_info))
@@ -472,7 +475,10 @@ mod tests {
 
         starknet_state
             .state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         // --------------------------------------------

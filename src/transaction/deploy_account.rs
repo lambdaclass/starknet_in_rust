@@ -465,7 +465,9 @@ mod tests {
         .unwrap();
 
         let class_hash = internal_deploy.class_hash();
-        state.set_contract_class(class_hash, &contract).unwrap();
+        state
+            .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
+            .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
         assert_matches!(
             internal_deploy_error
@@ -501,7 +503,9 @@ mod tests {
         .unwrap();
 
         let class_hash = internal_deploy.class_hash();
-        state.set_contract_class(class_hash, &contract).unwrap();
+        state
+            .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
+            .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
     }
 }

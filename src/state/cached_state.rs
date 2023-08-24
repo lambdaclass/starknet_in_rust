@@ -4,13 +4,10 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::StateDiff,
     utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
@@ -167,8 +164,6 @@ impl<T: StateReader> StateReader for CachedState<T> {
         }
 
         // II: FETCHING FROM STATE_READER
-        // TODO: Should this modify the cache?
-        // TODO: Related: Isn't this exact method available in `impl<T: StateReader> State for CachedState`?
         self.state_reader.get_contract_class(class_hash)
     }
 }
@@ -178,14 +173,10 @@ impl<T: StateReader> State for CachedState<T> {
     fn set_contract_class(
         &mut self,
         class_hash: &ClassHash,
-        contract_class: &ContractClass,
+        contract_class: &CompiledClass,
     ) -> Result<(), StateError> {
-        // TODO: Could this method's signature use `CompiledClass` instead of `ContractClass`? Or
-        //   even better, could the entire trait use `Arc<CompiledClass>`?
-        self.contract_classes.insert(
-            *class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
-        );
+        self.contract_classes
+            .insert(*class_hash, contract_class.clone());
 
         Ok(())
     }
@@ -246,20 +237,6 @@ impl<T: StateReader> State for CachedState<T> {
         self.cache
             .class_hash_writes
             .insert(deploy_contract_address, class_hash);
-        Ok(())
-    }
-
-    fn set_compiled_class(
-        &mut self,
-        compiled_class_hash: &Felt252,
-        casm_class: CasmContractClass,
-    ) -> Result<(), StateError> {
-        let compiled_class_hash = compiled_class_hash.to_be_bytes();
-        self.contract_classes.insert(
-            compiled_class_hash,
-            CompiledClass::Casm(Arc::new(casm_class)),
-        );
-
         Ok(())
     }
 
@@ -423,13 +400,13 @@ impl<T: StateReader> State for CachedState<T> {
             CompiledClass::Casm(ref casm_class) => {
                 // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
                 let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
-                self.set_compiled_class(
-                    &Felt252::from_bytes_be(&compiled_class_hash),
-                    casm_class.as_ref().clone(),
+                self.set_contract_class(
+                    &compiled_class_hash,
+                    &CompiledClass::Casm(casm_class.clone()),
                 )?;
             }
             CompiledClass::Deprecated(ref contract) => {
-                self.set_contract_class(class_hash, &contract.clone())?
+                self.set_contract_class(class_hash, &CompiledClass::Deprecated(contract.clone()))?
             }
         }
         Ok(contract)
@@ -440,7 +417,10 @@ impl<T: StateReader> State for CachedState<T> {
 mod tests {
     use super::*;
 
-    use crate::state::in_memory_state_reader::InMemoryStateReader;
+    use crate::{
+        services::api::contract_classes::deprecated_contract_class::ContractClass,
+        state::in_memory_state_reader::InMemoryStateReader,
+    };
 
     use num_traits::One;
 

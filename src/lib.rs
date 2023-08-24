@@ -684,7 +684,10 @@ mod test {
         let mut state = CachedState::new(state_reader, HashMap::new());
 
         state
-            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+            .set_contract_class(
+                &CLASS_HASH_BYTES,
+                &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+            )
             .unwrap();
 
         let block_context = &Default::default();
@@ -760,7 +763,10 @@ mod test {
         let mut state = CachedState::new(state_reader, HashMap::new());
 
         state
-            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+            .set_contract_class(
+                &CLASS_HASH_BYTES,
+                &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+            )
             .unwrap();
 
         let block_context = Default::default();
@@ -821,7 +827,10 @@ mod test {
         let mut state = CachedState::new(state_reader, HashMap::new());
 
         state
-            .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+            .set_contract_class(
+                &CLASS_HASH_BYTES,
+                &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+            )
             .unwrap();
 
         let block_context = &Default::default();
@@ -945,7 +954,10 @@ mod test {
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let mut block_context = BlockContext::default();

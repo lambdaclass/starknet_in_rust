@@ -5,6 +5,7 @@ use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
@@ -26,6 +27,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::sync::Arc;
 
 /// Represents a declare transaction in the starknet network.
 /// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
@@ -372,7 +374,10 @@ impl DeclareV2 {
             ));
         }
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
-        state.set_compiled_class(&self.compiled_class_hash, casm_class)?;
+        state.set_contract_class(
+            &self.compiled_class_hash.to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(casm_class)),
+        )?;
 
         Ok(())
     }
