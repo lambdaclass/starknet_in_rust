@@ -1157,7 +1157,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => *class,
+        CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
     };
 
@@ -1261,7 +1261,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => *class,
+        CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
     };
 
@@ -1363,7 +1363,7 @@ fn deploy_cairo1_and_invoke() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => *class,
+        CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
     };
 
