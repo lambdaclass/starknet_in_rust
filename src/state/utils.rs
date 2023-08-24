@@ -1,7 +1,8 @@
 use cairo_vm::felt::Felt252;
 use sha3::Keccak256;
+use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
 
-use crate::definitions::constants;
+use crate::{definitions::constants, utils::Address};
 
 
 /// A variant of eth-keccak that computes a value that fits in a StarkNet field element.
@@ -32,8 +33,8 @@ pub fn selector_from_name(entry_point_name: &str) -> Felt252 {
 /// Returns the storage address of a StarkNet storage variable given its name and arguments.
 pub fn get_storage_var_address(
     storage_var_name: &str,
-    args: &[StarkFelt],
-) -> Result<StorageKey, StarknetApiError> {
+    args: &[Felt252],
+) -> Result<Felt252, StarknetApiError> {
     let storage_var_name_hash = starknet_keccak(storage_var_name.as_bytes());
     let storage_var_name_hash = felt_to_stark_felt(&storage_var_name_hash);
 
@@ -61,7 +62,7 @@ pub fn get_uint256_storage_var_addresses(
 }
 
 pub fn get_erc20_balance_var_addresses(
-    contract_address: &ContractAddress,
-) -> Result<(StorageKey, StorageKey), StarknetApiError> {
+    contract_address: &Address,
+) -> Result<(Felt252, Felt252), StarknetApiError> {
     get_uint256_storage_var_addresses("ERC20_balances", &[*contract_address.0.key()])
 }
