@@ -29,6 +29,7 @@ pub struct CachedState<T: StateReader> {
     pub(crate) cache: StateCache,
     #[get = "pub"]
     pub(crate) contract_classes: ContractClassesCache,
+    pub(crate) contract_classes_private: HashMap<ClassHash, CompiledClass>,
 }
 
 impl<T: StateReader> CachedState<T> {
@@ -38,6 +39,7 @@ impl<T: StateReader> CachedState<T> {
             cache: StateCache::default(),
             state_reader,
             contract_classes,
+            contract_classes_private: HashMap::new(),
         }
     }
 
@@ -49,8 +51,9 @@ impl<T: StateReader> CachedState<T> {
     ) -> Self {
         Self {
             cache,
-            contract_classes,
             state_reader,
+            contract_classes,
+            contract_classes_private: HashMap::new(),
         }
     }
 
@@ -59,9 +62,6 @@ impl<T: StateReader> CachedState<T> {
         &mut self,
         contract_classes: ContractClassesCache,
     ) -> Result<(), StateError> {
-        // if !self.contract_classes.is_empty() {
-        //     return Err(StateError::AssignedContractClassCache);
-        // }
         self.contract_classes = contract_classes;
         Ok(())
     }
@@ -153,7 +153,9 @@ impl<T: StateReader> StateReader for CachedState<T> {
         }
 
         // I: FETCHING FROM CACHE
-        if let Some(compiled_class) = self.contract_classes.read().unwrap().get(class_hash) {
+        if let Some(compiled_class) = self.contract_classes_private.get(class_hash) {
+            return Ok(compiled_class.clone());
+        } else if let Some(compiled_class) = self.contract_classes.read().unwrap().get(class_hash) {
             return Ok(compiled_class.clone());
         }
 
@@ -161,7 +163,9 @@ impl<T: StateReader> StateReader for CachedState<T> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = self
+            if let Some(casm_class) = self.contract_classes_private.get(compiled_class_hash) {
+                return Ok(casm_class.clone());
+            } else if let Some(casm_class) = self
                 .contract_classes
                 .read()
                 .unwrap()
@@ -183,9 +187,7 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &ClassHash,
         contract_class: &CompiledClass,
     ) -> Result<(), StateError> {
-        self.contract_classes
-            .write()
-            .unwrap()
+        self.contract_classes_private
             .insert(*class_hash, contract_class.clone());
 
         Ok(())
@@ -391,7 +393,9 @@ impl<T: StateReader> State for CachedState<T> {
 
         // I: FETCHING FROM CACHE
         // deprecated contract classes dont have compiled class hashes, so we only have one case
-        if let Some(compiled_class) = self.contract_classes.read().unwrap().get(class_hash) {
+        if let Some(compiled_class) = self.contract_classes_private.get(class_hash) {
+            return Ok(compiled_class.clone());
+        } else if let Some(compiled_class) = self.contract_classes.read().unwrap().get(class_hash) {
             return Ok(compiled_class.clone());
         }
 
@@ -399,7 +403,9 @@ impl<T: StateReader> State for CachedState<T> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = self
+            if let Some(casm_class) = self.contract_classes_private.get(compiled_class_hash) {
+                return Ok(casm_class.clone());
+            } else if let Some(casm_class) = self
                 .contract_classes
                 .read()
                 .unwrap()
@@ -454,8 +460,11 @@ pub fn merge_caches(
     }
 }
 
-pub fn take_cache() {
-    todo!()
+pub fn take_cache<T>(state: CachedState<T>) -> HashMap<ClassHash, CompiledClass>
+where
+    T: StateReader,
+{
+    state.contract_classes_private
 }
 
 #[cfg(test)]
