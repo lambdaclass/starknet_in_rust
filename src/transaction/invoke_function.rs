@@ -240,6 +240,25 @@ impl InvokeFunction {
         // FIXME: why are we ignoring revert in the validation step?
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
+
+        let changes = state.count_actual_storage_changes()?;
+        dbg!(&changes);
+        let actual_resources = calculate_tx_resources(
+            resources_manager.clone(),
+            &vec![validate_info.clone()],
+            self.tx_type,
+            changes,
+            None,
+            0,
+        )?;
+        dbg!(&actual_resources);
+        let actual_fee = calculate_tx_fee(
+            &actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
+        dbg!(actual_fee);
+
         // Execute transaction
         let ExecutionResult {
             call_info,
@@ -294,7 +313,6 @@ impl InvokeFunction {
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
 
-        dbg!(&tx_exec_info.actual_resources);
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
             block_context.starknet_os_config.gas_price,

@@ -953,7 +953,6 @@ mod blockifier_transaction_tests {
             ..
         } = execute_call_info.unwrap();
 
-        dbg!(actual_resources);
         assert!(false);
         //dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
         //dbg!(execute_call_info.unwrap().vm_resources); // Ok with explorer

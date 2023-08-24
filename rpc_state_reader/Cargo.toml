@@ -20,3 +20,6 @@ thiserror = { workspace = true }
 serde_with = "3.0.0"
 dotenv = "0.15.0"
 cairo-vm = "0.8.5"
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"

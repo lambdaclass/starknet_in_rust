@@ -3,6 +3,7 @@ pub(crate) mod contract_storage_state;
 pub mod in_memory_state_reader;
 pub mod state_api;
 pub mod state_cache;
+pub(crate) mod utils;
 
 use crate::{
     core::errors::state_errors::StateError,

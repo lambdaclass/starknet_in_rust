@@ -562,6 +562,7 @@ impl<'a, T: StateReader> TransactionalCachedState<'a, T> {
             modified_contracts.len()
         };
 
+        dbg!(storage_updates.len());
         Ok((n_modified_contracts, storage_updates.len()))
     }
 }

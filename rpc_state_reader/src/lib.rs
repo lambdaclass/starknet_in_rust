@@ -741,7 +741,7 @@ mod transaction_tests {
         felt::felt_str,
         state::cached_state::CachedState,
     };
-    use std::sync::Arc;
+    use std::{collections::HashMap, sync::Arc};
 
     fn test_tx(
         tx_hash: &str,
@@ -936,6 +936,8 @@ mod transaction_tests {
 
     #[test]
     fn test_recent_tx() {
+    use pretty_assertions::{assert_eq, assert_ne};
+
         let (tx_info, trace) = test_tx(
             "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
             RpcChain::MainNet,
@@ -959,7 +961,15 @@ mod transaction_tests {
             ..
         } = call_info.unwrap();
 
-        dbg!(actual_resources);
+        let blockifier_actual_resources = HashMap::from([
+            ("l1_gas_usage".to_string(), 2448),
+            ("n_steps".to_string(), 6365),
+            ("range_check_builtin".to_string(), 143usize),
+            ("ecdsa_builtin".to_string(), 1),
+            ("pedersen_builtin".to_string(), 16),
+        ]);
+
+        assert_eq!(actual_resources, blockifier_actual_resources);
         //dbg!(actual_fee); // test=83714806176032, explorer=67749104314311, diff=15965701861721 (23%)
         //dbg!(execute_call_info.unwrap().vm_resources); // Ok with explorer
         //dbg!(execute_call_info.unwrap().inner_calls.len()); // Ok with explorer
@@ -967,7 +977,10 @@ mod transaction_tests {
         //dbg!(trace.function_invocation.internal_calls.len());
         //dbg!(execute_call_info);
 
-        assert_eq!(execution_resources, trace.function_invocation.execution_resources);
+        assert_eq!(
+            execution_resources,
+            trace.function_invocation.execution_resources
+        );
         assert_eq!(
             internal_calls.len(),
             trace.function_invocation.internal_calls.len()

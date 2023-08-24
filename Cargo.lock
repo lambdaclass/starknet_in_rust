@@ -3122,6 +3122,7 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-vm",
  "dotenv",
+ "pretty_assertions",
  "serde",
  "serde_json",
  "serde_with 3.1.0",

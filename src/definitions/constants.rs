@@ -93,6 +93,9 @@ pub const DEFAULT_VALIDATE_MAX_N_STEPS: u64 = 1000000;
 pub const STEP_GAS_COST: u128 = 100;
 pub const INITIAL_GAS_COST: u128 = 10_u128.pow(8) * STEP_GAS_COST;
 
+pub const DEFAULT_ENTRY_POINT_NAME: &str = "__default__";
+pub const DEFAULT_L1_ENTRY_POINT_NAME: &str = "__l1_default__";
+
 lazy_static! {
     /// Value generated from `get_selector_from_name('constructor')`.
     pub static ref CONSTRUCTOR_ENTRY_POINT_SELECTOR: Felt252 =
