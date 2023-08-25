@@ -433,9 +433,10 @@ mod test {
 
         let block_context = BlockContext::default();
         let Transaction::InvokeFunction(simul_invoke) =
-            invoke.create_for_simulation(true, false, false, false, false) else {
-                unreachable!()
-            };
+            invoke.create_for_simulation(true, false, false, false, false)
+        else {
+            unreachable!()
+        };
 
         let call_info = simul_invoke
             .run_validate_entrypoint(
