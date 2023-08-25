@@ -1,0 +1,60 @@
+ame: Install dependencies, build the project and run tests from zero
+
+on:
+  merge_group:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  fresh_run:
+    strategy:
+        fail-fast: false
+        matrix:
+          include:
+          - os: ubuntu-22.04
+            deps_suffix: ''
+          - os: macos-12
+            deps_suffix: '-macos' 
+    runs-on: ${{ matrix.os }}
+    name: "Make deps, build & test on fresh ${{ matrix.os }} system"
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install pyenv
+      uses: "gabrielfalcao/pyenv-action@v13"
+
+    - name: Run make deps${{ matrix.deps_suffix }}
+      id: deps
+      run: make deps${{ matrix.deps_suffix }}
+
+    - name: Run make build
+      id: build
+      run: make build
+
+    - name: Run make test
+      id: test
+      run: |
+        . starknet-venv/bin/activate; \
+        make test
+    - name: Check which step failed
+      if: failure()
+      run: |
+        if [ ${{ steps.deps.outcome }} = failure ]; then
+            FAILED_TARGET=deps${{ matrix.deps_suffix }}
+        elif [ ${{ steps.build.outcome }} = failure ]; then
+            FAILED_TARGET=build
+        else 
+            FAILED_TARGET=test
+        fi
+        echo "FAILED_TARGET=$FAILED_TARGET" >> $GITHUB_ENV
+    - name: Create Issue
+      if: ${{ failure() }}
+      uses: JasonEtco/create-an-issue@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        OS: ${{ matrix.os}}
+        COMMIT_SHA: ${{ github.sha }}
+      with:
+        filename: .github/ISSUE_TEMPLATE/fresh_run_failure.md
