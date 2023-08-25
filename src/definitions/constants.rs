@@ -44,9 +44,9 @@ lazy_static! {
         0.into(),
         1.into(),
         2.into(),
-        &0.into() | &QUERY_VERSION_BASE.clone(),
-        &1.into() | &QUERY_VERSION_BASE.clone(),
-        &2.into() | &QUERY_VERSION_BASE.clone(),
+        &Into::<Felt252>::into(0) | &QUERY_VERSION_BASE.clone(),
+        &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone(),
+        &Into::<Felt252>::into(2) | &QUERY_VERSION_BASE.clone(),
     ];
 }
 

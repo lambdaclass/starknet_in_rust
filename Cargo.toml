@@ -26,7 +26,6 @@ cairo-lang-sierra = "2.1.0-rc4"
 cairo-lang-utils = "2.1.0-rc4"
 
 [dependencies]
-cairo-felt = "0.8.5"
 cairo-lang-starknet = { workspace = true }
 cairo-lang-casm = { workspace = true }
 cairo-lang-runner = { workspace = true }
