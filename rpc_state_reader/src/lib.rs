@@ -129,7 +129,7 @@ struct RpcResponseFelt252 {
 impl RpcState {
     pub fn new(chain: RpcChain, block: BlockValue) -> Self {
         if env::var("INFURA_API_KEY").is_err() {
-            dotenv().expect("Missing .env file");
+            dotenv().expect("Missing env variable");
         }
         Self {
             chain,
