@@ -1,4 +1,4 @@
-ame: Install dependencies, build the project and run tests from zero
+name: Install dependencies, build the project and run tests from zero
 
 on:
   merge_group:
