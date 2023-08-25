@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::core::errors::state_errors::StateError;
 use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
@@ -33,7 +34,7 @@ use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
 use cairo_native::starknet::{
     BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
 };
-use cairo_native::utils::{felt252_bigint, felt252_short_str, find_function_id};
+use cairo_native::utils::find_function_id;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -45,6 +46,7 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
+use num_traits::Zero;
 use serde_json::json;
 
 use super::{
@@ -52,9 +54,14 @@ use super::{
 };
 
 #[derive(Debug)]
-struct SyscallHandler;
+struct SyscallHandler<'a, S>
+where
+    S: StateReader,
+{
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+}
 
-impl StarkNetSyscallHandler for SyscallHandler {
+impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
     fn get_block_hash(&self, block_number: u64) -> SyscallResult<cairo_vm::felt::Felt252> {
         println!("Called `get_block_hash({block_number})` from MLIR.");
         Ok(Felt252::from_bytes_be(b"get_block_hash ok"))
@@ -127,22 +134,30 @@ impl StarkNetSyscallHandler for SyscallHandler {
     }
 
     fn storage_read(
-        &self,
+        &mut self,
         address_domain: u32,
         address: cairo_vm::felt::Felt252,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
         println!("Called `storage_read({address_domain}, {address})` from MLIR.");
-        Ok(address * &Felt252::new(3))
+        match self.starknet_storage_state.read(&address.to_be_bytes()) {
+            Ok(value) => Ok(value),
+            Err(_e @ StateError::Io(_)) => todo!(),
+            Err(_) => Ok(Felt252::zero()),
+        }
+        // Ok(address * &Felt252::new(3))
     }
 
     fn storage_write(
-        &self,
+        &mut self,
         address_domain: u32,
         address: cairo_vm::felt::Felt252,
         value: cairo_vm::felt::Felt252,
     ) -> SyscallResult<()> {
         println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
-        Ok(())
+        Ok(self
+            .starknet_storage_state
+            .write(&address.to_be_bytes(), value))
+        // Ok(())
     }
 
     fn emit_event(
@@ -709,9 +724,14 @@ impl ExecutionEntryPoint {
 
             let native_context = NativeContext::new();
 
-            let mut native_program = native_context.compile(&sierra_program).unwrap();
+            let native_program = native_context.compile(&sierra_program).unwrap();
+            let contract_storage_state =
+                ContractStorageState::new(state, self.contract_address.clone());
+            let mut syscall_handler = SyscallHandler {
+                starknet_storage_state: contract_storage_state,
+            };
             native_program
-                .insert_metadata(SyscallHandlerMeta::new(&SyscallHandler))
+                .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler))
                 .unwrap();
 
             let syscall_addr = native_program
@@ -722,15 +742,17 @@ impl ExecutionEntryPoint {
 
             let fn_id = find_function_id(
                 &sierra_program,
-                "erc20::erc20::erc_20::__constructor::constructor",
+                // "erc20::erc20::erc_20::__constructor::constructor",
+                "erc20::erc20::erc_20::__external::get_name",
             );
             let required_init_gas = native_program.get_required_init_gas(fn_id);
 
             let params = json!([
-                // pedersen
-                null,
-                // range check
-                null,
+                // // pedersen
+                // null,
+                // // range check
+                // null,
+                (),
                 // gas
                 u64::MAX,
                 // system
@@ -743,12 +765,12 @@ impl ExecutionEntryPoint {
                         // contract state
 
                         // name
-                        felt252_short_str("name"),   // name
-                        felt252_short_str("symbol"), // symbol
-                        felt252_bigint(0),           // decimals
-                        felt252_bigint(i64::MAX),    // initial supply
-                        felt252_bigint(4),           // contract address
-                        felt252_bigint(6),           // ??
+                        // felt252_short_str("name"),   // name
+                        // felt252_short_str("symbol"), // symbol
+                        // felt252_bigint(0),           // decimals
+                        // felt252_bigint(i64::MAX),    // initial supply
+                        // felt252_bigint(4),           // contract address
+                        // felt252_bigint(6),           // ??
                     ]
                 ]
             ]);
