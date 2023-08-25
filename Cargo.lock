@@ -1218,7 +1218,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=fix_array_slice#8da034e4b52489b0ce6afd84a0f0fcb10c875296"
+source = "git+https://github.com/lambdaclass/cairo_native?branch=fix_array_slice#0fc15f7f5074f86508935898a617d022f9ae4318"
 dependencies = [
  "bumpalo",
  "cairo-felt",
@@ -1252,7 +1252,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=fix_array_slice#8da034e4b52489b0ce6afd84a0f0fcb10c875296"
+source = "git+https://github.com/lambdaclass/cairo_native?branch=fix_array_slice#0fc15f7f5074f86508935898a617d022f9ae4318"
 dependencies = [
  "cairo-felt",
  "cairo-lang-runner",
@@ -2501,9 +2501,9 @@ dependencies = [
 
 [[package]]
 name = "libmimalloc-sys"
-version = "0.1.33"
+version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4ac0e912c8ef1b735e92369695618dc5b1819f5a7bf3f167301a3ba1cea515e"
+checksum = "25d058a81af0d1c22d7a1c948576bee6d673f7af3c0f35564abd6c81122f513d"
 dependencies = [
  "cc",
  "libc",
@@ -2629,9 +2629,9 @@ dependencies = [
 
 [[package]]
 name = "mimalloc"
-version = "0.1.37"
+version = "0.1.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e2894987a3459f3ffb755608bd82188f8ed00d0ae077f1edea29c068d639d98"
+checksum = "972e5f23f6716f62665760b0f4cbf592576a80c7b879ba9beaafc0e558894127"
 dependencies = [
  "libmimalloc-sys",
 ]
@@ -2976,9 +2976,9 @@ checksum = "5be167a7af36ee22fe3115051bc51f6e6c7054c9348e28deb4f49bd6f705a315"
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12cc1b0bf1727a77a54b6654e7b5f1af8604923edc8b81885f8ec92f9e3f0a05"
+checksum = "8afb450f006bf6385ca15ef45d71d2288452bc3683ce2e2cacc0d18e4be60b58"
 
 [[package]]
 name = "pin-utils"
@@ -4037,6 +4037,7 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "base64 0.21.2",
+ "cairo-felt",
  "cairo-lang-casm",
  "cairo-lang-runner",
  "cairo-lang-sierra",
