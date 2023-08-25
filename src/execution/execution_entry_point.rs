@@ -34,7 +34,7 @@ use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
 use cairo_native::starknet::{
     BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
 };
-use cairo_native::utils::find_function_id;
+use cairo_native::utils::{felt252_bigint, find_function_id};
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -717,10 +717,19 @@ impl ExecutionEntryPoint {
             dbg!("Use cairo native");
 
             // TODO: Read this from contract class, make contract classes store sierra instead of casm
-            let source = std::fs::read_to_string("cairo_programs/erc20.sierra").unwrap();
-            let sierra_program = cairo_lang_sierra::ProgramParser::new()
-                .parse(&source)
+            let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+                serde_json::from_str(
+                    std::fs::read_to_string("cairo_programs/wallet.sierra")
+                        .unwrap()
+                        .as_str(),
+                )
                 .unwrap();
+
+            let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
+            println!("{}", sierra_program.to_string());
+            // let sierra_program = cairo_lang_sierra::ProgramParser::new()
+            //     .parse(&source)
+            //     .unwrap();
 
             let native_context = NativeContext::new();
 
@@ -740,14 +749,50 @@ impl ExecutionEntryPoint {
                 .as_ptr()
                 .addr();
 
-            let fn_id = find_function_id(
+            let increase_fn_id = find_function_id(
                 &sierra_program,
                 // "erc20::erc20::erc_20::__constructor::constructor",
-                "erc20::erc20::erc_20::__external::get_name",
+                // "erc20::erc20::erc_20::__external::get_name",
+                "wallet::wallet::SimpleWallet::__wrapper_increase_balance",
             );
-            let required_init_gas = native_program.get_required_init_gas(fn_id);
+            let increase_required_init_gas = native_program.get_required_init_gas(increase_fn_id);
 
-            let params = json!([
+            let get_fn_id = find_function_id(
+                &sierra_program,
+                // "erc20::erc20::erc_20::__constructor::constructor",
+                // "erc20::erc20::erc_20::__external::get_name",
+                "wallet::wallet::SimpleWallet::__wrapper_get_balance",
+            );
+            let get_required_init_gas = native_program.get_required_init_gas(get_fn_id);
+
+            println!("SYSCALL ADDRESS: {}", syscall_addr);
+
+            let increase_params = json!([
+                // // pedersen
+                // null,
+                // // range check
+                // null,
+                (),
+                // gas
+                u64::MAX,
+                // system
+                syscall_addr,
+                // The amount of params change depending on the contract function called
+                // Struct<Span<Array<felt>>>
+                // Span<Array<felt>>
+                // contract state
+                [[
+                    felt252_bigint(11), // decimals
+                                        // ] // name
+                                        // ] // felt252_short_str("name"),   // name
+                                        // felt252_short_str("symbol"), // symbol
+                                        // felt252_bigint(i64::MAX),    // initial supply
+                                        // felt252_bigint(4),           // contract address
+                                        // felt252_bigint(6),           // ??
+                ]]
+            ]);
+
+            let get_params = json!([
                 // // pedersen
                 // null,
                 // // range check
@@ -767,28 +812,42 @@ impl ExecutionEntryPoint {
                         // name
                         // felt252_short_str("name"),   // name
                         // felt252_short_str("symbol"), // symbol
-                        // felt252_bigint(0),           // decimals
-                        // felt252_bigint(i64::MAX),    // initial supply
-                        // felt252_bigint(4),           // contract address
-                        // felt252_bigint(6),           // ??
+                        // decimals
+                                            // felt252_bigint(i64::MAX),    // initial supply
+                                            // felt252_bigint(4),           // contract address
+                                            // felt252_bigint(6),           // ??
                     ]
                 ]
             ]);
 
-            let mut writer: Vec<u8> = Vec::new();
-            let returns = &mut serde_json::Serializer::new(&mut writer);
+            let mut increase_writer: Vec<u8> = Vec::new();
+            let mut get_writer: Vec<u8> = Vec::new();
+            let increase_returns = &mut serde_json::Serializer::new(&mut increase_writer);
+            let get_returns = &mut serde_json::Serializer::new(&mut get_writer);
 
             let native_executor = NativeExecutor::new(native_program);
 
             native_executor
-                .execute(fn_id, params, returns, required_init_gas)
+                .execute(
+                    increase_fn_id,
+                    increase_params,
+                    increase_returns,
+                    increase_required_init_gas,
+                )
                 .unwrap();
 
-            let deserialized_result: String = String::from_utf8(writer).unwrap();
-            let deserialized_value =
-                serde_json::from_str::<serde_json::Value>(&deserialized_result)
-                    .expect("Failed to deserialize result");
-            println!("{}", deserialized_value);
+            native_executor
+                .execute(get_fn_id, get_params, get_returns, get_required_init_gas)
+                .unwrap();
+
+            let increase_result: String = String::from_utf8(increase_writer).unwrap();
+            let increase_value = serde_json::from_str::<serde_json::Value>(&increase_result)
+                .expect("Failed to deserialize result");
+            let get_result: String = String::from_utf8(get_writer).unwrap();
+            let get_value = serde_json::from_str::<serde_json::Value>(&get_result)
+                .expect("Failed to deserialize result");
+            println!("{}", increase_value);
+            println!("{}", get_value);
         }
 
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
