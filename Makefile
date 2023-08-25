@@ -147,14 +147,14 @@ check: compile-cairo compile-starknet
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
-	python3.9 -m venv starknet-venv
+	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest --version 0.9.49
 
 deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
-	python3.9 -m venv starknet-venv
+	python3 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest
 
