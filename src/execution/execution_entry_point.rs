@@ -193,8 +193,8 @@ impl ExecutionEntryPoint {
 
                 (x.selector() == &self.entry_point_selector).then_some(x)
             })
-            .fold(Ok(None), |acc, x| match acc {
-                Ok(None) => Ok(Some(x)),
+            .try_fold(None, |acc, x| match acc {
+                None => Ok(Some(x)),
                 _ => Err(TransactionError::NonUniqueEntryPoint),
             })?;
 
@@ -225,8 +225,8 @@ impl ExecutionEntryPoint {
 
                 (x.selector == self.entry_point_selector.to_biguint()).then_some(x)
             })
-            .fold(Ok(None), |acc, x| match acc {
-                Ok(None) => Ok(Some(x)),
+            .try_fold(None, |acc, x| match acc {
+                None => Ok(Some(x)),
                 _ => Err(TransactionError::NonUniqueEntryPoint),
             })?;
         entry_point
