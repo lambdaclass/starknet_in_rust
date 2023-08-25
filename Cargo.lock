@@ -1218,7 +1218,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=integration-changes#07ae75a9dc560a0abd7ef7e4c4bc7c6667d53c81"
+source = "git+https://github.com/lambdaclass/cairo_native?branch=integration-changes#a4ed037db33a4134b559bc349cce4dee5cf679bc"
 dependencies = [
  "bumpalo",
  "cairo-felt",
@@ -1252,7 +1252,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=integration-changes#07ae75a9dc560a0abd7ef7e4c4bc7c6667d53c81"
+source = "git+https://github.com/lambdaclass/cairo_native?branch=integration-changes#a4ed037db33a4134b559bc349cce4dee5cf679bc"
 dependencies = [
  "cairo-felt",
  "cairo-lang-runner",
@@ -2045,9 +2045,9 @@ checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "good_lp"
-version = "1.4.3"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4286919dfa7d06a1f3397e04381575043e87dd48e43548396874a5547b9b3913"
+checksum = "fa7f3b0e0de4e671b6ffc1274b153a9394cb58bf04ee67505b0cb9915513115f"
 dependencies = [
  "fnv",
  "minilp",
@@ -3370,9 +3370,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.8"
+version = "0.38.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19ed4fa021d81c8392ce04db050a3da9a60299050b7ae1cf482d862b54a7218f"
+checksum = "9bfe0f2582b4931a45d1fa608f8a8722e8b3c7ac54dd6d5f3b3212791fedef49"
 dependencies = [
  "bitflags 2.4.0",
  "errno",

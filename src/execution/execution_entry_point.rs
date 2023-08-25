@@ -724,7 +724,7 @@ impl ExecutionEntryPoint {
 
             let native_context = NativeContext::new();
 
-            let native_program = native_context.compile(&sierra_program).unwrap();
+            let mut native_program = native_context.compile(&sierra_program).unwrap();
             let contract_storage_state =
                 ContractStorageState::new(state, self.contract_address.clone());
             let mut syscall_handler = SyscallHandler {
