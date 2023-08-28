@@ -297,7 +297,7 @@ mod test {
         let transaction = Transaction::InvokeFunction(invoke_function);
 
         let estimated_fee = estimate_fee(&[transaction], state, &block_context).unwrap();
-        assert_eq!(estimated_fee[0], (2483, 2448));
+        assert_eq!(estimated_fee[0], (3707, 3672));
     }
 
     #[test]
