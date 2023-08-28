@@ -13,7 +13,7 @@ jobs:
         fail-fast: false
         matrix:
           include:
-          - os: ubuntu-22.04
+          - os: starknet_in_rust
             deps_suffix: ''
           - os: macos-12
             deps_suffix: '-macos' 
