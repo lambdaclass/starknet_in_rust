@@ -167,7 +167,8 @@ fn integration_test_cairo1() {
     let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
 
     // Create an execution entry point
-    let calldata = [0.into(), 1.into(), 12.into()].to_vec();
+    // let calldata = [0.into(), 1.into(), 12.into()].to_vec();
+    let calldata = [].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -192,7 +193,7 @@ fn integration_test_cairo1() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
+        true,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

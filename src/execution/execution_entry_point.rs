@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fmt;
 use std::sync::Arc;
 
 use crate::core::errors::state_errors::StateError;
@@ -48,11 +49,83 @@ use cairo_vm::{
     },
 };
 use num_traits::Zero;
+use serde::de::SeqAccess;
+use serde::{de, Deserialize, Deserializer};
 use serde_json::json;
 
 use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
 };
+
+#[derive(Debug)]
+pub struct NativeExecutionResult {
+    pub gas_builtin: Option<u64>,
+    pub range_check: Option<u64>,
+    pub system: Option<u64>,
+    pub failure_flag: bool,
+    pub return_values: Vec<Felt252>,
+}
+
+impl<'de> Deserialize<'de> for NativeExecutionResult {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct NativeExecutionResultVisitor;
+
+        impl<'de> de::Visitor<'de> for NativeExecutionResultVisitor {
+            type Value = NativeExecutionResult;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("Could not deserialize array of hexadecimal")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let gas_builtin = seq.next_element::<Option<u64>>()?.unwrap();
+                let range_check = seq.next_element::<Option<u64>>()?.unwrap();
+                let system = seq.next_element::<Option<u64>>()?.unwrap();
+                let (failure_flag_integer, return_values) = seq
+                    .next_element::<(u64, Vec<Vec<Vec<Vec<u32>>>>)>()?
+                    .unwrap();
+                let failure_flag = failure_flag_integer == 1;
+
+                Ok(NativeExecutionResult {
+                    gas_builtin,
+                    range_check,
+                    system,
+                    return_values: return_values[0][0]
+                        .iter()
+                        .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
+                        .collect(),
+                    failure_flag: failure_flag,
+                })
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &[
+            "gas_builtin",
+            "range_check",
+            "system",
+            "return_values",
+            "failure_flag",
+        ];
+        deserializer.deserialize_struct("Duration", FIELDS, NativeExecutionResultVisitor)
+    }
+}
+
+fn u32_vec_to_felt(u32_limbs: &[u32]) -> Felt252 {
+    let mut ret = vec![];
+
+    for limb in u32_limbs {
+        let bytes = limb.to_be_bytes();
+        ret.extend_from_slice(&bytes);
+    }
+
+    Felt252::from_bytes_be(&ret)
+}
 
 #[derive(Debug)]
 struct SyscallHandler<'a, S>
@@ -823,10 +896,10 @@ impl ExecutionEntryPoint {
             let increase_value = serde_json::from_str::<serde_json::Value>(&increase_result)
                 .expect("Failed to deserialize result");
             let get_result: String = String::from_utf8(get_writer).unwrap();
-            let get_value = serde_json::from_str::<serde_json::Value>(&get_result)
+            let get_value = serde_json::from_str::<NativeExecutionResult>(&get_result)
                 .expect("Failed to deserialize result");
             println!("{}", increase_value);
-            println!("{}", get_value);
+            println!("{:?}", get_value);
 
             return Ok(CallInfo {
                 caller_address: self.caller_address.clone(),
@@ -839,12 +912,7 @@ impl ExecutionEntryPoint {
                 entry_point_selector: Some(self.entry_point_selector.clone()),
                 entry_point_type: Some(self.entry_point_type),
                 calldata: self.calldata.clone(),
-                // retdata: call_result
-                //     .retdata
-                //     .iter()
-                //     .map(|n| n.get_int_ref().cloned().unwrap_or_default())
-                //     .collect(),
-                retdata: vec![],
+                retdata: get_value.return_values,
                 execution_resources: None,
 
                 // TODO
@@ -854,7 +922,7 @@ impl ExecutionEntryPoint {
                 accessed_storage_keys: HashSet::new(),
                 internal_calls: vec![],
 
-                failure_flag: false,
+                failure_flag: get_value.failure_flag,
 
                 // TODO
                 gas_consumed: 0,
