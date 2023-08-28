@@ -25,6 +25,7 @@ pub type CasmClassCache = HashMap<ClassHash, CasmContractClass>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
+/// Represents a cached state of contract classes with optional caches.
 #[derive(Default, Clone, Debug, Eq, Getters, MutGetters, PartialEq)]
 pub struct CachedState<T: StateReader> {
     pub state_reader: Arc<T>,
@@ -65,6 +66,7 @@ impl<T: StateReader> CachedState<T> {
 }
 
 impl<T: StateReader> CachedState<T> {
+    /// Constructor, creates a new cached state.
     pub fn new(
         state_reader: Arc<T>,
         contract_class_cache: Option<ContractClassCache>,
@@ -80,6 +82,7 @@ impl<T: StateReader> CachedState<T> {
         }
     }
 
+    /// Creates a CachedState for testing purposes.
     pub fn new_for_testing(
         state_reader: Arc<T>,
         contract_classes: Option<ContractClassCache>,
@@ -96,6 +99,7 @@ impl<T: StateReader> CachedState<T> {
         }
     }
 
+    /// Sets the contract classes cache.
     pub fn set_contract_classes(
         &mut self,
         contract_classes: ContractClassCache,
@@ -107,6 +111,7 @@ impl<T: StateReader> CachedState<T> {
         Ok(())
     }
 
+    /// Returns the casm classes.
     #[allow(dead_code)]
     pub(crate) fn get_casm_classes(&mut self) -> Result<&CasmClassCache, StateError> {
         self.casm_contract_classes
@@ -116,6 +121,7 @@ impl<T: StateReader> CachedState<T> {
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
+    /// Returns the class hash for a given contract address.
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
         if self.cache.get_class_hash(contract_address).is_none() {
             match self.state_reader.get_class_hash_at(contract_address) {
@@ -137,6 +143,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
             .cloned()
     }
 
+    /// Returns the nonce for a given contract address.
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
             return self.state_reader.get_nonce_at(contract_address);
@@ -147,6 +154,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
             .cloned()
     }
 
+    /// Returns storage data for a given storage entry.
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         if self.cache.get_storage(storage_entry).is_none() {
             match self.state_reader.get_storage_at(storage_entry) {
@@ -172,6 +180,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
+    /// Returned the compiled class hash for a given class hash.
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         if self
             .cache
@@ -188,6 +197,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
             .cloned()
     }
 
+    /// Returns the contract class for a given class hash.
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // This method can receive both compiled_class_hash & class_hash and return both casm and deprecated contract classes
         //, which can be on the cache or on the state_reader, different cases will be described below:
@@ -202,7 +212,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
             .as_ref()
             .and_then(|x| x.get(class_hash))
         {
-            return Ok(CompiledClass::Deprecated(Box::new(compiled_class.clone())));
+            return Ok(CompiledClass::Deprecated(Arc::new(compiled_class.clone())));
         }
         // I: CASM CONTRACT CLASS : COMPILED_CLASS_HASH
         if let Some(compiled_class) = self
@@ -210,7 +220,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
             .as_ref()
             .and_then(|x| x.get(class_hash))
         {
-            return Ok(CompiledClass::Casm(Box::new(compiled_class.clone())));
+            return Ok(CompiledClass::Casm(Arc::new(compiled_class.clone())));
         }
         // I: CASM CONTRACT CLASS : CLASS_HASH
         if let Some(compiled_class_hash) =
@@ -221,7 +231,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
                 .as_ref()
                 .and_then(|m| m.get(compiled_class_hash))
             {
-                return Ok(CompiledClass::Casm(Box::new(casm_class.clone())));
+                return Ok(CompiledClass::Casm(Arc::new(casm_class.clone())));
             }
         }
         // II: FETCHING FROM STATE_READER
@@ -230,6 +240,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
 }
 
 impl<T: StateReader> State for CachedState<T> {
+    /// Stores a contract class in the cache.
     fn set_contract_class(
         &mut self,
         class_hash: &ClassHash,
@@ -247,6 +258,7 @@ impl<T: StateReader> State for CachedState<T> {
         Ok(())
     }
 
+    /// Deploys a new contract and updates the cache.
     fn deploy_contract(
         &mut self,
         deploy_contract_address: Address,
@@ -515,7 +527,7 @@ impl<T: StateReader> State for CachedState<T> {
                 let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
                 self.casm_contract_classes
                     .as_mut()
-                    .and_then(|m| m.insert(compiled_class_hash, *class.clone()));
+                    .and_then(|m| m.insert(compiled_class_hash, class.as_ref().clone()));
             }
             CompiledClass::Deprecated(ref contract) => {
                 self.set_contract_class(class_hash, &contract.clone())?
@@ -533,6 +545,8 @@ mod tests {
 
     use num_traits::One;
 
+    /// Test checks if class hashes and nonces are correctly fetched from the state reader.
+    /// It also tests the increment_nonce method.
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
         let mut state_reader = InMemoryStateReader::new(
@@ -574,6 +588,7 @@ mod tests {
         );
     }
 
+    /// This test checks if the contract class is correctly fetched from the state reader.
     #[test]
     fn get_contract_class_from_state_reader() {
         let mut state_reader = InMemoryStateReader::new(
@@ -606,6 +621,7 @@ mod tests {
         );
     }
 
+    /// This test verifies the correct handling of storage in the cached state.
     #[test]
     fn cached_state_storage_test() {
         let mut cached_state =
@@ -624,6 +640,7 @@ mod tests {
             .is_zero());
     }
 
+    /// This test checks if deploying a contract works as expected.
     #[test]
     fn cached_state_deploy_contract_test() {
         let state_reader = Arc::new(InMemoryStateReader::default());
@@ -637,6 +654,7 @@ mod tests {
             .is_ok());
     }
 
+    /// This test verifies the set and get storage values in the cached state.
     #[test]
     fn get_and_set_storage() {
         let state_reader = Arc::new(InMemoryStateReader::default());
@@ -663,6 +681,7 @@ mod tests {
         assert_eq!(new_result.unwrap(), new_value);
     }
 
+    /// This test ensures that an error is thrown when trying to set contract classes twice.
     #[test]
     fn set_contract_classes_twice_error_test() {
         let state_reader = InMemoryStateReader::new(
@@ -683,6 +702,7 @@ mod tests {
         assert_matches!(result, StateError::AssignedContractClassCache);
     }
 
+    /// This test ensures that an error is thrown if a contract address is out of range.
     #[test]
     fn deploy_contract_address_out_of_range_error_test() {
         let state_reader = InMemoryStateReader::new(
@@ -708,6 +728,7 @@ mod tests {
         );
     }
 
+    /// This test ensures that an error is thrown if a contract address is already in use.
     #[test]
     fn deploy_contract_address_in_use_error_test() {
         let state_reader = InMemoryStateReader::new(
@@ -736,6 +757,7 @@ mod tests {
         );
     }
 
+    /// This test checks if replacing a contract in the cached state works correctly.
     #[test]
     fn cached_state_replace_contract_test() {
         let state_reader = InMemoryStateReader::new(
@@ -765,6 +787,7 @@ mod tests {
         );
     }
 
+    /// This test verifies  if the cached state's internal structures are correctly updated after applying a state update.
     #[test]
     fn cached_state_apply_state_update() {
         let state_reader = InMemoryStateReader::new(
@@ -809,6 +832,7 @@ mod tests {
         assert!(cached_state.cache.class_hash_initial_values.is_empty());
     }
 
+    /// This test calculate the number of actual storage changes.
     #[test]
     fn count_actual_storage_changes_test() {
         let state_reader = InMemoryStateReader::default();
