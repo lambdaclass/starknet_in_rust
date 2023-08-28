@@ -109,10 +109,10 @@ fn integration_test() {
         calldata,
         retdata: [144.into()].to_vec(),
         class_hash: Some(class_hash),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 94,
             ..Default::default()
-        },
+        }),
         ..Default::default()
     };
 
@@ -136,10 +136,12 @@ fn integration_test() {
 #[test]
 fn integration_test_cairo1() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+    // #[cfg(not(feature = "cairo_1_tests"))]
+    // let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
+    // #[cfg(feature = "cairo_1_tests")]
+    // let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+
+    let program_data = include_bytes!("../starknet_programs/cairo2/wallet.casm");
 
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
@@ -203,11 +205,11 @@ fn integration_test_cairo1() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 418,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
-        },
+        }),
         class_hash: Some(class_hash),
         gas_consumed: 35220,
         ..Default::default()

@@ -109,10 +109,10 @@ fn integration_test() {
         calldata,
         retdata: [144.into()].to_vec(),
         class_hash: Some(class_hash),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 94,
             ..Default::default()
-        },
+        }),
         ..Default::default()
     };
 
@@ -203,11 +203,11 @@ fn integration_test_cairo1() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 418,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
-        },
+        }),
         class_hash: Some(class_hash),
         gas_consumed: 35220,
         ..Default::default()

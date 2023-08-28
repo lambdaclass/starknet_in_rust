@@ -42,14 +42,14 @@ pub struct CallInfo {
     pub entry_point_selector: Option<Felt252>,
     pub entry_point_type: Option<EntryPointType>,
     pub calldata: Vec<Felt252>,
-    pub retdata: Vec<Felt252>,
-    pub execution_resources: ExecutionResources,
-    pub events: Vec<OrderedEvent>,
-    pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
-    pub storage_read_values: Vec<Felt252>,
-    pub accessed_storage_keys: HashSet<ClassHash>,
-    pub internal_calls: Vec<CallInfo>,
-    pub gas_consumed: u128,
+    pub retdata: Vec<Felt252>,                           // Chequear
+    pub execution_resources: Option<ExecutionResources>, // No
+    pub events: Vec<OrderedEvent>,                       // Chequear
+    pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,    // Mismo que events
+    pub storage_read_values: Vec<Felt252>,               // Mismo que arriba
+    pub accessed_storage_keys: HashSet<ClassHash>,       // Mismo
+    pub internal_calls: Vec<CallInfo>,                   // Chequear
+    pub gas_consumed: u128,                              // Chequear
     pub failure_flag: bool,
 }
 
@@ -73,11 +73,11 @@ impl CallInfo {
             entry_point_type,
             calldata: Vec::new(),
             retdata: Vec::new(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 0,
                 builtin_instance_counter: HashMap::new(),
                 n_memory_holes: 0,
-            },
+            }),
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
             storage_read_values: Vec::new(),
@@ -222,11 +222,11 @@ impl Default for CallInfo {
             l2_to_l1_messages: Vec::new(),
             accessed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 0,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::new(),
-            },
+            }),
             events: Vec::new(),
             gas_consumed: 0,
             failure_flag: false,
@@ -275,7 +275,7 @@ impl<'de> Deserialize<'de> for CallInfo {
         }
 
         Ok(CallInfo {
-            execution_resources,
+            execution_resources: Some(execution_resources),
             retdata,
             calldata,
             internal_calls,

@@ -91,14 +91,14 @@ fn amm_init_pool_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 232,
             n_memory_holes: 20,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 14),
                 (HASH_BUILTIN_NAME.to_string(), 2),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -180,14 +180,14 @@ fn amm_add_demo_tokens_test() {
         entry_point_selector: Some(add_demo_token_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_add_demo_token.clone(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 393,
             n_memory_holes: 44,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 20),
                 (HASH_BUILTIN_NAME.to_string(), 8),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys_add_demo_token,
         storage_read_values: vec![Felt252::zero(), Felt252::zero()],
@@ -255,14 +255,14 @@ fn amm_get_pool_token_balance() {
         entry_point_selector: Some(get_pool_balance_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_get_pool_token_balance.clone(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 84,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
                 (HASH_BUILTIN_NAME.to_string(), 1),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys_get_pool_token_balance,
         storage_read_values: vec![10000.into()],
@@ -351,14 +351,14 @@ fn amm_swap_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_swap.clone(),
         retdata: expected_return,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 820,
             n_memory_holes: 95,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 41),
                 (HASH_BUILTIN_NAME.to_string(), 14),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: [
@@ -602,14 +602,14 @@ fn amm_get_account_token_balance_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_get_balance,
         retdata: expected_return,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 92,
             n_memory_holes: 11,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
                 (HASH_BUILTIN_NAME.to_string(), 2),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: [10.into()].to_vec(),
