@@ -156,10 +156,13 @@ deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
-	pyenv install -s pypy3.9-7.3.9
+	arch -x86_64 pyenv install -s pypy3.9-7.3.9
+	PYENV_VERSION=pypy3.9-7.3.9 python -m venv starknet-pypy-env
+	. starknet-pypy-env/bin/activate ; \
+	CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install -r requirements.txt ; \
 	pyenv install -s 3.9.15
-	python3.9 -m venv starknet-venv
-	. starknet-venv/bin/activate && $(MAKE) deps-venv
+	PYENV_VERSION=3.9.15 python -m venv starknet-venv
+	CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install -r requirements.txt ; \
 	cargo install cargo-nextest
 
 clean:
