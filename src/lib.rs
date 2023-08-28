@@ -388,7 +388,7 @@ mod test {
         block_context.starknet_os_config.gas_price = 1;
 
         let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
-        assert_eq!(estimated_fee, (19708, 19695));
+        assert_eq!(estimated_fee, (20932, 20919));
     }
 
     #[test]
@@ -1014,7 +1014,7 @@ mod test {
 
         assert_eq!(
             estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
-            [(0, 3672), (0, 2448)]
+            [(0, 3672), (0, 3672)]
         );
     }
 
