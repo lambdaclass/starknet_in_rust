@@ -144,7 +144,6 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
             Err(_e @ StateError::Io(_)) => todo!(),
             Err(_) => Ok(Felt252::zero()),
         }
-        // Ok(address * &Felt252::new(3))
     }
 
     fn storage_write(
@@ -157,7 +156,6 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
         Ok(self
             .starknet_storage_state
             .write(&address.to_be_bytes(), value))
-        // Ok(())
     }
 
     fn emit_event(
@@ -751,45 +749,22 @@ impl ExecutionEntryPoint {
 
             let increase_fn_id = find_function_id(
                 &sierra_program,
-                // "erc20::erc20::erc_20::__constructor::constructor",
-                // "erc20::erc20::erc_20::__external::get_name",
                 "wallet::wallet::SimpleWallet::__wrapper_increase_balance",
             );
             let increase_required_init_gas = native_program.get_required_init_gas(increase_fn_id);
 
             let get_fn_id = find_function_id(
                 &sierra_program,
-                // "erc20::erc20::erc_20::__constructor::constructor",
-                // "erc20::erc20::erc_20::__external::get_name",
                 "wallet::wallet::SimpleWallet::__wrapper_get_balance",
             );
             let get_required_init_gas = native_program.get_required_init_gas(get_fn_id);
 
-            println!("SYSCALL ADDRESS: {}", syscall_addr);
-
             let increase_params = json!([
-                // // pedersen
-                // null,
-                // // range check
-                // null,
                 (),
-                // gas
                 u64::MAX,
                 // system
                 syscall_addr,
-                // The amount of params change depending on the contract function called
-                // Struct<Span<Array<felt>>>
-                // Span<Array<felt>>
-                // contract state
-                [[
-                    felt252_bigint(11), // decimals
-                                        // ] // name
-                                        // ] // felt252_short_str("name"),   // name
-                                        // felt252_short_str("symbol"), // symbol
-                                        // felt252_bigint(i64::MAX),    // initial supply
-                                        // felt252_bigint(4),           // contract address
-                                        // felt252_bigint(6),           // ??
-                ]]
+                [[felt252_bigint(11),]]
             ]);
 
             let get_params = json!([
