@@ -493,7 +493,7 @@ impl<T: StateReader> State for CachedState<T> {
             .and_then(|x| x.get(class_hash).cloned());
         if let Some(compiled_class) = some_contract_class {
             self.add_hit();
-            return Ok(CompiledClass::Deprecated(Box::new(compiled_class)));
+            return Ok(CompiledClass::Deprecated(Box::new(compiled_class).into()));
         }
         // I: CASM CONTRACT CLASS : COMPILED_CLASS_HASH
         if let Some(compiled_class) = self
@@ -502,7 +502,7 @@ impl<T: StateReader> State for CachedState<T> {
             .and_then(|x| x.get(class_hash).cloned())
         {
             self.add_hit();
-            return Ok(CompiledClass::Casm(Box::new(compiled_class)));
+            return Ok(CompiledClass::Casm(Box::new(compiled_class).into()));
         }
 
         // I: CASM CONTRACT CLASS : CLASS_HASH
@@ -516,7 +516,7 @@ impl<T: StateReader> State for CachedState<T> {
 
             if let Some(casm_class) = some_casm_class {
                 self.add_hit();
-                return Ok(CompiledClass::Casm(Box::new(casm_class)));
+                return Ok(CompiledClass::Casm(Box::new(casm_class).into()));
             }
         }
         // II: FETCHING FROM STATE_READER
