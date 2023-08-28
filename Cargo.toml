@@ -9,6 +9,7 @@ license = "Apache-2.0"
 default = ["with_mimalloc"]
 with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
+metrics = []
 
 [workspace]
 members = ["cli", "fuzzer", "rpc_state_reader"]
