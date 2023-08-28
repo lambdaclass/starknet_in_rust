@@ -17,11 +17,14 @@ use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use num_integer::Integer;
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
-use starknet_crypto::FieldElement;
+use starknet::core::types::FromByteArrayError;
+use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
+use starknet_crypto::{pedersen_hash, FieldElement};
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -268,6 +271,51 @@ where
     keys1.extend(keys2);
 
     keys1.into_iter().collect()
+}
+
+/// Returns the storage address of a StarkNet storage variable given its name and arguments.
+pub fn get_storage_var_address(
+    storage_var_name: &str,
+    args: &[Felt252],
+) -> Result<Felt252, FromByteArrayError> {
+    let felt_to_field_element = |felt: &Felt252| -> Result<FieldElement, FromByteArrayError> {
+        FieldElement::from_bytes_be(&felt.to_be_bytes())
+    };
+
+    let args = args
+        .iter()
+        .map(|felt| felt_to_field_element(felt))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let storage_var_name_hash =
+        FieldElement::from_bytes_be(&calculate_sn_keccak(&storage_var_name.as_bytes()))?;
+    let storage_key_hash = args
+        .iter()
+        .fold(storage_var_name_hash, |res, arg| pedersen_hash(&res, arg));
+
+    let storage_key = field_element_to_felt(&storage_key_hash).mod_floor(&Felt252::from_bytes_be(
+        &L2_ADDRESS_UPPER_BOUND.to_bytes_be(),
+    ));
+
+    Ok(storage_key)
+}
+
+/// Gets storage keys for a Uint256 storage variable.
+pub fn get_uint256_storage_var_addresses(
+    storage_var_name: &str,
+    args: &[Felt252],
+) -> Result<(Felt252, Felt252), FromByteArrayError> {
+    let low_key = get_storage_var_address(storage_var_name, args)?;
+    let high_key = &low_key + &Felt252::from(1);
+    Ok((low_key, high_key))
+}
+
+pub fn get_erc20_balance_var_addresses(
+    contract_address: &Address,
+) -> Result<([u8; 32], [u8; 32]), FromByteArrayError> {
+    let (felt_low, felt_high) =
+        get_uint256_storage_var_addresses("ERC20_balances", &[contract_address.clone().0])?;
+    Ok((felt_low.to_be_bytes(), felt_high.to_be_bytes()))
 }
 
 //* ----------------------------
