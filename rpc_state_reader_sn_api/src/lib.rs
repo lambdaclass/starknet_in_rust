@@ -337,9 +337,9 @@ impl RpcState {
                 "0x1" => Transaction::Invoke(InvokeTransaction::V1(
                     serde_json::from_value(result).unwrap(),
                 )),
-                _ => unreachable!(),
+                _ => unimplemented!(),
             },
-            _ => unreachable!(),
+            _ => unimplemented!(),
         }
     }
 
