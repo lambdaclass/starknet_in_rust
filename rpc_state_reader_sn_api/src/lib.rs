@@ -120,6 +120,7 @@ pub struct RpcBlockInfo {
     pub block_timestamp: BlockTimestamp,
     /// The sequencer address of this block.
     pub sequencer_address: ContractAddress,
+    /// The transactions of this block.
     pub transactions: Vec<Transaction>,
 }
 
