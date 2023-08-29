@@ -114,7 +114,7 @@ impl From<StarkHash> for BlockValue {
 impl BlockValue {
     fn to_value(self) -> Result<serde_json::Value, serde_json::Error> {
         serde_json::to_value(match self {
-            BlockValue::Tag(block_tag) => json!({ "block_tag": block_tag.to_string() }),
+            BlockValue::Tag(block_tag) => block_tag.to_string().into(),
             BlockValue::Number(block_number) => json!({ "block_number": block_number }),
             BlockValue::Hash(block_hash) => json!({ "block_hash": block_hash }),
         })
@@ -222,7 +222,7 @@ fn actual_fee_deser<'de, D>(deserializer: D) -> Result<u128, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let hex: &str = Deserialize::deserialize(deserializer)?;
+    let hex: String = Deserialize::deserialize(deserializer)?;
     Ok(u128::from_str_radix(&hex[2..], 16).unwrap())
 }
 
