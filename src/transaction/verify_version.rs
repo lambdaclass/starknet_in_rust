@@ -31,6 +31,8 @@ pub fn verify_version(
 
 #[cfg(test)]
 mod test {
+    use cairo_vm::felt::Felt252;
+
     // TODO: fixture tests would be better here
     use crate::{definitions::constants::QUERY_VERSION_BASE, transaction::error::TransactionError};
 
@@ -109,7 +111,7 @@ mod test {
     #[test]
     fn version_0_with_max_fee_0_nonce_0_and_empty_signature_and_query_version_set_should_return_ok()
     {
-        let version = &0.into() | &QUERY_VERSION_BASE.clone();
+        let version = &Into::<Felt252>::into(0) | &QUERY_VERSION_BASE.clone();
         let max_fee = 0;
         let nonce = 0.into();
         let signature = vec![];
@@ -119,7 +121,7 @@ mod test {
 
     #[test]
     fn version_1_with_query_version_set_should_return_ok() {
-        let version = &1.into() | &QUERY_VERSION_BASE.clone();
+        let version = &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone();
         let max_fee = 2;
         let nonce = 3.into();
         let signature = vec![5.into()];
@@ -129,7 +131,7 @@ mod test {
 
     #[test]
     fn version_2_with_query_version_set_should_return_ok() {
-        let version = &2.into() | &QUERY_VERSION_BASE.clone();
+        let version = &Into::<Felt252>::into(2) | &QUERY_VERSION_BASE.clone();
         let max_fee = 43;
         let nonce = 4.into();
         let signature = vec![6.into()];

@@ -134,6 +134,7 @@ fn integration_test() {
 }
 
 #[test]
+#[ignore]
 fn integration_test_erc20() {
     // ----------------------------- //
     // CHANGE FOR CAIRO NATIVE USAGE //

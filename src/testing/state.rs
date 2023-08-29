@@ -591,11 +591,11 @@ mod tests {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![1.into(), 1.into(), 10.into()],
                 retdata: vec![144.into()],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 94,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::default(),
-                },
+                }),
                 ..Default::default()
             }),
             actual_resources,

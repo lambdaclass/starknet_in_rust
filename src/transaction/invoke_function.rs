@@ -1045,7 +1045,7 @@ mod tests {
             )
             .unwrap(),
             None,
-            &1.into() | &QUERY_VERSION_BASE.clone(),
+            &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone(),
         );
         assert!(expected_error.is_err());
     }

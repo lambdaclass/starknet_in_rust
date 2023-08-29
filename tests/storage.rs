@@ -116,10 +116,10 @@ fn integration_storage_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [42.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 68,
             ..Default::default()
-        },
+        }),
         class_hash: Some(class_hash),
         storage_read_values: vec![42.into()],
         accessed_storage_keys: expected_accessed_storage_keys,

@@ -119,10 +119,10 @@ fn hello_starknet_increase_balance() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 65,
             ..Default::default()
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys: expected_accessed_storage_keys,
         storage_read_values: expected_storage_read_values,

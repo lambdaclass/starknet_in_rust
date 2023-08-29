@@ -293,7 +293,7 @@ fn library_call() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
-        execution_resources: expected_execution_resources,
+        execution_resources: Some(expected_execution_resources),
         class_hash: Some(class_hash),
         internal_calls: vec![CallInfo {
             caller_address: Address(0.into()),
@@ -309,7 +309,7 @@ fn library_call() {
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![25.into()],
             retdata: [5.into()].to_vec(),
-            execution_resources: expected_execution_resources_internal_call,
+            execution_resources: Some(expected_execution_resources_internal_call),
             class_hash: Some(lib_class_hash),
             gas_consumed: 0,
             ..Default::default()
@@ -1162,7 +1162,7 @@ fn test_send_message_to_l1_syscall() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
-        execution_resources: expected_execution_resources,
+        execution_resources: Some(expected_execution_resources),
         gas_consumed: 10040,
         ..Default::default()
     };
@@ -1257,7 +1257,7 @@ fn test_get_execution_info() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
-        execution_resources: expected_execution_resources,
+        execution_resources: Some(expected_execution_resources),
         gas_consumed: 28580,
         ..Default::default()
     };

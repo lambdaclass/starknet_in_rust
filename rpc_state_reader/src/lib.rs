@@ -633,7 +633,7 @@ mod tests {
         assert_eq!(tx_trace.validate_invocation.retdata, vec![]);
         assert_eq!(
             tx_trace.validate_invocation.execution_resources,
-            ExecutionResources {
+            Some(ExecutionResources {
                 n_steps: 790,
                 n_memory_holes: 51,
                 builtin_instance_counter: HashMap::from([
@@ -641,7 +641,7 @@ mod tests {
                     ("ecdsa_builtin".to_string(), 1),
                     ("pedersen_builtin".to_string(), 2),
                 ]),
-            }
+            })
         );
         assert_eq!(tx_trace.validate_invocation.internal_calls.len(), 1);
 
@@ -674,14 +674,14 @@ mod tests {
         assert_eq!(tx_trace.function_invocation.retdata, vec![0.into()]);
         assert_eq!(
             tx_trace.function_invocation.execution_resources,
-            ExecutionResources {
+            Some(ExecutionResources {
                 n_steps: 2808,
                 n_memory_holes: 136,
                 builtin_instance_counter: HashMap::from([
                     ("range_check_builtin".to_string(), 49),
                     ("pedersen_builtin".to_string(), 14),
                 ]),
-            }
+            })
         );
         assert_eq!(tx_trace.function_invocation.internal_calls.len(), 1);
         assert_eq!(
@@ -711,14 +711,14 @@ mod tests {
         assert_eq!(tx_trace.fee_transfer_invocation.retdata, vec![1.into()]);
         assert_eq!(
             tx_trace.fee_transfer_invocation.execution_resources,
-            ExecutionResources {
+            Some(ExecutionResources {
                 n_steps: 586,
                 n_memory_holes: 42,
                 builtin_instance_counter: HashMap::from([
                     ("range_check_builtin".to_string(), 21),
                     ("pedersen_builtin".to_string(), 4),
                 ]),
-            }
+            })
         );
         assert_eq!(tx_trace.fee_transfer_invocation.internal_calls.len(), 1);
     }
