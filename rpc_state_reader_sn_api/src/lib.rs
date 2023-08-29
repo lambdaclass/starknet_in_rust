@@ -522,10 +522,10 @@ mod utils {
         entry_points_by_type_map
     }
 
-    use flate2::bufread;
     // Uncompresses a Gz Encoded vector of bytes and returns a string or error
     // Here &[u8] implements BufRead
     pub(crate) fn decode_reader(bytes: Vec<u8>) -> io::Result<String> {
+        use flate2::bufread;
         let mut gz = bufread::GzDecoder::new(&bytes[..]);
         let mut s = String::new();
         gz.read_to_string(&mut s)?;
