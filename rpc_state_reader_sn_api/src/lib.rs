@@ -191,14 +191,24 @@ pub struct RpcCallInfo {
     pub internal_calls: Vec<RpcCallInfo>,
 }
 
+#[allow(unused)]
 #[derive(Debug, Deserialize)]
 pub struct RpcTransactionReceipt {
-    actual_fee: StarkFelt,
+    #[serde(deserialize_with = "actual_fee_deser")]
+    actual_fee: u128,
     block_hash: StarkHash,
     block_number: u64,
     execution_status: String,
     #[serde(rename = "type")]
     tx_type: String,
+}
+
+fn actual_fee_deser<'de, D>(deserializer: D) -> Result<u128, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hex: &str = Deserialize::deserialize(deserializer)?;
+    Ok(u128::from_str_radix(&hex[2..], 16).unwrap())
 }
 
 impl<'de> Deserialize<'de> for RpcCallInfo {
@@ -281,7 +291,7 @@ impl RpcState {
     /// - actual fee
     /// - events
     /// - return data
-    pub fn get_transaction_trace(&self, hash: TransactionHash) -> TransactionTrace {
+    pub fn get_transaction_trace(&self, hash: &TransactionHash) -> TransactionTrace {
         let chain_name = self.get_chain_name();
         let response = ureq::get(&format!(
             "https://{}.starknet.io/feeder_gateway/get_transaction_trace",
@@ -657,7 +667,7 @@ mod tests {
             "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc"
         ));
 
-        let tx_trace = rpc_state.get_transaction_trace(tx_hash);
+        let tx_trace = rpc_state.get_transaction_trace(&tx_hash);
 
         assert_eq!(
             tx_trace.signature,
@@ -863,7 +873,11 @@ mod blockifier_transaction_tests {
         network: RpcChain,
         block_number: u64,
         gas_price: u128,
-    ) -> (TransactionExecutionInfo, TransactionTrace) {
+    ) -> (
+        TransactionExecutionInfo,
+        TransactionTrace,
+        RpcTransactionReceipt,
+    ) {
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
         // Instantiate the RPC StateReader and the CachedState
@@ -882,7 +896,8 @@ mod blockifier_transaction_tests {
         let tx_hash = TransactionHash(stark_felt!(tx_hash));
         let sn_api_tx = rpc_reader.0.get_transaction(&tx_hash);
 
-        let trace = rpc_reader.0.get_transaction_trace(tx_hash);
+        let trace = rpc_reader.0.get_transaction_trace(&tx_hash);
+        let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
 
         // Create state from RPC reader
         let global_cache = GlobalContractCache::default();
@@ -935,6 +950,7 @@ mod blockifier_transaction_tests {
                 .execute(&mut state, &block_context, true, true)
                 .unwrap(),
             trace,
+            receipt,
         )
     }
 
@@ -947,7 +963,7 @@ mod blockifier_transaction_tests {
         #[test]
         #[ignore = "working on fixes"]
         fn test_recent_tx() {
-            let (tx_info, trace) = execute_tx(
+            let (tx_info, trace, receipt) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
                 RpcChain::MainNet,
                 169928,
@@ -972,7 +988,7 @@ mod blockifier_transaction_tests {
                 trace.function_invocation.internal_calls.len()
             );
 
-            assert_eq!(actual_fee.0, 5728510166928);
+            assert_eq!(actual_fee.0, receipt.actual_fee);
         }
     }
 }
