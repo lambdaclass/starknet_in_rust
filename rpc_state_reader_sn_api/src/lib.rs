@@ -333,7 +333,7 @@ impl RpcState {
 
         let gas_price_hex = res["gas_price"].as_str().unwrap();
         let gas_price = u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).unwrap();
-        Ok(gas_price / 10) // correct units?
+        Ok(gas_price)
     }
 
     pub fn get_chain_name(&self) -> ChainId {
@@ -975,7 +975,7 @@ mod blockifier_transaction_tests {
             let rpc_state = RpcState::new(RpcChain::MainNet, block);
 
             let price = rpc_state.get_gas_price(169928).unwrap();
-            assert_eq!(price, 2280457869);
+            assert_eq!(price, 22804578690);
         }
 
         #[test]
@@ -1004,7 +1004,7 @@ mod blockifier_transaction_tests {
                 trace.function_invocation.internal_calls.len()
             );
 
-            assert_eq!(actual_fee.0, 5728510166928);
+            assert_eq!(actual_fee.0, 57285101669280);
         }
     }
 }
