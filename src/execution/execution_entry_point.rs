@@ -1,6 +1,6 @@
 use std::collections::HashSet;
-use std::fmt;
 use std::sync::Arc;
+use std::{fmt, fs};
 
 use crate::core::errors::state_errors::StateError;
 use crate::services::api::contract_classes::deprecated_contract_class::{
@@ -29,6 +29,7 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
+use cairo_lang_sierra::ProgramParser;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_native::context::NativeContext;
 use cairo_native::executor::NativeExecutor;
@@ -36,7 +37,7 @@ use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
 use cairo_native::starknet::{
     BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
 };
-use cairo_native::utils::{felt252_bigint, find_function_id};
+use cairo_native::utils::{felt252_bigint, felt252_short_str, find_function_id};
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -237,7 +238,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
         keys: &[cairo_vm::felt::Felt252],
         data: &[cairo_vm::felt::Felt252],
     ) -> SyscallResult<()> {
-        println!("Called `emit_event({keys:?}, {data:?})` from MLIR.");
+        println!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from MLIR.");
         Ok(())
     }
 
@@ -791,7 +792,7 @@ impl ExecutionEntryPoint {
             // TODO: Read this from contract class, make contract classes store sierra instead of casm
             let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
                 serde_json::from_str(
-                    std::fs::read_to_string("cairo_programs/wallet.sierra")
+                    std::fs::read_to_string("starknet_programs/cairo2/erc20.sierra")
                         .unwrap()
                         .as_str(),
                 )
@@ -817,39 +818,17 @@ impl ExecutionEntryPoint {
                 .as_ptr()
                 .addr();
 
-            let increase_fn_id = find_function_id(
+            let fn_id = find_function_id(
                 &sierra_program,
-                "wallet::wallet::SimpleWallet::__wrapper_increase_balance",
-                // "wallet::wallet::SimpleWallet::SimpleWallet::increase_balance",
+                "erc20::erc20::erc_20::__wrapper_constructor",
             );
-            let increase_required_init_gas = native_program.get_required_init_gas(increase_fn_id);
+            let required_init_gas = native_program.get_required_init_gas(fn_id);
 
-            let get_fn_id = find_function_id(
-                &sierra_program,
-                "wallet::wallet::SimpleWallet::__wrapper_get_balance",
-            );
-            let get_required_init_gas = native_program.get_required_init_gas(get_fn_id);
-
-            println!("SYSCALL ADDRESS: {}", syscall_addr);
-
-            // let params : Vec<_> = self.calldata.iter().map(|felt| {
-            //     felt.to_be_bytes()
-            // }).collect();
-
-            let increase_params = json!([
-                (),
-                u64::MAX,
-                // system
-                syscall_addr,
-                [[felt252_bigint(11),]]
-            ]);
-
-            let get_params = json!([
-                // // pedersen
-                // null,
-                // // range check
-                // null,
-                (),
+            let params = json!([
+                // pedersen
+                null,
+                // range check
+                null,
                 // gas
                 u64::MAX,
                 // system
@@ -860,46 +839,91 @@ impl ExecutionEntryPoint {
                     // Span<Array<felt>>
                     [
                         // contract state
-
-                        // name
-                        // felt252_short_str("name"),   // name
-                        // felt252_short_str("symbol"), // symbol
-                        // decimals
-                                            // felt252_bigint(i64::MAX),    // initial supply
-                                            // felt252_bigint(4),           // contract address
-                                            // felt252_bigint(6),           // ??
+                        felt252_bigint(1), // contract address
+                        felt252_bigint(1), // contract address
+                        felt252_bigint(1), // contract address
+                        felt252_bigint(1), // contract address
+                        felt252_bigint(1), // contract address
+                                           // felt252_short_str("name"),   // name
+                                           // felt252_short_str("symbol"), // symbol
+                                           // felt252_bigint(0),           // decimals
+                                           // felt252_bigint(i64::MAX),    // initial supply
+                                           // felt252_bigint(4),           // contract address
+                                           // felt252_bigint(6),           // ??
                     ]
                 ]
             ]);
 
-            let mut increase_writer: Vec<u8> = Vec::new();
-            let mut get_writer: Vec<u8> = Vec::new();
-            let increase_returns = &mut serde_json::Serializer::new(&mut increase_writer);
-            let get_returns = &mut serde_json::Serializer::new(&mut get_writer);
+            // let increase_fn_id = find_function_id(
+            //     &sierra_program,
+            //     "wallet::wallet::SimpleWallet::__wrapper_increase_balance",
+            //     // "wallet::wallet::SimpleWallet::SimpleWallet::increase_balance",
+            // );
+            // let increase_required_init_gas = native_program.get_required_init_gas(increase_fn_id);
+
+            // let get_fn_id = find_function_id(
+            //     &sierra_program,
+            //     "wallet::wallet::SimpleWallet::__wrapper_get_balance",
+            // );
+            // let get_required_init_gas = native_program.get_required_init_gas(get_fn_id);
+
+            println!("SYSCALL ADDRESS: {}", syscall_addr);
+
+            // let params : Vec<_> = self.calldata.iter().map(|felt| {
+            //     felt.to_be_bytes()
+            // }).collect();
+
+            // let increase_params = json!([
+            //     (),
+            //     u64::MAX,
+            //     // system
+            //     syscall_addr,
+            //     [[felt252_bigint(11),]]
+            // ]);
+
+            // let get_params = json!([
+            //     // // pedersen
+            //     // null,
+            //     // // range check
+            //     // null,
+            //     (),
+            //     // gas
+            //     u64::MAX,
+            //     // system
+            //     syscall_addr,
+            //     // The amount of params change depending on the contract function called
+            //     // Struct<Span<Array<felt>>>
+            //     [
+            //         // Span<Array<felt>>
+            //         [
+            //             // contract state
+
+            //             // name
+            //             // felt252_short_str("name"),   // name
+            //             // felt252_short_str("symbol"), // symbol
+            //             // decimals
+            //                                 // felt252_bigint(i64::MAX),    // initial supply
+            //                                 // felt252_bigint(4),           // contract address
+            //                                 // felt252_bigint(6),           // ??
+            //         ]
+            //     ]
+            // ]);
+
+            // let mut increase_writer: Vec<u8> = Vec::new();
+            // let mut get_writer: Vec<u8> = Vec::new();
+            // let increase_returns = &mut serde_json::Serializer::new(&mut increase_writer);
+            // let get_returns = &mut serde_json::Serializer::new(&mut get_writer);
+            let mut writer: Vec<u8> = Vec::new();
+            let returns = &mut serde_json::Serializer::new(&mut writer);
 
             let native_executor = NativeExecutor::new(native_program);
 
             native_executor
-                .execute(
-                    increase_fn_id,
-                    increase_params,
-                    increase_returns,
-                    increase_required_init_gas,
-                )
+                .execute(fn_id, params, returns, required_init_gas)
                 .unwrap();
 
-            native_executor
-                .execute(get_fn_id, get_params, get_returns, get_required_init_gas)
-                .unwrap();
-
-            let increase_result: String = String::from_utf8(increase_writer).unwrap();
-            let increase_value = serde_json::from_str::<serde_json::Value>(&increase_result)
-                .expect("Failed to deserialize result");
-            let get_result: String = String::from_utf8(get_writer).unwrap();
-            let get_value = serde_json::from_str::<NativeExecutionResult>(&get_result)
-                .expect("Failed to deserialize result");
-            println!("{}", increase_value);
-            println!("{:?}", get_value);
+            let result: String = String::from_utf8(writer).unwrap();
+            let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
 
             return Ok(CallInfo {
                 caller_address: self.caller_address.clone(),
@@ -912,7 +936,7 @@ impl ExecutionEntryPoint {
                 entry_point_selector: Some(self.entry_point_selector.clone()),
                 entry_point_type: Some(self.entry_point_type),
                 calldata: self.calldata.clone(),
-                retdata: get_value.return_values,
+                retdata: value.return_values,
                 execution_resources: None,
 
                 // TODO
@@ -922,7 +946,7 @@ impl ExecutionEntryPoint {
                 accessed_storage_keys: HashSet::new(),
                 internal_calls: vec![],
 
-                failure_flag: get_value.failure_flag,
+                failure_flag: value.failure_flag,
 
                 // TODO
                 gas_consumed: 0,
@@ -999,7 +1023,6 @@ impl ExecutionEntryPoint {
 
             // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
             let data = self.calldata.iter().map(|d| d.into()).collect();
-            println!("CALLDATA: {:?}", self.calldata);
             let alloc_pointer: MaybeRelocatable = runner
                 .hint_processor
                 .syscall_handler

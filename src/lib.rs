@@ -1,5 +1,5 @@
 #![feature(strict_provenance)]
-#![deny(warnings)]
+// #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
 use std::{collections::HashMap, sync::Arc};

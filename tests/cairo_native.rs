@@ -134,18 +134,18 @@ fn integration_test() {
 }
 
 #[test]
-fn integration_test_cairo1() {
-    //  Create program and entry point types for contract class
-    // #[cfg(not(feature = "cairo_1_tests"))]
-    // let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
-    // #[cfg(feature = "cairo_1_tests")]
-    // let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
+fn integration_test_erc20() {
+    // ----------------------------- //
+    // CHANGE FOR CAIRO NATIVE USAGE //
+    // ----------------------------- //
+    let use_native = true;
 
-    let program_data = include_bytes!("../starknet_programs/cairo2/wallet.casm");
+    let program_data = include_bytes!("../starknet_programs/cairo2/erc20.casm");
 
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let fib_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    let constructor_entry_point_selector = &entrypoints.constructor.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -166,21 +166,20 @@ fn integration_test_cairo1() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
 
-    // Create an execution entry point
-    // let calldata = [0.into(), 1.into(), 12.into()].to_vec();
-    let calldata = [].to_vec();
+    // Dummy calldata
+    let calldata = [1.into(), 1.into(), 1.into(), 1.into(), 1.into()].to_vec();
+
     let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        Felt252::new(fib_entrypoint_selector.clone()),
+        Felt252::new(constructor_entry_point_selector.clone()),
         caller_address,
-        entry_point_type,
+        EntryPointType::Constructor,
         Some(CallType::Delegate),
         Some(class_hash),
-        100000,
+        u128::MAX,
     );
 
     // Execute the entrypoint
@@ -193,7 +192,7 @@ fn integration_test_cairo1() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        true,
+        use_native,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -202,8 +201,8 @@ fn integration_test_cairo1() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(Felt252::new(fib_entrypoint_selector)),
-        entry_point_type: Some(EntryPointType::External),
+        entry_point_selector: Some(Felt252::new(constructor_entry_point_selector)),
+        entry_point_type: Some(EntryPointType::Constructor),
         calldata,
         retdata: [144.into()].to_vec(),
         execution_resources: Some(ExecutionResources {

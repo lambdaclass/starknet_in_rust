@@ -562,7 +562,11 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let order = self.tx_execution_context.n_emitted_events;
         let keys: Vec<Felt252> = get_felt_range(vm, request.keys_start, request.keys_end)?;
+        println!("KEYS");
+        keys.iter().for_each(|k| println!("KEY: {}", k));
         let data: Vec<Felt252> = get_felt_range(vm, request.data_start, request.data_end)?;
+        println!("DATA");
+        data.iter().for_each(|d| println!("DATA: {}", d));
         self.events.push(OrderedEvent::new(order, keys, data));
 
         // Update events count.

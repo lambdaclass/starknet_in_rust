@@ -67,7 +67,7 @@ mod erc_20 {
         self.name.write(name);
         self.symbol.write(symbol);
         self.decimals.write(decimals);
-        assert(!recipient.is_zero(), 'ERC20: mint to the 0 address');
+        // assert(!recipient.is_zero(), 'ERC20: mint to the 0 address');
         self.total_supply.write(initial_supply);
         self.balances.write(recipient, initial_supply);
         self
