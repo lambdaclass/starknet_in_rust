@@ -317,6 +317,25 @@ impl RpcState {
         deserialize_transaction_json(result).expect("transaction should deserialize correctly")
     }
 
+    /// Gets the gas price of a given block.
+    pub fn get_gas_price(&self, block_number: u64) -> serde_json::Result<u128> {
+        let chain_name = self.get_chain_name();
+
+        let response = ureq::get(&format!(
+            "https://{}.starknet.io/feeder_gateway/get_block",
+            chain_name
+        ))
+        .query("blockNumber", &block_number.to_string())
+        .call()
+        .unwrap();
+
+        let res: serde_json::Value = response.into_json().expect("should be json");
+
+        let gas_price_hex = res["gas_price"].as_str().unwrap();
+        let gas_price = u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).unwrap();
+        Ok(gas_price / 10) // correct units?
+    }
+
     pub fn get_chain_name(&self) -> ChainId {
         ChainId(match self.chain {
             RpcChain::MainNet => "alpha-mainnet".to_string(),
@@ -867,13 +886,13 @@ mod blockifier_transaction_tests {
         tx_hash: &str,
         network: RpcChain,
         block_number: u64,
-        gas_price: u128,
     ) -> (TransactionExecutionInfo, TransactionTrace) {
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
         let rpc_reader = RpcStateReader(RpcState::new(network, block));
+        let gas_price = rpc_reader.0.get_gas_price(block_number).unwrap();
 
         // Get values for block context before giving ownership of the reader
         let chain_id = rpc_reader.0.get_chain_name();
@@ -921,7 +940,7 @@ mod blockifier_transaction_tests {
             sequencer_address,
             fee_token_address,
             vm_resource_fee_cost,
-            gas_price,
+            gas_price: gas_price,
             invoke_tx_max_n_steps: 1_000_000,
             validate_max_n_steps: 1_000_000,
             max_recursion_depth: 500,
@@ -951,13 +970,21 @@ mod blockifier_transaction_tests {
         use super::*;
 
         #[test]
-        #[ignore = "working on fixes"]
+        fn test_get_gas_price() {
+            // Instantiate the RPC StateReader and the CachedState
+            let block = BlockValue::Number(serde_json::to_value(169928).unwrap());
+            let rpc_state = RpcState::new(RpcChain::MainNet, block);
+
+            let price = rpc_state.get_gas_price(169928).unwrap();
+            assert_eq!(price, 2280457869);
+        }
+
+        #[test]
         fn test_recent_tx() {
             let (tx_info, trace) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
                 RpcChain::MainNet,
                 169928,
-                17110275391107,
             );
 
             let TransactionExecutionInfo {
