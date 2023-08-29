@@ -10,7 +10,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_TOOLCHAIN: 1.70.0
-  MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
   CAIRO_PROGRAMS_PATH: |
     cairo_programs/**/*.casm
     cairo_programs/**/*.sierra
@@ -34,6 +33,8 @@ jobs:
         ]
     name: Build Cairo programs
     runs-on: ubuntu-22.04
+    env:
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -138,6 +139,8 @@ jobs:
     name: Build with release profile
     needs: merge-caches
     runs-on: ubuntu-22.04
+    env:
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -197,6 +200,7 @@ jobs:
   tests:
     env:
       INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     strategy:
       fail-fast: false
       matrix:
@@ -237,6 +241,8 @@ jobs:
     needs: merge-caches
     name: Generate and upload coverage report
     runs-on: ubuntu-22.04
+    env:
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
     - name: Checkout
       uses: actions/checkout@v3
