@@ -11,13 +11,11 @@ use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
-use serde_with::{serde_as, DeserializeAs};
 use starknet::core::types::ContractClass as SNContractClass;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::{ChainId, ClassHash, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointOffset;
 use starknet_api::hash::StarkFelt;
-use starknet_api::serde_utils::PrefixedBytesAsHex;
 use starknet_api::transaction::{InvokeTransaction, Transaction, TransactionHash};
 use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
 use std::collections::HashMap;
@@ -64,8 +62,6 @@ enum RpcError {
     RpcCall(String),
     #[error("Request failed with error: {0}")]
     Request(String),
-    #[error("Failed to cast from: {0} to: {1} with error: {2}")]
-    Cast(String, String, String),
 }
 
 /// Represents the tag of a block value.
@@ -125,31 +121,6 @@ impl BlockValue {
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct RpcResponseContractClass {
-    result: SNContractClass,
-}
-
-// We use this new struct to cast the string that contains a [`StarkFelt`] in hex to a [`StarkFelt`]
-struct StarkFeltHex;
-
-impl<'de> DeserializeAs<'de, StarkFelt> for StarkFeltHex {
-    fn deserialize_as<D>(deserializer: D) -> Result<StarkFelt, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let bytes: PrefixedBytesAsHex<32> = PrefixedBytesAsHex::deserialize(deserializer)?;
-        Ok(bytes.try_into().unwrap())
-    }
-}
-
-#[serde_as]
-#[derive(Debug, Deserialize)]
-struct RpcResponseFelt {
-    #[serde_as(as = "StarkFeltHex")]
-    result: StarkFelt,
-}
-
 pub struct RpcBlockInfo {
     /// The sequence number of the last block created.
     pub block_number: BlockNumber,
@@ -159,7 +130,10 @@ pub struct RpcBlockInfo {
     pub sequencer_address: ContractAddress,
 }
 
-type RpcResponse = ureq::Response;
+#[derive(Deserialize)]
+pub struct RpcResponse<T> {
+    result: T,
+}
 
 impl RpcState {
     pub fn new(chain: RpcChain, block: BlockValue) -> Self {
@@ -174,14 +148,24 @@ impl RpcState {
         }
     }
 
+    fn rpc_call_result<T: for<'a> Deserialize<'a>>(
+        &self,
+        params: &serde_json::Value,
+    ) -> Result<T, RpcError> {
+        Ok(self.rpc_call::<RpcResponse<T>>(params)?.result)
+    }
+
     fn rpc_call<T: for<'a> Deserialize<'a>>(
         &self,
         params: &serde_json::Value,
     ) -> Result<T, RpcError> {
-        Self::deserialize_call(self.rpc_call_no_deserialize(params)?)
+        Self::deserialize_call(self.rpc_call_no_deserialize(params)?.into_json().unwrap())
     }
 
-    fn rpc_call_no_deserialize(&self, params: &serde_json::Value) -> Result<RpcResponse, RpcError> {
+    fn rpc_call_no_deserialize(
+        &self,
+        params: &serde_json::Value,
+    ) -> Result<ureq::Response, RpcError> {
         ureq::post(&format!(
             "https://{}.infura.io/v3/{}",
             self.chain, self.api_key
@@ -192,17 +176,11 @@ impl RpcState {
         .map_err(|err| RpcError::Request(err.to_string()))
     }
 
-    fn deserialize_call<T: for<'a> Deserialize<'a>>(response: RpcResponse) -> Result<T, RpcError> {
-        let response = response.into_string().map_err(|err| {
-            RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string())
-        })?;
-        serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
+    fn deserialize_call<T: for<'a> Deserialize<'a>>(
+        response: serde_json::Value,
+    ) -> Result<T, RpcError> {
+        serde_json::from_value(response).map_err(|err| RpcError::RpcCall(err.to_string()))
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RpcResult<T> {
-    result: T,
 }
 
 #[derive(Debug)]
@@ -413,10 +391,7 @@ impl RpcState {
             "id": 1
         });
 
-        let response = self
-            .rpc_call::<RpcResponseContractClass>(&params)
-            .unwrap()
-            .result;
+        let response = self.rpc_call_result(&params).unwrap();
 
         match response {
             SNContractClass::Legacy(compressed_legacy_cc) => {
@@ -457,9 +432,9 @@ impl RpcState {
             "id": 1
         });
 
-        let response: RpcResponseFelt = self.rpc_call(&params).unwrap();
+        let hash = self.rpc_call_result(&params).unwrap();
 
-        ClassHash(response.result)
+        ClassHash(hash)
     }
 
     pub fn get_nonce_at(&self, contract_address: &ContractAddress) -> StarkFelt {
@@ -470,9 +445,7 @@ impl RpcState {
             "id": 1
         });
 
-        let resp: RpcResponseFelt = self.rpc_call(&params).unwrap();
-
-        resp.result
+        self.rpc_call_result(&params).unwrap()
     }
 
     fn get_storage_at(&self, contract_address: &ContractAddress, key: &StorageKey) -> StarkFelt {
@@ -486,9 +459,7 @@ impl RpcState {
             "id": 1
         });
 
-        let resp: RpcResponseFelt = self.rpc_call(&params).unwrap();
-
-        resp.result
+        self.rpc_call_result(&params).unwrap()
     }
 
     /// Requests the given transaction to the Feeder Gateway API.
@@ -499,9 +470,7 @@ impl RpcState {
             "params": [hash.to_string()],
             "id": 1
         });
-        self.rpc_call::<RpcResult<RpcTransactionReceipt>>(&params)
-            .unwrap()
-            .result
+        self.rpc_call_result(&params).unwrap()
     }
 }
 
