@@ -402,12 +402,8 @@ mod tests {
         assert_eq!(
             starknet_state
                 .state
-                .contract_classes
-                .read()
-                .unwrap()
-                .get(&class_hash)
-                .unwrap()
-                .to_owned(),
+                .get_contract_class(&class_hash)
+                .unwrap(),
             CompiledClass::Deprecated(Arc::new(contract_class))
         );
     }

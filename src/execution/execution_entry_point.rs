@@ -305,10 +305,10 @@ impl ExecutionEntryPoint {
     /// Returns the hash of the executed contract class.
     fn get_code_class_hash<S: State>(&self, state: &mut S) -> Result<[u8; 32], TransactionError> {
         if self.class_hash.is_some() {
-            match self.call_type {
-                CallType::Delegate => return Ok(self.class_hash.unwrap()),
-                _ => return Err(TransactionError::CallTypeIsNotDelegate),
-            }
+            return match self.call_type {
+                CallType::Delegate => Ok(self.class_hash.unwrap()),
+                _ => Err(TransactionError::CallTypeIsNotDelegate),
+            };
         }
         let code_address = match self.call_type {
             CallType::Call => Some(self.contract_address.clone()),

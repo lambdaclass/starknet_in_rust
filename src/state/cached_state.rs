@@ -29,8 +29,6 @@ pub struct CachedState<T: StateReader> {
     pub(crate) cache: StateCache,
     #[get = "pub"]
     pub(crate) contract_classes: ContractClassesCache,
-    // TODO: Should the private cache be updated with the contracts that already exist in the shared
-    // level? It should keep the contracts used by the transaction closer.
     pub(crate) contract_classes_private: HashMap<ClassHash, CompiledClass>,
 }
 
@@ -398,6 +396,8 @@ impl<T: StateReader> State for CachedState<T> {
         if let Some(compiled_class) = self.contract_classes_private.get(class_hash) {
             return Ok(compiled_class.clone());
         } else if let Some(compiled_class) = self.contract_classes.read().unwrap().get(class_hash) {
+            self.contract_classes_private
+                .insert(*class_hash, compiled_class.clone());
             return Ok(compiled_class.clone());
         }
 
@@ -413,6 +413,8 @@ impl<T: StateReader> State for CachedState<T> {
                 .unwrap()
                 .get(compiled_class_hash)
             {
+                self.contract_classes_private
+                    .insert(*class_hash, casm_class.clone());
                 return Ok(casm_class.clone());
             }
         }

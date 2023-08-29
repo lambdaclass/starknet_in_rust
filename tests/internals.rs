@@ -2049,12 +2049,13 @@ fn test_library_call_with_declare_v2() {
     let casm_contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2.clone()
+        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2.clone();
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone()
+        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone();
     }
+
     // Create an execution entry point
     let calldata = vec![
         casm_contract_hash,
