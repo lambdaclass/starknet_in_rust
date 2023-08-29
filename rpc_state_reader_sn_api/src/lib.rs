@@ -913,12 +913,21 @@ mod blockifier_transaction_tests {
             _ => unimplemented!(),
         };
 
-        (
-            blockifier_tx
-                .execute(&mut state, &block_context, true, true)
-                .unwrap(),
-            trace,
-        )
+        let x = blockifier_tx
+            .execute(&mut state, &block_context, true, true)
+            .unwrap();
+
+        dbg!(&state.cache.storage_initial_values.len());
+        dbg!(&state.cache.storage_writes.len());
+        dbg!(&state.cache.compiled_class_hash_writes.len());
+        dbg!(&state.cache.compiled_class_hash_initial_values.len());
+
+        dbg!(state.cache.get_storage_updates().len());
+        dbg!(state.cache.get_nonce_updates().len());
+        dbg!(state.cache.get_compiled_class_hash_updates().len());
+        dbg!(state.cache.get_class_hash_updates().len());
+
+        (x, trace)
     }
 
     #[cfg(test)]
@@ -956,6 +965,38 @@ mod blockifier_transaction_tests {
             );
 
             assert_eq!(actual_fee.0, 5728510166928);
+        }
+
+        #[test]
+        fn test_edgar_tx() {
+            let (tx_info, trace) = execute_tx(
+                "0x01e8d3628b0532e1e944c3c695649c9cf0b9937c88e3404aafa0c43d4b14de79",
+                RpcChain::MainNet,
+                179411,
+                2014684578,
+            );
+
+            let TransactionExecutionInfo {
+                execute_call_info,
+                actual_fee,
+                ..
+            } = tx_info;
+
+            let CallInfo {
+                vm_resources,
+                inner_calls,
+                ..
+            } = execute_call_info.unwrap();
+
+            dbg!(&tx_info.actual_resources);
+            dbg!(&tx_info.actual_fee);
+            assert_eq!(vm_resources, trace.function_invocation.execution_resources);
+            assert_eq!(
+                inner_calls.len(),
+                trace.function_invocation.internal_calls.len()
+            );
+
+            assert_eq!(actual_fee.0, 22632966549252);
         }
     }
 }

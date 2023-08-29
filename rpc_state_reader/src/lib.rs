@@ -781,7 +781,22 @@ mod transaction_tests {
 
         let tx = rpc_state.get_transaction(tx_hash);
 
-        tx.execute(&mut state, &block_context, 0).unwrap()
+        let x = tx.execute(&mut state, &block_context, 0).unwrap();
+
+        dbg!(state.cache_mut().storage_initial_values_mut().len());
+        dbg!(state.cache_mut().storage_writes().len());
+        dbg!(state.cache_mut().compiled_class_hash_writes_mut().len());
+        dbg!(state
+            .cache_mut()
+            .compiled_class_hash_initial_values_mut()
+            .len());
+
+        dbg!(state.cache_mut().get_storage_updates().len());
+        dbg!(state.cache_mut().get_nonce_updates().len());
+        dbg!(state.cache_mut().get_compiled_class_hash_updates().len());
+        dbg!(state.cache_mut().get_class_hash_updates().len());
+
+        x
     }
 
     /// - Transaction Hash: `0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5`
@@ -929,4 +944,29 @@ mod transaction_tests {
     //     dbg!(&result.call_info.clone().unwrap().execution_resources);
     //     dbg!(&result.call_info.unwrap().internal_calls.len());
     // }
+
+    #[test]
+    fn test_edgar_tx() {
+        let result = test_tx(
+            "0x01e8d3628b0532e1e944c3c695649c9cf0b9937c88e3404aafa0c43d4b14de79",
+            RpcChain::MainNet,
+            179411,
+            2014684578,
+        );
+
+        /*
+               STEPS
+               5083
+               MEMORY HOLES
+               224
+               PEDERSEN_BUILTIN
+               21
+               RANGE_CHECK_BUILTIN
+               244
+        */
+        dbg!(&result.actual_resources);
+        dbg!(&result.actual_fee); // test=29773008693684, explorer=22632966549252, diff=7140042144432 (0.31%)
+        dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
+        dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
+    }
 }
