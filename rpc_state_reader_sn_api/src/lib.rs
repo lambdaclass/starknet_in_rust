@@ -163,6 +163,11 @@ impl RpcState {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RpcResult<T> {
+    result: T,
+}
+
 #[derive(Debug)]
 pub struct TransactionTrace {
     pub validate_invocation: RpcCallInfo,
@@ -184,6 +189,16 @@ pub struct RpcCallInfo {
     pub retdata: Option<Vec<StarkFelt>>,
     pub calldata: Option<Vec<StarkFelt>>,
     pub internal_calls: Vec<RpcCallInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RpcTransactionReceipt {
+    actual_fee: StarkFelt,
+    block_hash: StarkHash,
+    block_number: u64,
+    execution_status: String,
+    #[serde(rename = "type")]
+    tx_type: String,
 }
 
 impl<'de> Deserialize<'de> for RpcCallInfo {
@@ -430,27 +445,16 @@ impl RpcState {
     }
 
     /// Requests the given transaction to the Feeder Gateway API.
-    pub fn get_transaction_receipt(&self, hash: &TransactionHash) -> Transaction {
+    pub fn get_transaction_receipt(&self, hash: &TransactionHash) -> RpcTransactionReceipt {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getTransactionReceipt",
             "params": [hash.to_string()],
             "id": 1
         });
-        let result = self.rpc_call::<serde_json::Value>(&params).unwrap()["result"].clone();
-
-        match result["type"].as_str().unwrap() {
-            "INVOKE" => match result["version"].as_str().unwrap() {
-                "0x0" => Transaction::Invoke(InvokeTransaction::V0(
-                    serde_json::from_value(result).unwrap(),
-                )),
-                "0x1" => Transaction::Invoke(InvokeTransaction::V1(
-                    serde_json::from_value(result).unwrap(),
-                )),
-                _ => unreachable!(),
-            },
-            _ => unreachable!(),
-        }
+        self.rpc_call::<RpcResult<RpcTransactionReceipt>>(&params)
+            .unwrap()
+            .result
     }
 }
 
@@ -771,6 +775,19 @@ mod tests {
             }
         );
         assert_eq!(tx_trace.fee_transfer_invocation.internal_calls.len(), 1);
+    }
+
+    #[test]
+    fn test_get_transaction_receipt() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+        let tx_hash = TransactionHash(stark_felt!(
+            "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
+        ));
+
+        rpc_state.get_transaction_receipt(&tx_hash);
     }
 }
 
