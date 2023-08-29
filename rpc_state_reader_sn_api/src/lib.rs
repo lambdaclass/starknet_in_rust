@@ -120,6 +120,7 @@ pub struct RpcBlockInfo {
     pub block_timestamp: BlockTimestamp,
     /// The sequencer address of this block.
     pub sequencer_address: ContractAddress,
+    pub transactions: Vec<Transaction>,
 }
 
 type RpcResponse = ureq::Response;
@@ -314,7 +315,7 @@ impl RpcState {
     pub fn get_block_info(&self) -> RpcBlockInfo {
         let get_block_info_params = ureq::json!({
             "jsonrpc": "2.0",
-            "method": "starknet_getBlockWithTxHashes",
+            "method": "starknet_getBlockWithTxs",
             "params": [self.block.to_value()],
             "id": 1
         });
@@ -322,6 +323,24 @@ impl RpcState {
         let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
         let sequencer_address: StarkFelt =
             serde_json::from_value(block_info["result"]["sequencer_address"].clone()).unwrap();
+
+        let txs: Vec<_> = block_info["result"]["transactions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|result| match dbg!(&result)["type"].as_str().unwrap() {
+                "INVOKE" => match result["version"].as_str().unwrap() {
+                    "0x0" => Some(Transaction::Invoke(InvokeTransaction::V0(
+                        serde_json::from_value(result.clone()).unwrap(),
+                    ))),
+                    "0x1" => Some(Transaction::Invoke(InvokeTransaction::V1(
+                        serde_json::from_value(result.clone()).unwrap(),
+                    ))),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect();
 
         RpcBlockInfo {
             block_number: BlockNumber(
@@ -337,6 +356,7 @@ impl RpcState {
                     .unwrap(),
             ),
             sequencer_address: ContractAddress(sequencer_address.try_into().unwrap()),
+            transactions: txs,
         }
     }
 
@@ -859,6 +879,7 @@ mod blockifier_transaction_tests {
             block_number,
             block_timestamp,
             sequencer_address,
+            ..
         } = rpc_reader.0.get_block_info();
 
         // Get transaction before giving ownership of the reader
