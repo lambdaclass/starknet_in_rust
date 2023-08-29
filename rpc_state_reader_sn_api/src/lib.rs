@@ -22,6 +22,7 @@ use starknet_api::transaction::{InvokeTransaction, Transaction, TransactionHash}
 use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
 use std::collections::HashMap;
 use std::env;
+use std::fmt::Display;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -67,24 +68,60 @@ enum RpcError {
     Cast(String, String, String),
 }
 
+/// Represents the tag of a block value.
+#[derive(Copy, Clone)]
+pub enum BlockTag {
+    Latest,
+    Pending,
+}
+
+impl Display for BlockTag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let string = match self {
+            BlockTag::Latest => "latest",
+            BlockTag::Pending => "pending",
+        };
+        write!(f, "{}", string)
+    }
+}
+
 /// [`BlockValue`] is an Enum that represent which block we are going to use to retrieve information.
 #[allow(dead_code)]
+#[derive(Copy, Clone)]
 pub enum BlockValue {
     /// String one of: ["latest", "pending"]
-    Tag(serde_json::Value),
+    Tag(BlockTag),
     /// Integer
-    Number(serde_json::Value),
+    Number(BlockNumber),
     /// String with format: 0x{felt252}
-    Hash(serde_json::Value),
+    Hash(StarkHash),
+}
+
+impl From<BlockTag> for BlockValue {
+    fn from(value: BlockTag) -> Self {
+        BlockValue::Tag(value)
+    }
+}
+
+impl From<BlockNumber> for BlockValue {
+    fn from(value: BlockNumber) -> Self {
+        BlockValue::Number(value)
+    }
+}
+
+impl From<StarkHash> for BlockValue {
+    fn from(value: StarkHash) -> Self {
+        BlockValue::Hash(value)
+    }
 }
 
 impl BlockValue {
-    fn to_value(&self) -> serde_json::Value {
-        match self {
-            BlockValue::Tag(block_tag) => block_tag.clone(),
+    fn to_value(self) -> Result<serde_json::Value, serde_json::Error> {
+        serde_json::to_value(match self {
+            BlockValue::Tag(block_tag) => json!({ "block_tag": block_tag.to_string() }),
             BlockValue::Number(block_number) => json!({ "block_number": block_number }),
             BlockValue::Hash(block_hash) => json!({ "block_hash": block_hash }),
-        }
+        })
     }
 }
 
@@ -340,7 +377,7 @@ impl RpcState {
         let get_block_info_params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getBlockWithTxHashes",
-            "params": [self.block.to_value()],
+            "params": [self.block.to_value().unwrap()],
             "id": 1
         });
 
@@ -372,7 +409,7 @@ impl RpcState {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getClass",
-            "params": [self.block.to_value(), class_hash.0.to_string()],
+            "params": [self.block.to_value().unwrap(), class_hash.0.to_string()],
             "id": 1
         });
 
@@ -416,7 +453,7 @@ impl RpcState {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getClassHashAt",
-            "params": [self.block.to_value(), contract_address.0.key().clone().to_string()],
+            "params": [self.block.to_value().unwrap(), contract_address.0.key().clone().to_string()],
             "id": 1
         });
 
@@ -429,7 +466,7 @@ impl RpcState {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getNonce",
-            "params": [self.block.to_value(), contract_address.0.key().clone().to_string()],
+            "params": [self.block.to_value().unwrap(), contract_address.0.key().clone().to_string()],
             "id": 1
         });
 
@@ -445,7 +482,7 @@ impl RpcState {
             "jsonrpc": "2.0",
             "method": "starknet_getStorageAt",
             "params": [contract_address.to_string(),
-            key.to_string(), self.block.to_value()],
+            key.to_string(), self.block.to_value().unwrap()],
             "id": 1
         });
 
@@ -564,10 +601,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_class_cairo1() {
-        let rpc_state = RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
 
         let class_hash =
             class_hash!("0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216");
@@ -580,10 +614,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_class_cairo0() {
-        let rpc_state = RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
 
         let class_hash =
             class_hash!("025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
@@ -592,10 +623,7 @@ mod tests {
 
     #[test]
     fn test_get_class_hash_at() {
-        let rpc_state = RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
         let address =
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
 
@@ -607,10 +635,7 @@ mod tests {
 
     #[test]
     fn test_get_nonce_at() {
-        let rpc_state = RpcState::new(
-            RpcChain::TestNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::TestNet, BlockTag::Latest.into());
         // Contract deployed by xqft which will not be used again, so nonce changes will not break
         // this test.
         let address =
@@ -620,10 +645,7 @@ mod tests {
 
     #[test]
     fn test_get_storage_at() {
-        let rpc_state = RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
         let address =
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
         let key = StorageKey(patricia_key!(0u128));
@@ -633,10 +655,7 @@ mod tests {
 
     #[test]
     fn test_get_transaction() {
-        let rpc_state = RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
@@ -646,10 +665,7 @@ mod tests {
 
     #[test]
     fn test_get_block_info() {
-        let rpc_state = RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
 
         rpc_state.get_block_info();
     }
@@ -658,10 +674,7 @@ mod tests {
     // https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
     #[test]
     fn test_get_transaction_trace() {
-        let rpc_state = RpcState::new(
-            RpcChain::TestNet2,
-            BlockValue::Number(serde_json::to_value(838683).unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::TestNet2, BlockTag::Latest.into());
 
         let tx_hash = TransactionHash(stark_felt!(
             "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc"
@@ -789,10 +802,7 @@ mod tests {
 
     #[test]
     fn test_get_transaction_receipt() {
-        let rpc_state = RpcState::new(
-            RpcChain::MainNet,
-            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
-        );
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
@@ -871,7 +881,7 @@ mod blockifier_transaction_tests {
     pub fn execute_tx(
         tx_hash: &str,
         network: RpcChain,
-        block_number: u64,
+        block_number: BlockNumber,
         gas_price: u128,
     ) -> (
         TransactionExecutionInfo,
@@ -881,8 +891,7 @@ mod blockifier_transaction_tests {
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
         // Instantiate the RPC StateReader and the CachedState
-        let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
-        let rpc_reader = RpcStateReader(RpcState::new(network, block));
+        let rpc_reader = RpcStateReader(RpcState::new(network, block_number.into()));
 
         // Get values for block context before giving ownership of the reader
         let chain_id = rpc_reader.0.get_chain_name();
@@ -966,7 +975,7 @@ mod blockifier_transaction_tests {
             let (tx_info, trace, receipt) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
                 RpcChain::MainNet,
-                169928,
+                BlockNumber(169928),
                 17110275391107,
             );
 
