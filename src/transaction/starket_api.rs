@@ -3,9 +3,9 @@ use num_traits::{One, Zero};
 
 use crate::{definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR, utils::Address};
 
-use super::InvokeFunction;
+use super::{DeployAccount, InvokeFunction};
 
-fn convert_v0(value: starknet_api::transaction::InvokeTransactionV0) -> InvokeFunction {
+fn convert_invoke_v0(value: starknet_api::transaction::InvokeTransactionV0) -> InvokeFunction {
     let contract_address = Address(Felt252::from_bytes_be(
         value.contract_address.0.key().bytes(),
     ));
@@ -42,7 +42,7 @@ fn convert_v0(value: starknet_api::transaction::InvokeTransactionV0) -> InvokeFu
     .unwrap()
 }
 
-fn convert_v1(value: starknet_api::transaction::InvokeTransactionV1) -> InvokeFunction {
+fn convert_invoke_v1(value: starknet_api::transaction::InvokeTransactionV1) -> InvokeFunction {
     let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
     let max_fee = value.max_fee.0;
     let version = Felt252::one();
@@ -80,8 +80,64 @@ fn convert_v1(value: starknet_api::transaction::InvokeTransactionV1) -> InvokeFu
 impl From<starknet_api::transaction::InvokeTransaction> for InvokeFunction {
     fn from(value: starknet_api::transaction::InvokeTransaction) -> Self {
         match value {
-            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_v0(v0),
-            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_v1(v1),
+            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0),
+            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1),
         }
     }
 }
+
+impl From<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
+    fn from(value: starknet_api::transaction::DeployAccountTransaction) -> Self {
+        let max_fee = value.max_fee.0;
+        let version = Felt252::from_bytes_be(value.version.0.bytes());
+        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
+        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
+
+        let signature = value
+            .signature
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect();
+        let constructor_calldata = value
+            .constructor_calldata
+            .0
+            .as_ref()
+            .into_iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect();
+
+        let chain_id = Felt252::zero();
+
+        DeployAccount::new(
+            class_hash,
+            max_fee,
+            version,
+            nonce,
+            constructor_calldata,
+            signature,
+            contract_address_salt,
+            chain_id,
+        )
+        .unwrap()
+    }
+}
+
+// fn convert_declare_v0(value: starknet_api::transaction::DeclareTransactionV0V1) -> Declare {
+
+//     let sender_address = Felt252::from_bytes_be(value.sender_address.0.key().bytes());
+
+//     Declare::new(contract_class, chain_id, sender_address, max_fee, version, signature, nonce)
+//     todo!()
+// }
+
+// impl From<starknet_api::transaction::DeclareTransaction> for Declare {
+//     fn from(value: starknet_api::transaction::DeclareTransaction) -> Self {
+//         match value {
+//             starknet_api::transaction::DeclareTransaction::V0(v0) => convert_declare_v0(v0),
+//             starknet_api::transaction::DeclareTransaction::V1(v1) => todo!(),
+//             starknet_api::transaction::DeclareTransaction::V2(_) => unreachable!(),
+//         }
+//     }
+// }
