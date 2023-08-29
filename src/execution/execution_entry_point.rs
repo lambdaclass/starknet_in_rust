@@ -134,6 +134,10 @@ where
     S: StateReader,
 {
     pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) events: Vec<OrderedEvent>,
+    pub(crate) n_emitted_events: u64,
+    pub(crate) n_sent_messages: usize,
+    pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
 }
 
 impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
@@ -234,20 +238,33 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
     }
 
     fn emit_event(
-        &self,
+        &mut self,
         keys: &[cairo_vm::felt::Felt252],
         data: &[cairo_vm::felt::Felt252],
     ) -> SyscallResult<()> {
+        let order = self.n_emitted_events;
         println!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from MLIR.");
+        self.events
+            .push(OrderedEvent::new(order, keys.to_vec(), data.to_vec()));
+        self.n_emitted_events += 1;
         Ok(())
     }
 
     fn send_message_to_l1(
-        &self,
+        &mut self,
         to_address: cairo_vm::felt::Felt252,
         payload: &[cairo_vm::felt::Felt252],
     ) -> SyscallResult<()> {
         println!("Called `send_message_to_l1({to_address}, {payload:?})` from MLIR.");
+        let addr = Address(to_address);
+        self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
+            self.n_sent_messages,
+            addr,
+            payload.to_vec(),
+        ));
+
+        // Update messages count.
+        self.n_sent_messages += 1;
         Ok(())
     }
 
@@ -801,12 +818,16 @@ impl ExecutionEntryPoint {
             let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
 
             let native_context = NativeContext::new();
-
             let mut native_program = native_context.compile(&sierra_program).unwrap();
             let contract_storage_state =
                 ContractStorageState::new(state, self.contract_address.clone());
+
             let mut syscall_handler = SyscallHandler {
                 starknet_storage_state: contract_storage_state,
+                n_emitted_events: 0,
+                events: Vec::new(),
+                l2_to_l1_messages: Vec::new(),
+                n_sent_messages: 0,
             };
             native_program
                 .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler))
@@ -924,6 +945,8 @@ impl ExecutionEntryPoint {
 
             let result: String = String::from_utf8(writer).unwrap();
             let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
+            // let value = serde_json::from_str::<serde_json::Value>(&result).unwrap();
+            // println!("OUTPUT: {}", value);
 
             return Ok(CallInfo {
                 caller_address: self.caller_address.clone(),
@@ -938,15 +961,14 @@ impl ExecutionEntryPoint {
                 calldata: self.calldata.clone(),
                 retdata: value.return_values,
                 execution_resources: None,
+                events: syscall_handler.events,
+                storage_read_values: syscall_handler.starknet_storage_state.read_values,
+                accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
+                failure_flag: value.failure_flag,
+                l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
 
                 // TODO
-                events: vec![],
-                l2_to_l1_messages: vec![],
-                storage_read_values: vec![],
-                accessed_storage_keys: HashSet::new(),
                 internal_calls: vec![],
-
-                failure_flag: value.failure_flag,
 
                 // TODO
                 gas_consumed: 0,
