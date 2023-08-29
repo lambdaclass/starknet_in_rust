@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
@@ -26,6 +28,7 @@ use ::{
 };
 
 /// Starknet chains supported in Infura.
+#[deprecated = "use the starknet_api compatible rpc state reader"]
 #[derive(Debug, Clone, Copy)]
 pub enum RpcChain {
     MainNet,
@@ -58,6 +61,7 @@ impl fmt::Display for RpcChain {
 /// This implementation is uses HTTP requests to call the RPC endpoint,
 /// using Infura.
 /// In order to use it an Infura API key is necessary.
+#[deprecated = "use the starknet_api compatible rpc state reader"]
 pub struct RpcState {
     /// Enum with one of the supported Infura chains/
     chain: RpcChain,
@@ -78,6 +82,7 @@ enum RpcError {
 }
 
 /// [`BlockValue`] is an Enum that represent which block we are going to use to retrieve information.
+#[deprecated = "use the starknet_api compatible rpc state reader"]
 #[allow(dead_code)]
 pub enum BlockValue {
     /// String one of: ["latest", "pending"]
@@ -160,6 +165,7 @@ impl RpcState {
 }
 
 #[derive(Debug, Clone)]
+#[deprecated = "use the starknet_api compatible rpc state reader"]
 pub struct TransactionTrace {
     pub validate_invocation: CallInfo,
     pub function_invocation: CallInfo,
