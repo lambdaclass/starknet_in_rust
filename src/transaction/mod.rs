@@ -6,7 +6,6 @@ pub mod error;
 pub mod fee;
 pub mod invoke_function;
 pub mod l1_handler;
-pub mod starket_api;
 mod verify_version;
 
 pub use declare::Declare;
