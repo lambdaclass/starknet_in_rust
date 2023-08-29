@@ -123,21 +123,3 @@ impl From<starknet_api::transaction::DeployAccountTransaction> for DeployAccount
         .unwrap()
     }
 }
-
-// fn convert_declare_v0(value: starknet_api::transaction::DeclareTransactionV0V1) -> Declare {
-
-//     let sender_address = Felt252::from_bytes_be(value.sender_address.0.key().bytes());
-
-//     Declare::new(contract_class, chain_id, sender_address, max_fee, version, signature, nonce)
-//     todo!()
-// }
-
-// impl From<starknet_api::transaction::DeclareTransaction> for Declare {
-//     fn from(value: starknet_api::transaction::DeclareTransaction) -> Self {
-//         match value {
-//             starknet_api::transaction::DeclareTransaction::V0(v0) => convert_declare_v0(v0),
-//             starknet_api::transaction::DeclareTransaction::V1(v1) => todo!(),
-//             starknet_api::transaction::DeclareTransaction::V2(_) => unreachable!(),
-//         }
-//     }
-// }
