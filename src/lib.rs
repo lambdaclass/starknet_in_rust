@@ -61,7 +61,7 @@ pub fn simulate_transaction<S: StateReader>(
     ignore_max_fee: bool,
     skip_nonce_check: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
-    let mut cache_state = CachedState::new(Arc::new(state), None, Some(HashMap::new()));
+    let mut cache_state = CachedState::new(Arc::new(state)).set_casm_classes_cache(HashMap::new());
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         let tx_for_simulation = transaction.create_for_simulation(
@@ -89,7 +89,7 @@ where
     T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(Arc::new(state), None, None);
+    let mut cached_state = CachedState::<T>::new(Arc::new(state));
 
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
@@ -178,7 +178,7 @@ where
     T: StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(Arc::new(state), None, None);
+    let mut cached_state = CachedState::<T>::new(Arc::new(state));
 
     // Check if the contract is deployed.
     cached_state.get_class_hash_at(l1_handler.contract_address())?;
@@ -312,13 +312,13 @@ mod test {
         let entrypoints = contract_class.clone().entry_points_by_type;
         let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
-        let mut contract_class_cache = HashMap::new();
+        let mut casm_classes_cache = HashMap::new();
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
         let nonce = Felt252::zero();
 
-        contract_class_cache.insert(class_hash, contract_class);
+        casm_classes_cache.insert(class_hash, contract_class);
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
@@ -327,7 +327,8 @@ mod test {
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+        let mut state =
+            CachedState::new(Arc::new(state_reader)).set_casm_classes_cache(casm_classes_cache);
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
         let retdata = call_contract(
@@ -379,11 +380,11 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let state = CachedState::new(Arc::new(state_reader));
 
         // Initialize state.contract_classes
         let contract_classes = HashMap::from([(class_hash, contract_class)]);
-        state.set_contract_classes(contract_classes).unwrap();
+        let state = state.set_contract_classes_cache(contract_classes);
 
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
@@ -402,13 +403,13 @@ mod test {
         let entrypoints = contract_class.clone().entry_points_by_type;
         let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
-        let mut contract_class_cache = HashMap::new();
+        let mut casm_classes_cache = HashMap::new();
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
         let nonce = Felt252::zero();
 
-        contract_class_cache.insert(class_hash, contract_class);
+        casm_classes_cache.insert(class_hash, contract_class);
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
@@ -417,7 +418,8 @@ mod test {
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+        let mut state =
+            CachedState::new(Arc::new(state_reader)).set_casm_classes_cache(casm_classes_cache);
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
         let invoke = InvokeFunction::new(
@@ -674,7 +676,8 @@ mod test {
     #[test]
     fn test_simulate_deploy() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state =
+            CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
         state
             .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
@@ -713,7 +716,7 @@ mod test {
     #[test]
     fn test_simulate_declare() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let state = CachedState::new(state_reader, Some(Default::default()), None);
+        let state = CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
         let block_context = &Default::default();
 
@@ -750,7 +753,8 @@ mod test {
     #[test]
     fn test_simulate_invoke() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state =
+            CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
         state
             .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
@@ -811,7 +815,8 @@ mod test {
     #[test]
     fn test_simulate_deploy_account() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state =
+            CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
         state
             .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
@@ -932,10 +937,9 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(Arc::new(state_reader))
+            // Initialize state.contract_classes
+            .set_contract_classes_cache(HashMap::new());
 
         state
             .set_contract_class(&class_hash, &contract_class)
@@ -961,7 +965,7 @@ mod test {
     #[test]
     fn test_deploy_and_invoke_simulation() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let state = CachedState::new(state_reader, Some(Default::default()), None);
+        let state = CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
         let block_context = &Default::default();
 

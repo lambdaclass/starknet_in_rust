@@ -731,7 +731,7 @@ mod tests {
             ]
         );
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()));
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -767,7 +767,7 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()));
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -809,7 +809,7 @@ mod tests {
         let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
 
         // invoke syscall
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()));
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -878,7 +878,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()));
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -943,7 +943,7 @@ mod tests {
 
         let hint_data = HintProcessorData::new_default(STORAGE_WRITE.to_string(), ids_data);
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()));
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -1017,18 +1017,12 @@ mod tests {
         let hint_data = HintProcessorData::new_default(DEPLOY.to_string(), ids_data);
 
         // Create SyscallHintProcessor
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+            .set_contract_classes_cache(HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
         );
-        // Initialize state.set_contract_classes
-        syscall_handler_hint_processor
-            .syscall_handler
-            .starknet_storage_state
-            .state
-            .set_contract_classes(HashMap::new())
-            .unwrap();
 
         // Set contract class
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
@@ -1115,18 +1109,12 @@ mod tests {
         );
 
         // Create SyscallHintProcessor
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+            .set_contract_classes_cache(HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
         );
-        // Initialize state.set_contract_classes
-        syscall_handler_hint_processor
-            .syscall_handler
-            .starknet_storage_state
-            .state
-            .set_contract_classes(HashMap::new())
-            .unwrap();
 
         // Set contract class
         let contract_class =

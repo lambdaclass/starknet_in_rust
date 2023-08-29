@@ -24,11 +24,8 @@ use crate::complex_contracts::utils::*;
 #[test]
 fn erc721_constructor_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be(b"some-nft");
     let collection_symbol = Felt252::from(555);
@@ -71,11 +68,8 @@ fn erc721_constructor_test() {
 #[test]
 fn erc721_balance_of_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -162,11 +156,8 @@ fn erc721_balance_of_test() {
 #[test]
 fn erc721_test_owner_of() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -245,11 +236,8 @@ fn erc721_test_owner_of() {
 #[test]
 fn erc721_test_get_approved() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -345,11 +333,8 @@ fn erc721_test_get_approved() {
 #[test]
 fn erc721_test_is_approved_for_all() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -448,11 +433,8 @@ fn erc721_test_is_approved_for_all() {
 #[test]
 fn erc721_test_approve() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -553,11 +535,8 @@ fn erc721_test_approve() {
 #[test]
 fn erc721_set_approval_for_all() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -652,11 +631,8 @@ fn erc721_set_approval_for_all() {
 #[test]
 fn erc721_transfer_from_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -793,11 +769,8 @@ fn erc721_transfer_from_test() {
 #[test]
 fn erc721_transfer_from_and_get_owner_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -885,11 +858,8 @@ fn erc721_transfer_from_and_get_owner_test() {
 #[test]
 fn erc721_safe_transfer_from_should_fail_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -953,11 +923,8 @@ fn erc721_safe_transfer_from_should_fail_test() {
 #[test]
 fn erc721_calling_constructor_twice_should_fail_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -1003,11 +970,8 @@ fn erc721_calling_constructor_twice_should_fail_test() {
 #[test]
 fn erc721_constructor_should_fail_with_to_equal_zero() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -1031,11 +995,8 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
 #[test]
 fn erc721_transfer_fail_to_zero_address() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
@@ -1086,11 +1047,8 @@ fn erc721_transfer_fail_to_zero_address() {
 #[test]
 fn erc721_transfer_fail_not_owner() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+        .set_contract_classes_cache(Default::default());
 
     let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);

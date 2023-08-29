@@ -76,7 +76,8 @@ fn delegate_call() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+    let mut state =
+        CachedState::new(Arc::new(state_reader)).set_contract_classes_cache(contract_class_cache);
 
     //* ------------------------------------
     //*    Create execution entry point
