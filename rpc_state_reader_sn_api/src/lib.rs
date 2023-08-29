@@ -940,7 +940,7 @@ mod blockifier_transaction_tests {
             sequencer_address,
             fee_token_address,
             vm_resource_fee_cost,
-            gas_price: gas_price,
+            gas_price,
             invoke_tx_max_n_steps: 1_000_000,
             validate_max_n_steps: 1_000_000,
             max_recursion_depth: 500,
@@ -971,7 +971,6 @@ mod blockifier_transaction_tests {
 
         #[test]
         fn test_get_gas_price() {
-            // Instantiate the RPC StateReader and the CachedState
             let block = BlockValue::Number(serde_json::to_value(169928).unwrap());
             let rpc_state = RpcState::new(RpcChain::MainNet, block);
 
