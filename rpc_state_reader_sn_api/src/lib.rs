@@ -261,6 +261,29 @@ impl<'de> Deserialize<'de> for TransactionTrace {
     }
 }
 
+/// Freestanding deserialize method to avoid a new type.
+fn deserialize_transaction_json(transaction: serde_json::Value) -> serde_json::Result<Transaction> {
+    let tx_type: String = serde_json::from_value(transaction["type"].clone())?;
+    let tx_version: String = serde_json::from_value(transaction["version"].clone())?;
+
+    match tx_type.as_str() {
+        "INVOKE" => match tx_version.as_str() {
+            "0x0" => Ok(Transaction::Invoke(InvokeTransaction::V0(
+                serde_json::from_value(transaction)?,
+            ))),
+            "0x1" => Ok(Transaction::Invoke(InvokeTransaction::V1(
+                serde_json::from_value(transaction)?,
+            ))),
+            x => Err(serde::de::Error::custom(format!(
+                "unimplemented invoke version: {x}"
+            ))),
+        },
+        x => Err(serde::de::Error::custom(format!(
+            "unimplemented transaction type deserialization: {x}"
+        ))),
+    }
+}
+
 impl RpcState {
     /// Requests the transaction trace to the Feeder Gateway API.
     /// It's useful for testing the transaction outputs like:
@@ -291,18 +314,7 @@ impl RpcState {
         });
         let result = self.rpc_call::<serde_json::Value>(&params).unwrap()["result"].clone();
 
-        match result["type"].as_str().unwrap() {
-            "INVOKE" => match result["version"].as_str().unwrap() {
-                "0x0" => Transaction::Invoke(InvokeTransaction::V0(
-                    serde_json::from_value(result).unwrap(),
-                )),
-                "0x1" => Transaction::Invoke(InvokeTransaction::V1(
-                    serde_json::from_value(result).unwrap(),
-                )),
-                _ => unreachable!(),
-            },
-            _ => unreachable!(),
-        }
+        deserialize_transaction_json(result).expect("transaction should deserialize correctly")
     }
 
     pub fn get_chain_name(&self) -> ChainId {
@@ -329,18 +341,7 @@ impl RpcState {
             .as_array()
             .unwrap()
             .iter()
-            .filter_map(|result| match result["type"].as_str().unwrap() {
-                "INVOKE" => match result["version"].as_str().unwrap() {
-                    "0x0" => Some(Transaction::Invoke(InvokeTransaction::V0(
-                        serde_json::from_value(result.clone()).unwrap(),
-                    ))),
-                    "0x1" => Some(Transaction::Invoke(InvokeTransaction::V1(
-                        serde_json::from_value(result.clone()).unwrap(),
-                    ))),
-                    _ => None,
-                },
-                _ => None,
-            })
+            .filter_map(|result| deserialize_transaction_json(result.clone()).ok())
             .collect();
 
         RpcBlockInfo {
