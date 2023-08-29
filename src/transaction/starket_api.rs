@@ -25,7 +25,7 @@ fn convert_invoke_v0(value: starknet_api::transaction::InvokeTransactionV0) -> I
         .calldata
         .0
         .as_ref()
-        .into_iter()
+        .iter()
         .map(|f| Felt252::from_bytes_be(f.bytes()))
         .collect();
 
@@ -60,7 +60,7 @@ fn convert_invoke_v1(value: starknet_api::transaction::InvokeTransactionV1) -> I
         .calldata
         .0
         .as_ref()
-        .into_iter()
+        .iter()
         .map(|f| Felt252::from_bytes_be(f.bytes()))
         .collect();
 
@@ -104,7 +104,7 @@ impl From<starknet_api::transaction::DeployAccountTransaction> for DeployAccount
             .constructor_calldata
             .0
             .as_ref()
-            .into_iter()
+            .iter()
             .map(|f| Felt252::from_bytes_be(f.bytes()))
             .collect();
 
