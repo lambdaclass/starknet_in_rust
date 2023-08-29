@@ -1,11 +1,16 @@
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 
-use crate::{definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR, utils::Address};
+use crate::{
+    definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR,
+    syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address,
+};
 
-use super::{DeployAccount, InvokeFunction};
+use super::{error::TransactionError, DeployAccount, InvokeFunction};
 
-fn convert_invoke_v0(value: starknet_api::transaction::InvokeTransactionV0) -> InvokeFunction {
+fn convert_invoke_v0(
+    value: starknet_api::transaction::InvokeTransactionV0,
+) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(
         value.contract_address.0.key().bytes(),
     ));
@@ -39,10 +44,11 @@ fn convert_invoke_v0(value: starknet_api::transaction::InvokeTransactionV0) -> I
         chain_id,
         nonce,
     )
-    .unwrap()
 }
 
-fn convert_invoke_v1(value: starknet_api::transaction::InvokeTransactionV1) -> InvokeFunction {
+fn convert_invoke_v1(
+    value: starknet_api::transaction::InvokeTransactionV1,
+) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
     let max_fee = value.max_fee.0;
     let version = Felt252::one();
@@ -74,11 +80,14 @@ fn convert_invoke_v1(value: starknet_api::transaction::InvokeTransactionV1) -> I
         chain_id,
         Some(nonce),
     )
-    .unwrap()
 }
 
-impl From<starknet_api::transaction::InvokeTransaction> for InvokeFunction {
-    fn from(value: starknet_api::transaction::InvokeTransaction) -> Self {
+impl TryFrom<starknet_api::transaction::InvokeTransaction> for InvokeFunction {
+    type Error = TransactionError;
+
+    fn try_from(
+        value: starknet_api::transaction::InvokeTransaction,
+    ) -> Result<Self, TransactionError> {
         match value {
             starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0),
             starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1),
@@ -86,8 +95,12 @@ impl From<starknet_api::transaction::InvokeTransaction> for InvokeFunction {
     }
 }
 
-impl From<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
-    fn from(value: starknet_api::transaction::DeployAccountTransaction) -> Self {
+impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
+    type Error = SyscallHandlerError;
+
+    fn try_from(
+        value: starknet_api::transaction::DeployAccountTransaction,
+    ) -> Result<Self, SyscallHandlerError> {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
         let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
@@ -120,6 +133,5 @@ impl From<starknet_api::transaction::DeployAccountTransaction> for DeployAccount
             contract_address_salt,
             chain_id,
         )
-        .unwrap()
     }
 }
