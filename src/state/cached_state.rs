@@ -16,6 +16,8 @@ use std::{
     sync::Arc,
 };
 
+pub type ContractClassCache = HashMap<ClassHash, CompiledClass>;
+
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
 
 /// Represents a cached state of contract classes with optional caches.
@@ -25,12 +27,12 @@ pub struct CachedState<T: StateReader> {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) cache: StateCache,
     #[get = "pub"]
-    pub(crate) contract_classes: HashMap<ClassHash, CompiledClass>,
+    pub(crate) contract_classes: ContractClassCache,
 }
 
 impl<T: StateReader> CachedState<T> {
     /// Constructor, creates a new cached state.
-    pub fn new(state_reader: Arc<T>, contract_classes: HashMap<ClassHash, CompiledClass>) -> Self {
+    pub fn new(state_reader: Arc<T>, contract_classes: ContractClassCache) -> Self {
         Self {
             cache: StateCache::default(),
             state_reader,
@@ -42,7 +44,7 @@ impl<T: StateReader> CachedState<T> {
     pub fn new_for_testing(
         state_reader: Arc<T>,
         cache: StateCache,
-        contract_classes: HashMap<ClassHash, CompiledClass>,
+        contract_classes: ContractClassCache,
     ) -> Self {
         Self {
             cache,
@@ -54,7 +56,7 @@ impl<T: StateReader> CachedState<T> {
     /// Sets the contract classes cache.
     pub fn set_contract_classes(
         &mut self,
-        contract_classes: HashMap<ClassHash, CompiledClass>,
+        contract_classes: ContractClassCache,
     ) -> Result<(), StateError> {
         if !self.contract_classes.is_empty() {
             return Err(StateError::AssignedContractClassCache);
