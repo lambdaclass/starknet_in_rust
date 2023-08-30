@@ -1060,7 +1060,7 @@ mod starknet_in_rust_transaction_tests {
 
     impl StateReader for RpcStateReader {
         fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-            let hash = ClassHash(StarkHash::new(class_hash.clone()).unwrap());
+            let hash = ClassHash(StarkHash::new(*class_hash).unwrap());
             Ok(CompiledClass::from(self.0.get_contract_class(&hash)))
         }
 
@@ -1095,13 +1095,13 @@ mod starknet_in_rust_transaction_tests {
                 .unwrap(),
             );
             let key =
-                StorageKey(PatriciaKey::try_from(StarkHash::new(key.clone()).unwrap()).unwrap());
+                StorageKey(PatriciaKey::try_from(StarkHash::new(*key).unwrap()).unwrap());
             let value = self.0.get_storage_at(&address, &key);
             Ok(Felt252::from_bytes_be(value.bytes()))
         }
         fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
             let address = ContractAddress(
-                PatriciaKey::try_from(StarkHash::new(class_hash.clone()).unwrap()).unwrap(),
+                PatriciaKey::try_from(StarkHash::new(*class_hash).unwrap()).unwrap(),
             );
             let mut bytes = [0u8; 32];
             bytes.copy_from_slice(self.0.get_class_hash_at(&address).0.bytes());
@@ -1210,7 +1210,7 @@ mod starknet_in_rust_transaction_tests {
         }
 
         #[test]
-        #[ignore = "working on fixes"]
+        //#[ignore = "working on fixes"]
         fn test_recent_tx() {
             let (tx_info, trace, receipt) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
