@@ -3139,6 +3139,7 @@ dependencies = [
  "serde_with 3.1.0",
  "starknet",
  "starknet_api 0.4.1",
+ "starknet_in_rust",
  "thiserror",
  "ureq",
 ]
