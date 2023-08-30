@@ -13,7 +13,7 @@ jobs:
         fail-fast: false
         matrix:
           include:
-          - os: starknet_in_rust
+          - os: ubuntu-22.04
             deps_suffix: ''
     runs-on: ${{ matrix.os }}
     name: "Make deps, build & test on fresh ${{ matrix.os }} system"
