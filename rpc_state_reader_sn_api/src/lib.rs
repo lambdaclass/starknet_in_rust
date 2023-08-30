@@ -362,7 +362,7 @@ impl RpcState {
                 "0x1" => Transaction::Invoke(InvokeTransaction::V1(
                     serde_json::from_value(result).unwrap(),
                 )),
-                _ => unimplemented!(),
+                _ => unreachable!(),
             },
             _ => unimplemented!(),
         }
@@ -1027,17 +1027,26 @@ mod blockifier_transaction_tests {
 }
 
 mod starknet_in_rust_transaction_tests {
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::felt::{felt_str, Felt252};
     use starknet_api::{
-        contract_address,
-        core::{CompiledClassHash, Nonce, PatriciaKey},
-        patricia_key, stark_felt,
-        transaction::TransactionHash,
+        contract_address, core::PatriciaKey, patricia_key, stark_felt, transaction::TransactionHash,
     };
     use starknet_in_rust::{
         core::errors::state_errors::StateError,
+        definitions::{
+            block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+            constants::{
+                DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
+                DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+                DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_INVOKE_TX_MAX_N_STEPS,
+                DEFAULT_VALIDATE_MAX_N_STEPS,
+            },
+        },
+        execution::TransactionExecutionInfo,
         services::api::contract_classes::compiled_class::CompiledClass,
-        state::{state_api::StateReader, state_cache::StorageEntry},
+        state::{
+            cached_state::CachedState, state_api::StateReader, state_cache::StorageEntry, BlockInfo,
+        },
         utils::{Address, ClassHash},
     };
 
@@ -1086,11 +1095,13 @@ mod starknet_in_rust_transaction_tests {
             let bytes = self.0.get_storage_at(&address, &key).bytes();
             Ok(Felt252::from_bytes_be(bytes))
         }
-        fn get_compiled_class_hash(
-            &self,
-            class_hash: &ClassHash,
-        ) -> Result<CompiledClassHash, StateError> {
-            Ok(self.0.get_class_hash_at(contract_address).0)
+        fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
+            let address = ContractAddress(
+                PatriciaKey::try_from(StarkHash::new(class_hash.clone()).unwrap()).unwrap(),
+            );
+            let mut bytes = [0u8; 32];
+            bytes.copy_from_slice(self.0.get_class_hash_at(&address).0.bytes());
+            Ok(bytes)
         }
     }
 
@@ -1105,6 +1116,11 @@ mod starknet_in_rust_transaction_tests {
         TransactionTrace,
         RpcTransactionReceipt,
     ) {
+        let fee_token_address = Address(felt_str!(
+            "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            16
+        ));
+
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
         // Instantiate the RPC StateReader and the CachedState
@@ -1112,11 +1128,31 @@ mod starknet_in_rust_transaction_tests {
 
         // Get values for block context before giving ownership of the reader
         let chain_id = rpc_reader.0.get_chain_name();
-        let RpcBlockInfo {
-            block_number,
-            block_timestamp,
-            sequencer_address,
-        } = rpc_reader.0.get_block_info();
+        let starknet_os_config = StarknetOsConfig::new(
+            (chain_id.into() as StarknetChainId).to_felt(),
+            fee_token_address,
+            gas_price,
+        );
+        let block_info = {
+            let RpcBlockInfo {
+                block_number,
+                block_timestamp,
+                sequencer_address,
+            } = rpc_reader.0.get_block_info();
+
+            let block_number = block_number.0;
+            let block_timestamp = block_timestamp.0;
+            let sequencer_address =
+                Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
+            let gas_price = gas_price as u64; // FIXME: possible issue
+
+            BlockInfo {
+                block_number,
+                block_timestamp,
+                gas_price,
+                sequencer_address,
+            }
+        };
 
         // Get transaction before giving ownership of the reader
         let tx_hash = TransactionHash(stark_felt!(tx_hash));
@@ -1125,42 +1161,19 @@ mod starknet_in_rust_transaction_tests {
         let trace = rpc_reader.0.get_transaction_trace(&tx_hash);
         let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
 
-        // Create state from RPC reader
-        let global_cache = GlobalContractCache::default();
-        let mut state = CachedState::new(rpc_reader, global_cache);
+        let mut state = CachedState::new(Arc::new(rpc_reader), None, None);
 
-        let fee_token_address =
-            contract_address!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7");
-
-        const N_STEPS_FEE_WEIGHT: f64 = 0.01;
-        let vm_resource_fee_cost = Arc::new(HashMap::from([
-            ("n_steps".to_string(), N_STEPS_FEE_WEIGHT),
-            ("output_builtin".to_string(), 0.0),
-            ("pedersen_builtin".to_string(), N_STEPS_FEE_WEIGHT * 32.0),
-            ("range_check_builtin".to_string(), N_STEPS_FEE_WEIGHT * 16.0),
-            ("ecdsa_builtin".to_string(), N_STEPS_FEE_WEIGHT * 2048.0),
-            ("bitwise_builtin".to_string(), N_STEPS_FEE_WEIGHT * 64.0),
-            ("ec_op_builtin".to_string(), N_STEPS_FEE_WEIGHT * 1024.0),
-            ("poseidon_builtin".to_string(), N_STEPS_FEE_WEIGHT * 32.0),
-            (
-                "segment_arena_builtin".to_string(),
-                N_STEPS_FEE_WEIGHT * 10.0,
-            ),
-            ("keccak_builtin".to_string(), N_STEPS_FEE_WEIGHT * 2048.0), // 2**11
-        ]));
-
-        let block_context = BlockContext {
-            chain_id,
-            block_number,
-            block_timestamp,
-            sequencer_address,
-            fee_token_address,
-            vm_resource_fee_cost,
-            gas_price,
-            invoke_tx_max_n_steps: 1_000_000,
-            validate_max_n_steps: 1_000_000,
-            max_recursion_depth: 500,
-        };
+        let block_context = BlockContext::new(
+            starknet_os_config,
+            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            DEFAULT_VALIDATE_MAX_N_STEPS,
+            block_info,
+            Default::default(),
+            true,
+        );
 
         // Map starknet_api transaction to blockifier's
         let blockifier_tx = match sn_api_tx {
