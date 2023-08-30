@@ -10,10 +10,7 @@ use starknet_in_rust::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{
-        cached_state::{CachedState, ContractClassCache},
-        state_api::State,
-    },
+    state::{cached_state::CachedState, state_api::State},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
@@ -21,6 +18,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 use assert_matches::assert_matches;
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use std::collections::HashMap;
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
@@ -63,19 +62,23 @@ fn test_contract<'a>(
     state_reader
         .address_to_nonce_mut()
         .insert(contract_address.clone(), nonce);
-    state_reader
-        .class_hash_to_contract_class_mut()
-        .insert(class_hash, contract_class);
+    state_reader.class_hash_to_compiled_class_mut().insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
-        let mut contract_class_cache = ContractClassCache::new();
+        let mut contract_class_cache = HashMap::new();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
             let contract_class = ContractClass::from_path(contract_path)
                 .expect("Could not load extra contract from JSON");
 
-            contract_class_cache.insert(class_hash, contract_class.clone());
+            contract_class_cache.insert(
+                class_hash,
+                CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+            );
 
             if let Some((contract_address, data)) = contract_address {
                 storage_entries.extend(data.into_iter().map(|(name, value)| {
@@ -89,15 +92,16 @@ fn test_contract<'a>(
                 state_reader
                     .address_to_class_hash_mut()
                     .insert(contract_address.clone(), class_hash);
-                state_reader
-                    .class_hash_to_contract_class_mut()
-                    .insert(class_hash, contract_class.clone());
+                state_reader.class_hash_to_compiled_class_mut().insert(
+                    class_hash,
+                    CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+                );
             }
         }
 
-        Some(contract_class_cache)
+        contract_class_cache
     };
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache, None);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));

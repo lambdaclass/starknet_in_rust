@@ -4,7 +4,6 @@ use cairo_vm::{
 };
 use lazy_static::lazy_static;
 use num_traits::Zero;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
@@ -20,7 +19,13 @@ use starknet_in_rust::{
     utils::Address,
     CasmContractClass,
 };
-use std::{collections::HashSet, sync::Arc};
+use starknet_in_rust::{
+    services::api::contract_classes::compiled_class::CompiledClass, EntryPointType,
+};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -29,7 +34,7 @@ lazy_static! {
 #[test]
 fn internal_deploy_account() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, None, None);
+    let mut state = CachedState::new(state_reader, HashMap::new());
 
     state.set_contract_classes(Default::default()).unwrap();
 
@@ -40,7 +45,10 @@ fn internal_deploy_account() {
     let class_hash_bytes = class_hash.to_be_bytes();
 
     state
-        .set_contract_class(&class_hash_bytes, &contract_class)
+        .set_contract_class(
+            &class_hash_bytes,
+            &CompiledClass::Deprecated(Arc::new(contract_class)),
+        )
         .unwrap();
 
     let contract_address_salt =
@@ -109,7 +117,7 @@ fn internal_deploy_account() {
 #[test]
 fn internal_deploy_account_cairo1() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, None, Some(Default::default()));
+    let mut state = CachedState::new(state_reader, HashMap::default());
 
     state.set_contract_classes(Default::default()).unwrap();
 
@@ -120,9 +128,9 @@ fn internal_deploy_account_cairo1() {
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     state
-        .set_compiled_class(
-            &TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.clone(),
-            contract_class,
+        .set_contract_class(
+            &TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(contract_class)),
         )
         .unwrap();
 

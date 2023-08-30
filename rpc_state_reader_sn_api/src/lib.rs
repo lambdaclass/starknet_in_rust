@@ -128,6 +128,8 @@ pub struct RpcBlockInfo {
     pub block_timestamp: BlockTimestamp,
     /// The sequencer address of this block.
     pub sequencer_address: ContractAddress,
+    /// The transactions of this block.
+    pub transactions: Vec<Transaction>,
 }
 
 #[derive(Deserialize)]
@@ -299,6 +301,29 @@ impl<'de> Deserialize<'de> for TransactionTrace {
     }
 }
 
+/// Freestanding deserialize method to avoid a new type.
+fn deserialize_transaction_json(transaction: serde_json::Value) -> serde_json::Result<Transaction> {
+    let tx_type: String = serde_json::from_value(transaction["type"].clone())?;
+    let tx_version: String = serde_json::from_value(transaction["version"].clone())?;
+
+    match tx_type.as_str() {
+        "INVOKE" => match tx_version.as_str() {
+            "0x0" => Ok(Transaction::Invoke(InvokeTransaction::V0(
+                serde_json::from_value(transaction)?,
+            ))),
+            "0x1" => Ok(Transaction::Invoke(InvokeTransaction::V1(
+                serde_json::from_value(transaction)?,
+            ))),
+            x => Err(serde::de::Error::custom(format!(
+                "unimplemented invoke version: {x}"
+            ))),
+        },
+        x => Err(serde::de::Error::custom(format!(
+            "unimplemented transaction type deserialization: {x}"
+        ))),
+    }
+}
+
 impl RpcState {
     /// Requests the transaction trace to the Feeder Gateway API.
     /// It's useful for testing the transaction outputs like:
@@ -343,6 +368,25 @@ impl RpcState {
         }
     }
 
+    /// Gets the gas price of a given block.
+    pub fn get_gas_price(&self, block_number: u64) -> serde_json::Result<u128> {
+        let chain_name = self.get_chain_name();
+
+        let response = ureq::get(&format!(
+            "https://{}.starknet.io/feeder_gateway/get_block",
+            chain_name
+        ))
+        .query("blockNumber", &block_number.to_string())
+        .call()
+        .unwrap();
+
+        let res: serde_json::Value = response.into_json().expect("should be json");
+
+        let gas_price_hex = res["gas_price"].as_str().unwrap();
+        let gas_price = u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).unwrap();
+        Ok(gas_price)
+    }
+
     pub fn get_chain_name(&self) -> ChainId {
         ChainId(match self.chain {
             RpcChain::MainNet => "alpha-mainnet".to_string(),
@@ -354,7 +398,7 @@ impl RpcState {
     pub fn get_block_info(&self) -> RpcBlockInfo {
         let get_block_info_params = ureq::json!({
             "jsonrpc": "2.0",
-            "method": "starknet_getBlockWithTxHashes",
+            "method": "starknet_getBlockWithTxs",
             "params": [self.block.to_value().unwrap()],
             "id": 1
         });
@@ -362,6 +406,13 @@ impl RpcState {
         let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
         let sequencer_address: StarkFelt =
             serde_json::from_value(block_info["result"]["sequencer_address"].clone()).unwrap();
+
+        let transactions: Vec<_> = block_info["result"]["transactions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|result| deserialize_transaction_json(result.clone()).ok())
+            .collect();
 
         RpcBlockInfo {
             block_number: BlockNumber(
@@ -377,6 +428,7 @@ impl RpcState {
                     .unwrap(),
             ),
             sequencer_address: ContractAddress(sequencer_address.try_into().unwrap()),
+            transactions,
         }
     }
 
@@ -851,7 +903,6 @@ mod blockifier_transaction_tests {
         tx_hash: &str,
         network: RpcChain,
         block_number: BlockNumber,
-        gas_price: u128,
     ) -> (
         TransactionExecutionInfo,
         TransactionTrace,
@@ -861,6 +912,7 @@ mod blockifier_transaction_tests {
 
         // Instantiate the RPC StateReader and the CachedState
         let rpc_reader = RpcStateReader(RpcState::new(network, block_number.into()));
+        let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
         // Get values for block context before giving ownership of the reader
         let chain_id = rpc_reader.0.get_chain_name();
@@ -868,6 +920,7 @@ mod blockifier_transaction_tests {
             block_number,
             block_timestamp,
             sequencer_address,
+            ..
         } = rpc_reader.0.get_block_info();
 
         // Get transaction before giving ownership of the reader
@@ -939,13 +992,20 @@ mod blockifier_transaction_tests {
         use super::*;
 
         #[test]
-        #[ignore = "working on fixes"]
+        fn test_get_gas_price() {
+            let block = BlockValue::Number(BlockNumber(169928));
+            let rpc_state = RpcState::new(RpcChain::MainNet, block);
+
+            let price = rpc_state.get_gas_price(169928).unwrap();
+            assert_eq!(price, 22804578690);
+        }
+
+        #[test]
         fn test_recent_tx() {
             let (tx_info, trace, receipt) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
                 RpcChain::MainNet,
                 BlockNumber(169928),
-                17110275391107,
             );
 
             let TransactionExecutionInfo {
