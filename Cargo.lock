@@ -191,9 +191,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web-codegen"
-version = "4.2.1"
+version = "4.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cc9afd177d10afc1e7842eaf6b8b24a38f4d22088b197a2b9395b102c4413eb"
+checksum = "eb1f50ebbb30eca122b188319a4398b3f7bb4a8cdf50ecfb73bfc6a3c3ce54f5"
 dependencies = [
  "actix-router",
  "proc-macro2",
@@ -1288,7 +1288,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=sir-integration#09009a1410f16fd24e350a7ada6a4006e1a3b360"
+source = "git+https://github.com/lambdaclass/cairo_native?branch=sir-integration#4ece7270343f16e6bdcab9ef20e6b23578f6c190"
 dependencies = [
  "bumpalo",
  "cairo-felt",
@@ -1322,7 +1322,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=sir-integration#09009a1410f16fd24e350a7ada6a4006e1a3b360"
+source = "git+https://github.com/lambdaclass/cairo_native?branch=sir-integration#4ece7270343f16e6bdcab9ef20e6b23578f6c190"
 dependencies = [
  "cairo-felt",
  "cairo-lang-runner",
@@ -1398,9 +1398,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chrono"
-version = "0.4.27"
+version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f56b4c72906975ca04becb8a30e102dfecddd0c06181e3e95ddc444be28881f8"
+checksum = "95ed24df0632f708f5f6d8082675bef2596f7084dee3dd55f632290bf35bfe0f"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
@@ -1774,9 +1774,9 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
-version = "5.5.2"
+version = "5.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b101bb8960ab42ada6ae98eb82afcea4452294294c45b681295af26610d6d28"
+checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
 dependencies = [
  "cfg-if",
  "hashbrown 0.14.0",
@@ -2747,9 +2747,9 @@ dependencies = [
 
 [[package]]
 name = "memchr"
-version = "2.6.1"
+version = "2.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f478948fd84d9f8e86967bf432640e46adfb5a4bd4f14ef7e864ab38220534ae"
+checksum = "5486aed0026218e61b8a01d5fbd5a0a134649abb71a0e53b7bc088529dced86e"
 
 [[package]]
 name = "memmap2"

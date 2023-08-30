@@ -255,7 +255,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
         self.starknet_storage_state
             .accessed_keys
             .extend(call_info.accessed_storage_keys.clone());
-        self.internal_calls.push(call_info);
+        self.internal_calls.push(call_info.clone());
 
         Ok(call_info.retdata)
     }
