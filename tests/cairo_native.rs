@@ -149,9 +149,7 @@ fn integration_test_erc20() {
         .unwrap();
 
     let entrypoints = sierra_contract_class.clone().entry_points_by_type;
-    println!("ENTRYPOINTS: {:?}", entrypoints);
     let constructor_entry_point_selector = &entrypoints.constructor.get(0).unwrap().selector;
-    // let constructor_entry_point_selector = &entrypoints.external.get(1).unwrap().selector;
 
     // Create state reader with class hash data
     let mut sierra_contract_class_cache = HashMap::new();
@@ -174,8 +172,7 @@ fn integration_test_erc20() {
         .set_sierra_programs_cache(sierra_contract_class_cache);
 
     // Dummy calldata
-    let calldata = [1.into(), 1.into(), 1.into(), 1.into(), 1.into()].to_vec();
-    // let calldata = [].to_vec();
+    let calldata = [1.into(), 2.into(), 3.into(), 4.into(), 5.into()].to_vec();
     let caller_address = Address(0000.into());
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
@@ -225,6 +222,66 @@ fn integration_test_erc20() {
     assert_eq!(result.entry_point_type, Some(EntryPointType::Constructor));
     assert_eq!(result.calldata, calldata);
     assert_eq!(result.retdata, [].to_vec());
+    assert_eq!(result.execution_resources, None);
+    assert_eq!(result.class_hash, Some(class_hash));
+    assert_eq!(result.gas_consumed, 0);
+
+    let get_name_entry_point_selector = &entrypoints.external.get(1).unwrap().selector;
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+
+    // Dummy calldata
+    let calldata = [].to_vec();
+    let caller_address = Address(0000.into());
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata.clone(),
+        Felt252::new(get_name_entry_point_selector.clone()),
+        caller_address,
+        EntryPointType::External,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        u128::MAX,
+    );
+
+    // Execute the entrypoint
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+        use_native,
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    let result = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps(),
+        )
+        .unwrap()
+        .call_info
+        .unwrap();
+
+    assert_eq!(result.caller_address, Address(0.into()));
+    assert_eq!(result.call_type, Some(CallType::Delegate));
+    assert_eq!(result.contract_address, Address(1111.into()));
+    assert_eq!(
+        result.entry_point_selector,
+        Some(Felt252::new(get_name_entry_point_selector))
+    );
+    assert_eq!(result.entry_point_type, Some(EntryPointType::External));
+    assert_eq!(result.calldata, calldata);
+    assert_eq!(result.retdata, [12345.into()].to_vec());
     assert_eq!(result.execution_resources, None);
     assert_eq!(result.class_hash, Some(class_hash));
     assert_eq!(result.gas_consumed, 0);
