@@ -1,6 +1,7 @@
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -50,7 +51,10 @@ fn integration_storage_test() {
     let storage_entry = (address.clone(), [90; 32]);
     let storage_value = Felt252::new(10902);
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -66,7 +70,7 @@ fn integration_storage_test() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     //* ------------------------------------
     //*    Create execution entry point
