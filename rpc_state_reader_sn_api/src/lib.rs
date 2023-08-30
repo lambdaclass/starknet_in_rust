@@ -1045,7 +1045,10 @@ mod starknet_in_rust_transaction_tests {
         execution::TransactionExecutionInfo,
         services::api::contract_classes::compiled_class::CompiledClass,
         state::{
-            cached_state::CachedState, state_api::StateReader, state_cache::StorageEntry, BlockInfo,
+            cached_state::{CachedState, ContractClassCache},
+            state_api::StateReader,
+            state_cache::StorageEntry,
+            BlockInfo,
         },
         transaction::Transaction,
         utils::{Address, ClassHash},
@@ -1139,6 +1142,7 @@ mod starknet_in_rust_transaction_tests {
                 block_number,
                 block_timestamp,
                 sequencer_address,
+                ..
             } = rpc_reader.0.get_block_info();
 
             let block_number = block_number.0;
@@ -1162,7 +1166,8 @@ mod starknet_in_rust_transaction_tests {
         let trace = rpc_reader.0.get_transaction_trace(&tx_hash);
         let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
 
-        let mut state = CachedState::new(Arc::new(rpc_reader), None, None);
+        let class_cache = ContractClassCache::default();
+        let mut state = CachedState::new(Arc::new(rpc_reader), class_cache);
 
         let block_context = BlockContext::new(
             starknet_os_config,
@@ -1176,10 +1181,18 @@ mod starknet_in_rust_transaction_tests {
             true,
         );
 
-        let tx: Transaction = rpc_reader.0.get_transaction(&tx_hash).try_into().unwrap();
+        let tx: starknet_in_rust::transaction::invoke_function::InvokeFunction =
+            match rpc_reader.0.get_transaction(&tx_hash) {
+                starknet_api::transaction::Transaction::Invoke(x) => x.try_into().unwrap(),
+                _ => unimplemented!(),
+            }
+            .try_into()
+            .unwrap();
+
+        let tx = Transaction::InvokeFunction(tx);
 
         (
-            tx.execute(&mut state, &block_context, true, true).unwrap(),
+            tx.execute(&mut state, &block_context, u128::MAX).unwrap(),
             trace,
             receipt,
         )
@@ -1187,7 +1200,7 @@ mod starknet_in_rust_transaction_tests {
 
     #[cfg(test)]
     mod test {
-        use blockifier::execution::entry_point::CallInfo;
+        use starknet_in_rust::execution::CallInfo;
 
         use super::*;
 
@@ -1202,24 +1215,27 @@ mod starknet_in_rust_transaction_tests {
             );
 
             let TransactionExecutionInfo {
-                execute_call_info,
+                call_info,
                 actual_fee,
                 ..
             } = tx_info;
 
             let CallInfo {
-                vm_resources,
-                inner_calls,
+                execution_resources,
+                internal_calls,
                 ..
-            } = execute_call_info.unwrap();
+            } = call_info.unwrap();
 
-            assert_eq!(vm_resources, trace.function_invocation.execution_resources);
             assert_eq!(
-                inner_calls.len(),
+                execution_resources,
+                trace.function_invocation.execution_resources
+            );
+            assert_eq!(
+                internal_calls.len(),
                 trace.function_invocation.internal_calls.len()
             );
 
-            assert_eq!(actual_fee.0, receipt.actual_fee);
+            assert_eq!(actual_fee, receipt.actual_fee);
         }
     }
 }
