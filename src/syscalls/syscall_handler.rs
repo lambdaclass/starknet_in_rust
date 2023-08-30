@@ -1,5 +1,5 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use crate::state::state_api::StateReader;
+use crate::state::{contract_class_cache::ContractClassCache, state_api::StateReader};
 use crate::transaction::error::TransactionError;
 use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
@@ -32,15 +32,15 @@ pub(crate) trait HintProcessorPostRun {
 }
 
 #[allow(unused)]
-pub(crate) struct SyscallHintProcessor<'a, S: StateReader> {
+pub(crate) struct SyscallHintProcessor<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
-    pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S>,
+    pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S, C>,
     pub(crate) run_resources: RunResources,
 }
 
-impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> SyscallHintProcessor<'a, S, C> {
     pub fn new(
-        syscall_handler: BusinessLogicSyscallHandler<'a, S>,
+        syscall_handler: BusinessLogicSyscallHandler<'a, S, C>,
         hints: &[(usize, Vec<Hint>)],
         run_resources: RunResources,
     ) -> Self {
@@ -52,7 +52,9 @@ impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> HintProcessorLogic
+    for SyscallHintProcessor<'a, S, C>
+{
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -111,7 +113,7 @@ impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> ResourceTracker for SyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> ResourceTracker for SyscallHintProcessor<'a, S, C> {
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }
@@ -129,7 +131,9 @@ impl<'a, S: StateReader> ResourceTracker for SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> HintProcessorPostRun
+    for SyscallHintProcessor<'a, S, C>
+{
     fn post_run(
         &self,
         runner: &mut VirtualMachine,

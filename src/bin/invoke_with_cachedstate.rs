@@ -16,7 +16,9 @@ use starknet_in_rust::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::in_memory_state_reader::InMemoryStateReader,
-    state::{cached_state::CachedState, BlockInfo},
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
+    },
     transaction::InvokeFunction,
     utils::Address,
 };
@@ -94,7 +96,7 @@ fn main() {
     }
 }
 
-fn create_initial_state() -> CachedState<InMemoryStateReader> {
+fn create_initial_state() -> CachedState<InMemoryStateReader, PermanentContractClassCache> {
     let cached_state = CachedState::new(
         {
             let mut state_reader = InMemoryStateReader::default();
@@ -115,7 +117,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
                 .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             Arc::new(state_reader)
         },
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
 
     cached_state

@@ -10,13 +10,15 @@ use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     execution::{CallInfo, CallType},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{cached_state::CachedState, state_api::StateReader},
+    state::cached_state::CachedState,
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::error::TransactionError,
     utils::{calculate_sn_keccak, Address},
 };
 
 use crate::complex_contracts::utils::*;
+use starknet_in_rust::state::contract_class_cache::PermanentContractClassCache;
+use starknet_in_rust::state::state_api::StateReader;
 
 fn init_pool(
     calldata: &[Felt252],
@@ -56,7 +58,7 @@ fn amm_init_pool_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -125,7 +127,7 @@ fn amm_add_demo_tokens_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -203,7 +205,7 @@ fn amm_get_pool_token_balance() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -278,7 +280,7 @@ fn amm_swap_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -379,7 +381,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -418,7 +420,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -457,7 +459,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -496,7 +498,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -538,7 +540,7 @@ fn amm_get_account_token_balance_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(

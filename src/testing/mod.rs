@@ -1,17 +1,3 @@
-pub mod erc20;
-pub mod state;
-pub mod state_error;
-pub mod type_utils;
-
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
-
-use cairo_vm::felt::{felt_str, Felt252};
-use lazy_static::lazy_static;
-use num_traits::Zero;
-
 use crate::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -21,12 +7,24 @@ use crate::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::{
-        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-        state_cache::StorageEntry, BlockInfo,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_cache::StorageEntry, BlockInfo,
     },
     utils::{felt_to_hash, Address, ClassHash},
 };
+use lazy_static::lazy_static;
+use num_traits::Zero;
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
+pub mod erc20;
+pub mod state;
+pub mod state_error;
+pub mod type_utils;
+
+use cairo_vm::felt::{felt_str, Felt252};
 pub const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
 pub const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
 pub const TEST_CONTRACT_PATH: &str = "starknet_programs/fibonacci.json";
@@ -84,8 +82,13 @@ pub fn new_starknet_block_context_for_testing() -> BlockContext {
     )
 }
 
-pub fn create_account_tx_test_state(
-) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+pub fn create_account_tx_test_state() -> Result<
+    (
+        BlockContext,
+        CachedState<InMemoryStateReader, PermanentContractClassCache>,
+    ),
+    Box<dyn std::error::Error>,
+> {
     let block_context = new_starknet_block_context_for_testing();
 
     let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
@@ -161,7 +164,7 @@ pub fn create_account_tx_test_state(
             }
             Arc::new(state_reader)
         },
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
 
     Ok((block_context, cached_state))

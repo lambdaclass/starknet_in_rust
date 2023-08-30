@@ -1,18 +1,20 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, Event, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, Event, TransactionExecutionContext, TransactionExecutionInfo,
     },
     services::api::{
-        contract_classes::deprecated_contract_class::ContractClass, messages::StarknetMessageToL1,
+        contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
+        messages::StarknetMessageToL1,
     },
     state::{
         cached_state::CachedState,
+        contract_class_cache::PermanentContractClassCache,
         state_api::{State, StateReader},
     },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
@@ -23,13 +25,13 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use std::{collections::HashMap, sync::RwLock};
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
 pub struct StarknetState {
-    pub state: CachedState<InMemoryStateReader>,
+    pub state: CachedState<InMemoryStateReader, PermanentContractClassCache>,
     pub(crate) block_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
@@ -41,7 +43,10 @@ impl StarknetState {
         let block_context = context.unwrap_or_default();
         let state_reader = Arc::new(InMemoryStateReader::default());
 
-        let state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+        let state = CachedState::new(
+            state_reader,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        );
 
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
@@ -58,7 +63,7 @@ impl StarknetState {
 
     pub fn new_with_states(
         block_context: Option<BlockContext>,
-        state: CachedState<InMemoryStateReader>,
+        state: CachedState<InMemoryStateReader, PermanentContractClassCache>,
     ) -> Self {
         let block_context = block_context.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
@@ -334,7 +339,7 @@ mod tests {
         execution::{CallType, OrderedL2ToL1Message},
         hash_utils::calculate_contract_address,
         services::api::contract_classes::compiled_class::CompiledClass,
-        state::state_cache::StorageEntry,
+        state::{contract_class_cache::ContractClassCache, state_cache::StorageEntry},
         utils::{calculate_sn_keccak, felt_to_hash},
     };
 
@@ -414,13 +419,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         // hack store account contract
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-        contract_class_cache.insert(
+        let class_hash: [u8; 32] = felt_to_hash(&hash);
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class.clone())),
         );

@@ -1,24 +1,29 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use num_traits::Zero;
-use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{cached_state::CachedState, state_cache::StorageEntry},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        state_cache::StorageEntry,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
+    EntryPointType,
 };
-use std::sync::{Arc, RwLock};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     path::PathBuf,
+    sync::{Arc, RwLock},
 };
 
 #[test]
@@ -44,7 +49,7 @@ fn hello_starknet_increase_balance() {
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let mut contract_class_cache = HashMap::new();
+    let mut contract_class_cache = PermanentContractClassCache::default();
 
     //  ------------ contract data --------------------
 
@@ -54,7 +59,7 @@ fn hello_starknet_increase_balance() {
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
     let storage = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );

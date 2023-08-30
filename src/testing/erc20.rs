@@ -20,6 +20,7 @@ use crate::{
     },
     state::{
         cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
         in_memory_state_reader::InMemoryStateReader,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
@@ -59,14 +60,15 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.insert(
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
         erc20_class_hash,
         CompiledClass::Casm(Arc::new(test_contract_class)),
     );

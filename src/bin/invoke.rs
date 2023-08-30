@@ -1,23 +1,22 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
-
 use cairo_vm::felt::{felt_str, Felt252};
+use lazy_static::lazy_static;
 use num_traits::Zero;
-
 use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::cached_state::CachedState,
-    state::in_memory_state_reader::InMemoryStateReader,
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader,
+    },
     testing::state::StarknetState,
     utils::Address,
 };
-
-use lazy_static::lazy_static;
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
@@ -89,7 +88,7 @@ fn main() {
     }
 }
 
-fn create_initial_state() -> CachedState<InMemoryStateReader> {
+fn create_initial_state() -> CachedState<InMemoryStateReader, PermanentContractClassCache> {
     let cached_state = CachedState::new(
         {
             let mut state_reader = InMemoryStateReader::default();
@@ -110,7 +109,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
                 .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             Arc::new(state_reader)
         },
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
 
     cached_state

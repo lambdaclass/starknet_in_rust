@@ -3,33 +3,35 @@
 #[macro_use]
 extern crate honggfuzz;
 
-use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use num_traits::Zero;
-use starknet_in_rust::execution::execution_entry_point::ExecutionResult;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::cached_state::CachedState,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
+    EntryPointType,
 };
-
-use std::sync::{Arc, RwLock};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
+    fs,
     path::PathBuf,
+    process::Command,
+    sync::{Arc, RwLock},
+    thread,
+    time::Duration,
 };
-
-use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
-use std::fs;
-use std::process::Command;
-use std::thread;
-use std::time::Duration;
 
 fn main() {
     println!("Starting fuzzer");
@@ -110,14 +112,14 @@ fn main() {
             //*    Create state reader with class hash data
             //* --------------------------------------------
 
-            let mut contract_class_cache = HashMap::new();
+            let mut contract_class_cache = PermanentContractClassCache::default();
 
             //  ------------ contract data --------------------
 
             let address = Address(1111.into());
             let class_hash = [1; 32];
 
-            contract_class_cache.insert(
+            contract_class_cache.set_contract_class(
                 class_hash,
                 CompiledClass::Deprecated(Arc::new(contract_class)),
             );

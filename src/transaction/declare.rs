@@ -1,23 +1,29 @@
-use crate::definitions::constants::QUERY_VERSION_BASE;
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::cached_state::CachedState;
+use super::fee::charge_fee;
+use super::{verify_version, Transaction};
+use crate::state::contract_class_cache::ContractClassCache;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
         transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
-        block_context::BlockContext, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
+        block_context::BlockContext,
+        constants::{QUERY_VERSION_BASE, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass,
+        deprecated_contract_class::{ContractClass, EntryPointType},
+    },
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
     transaction::error::TransactionError,
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
@@ -26,10 +32,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-
-use super::fee::charge_fee;
-use super::{verify_version, Transaction};
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use std::sync::Arc;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -154,9 +156,9 @@ impl Declare {
 
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: StateReader>(
+    pub fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
@@ -203,9 +205,9 @@ impl Declare {
         )
     }
 
-    pub fn run_validate_entrypoint<S: StateReader>(
+    pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
@@ -264,9 +266,9 @@ impl Declare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
@@ -323,6 +325,20 @@ impl Declare {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        definitions::{
+            block_context::{BlockContext, StarknetChainId},
+            constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
+            transaction_type::TransactionType,
+        },
+        execution::CallType,
+        services::api::contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        },
+        state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
+        utils::{felt_to_hash, Address},
+    };
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
@@ -334,23 +350,6 @@ mod tests {
         sync::{Arc, RwLock},
     };
 
-    use crate::{
-        definitions::{
-            block_context::{BlockContext, StarknetChainId},
-            constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            transaction_type::TransactionType,
-        },
-        execution::CallType,
-        services::api::contract_classes::{
-            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-        },
-        state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
-        utils::{felt_to_hash, Address},
-    };
-
-    use super::Declare;
-
     #[test]
     fn declare_fibonacci() {
         // accounts contract class must be stored before running declaration of fibonacci
@@ -358,13 +357,13 @@ mod tests {
             ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class.clone())),
         );
@@ -521,13 +520,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -590,13 +589,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -658,13 +657,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -740,13 +739,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -811,7 +810,7 @@ mod tests {
     #[test]
     fn validate_transaction_should_fail() {
         // Instantiate CachedState
-        let contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         let state_reader = Arc::new(InMemoryStateReader::default());
 
@@ -850,13 +849,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );

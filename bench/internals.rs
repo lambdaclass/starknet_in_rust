@@ -14,13 +14,15 @@ use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader,
+    },
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
 use std::{
-    collections::HashMap,
     hint::black_box,
     sync::{Arc, RwLock},
 };
@@ -67,7 +69,10 @@ fn deploy_account() {
     const RUNS: usize = 500;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+    );
 
     state
         .set_contract_class(
@@ -106,7 +111,10 @@ fn declare() {
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+    let state = CachedState::new(
+        state_reader,
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+    );
 
     let block_context = &Default::default();
 
@@ -138,7 +146,10 @@ fn deploy() {
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+    );
 
     state
         .set_contract_class(
@@ -176,7 +187,10 @@ fn invoke() {
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+    );
 
     state
         .set_contract_class(

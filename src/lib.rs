@@ -1,29 +1,24 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
 
 use crate::{
+    definitions::block_context::BlockContext,
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallType, TransactionExecutionContext, TransactionExecutionInfo,
     },
     state::{
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, Transaction},
+    transaction::{error::TransactionError, fee::calculate_tx_fee, L1Handler, Transaction},
+    utils::Address,
 };
-
 use cairo_vm::felt::Felt252;
-use definitions::block_context::BlockContext;
-use execution::execution_entry_point::ExecutionResult;
-use state::cached_state::CachedState;
-use transaction::{fee::calculate_tx_fee, L1Handler};
-use utils::Address;
+use std::sync::{Arc, RwLock};
 
 #[cfg(test)]
 #[macro_use]
@@ -33,9 +28,10 @@ extern crate assert_matches;
 pub use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
-pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-pub use cairo_lang_starknet::contract_class::ContractClass;
-pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+pub use cairo_lang_starknet::{
+    casm_contract_class::CasmContractClass, contract_class::ContractClass,
+    contract_class::ContractClass as SierraContractClass,
+};
 pub use cairo_vm::felt;
 
 pub mod core;
@@ -53,9 +49,10 @@ pub mod transaction;
 pub mod utils;
 
 #[allow(clippy::too_many_arguments)]
-pub fn simulate_transaction<S: StateReader>(
+pub fn simulate_transaction<S: StateReader, C: ContractClassCache>(
     transactions: &[&Transaction],
     state: S,
+    contract_class_cache: Arc<RwLock<C>>,
     block_context: &BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
@@ -64,7 +61,7 @@ pub fn simulate_transaction<S: StateReader>(
     ignore_max_fee: bool,
     skip_nonce_check: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
-    let mut cache_state = CachedState::new(Arc::new(state), Arc::new(RwLock::new(HashMap::new())));
+    let mut cache_state = CachedState::new(Arc::new(state), contract_class_cache);
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         let tx_for_simulation = transaction.create_for_simulation(
@@ -83,17 +80,18 @@ pub fn simulate_transaction<S: StateReader>(
 }
 
 /// Estimate the fee associated with transaction
-pub fn estimate_fee<T>(
+pub fn estimate_fee<T, C>(
     transactions: &[Transaction],
     state: T,
+    contract_class_cache: Arc<RwLock<C>>,
     block_context: &BlockContext,
 ) -> Result<Vec<(u128, usize)>, TransactionError>
 where
     T: StateReader,
+    C: ContractClassCache,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state =
-        CachedState::<T>::new(Arc::new(state), Arc::new(RwLock::new(HashMap::new())));
+    let mut cached_state = CachedState::<T, C>::new(Arc::new(state), contract_class_cache);
 
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
@@ -118,11 +116,11 @@ where
     Ok(result)
 }
 
-pub fn call_contract<T: StateReader>(
+pub fn call_contract<T: StateReader, C: ContractClassCache>(
     contract_address: Felt252,
     entrypoint_selector: Felt252,
     calldata: Vec<Felt252>,
-    state: &mut CachedState<T>,
+    state: &mut CachedState<T, C>,
     block_context: BlockContext,
     caller_address: Address,
 ) -> Result<Vec<Felt252>, TransactionError> {
@@ -172,17 +170,18 @@ pub fn call_contract<T: StateReader>(
 }
 
 /// Estimate the fee associated with L1Handler
-pub fn estimate_message_fee<T>(
+pub fn estimate_message_fee<T, C>(
     l1_handler: &L1Handler,
     state: T,
+    contract_class_cache: Arc<RwLock<C>>,
     block_context: &BlockContext,
 ) -> Result<(u128, usize), TransactionError>
 where
     T: StateReader,
+    C: ContractClassCache,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state =
-        CachedState::<T>::new(Arc::new(state), Arc::new(RwLock::new(HashMap::new())));
+    let mut cached_state = CachedState::<T, C>::new(Arc::new(state), contract_class_cache);
 
     // Check if the contract is deployed.
     cached_state.get_class_hash_at(l1_handler.contract_address())?;
@@ -201,9 +200,9 @@ where
     }
 }
 
-pub fn execute_transaction<S: StateReader>(
+pub fn execute_transaction<S: StateReader, C: ContractClassCache>(
     tx: Transaction,
-    state: &mut CachedState<S>,
+    state: &mut CachedState<S, C>,
     block_context: BlockContext,
     remaining_gas: u128,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
@@ -212,52 +211,51 @@ pub fn execute_transaction<S: StateReader>(
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-    use std::path::PathBuf;
-    use std::sync::{Arc, RwLock};
-
-    use crate::core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash};
-    use crate::definitions::constants::INITIAL_GAS_COST;
-    use crate::definitions::{
-        block_context::StarknetChainId,
-        constants::{
-            EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            VALIDATE_ENTRY_POINT_SELECTOR,
-        },
-        transaction_type::TransactionType,
-    };
-    use crate::estimate_fee;
-    use crate::estimate_message_fee;
-    use crate::hash_utils::calculate_contract_address;
-    use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
-    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-    use crate::state::state_api::State;
-    use crate::testing::{
-        create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
-        TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
-    };
-    use crate::transaction::{
-        Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
-    };
-    use crate::utils::felt_to_hash;
-    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-    use cairo_vm::felt::{felt_str, Felt252};
-    use num_traits::{Num, One, Zero};
-
     use crate::{
         call_contract,
-        definitions::block_context::BlockContext,
+        core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash},
+        definitions::{
+            block_context::{BlockContext, StarknetChainId},
+            constants::{
+                EXECUTE_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST,
+                VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR,
+            },
+            transaction_type::TransactionType,
+        },
+        estimate_fee, estimate_message_fee,
+        hash_utils::calculate_contract_address,
+        services::api::contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
         simulate_transaction,
         state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+            cached_state::CachedState,
+            contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+            in_memory_state_reader::InMemoryStateReader,
+            state_api::State,
             ExecutionResourcesManager,
         },
-        utils::{Address, ClassHash},
+        testing::{
+            create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
+            TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
+        },
+        transaction::{
+            Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
+        },
+        utils::{felt_to_hash, Address, ClassHash},
     };
-
-    use crate::services::api::contract_classes::compiled_class::CompiledClass;
+    use cairo_lang_starknet::{
+        casm_contract_class::CasmContractClass,
+        contract_class::ContractClass as SierraContractClass,
+    };
+    use cairo_vm::felt::{felt_str, Felt252};
     use lazy_static::lazy_static;
+    use num_traits::{Num, One, Zero};
+    use std::{
+        path::PathBuf,
+        sync::{Arc, RwLock},
+    };
 
     lazy_static! {
         // include_str! doesn't seem to work in CI
@@ -302,7 +300,13 @@ mod test {
         .unwrap();
         let transaction = Transaction::InvokeFunction(invoke_function);
 
-        let estimated_fee = estimate_fee(&[transaction], state, &block_context).unwrap();
+        let estimated_fee = estimate_fee(
+            &[transaction],
+            state,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            &block_context,
+        )
+        .unwrap();
         assert_eq!(estimated_fee[0], (2483, 2448));
     }
 
@@ -317,13 +321,14 @@ mod test {
         let entrypoints = contract_class.clone().entry_points_by_type;
         let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
         let nonce = Felt252::zero();
 
-        contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        contract_class_cache
+            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
@@ -387,24 +392,31 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(
+        let state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
         );
 
         // Initialize state.contract_classes
-        let contract_classes = HashMap::from([(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        )]);
         state
-            .set_contract_classes(Arc::new(RwLock::new(contract_classes)))
-            .unwrap();
+            .contract_class_cache()
+            .write()
+            .unwrap()
+            .set_contract_class(
+                class_hash,
+                CompiledClass::Deprecated(Arc::new(contract_class)),
+            );
 
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
 
-        let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
+        let estimated_fee = estimate_message_fee(
+            &l1_handler,
+            state.clone(),
+            state.contract_class_cache().clone(),
+            &block_context,
+        )
+        .unwrap();
         assert_eq!(estimated_fee, (19708, 19695));
     }
 
@@ -418,13 +430,14 @@ mod test {
         let entrypoints = contract_class.clone().entry_points_by_type;
         let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
         let nonce = Felt252::zero();
 
-        contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        contract_class_cache
+            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
 
         let mut state_reader = InMemoryStateReader::default();
         state_reader
@@ -577,6 +590,7 @@ mod test {
         let context = simulate_transaction(
             &[&invoke_1, &invoke_2, &invoke_3],
             state_reader,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
             &block_context,
             1000,
             false,
@@ -679,6 +693,7 @@ mod test {
         let context = simulate_transaction(
             &[&invoke],
             state_reader,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
             &block_context,
             1000,
             true,
@@ -697,7 +712,10 @@ mod test {
     #[test]
     fn test_simulate_deploy() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        );
 
         state
             .set_contract_class(
@@ -724,7 +742,8 @@ mod test {
 
         simulate_transaction(
             &[&internal_deploy],
-            state,
+            state.clone(),
+            state.contract_class_cache().clone(),
             block_context,
             100_000_000,
             false,
@@ -739,7 +758,10 @@ mod test {
     #[test]
     fn test_simulate_declare() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+        let state = CachedState::new(
+            state_reader,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        );
 
         let block_context = &Default::default();
 
@@ -761,7 +783,8 @@ mod test {
 
         simulate_transaction(
             &[&declare_tx],
-            state,
+            state.clone(),
+            state.contract_class_cache().clone(),
             block_context,
             100_000_000,
             false,
@@ -776,7 +799,10 @@ mod test {
     #[test]
     fn test_simulate_invoke() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        );
 
         state
             .set_contract_class(
@@ -825,7 +851,8 @@ mod test {
 
         simulate_transaction(
             &[&invoke_tx],
-            state,
+            state.clone(),
+            state.contract_class_cache().clone(),
             &block_context,
             100_000_000,
             false,
@@ -840,7 +867,10 @@ mod test {
     #[test]
     fn test_simulate_deploy_account() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        );
 
         state
             .set_contract_class(
@@ -868,7 +898,8 @@ mod test {
 
         simulate_transaction(
             &[&deploy_account_tx],
-            state,
+            state.clone(),
+            state.contract_class_cache().clone(),
             block_context,
             100_000_000,
             false,
@@ -913,7 +944,8 @@ mod test {
 
         simulate_transaction(
             &[&declare_tx],
-            state,
+            state.clone(),
+            state.contract_class_cache().clone(),
             &block_context,
             100_000_000,
             false,
@@ -966,13 +998,8 @@ mod test {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
         );
-
-        // Initialize state.contract_classes
-        state
-            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
-            .unwrap();
 
         state
             .set_contract_class(
@@ -986,7 +1013,8 @@ mod test {
 
         simulate_transaction(
             &[&l1_handler_tx],
-            state,
+            state.clone(),
+            state.contract_class_cache().clone(),
             &block_context,
             100_000_000,
             false,
@@ -1001,7 +1029,10 @@ mod test {
     #[test]
     fn test_deploy_and_invoke_simulation() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let state = CachedState::new(state_reader, Arc::new(RwLock::new(HashMap::new())));
+        let state = CachedState::new(
+            state_reader,
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        );
 
         let block_context = &Default::default();
 
@@ -1044,6 +1075,7 @@ mod test {
         simulate_transaction(
             &[&deploy, &invoke_tx],
             state.clone(),
+            state.contract_class_cache().clone(),
             block_context,
             100_000_000,
             false,
@@ -1055,7 +1087,13 @@ mod test {
         .unwrap();
 
         assert_eq!(
-            estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
+            estimate_fee(
+                &[deploy, invoke_tx],
+                state.clone(),
+                state.contract_class_cache().clone(),
+                block_context
+            )
+            .unwrap(),
             [(0, 3672), (0, 2448)]
         );
     }

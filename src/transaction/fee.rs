@@ -1,19 +1,20 @@
 use super::error::TransactionError;
-use crate::definitions::constants::{FEE_FACTOR, QUERY_VERSION_BASE};
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::execution::CallType;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::cached_state::CachedState;
 use crate::{
     definitions::{
         block_context::BlockContext,
-        constants::{INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
+        constants::{
+            FEE_FACTOR, INITIAL_GAS_COST, QUERY_VERSION_BASE, TRANSFER_ENTRY_POINT_SELECTOR,
+        },
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, CallType, TransactionExecutionContext,
     },
-    state::state_api::StateReader,
-    state::ExecutionResourcesManager,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    state::{
+        cached_state::CachedState, contract_class_cache::ContractClassCache,
+        state_api::StateReader, ExecutionResourcesManager,
+    },
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{ToPrimitive, Zero};
@@ -25,8 +26,8 @@ pub type FeeInfo = (Option<CallInfo>, u128);
 
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-pub(crate) fn execute_fee_transfer<S: StateReader>(
-    state: &mut CachedState<S>,
+pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
+    state: &mut CachedState<S, C>,
     block_context: &BlockContext,
     tx_execution_context: &mut TransactionExecutionContext,
     actual_fee: u128,
@@ -136,8 +137,8 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 /// - `tx_execution_context`: The transaction's execution context.
 /// - `skip_fee_transfer`: Whether to skip the fee transfer.
 ///
-pub fn charge_fee<S: StateReader>(
-    state: &mut CachedState<S>,
+pub fn charge_fee<S: StateReader, C: ContractClassCache>(
+    state: &mut CachedState<S, C>,
     resources: &HashMap<String, usize>,
     block_context: &BlockContext,
     max_fee: u128,
@@ -185,23 +186,25 @@ pub fn charge_fee<S: StateReader>(
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::HashMap,
-        sync::{Arc, RwLock},
-    };
-
     use crate::{
         definitions::block_context::BlockContext,
         execution::TransactionExecutionContext,
-        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         transaction::{error::TransactionError, fee::charge_fee},
+    };
+    use std::{
+        collections::HashMap,
+        sync::{Arc, RwLock},
     };
 
     #[test]
     fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_error() {
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
         );
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
@@ -230,7 +233,7 @@ mod tests {
     fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
         );
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),

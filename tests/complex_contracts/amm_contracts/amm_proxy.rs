@@ -1,25 +1,29 @@
 use crate::complex_contracts::utils::*;
-use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use starknet_crypto::FieldElement;
-use starknet_in_rust::definitions::block_context::BlockContext;
-use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
+    definitions::block_context::BlockContext,
     execution::{CallInfo, CallType},
-    state::{cached_state::CachedState, state_api::StateReader},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
+    EntryPointType,
 };
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, RwLock},
+};
 
 #[test]
 fn amm_proxy_init_pool_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
@@ -119,7 +123,7 @@ fn amm_proxy_get_pool_token_balance_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
@@ -226,7 +230,7 @@ fn amm_proxy_add_demo_token_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
@@ -339,7 +343,7 @@ fn amm_proxy_get_account_token_balance() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
@@ -465,7 +469,7 @@ fn amm_proxy_swap() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(HashMap::new())),
+        Arc::new(RwLock::new(PermanentContractClassCache::default())),
     );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(

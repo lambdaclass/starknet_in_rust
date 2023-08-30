@@ -1,7 +1,7 @@
 use crate::{
     execution::execution_entry_point::ExecutionResult,
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
-    state::cached_state::CachedState,
+    state::{cached_state::CachedState, contract_class_cache::ContractClassCache},
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
@@ -93,9 +93,9 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
@@ -206,30 +206,28 @@ impl L1Handler {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        sync::{Arc, RwLock},
-    };
-
-    use crate::services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    use crate::{
+        definitions::{block_context::BlockContext, transaction_type::TransactionType},
+        execution::{CallInfo, TransactionExecutionInfo},
+        services::api::contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader, state_api::State,
+        },
+        transaction::l1_handler::L1Handler,
+        utils::Address,
     };
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{Num, Zero};
-
-    use crate::{
-        definitions::{block_context::BlockContext, transaction_type::TransactionType},
-        execution::{CallInfo, TransactionExecutionInfo},
-        services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-            state_api::State,
-        },
-        transaction::l1_handler::L1Handler,
-        utils::Address,
+    use std::{
+        collections::{HashMap, HashSet},
+        sync::{Arc, RwLock},
     };
 
     #[test]
@@ -270,13 +268,8 @@ mod test {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
         );
-
-        // Initialize state.contract_classes
-        state
-            .set_contract_classes(Arc::new(RwLock::new(HashMap::new())))
-            .unwrap();
 
         state
             .set_contract_class(

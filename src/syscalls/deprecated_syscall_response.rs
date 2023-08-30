@@ -309,24 +309,24 @@ impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        collections::HashMap,
-        sync::{Arc, RwLock},
-    };
-
     use super::*;
     use crate::{
         add_segments,
         state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         utils::{get_integer, test_utils::vm},
     };
     use cairo_vm::relocatable;
+    use std::sync::{Arc, RwLock};
 
     type DeprecatedBLSyscallHandler<'a> =
         crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             InMemoryStateReader,
+            PermanentContractClassCache,
         >;
 
     /// Unit test to check the write_get_caller_address_response function
@@ -335,7 +335,7 @@ mod tests {
         // Initialize a VM and syscall handler
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
         );
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();

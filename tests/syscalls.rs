@@ -19,16 +19,18 @@ use starknet_in_rust::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, L2toL1MessageInfo,
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::{
         cached_state::CachedState,
-        state_api::{State, StateReader},
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        state_api::State,
+        ExecutionResourcesManager,
     },
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
-};
-use starknet_in_rust::{
-    services::api::contract_classes::compiled_class::CompiledClass, EntryPointType,
+    EntryPointType,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -92,13 +94,13 @@ fn test_contract<'a>(
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
-        let mut contract_class_cache = HashMap::new();
+        let mut contract_class_cache = PermanentContractClassCache::default();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
             let contract_class = ContractClass::from_path(contract_path)
                 .expect("Could not load extra contract from JSON");
 
-            contract_class_cache.insert(
+            contract_class_cache.set_contract_class(
                 class_hash,
                 CompiledClass::Deprecated(Arc::new(contract_class.clone())),
             );
@@ -1087,18 +1089,18 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
     // simulate contract declare
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Casm(Arc::new(test_contract_class.clone())),
     );
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );
@@ -1192,18 +1194,18 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
     // simulate contract declare
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Casm(Arc::new(test_contract_class.clone())),
     );
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );
@@ -1299,18 +1301,18 @@ fn deploy_cairo1_and_invoke() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
     // simulate contract declare
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Casm(Arc::new(test_contract_class.clone())),
     );
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );
@@ -1428,13 +1430,13 @@ fn send_messages_to_l1_different_contract_calls() {
         .to_owned();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );
@@ -1455,7 +1457,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let send_msg_class_hash: ClassHash = [2; 32];
     let send_msg_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         send_msg_class_hash,
         CompiledClass::Deprecated(Arc::new(send_msg_contract_class)),
     );

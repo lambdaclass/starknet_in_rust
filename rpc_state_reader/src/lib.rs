@@ -739,12 +739,9 @@ mod transaction_tests {
         },
         execution::TransactionExecutionInfo,
         felt::felt_str,
-        state::cached_state::CachedState,
+        state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
     };
-    use std::{
-        collections::HashMap,
-        sync::{Arc, RwLock},
-    };
+    use std::sync::{Arc, RwLock};
 
     fn test_tx(
         tx_hash: &str,
@@ -757,7 +754,10 @@ mod transaction_tests {
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
         let rpc_state = Arc::new(RpcState::new(network, block));
-        let mut state = CachedState::new(rpc_state.clone(), Arc::new(RwLock::new(HashMap::new())));
+        let mut state = CachedState::new(
+            rpc_state.clone(),
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        );
 
         let fee_token_address = Address(felt_str!(
             "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",

@@ -1,22 +1,26 @@
 #![deny(warnings)]
 
-use std::sync::{Arc, RwLock};
-
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{cached_state::CachedState, state_cache::StorageEntry},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        state_cache::StorageEntry,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address, ClassHash},
+    EntryPointType,
 };
-use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 #[test]
 fn test_internal_calls() {
@@ -49,10 +53,14 @@ fn test_internal_calls() {
 
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new(HashMap::from([(
-            [0x01; 32],
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        )]))),
+        Arc::new(RwLock::new({
+            let mut cache = PermanentContractClassCache::default();
+            cache.set_contract_class(
+                [0x01; 32],
+                CompiledClass::Deprecated(Arc::new(contract_class)),
+            );
+            cache
+        })),
     );
 
     let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"a"));

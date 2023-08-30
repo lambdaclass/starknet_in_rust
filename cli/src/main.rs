@@ -27,12 +27,14 @@ use starknet_in_rust::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::{cached_state::CachedState, state_api::State},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager,
+    },
     transaction::{error::TransactionError, InvokeFunction},
     utils::{felt_to_hash, string_to_hash, Address},
 };
 use std::{
-    collections::HashMap,
     path::PathBuf,
     sync::{Arc, Mutex, RwLock},
 };
@@ -102,11 +104,11 @@ struct DevnetArgs {
 }
 
 struct AppState {
-    cached_state: Mutex<CachedState<InMemoryStateReader>>,
+    cached_state: Mutex<CachedState<InMemoryStateReader, PermanentContractClassCache>>,
 }
 
 fn declare_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     args: &DeclareArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_class =
@@ -129,7 +131,7 @@ fn declare_parser(
 }
 
 fn deploy_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     args: &DeployArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let constructor_calldata = match &args.inputs {
@@ -155,7 +157,7 @@ fn deploy_parser(
 }
 
 fn invoke_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     args: &InvokeArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_address = Address(
@@ -217,7 +219,7 @@ fn invoke_parser(
 }
 
 fn call_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     args: &CallArgs,
 ) -> Result<Vec<Felt252>, ParserError> {
     let contract_address = Address(
@@ -316,9 +318,9 @@ async fn call_req(data: web::Data<AppState>, args: web::Json<CallArgs>) -> HttpR
 
 pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
-        cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
+        cached_state: Mutex::new(CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(HashMap::new())),
+            Arc::new(RwLock::new(PermanentContractClassCache::default())),
         )),
     });
 
