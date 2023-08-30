@@ -1156,6 +1156,27 @@ impl ExecutionEntryPoint {
         state: &mut CachedState<S>,
         contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
     ) -> Result<CallInfo, TransactionError> {
+        let entry_point = match self.entry_point_type {
+            EntryPointType::External => contract_class
+                .entry_points_by_type
+                .external
+                .iter()
+                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .unwrap(),
+            EntryPointType::Constructor => contract_class
+                .entry_points_by_type
+                .constructor
+                .iter()
+                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .unwrap(),
+            EntryPointType::L1Handler => contract_class
+                .entry_points_by_type
+                .l1_handler
+                .iter()
+                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .unwrap(),
+        };
+
         let sierra_program = contract_class.extract_sierra_program().unwrap();
 
         let native_context = NativeContext::new();
@@ -1180,40 +1201,34 @@ impl ExecutionEntryPoint {
             .as_ptr()
             .addr();
 
-        let fn_id = find_function_id(
-            &sierra_program,
-            // "erc20::erc20::erc_20::__constructor::constructor",
-            "erc20::erc20::erc_20::__wrapper_constructor",
-        );
+        let fn_id = &sierra_program
+            .funcs
+            .iter()
+            .find(|x| x.id.id == (entry_point.function_idx as u64))
+            .unwrap()
+            .id;
+
         let required_init_gas = native_program.get_required_init_gas(fn_id);
+
+        let calldata: Vec<_> = self
+            .calldata
+            .iter()
+            .map(|felt| felt252_bigint(felt.to_bigint()))
+            .collect();
 
         let params = json!([
             // pedersen
             null,
             // range check
             null,
+            // (),
             // gas
             u64::MAX,
             // system
             syscall_addr,
-            // The amount of params change depending on the contract function called
-            // Struct<Span<Array<felt>>>
             [
                 // Span<Array<felt>>
-                [
-                    // contract state
-                    felt252_bigint(1), // contract address
-                    felt252_bigint(1), // contract address
-                    felt252_bigint(1), // contract address
-                    felt252_bigint(1), // contract address
-                    felt252_bigint(1), // contract address
-                                       // felt252_short_str("name"),   // name
-                                       // felt252_short_str("symbol"), // symbol
-                                       // felt252_bigint(0),           // decimals
-                                       // felt252_bigint(i64::MAX),    // initial supply
-                                       // felt252_bigint(4),           // contract address
-                                       // felt252_bigint(6),           // ??
-                ]
+                calldata
             ]
         ]);
 
@@ -1287,8 +1302,6 @@ impl ExecutionEntryPoint {
 
         let result: String = String::from_utf8(writer).unwrap();
         let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
-        // let value = serde_json::from_str::<serde_json::Value>(&result).unwrap();
-        // println!("OUTPUT: {}", value);
 
         return Ok(CallInfo {
             caller_address: self.caller_address.clone(),

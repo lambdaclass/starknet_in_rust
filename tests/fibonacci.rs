@@ -135,7 +135,6 @@ fn integration_test() {
 }
 
 #[test]
-#[ignore]
 fn integration_test_cairo1() {
     //  Create program and entry point types for contract class
     #[cfg(not(feature = "cairo_1_tests"))]
