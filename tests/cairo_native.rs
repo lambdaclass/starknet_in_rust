@@ -1,7 +1,6 @@
 #![cfg(not(feature = "cairo_1_tests"))]
 #![deny(warnings)]
 
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME};
 use num_traits::Zero;
@@ -63,7 +62,8 @@ fn integration_test() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+    let mut state =
+        CachedState::new(Arc::new(state_reader)).set_contract_classes_cache(contract_class_cache);
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -96,7 +96,7 @@ fn integration_test() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
+        true,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -134,7 +134,6 @@ fn integration_test() {
 }
 
 #[test]
-#[ignore]
 fn integration_test_erc20() {
     // ----------------------------- //
     // CHANGE FOR CAIRO NATIVE USAGE //
@@ -156,13 +155,13 @@ fn integration_test_erc20() {
     let constructor_entry_point_selector = &entrypoints.constructor.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut sierra_contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class);
+    sierra_contract_class_cache.insert(class_hash, sierra_contract_class);
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -172,7 +171,8 @@ fn integration_test_erc20() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+    let mut state = CachedState::new(Arc::new(state_reader))
+        .set_sierra_programs_cache(sierra_contract_class_cache);
 
     // Dummy calldata
     let calldata = [1.into(), 1.into(), 1.into(), 1.into(), 1.into()].to_vec();

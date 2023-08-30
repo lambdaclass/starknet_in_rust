@@ -63,7 +63,8 @@ fn integration_test() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+    let mut state =
+        CachedState::new(Arc::new(state_reader)).set_contract_classes_cache(contract_class_cache);
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -147,13 +148,13 @@ fn integration_test_cairo1() {
     let fib_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut casm_contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class);
+    casm_contract_class_cache.insert(class_hash, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -163,7 +164,8 @@ fn integration_test_cairo1() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+    let mut state =
+        CachedState::new(Arc::new(state_reader)).set_casm_classes_cache(casm_contract_class_cache);
 
     // Create an execution entry point
     let calldata = [0.into(), 1.into(), 12.into()].to_vec();

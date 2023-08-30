@@ -29,9 +29,7 @@ lazy_static! {
 #[test]
 fn internal_deploy_account() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, None, None);
-
-    state.set_contract_classes(Default::default()).unwrap();
+    let mut state = CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
     let contract_class =
         ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
@@ -109,9 +107,9 @@ fn internal_deploy_account() {
 #[test]
 fn internal_deploy_account_cairo1() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, None, Some(Default::default()));
-
-    state.set_contract_classes(Default::default()).unwrap();
+    let mut state = CachedState::new(state_reader)
+        .set_contract_classes_cache(Default::default())
+        .set_casm_classes_cache(Default::default());
 
     #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");

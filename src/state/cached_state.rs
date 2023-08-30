@@ -11,6 +11,7 @@ use crate::{
     utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
@@ -22,6 +23,8 @@ use std::{
 // K: class_hash V: ContractClass
 pub type ContractClassCache = HashMap<ClassHash, ContractClass>;
 pub type CasmClassCache = HashMap<ClassHash, CasmContractClass>;
+pub type SierraProgramCache =
+    HashMap<ClassHash, cairo_lang_starknet::contract_class::ContractClass>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
@@ -35,48 +38,49 @@ pub struct CachedState<T: StateReader> {
     pub(crate) contract_classes: Option<ContractClassCache>,
     #[get = "pub"]
     pub(crate) casm_contract_classes: Option<CasmClassCache>,
+    #[get = "pub"]
+    pub(crate) sierra_programs: Option<SierraProgramCache>,
 }
 
 impl<T: StateReader> CachedState<T> {
     /// Constructor, creates a new cached state.
-    pub fn new(
-        state_reader: Arc<T>,
-        contract_class_cache: Option<ContractClassCache>,
-        casm_class_cache: Option<CasmClassCache>,
-    ) -> Self {
+    pub fn new(state_reader: Arc<T>) -> Self {
         Self {
             cache: StateCache::default(),
-            contract_classes: contract_class_cache,
+            contract_classes: None,
             state_reader,
-            casm_contract_classes: casm_class_cache,
+            casm_contract_classes: None,
+            sierra_programs: None,
         }
     }
 
     /// Creates a CachedState for testing purposes.
-    pub fn new_for_testing(
-        state_reader: Arc<T>,
-        contract_classes: Option<ContractClassCache>,
-        cache: StateCache,
-        casm_contract_classes: Option<CasmClassCache>,
-    ) -> Self {
+    pub fn new_for_testing(state_reader: Arc<T>, cache: StateCache) -> Self {
         Self {
             cache,
-            contract_classes,
+            contract_classes: None,
             state_reader,
-            casm_contract_classes,
+            casm_contract_classes: None,
+            sierra_programs: None,
         }
     }
 
-    /// Sets the contract classes cache.
-    pub fn set_contract_classes(
-        &mut self,
-        contract_classes: ContractClassCache,
-    ) -> Result<(), StateError> {
-        if self.contract_classes.is_some() {
-            return Err(StateError::AssignedContractClassCache);
-        }
+    /// Sets the contract class cache.
+    pub fn set_contract_classes_cache(mut self, contract_classes: ContractClassCache) -> Self {
         self.contract_classes = Some(contract_classes);
-        Ok(())
+        self
+    }
+
+    /// Sets the casm classes cache.
+    pub fn set_casm_classes_cache(mut self, casm_contract_classes: CasmClassCache) -> Self {
+        self.casm_contract_classes = Some(casm_contract_classes);
+        self
+    }
+
+    /// Sets the sierra programs cache.
+    pub fn set_sierra_programs_cache(mut self, sierra_programs_cache: SierraProgramCache) -> Self {
+        self.sierra_programs = Some(sierra_programs_cache);
+        self
     }
 
     /// Returns the casm classes.
@@ -467,6 +471,16 @@ impl<T: StateReader> State for CachedState<T> {
                 return Ok(CompiledClass::Casm(Arc::new(casm_class.clone())));
             }
         }
+
+        if let Some(sierra_compiled_class) = self
+            .sierra_programs
+            .as_ref()
+            .and_then(|x| x.get(class_hash))
+        {
+            return Ok(CompiledClass::Sierra(Arc::new(
+                sierra_compiled_class.clone(),
+            )));
+        }
         // II: FETCHING FROM STATE_READER
         let contract = self.state_reader.get_contract_class(class_hash)?;
         match contract {
@@ -483,6 +497,28 @@ impl<T: StateReader> State for CachedState<T> {
             CompiledClass::Sierra(_) => todo!(),
         }
         Ok(contract)
+    }
+
+    fn set_sierra_program(
+        &mut self,
+        compiled_class_hash: &Felt252,
+        _sierra_program: Vec<BigUintAsHex>,
+    ) -> Result<(), StateError> {
+        let _compiled_class_hash = compiled_class_hash.to_be_bytes();
+
+        // TODO implement
+        // self.sierra_programs
+        //     .as_mut()
+        //     .ok_or(StateError::MissingSierraProgramsCache)?
+        //     .insert(compiled_class_hash, sierra_program);
+        Ok(())
+    }
+
+    fn get_sierra_program(
+        &mut self,
+        _class_hash: &ClassHash,
+    ) -> Result<Vec<cairo_lang_utils::bigint::BigUintAsHex>, StateError> {
+        todo!()
     }
 }
 
@@ -523,7 +559,7 @@ mod tests {
             .address_to_storage_mut()
             .insert(storage_entry, storage_value);
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader));
 
         assert_eq!(
             cached_state.get_class_hash_at(&contract_address).unwrap(),
@@ -556,9 +592,8 @@ mod tests {
             .class_hash_to_contract_class
             .insert([1; 32], contract_class);
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
-
-        cached_state.set_contract_classes(HashMap::new()).unwrap();
+        let cached_state =
+            CachedState::new(Arc::new(state_reader)).set_contract_classes_cache(HashMap::new());
         assert!(cached_state.contract_classes.is_some());
 
         assert_eq!(
@@ -573,8 +608,7 @@ mod tests {
     /// This test verifies the correct handling of storage in the cached state.
     #[test]
     fn cached_state_storage_test() {
-        let mut cached_state =
-            CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut cached_state = CachedState::new(Arc::new(InMemoryStateReader::default()));
 
         let storage_entry: StorageEntry = (Address(31.into()), [0; 32]);
         let value = Felt252::new(10);
@@ -596,7 +630,7 @@ mod tests {
 
         let contract_address = Address(32123.into());
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(state_reader);
 
         assert!(cached_state
             .deploy_contract(contract_address, [10; 32])
@@ -612,7 +646,7 @@ mod tests {
         let storage_key = [18; 32];
         let value = Felt252::new(912);
 
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(state_reader);
 
         // set storage_key
         cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
@@ -630,27 +664,6 @@ mod tests {
         assert_eq!(new_result.unwrap(), new_value);
     }
 
-    /// This test ensures that an error is thrown when trying to set contract classes twice.
-    #[test]
-    fn set_contract_classes_twice_error_test() {
-        let state_reader = InMemoryStateReader::new(
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-            HashMap::new(),
-        );
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
-
-        cached_state.set_contract_classes(HashMap::new()).unwrap();
-        let result = cached_state
-            .set_contract_classes(HashMap::new())
-            .unwrap_err();
-
-        assert_matches!(result, StateError::AssignedContractClassCache);
-    }
-
     /// This test ensures that an error is thrown if a contract address is out of range.
     #[test]
     fn deploy_contract_address_out_of_range_error_test() {
@@ -665,7 +678,7 @@ mod tests {
 
         let contract_address = Address(0.into());
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader));
 
         let result = cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -691,7 +704,7 @@ mod tests {
 
         let contract_address = Address(42.into());
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader));
 
         cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -720,7 +733,7 @@ mod tests {
 
         let contract_address = Address(32123.into());
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader));
 
         cached_state
             .deploy_contract(contract_address.clone(), [10; 32])
@@ -750,7 +763,7 @@ mod tests {
 
         let address_one = Address(Felt252::one());
 
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader));
 
         let state_diff = StateDiff {
             address_to_class_hash: HashMap::from([(
@@ -785,7 +798,7 @@ mod tests {
     #[test]
     fn count_actual_storage_changes_test() {
         let state_reader = InMemoryStateReader::default();
-        let mut cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut cached_state = CachedState::new(Arc::new(state_reader));
 
         let address_one = Address(1.into());
         let address_two = Address(2.into());

@@ -95,9 +95,10 @@ fn test_contract<'a>(
             }
         }
 
-        Some(contract_class_cache)
+        contract_class_cache
     };
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache, None);
+    let mut state =
+        CachedState::new(Arc::new(state_reader)).set_contract_classes_cache(contract_class_cache);
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));

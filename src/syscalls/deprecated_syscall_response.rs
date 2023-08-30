@@ -330,7 +330,7 @@ mod tests {
     #[test]
     fn write_get_caller_address_response() {
         // Initialize a VM and syscall handler
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()));
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 

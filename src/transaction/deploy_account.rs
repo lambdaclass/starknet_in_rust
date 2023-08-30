@@ -408,11 +408,8 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut _state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut _state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+            .set_contract_classes_cache(Default::default());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -444,11 +441,8 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+            .set_contract_classes_cache(Default::default());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -496,11 +490,8 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()))
+            .set_contract_classes_cache(Default::default());
 
         let internal_deploy = DeployAccount::new(
             class_hash,

@@ -754,7 +754,7 @@ mod transaction_tests {
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
         let rpc_state = Arc::new(RpcState::new(network, block));
-        let mut state = CachedState::new(rpc_state.clone(), None, None);
+        let mut state = CachedState::new(rpc_state.clone());
 
         let fee_token_address = Address(felt_str!(
             "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",

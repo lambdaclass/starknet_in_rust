@@ -38,11 +38,8 @@ fn test_multiple_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        Arc::new(state_reader),
-        None,
-        Some(contract_class_cache.clone()),
-    );
+    let mut state = CachedState::new(Arc::new(state_reader))
+        .set_casm_classes_cache(contract_class_cache.clone());
 
     // Create an execution entry point
     let calldata = [].to_vec();

@@ -68,28 +68,23 @@ fn main() {
 }
 
 fn create_initial_state() -> CachedState<InMemoryStateReader> {
-    let cached_state = CachedState::new(
-        {
-            let mut state_reader = InMemoryStateReader::default();
-            state_reader
-                .address_to_class_hash_mut()
-                .insert(CONTRACT_ADDRESS.clone(), *CONTRACT_CLASS_HASH);
+    CachedState::new({
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(CONTRACT_ADDRESS.clone(), *CONTRACT_CLASS_HASH);
 
-            state_reader
-                .address_to_nonce_mut()
-                .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
-            state_reader
-                .class_hash_to_contract_class_mut()
-                .insert(*CONTRACT_CLASS_HASH, CONTRACT_CLASS.clone());
+        state_reader
+            .address_to_nonce_mut()
+            .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+        state_reader
+            .class_hash_to_contract_class_mut()
+            .insert(*CONTRACT_CLASS_HASH, CONTRACT_CLASS.clone());
 
-            state_reader
-                .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
-            Arc::new(state_reader)
-        },
-        Some(HashMap::new()),
-        None,
-    );
-
-    cached_state
+        state_reader
+            .address_to_storage_mut()
+            .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
+        Arc::new(state_reader)
+    })
+    .set_contract_classes_cache(HashMap::new())
 }

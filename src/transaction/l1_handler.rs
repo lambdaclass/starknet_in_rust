@@ -267,10 +267,9 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(Arc::new(state_reader))
+            // Initialize state.contract_classes
+            .set_contract_classes_cache(HashMap::new());
 
         state
             .set_contract_class(&class_hash, &contract_class)

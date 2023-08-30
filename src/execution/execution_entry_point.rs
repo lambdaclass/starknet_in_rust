@@ -31,7 +31,7 @@ use crate::{
 };
 use cairo_lang_sierra::ProgramParser;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_lang_starknet::contract_class::ContractClass;
+use cairo_lang_starknet::contract;
 use cairo_native::context::NativeContext;
 use cairo_native::executor::NativeExecutor;
 use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
@@ -490,11 +490,14 @@ impl ExecutionEntryPoint {
                 })
             }
             CompiledClass::Casm(contract_class) => {
-                let mut tmp_state = CachedState::new(
-                    state.state_reader.clone(),
-                    state.contract_classes.clone(),
-                    state.casm_contract_classes.clone(),
-                );
+                let mut tmp_state = CachedState::new(state.state_reader.clone());
+                if let Some(contract_classes_cache) = &state.contract_classes {
+                    tmp_state =
+                        tmp_state.set_contract_classes_cache(contract_classes_cache.clone());
+                }
+                if let Some(casm_classes_cache) = &state.casm_contract_classes {
+                    tmp_state = tmp_state.set_casm_classes_cache(casm_classes_cache.clone());
+                }
                 tmp_state.cache = state.cache.clone();
 
                 match self._execute(
@@ -531,22 +534,21 @@ impl ExecutionEntryPoint {
                 }
             }
             CompiledClass::Sierra(contract_class) => {
-                let mut tmp_state = CachedState::new(
-                    state.state_reader.clone(),
-                    state.contract_classes.clone(),
-                    state.casm_contract_classes.clone(),
-                );
+                let mut tmp_state = CachedState::new(state.state_reader.clone());
+                if let Some(sierra_programs_cache) = &state.sierra_programs {
+                    tmp_state = tmp_state.set_sierra_programs_cache(sierra_programs_cache.clone());
+                }
                 tmp_state.cache = state.cache.clone();
 
                 match self.native_execute(&mut tmp_state, contract_class) {
                     Ok(call_info) => {
                         let state_diff = StateDiff::from_cached_state(tmp_state)?;
                         state.apply_state_update(&state_diff)?;
-                        Ok(ExecutionResult {
+                        return Ok(ExecutionResult {
                             call_info: Some(call_info),
                             revert_error: None,
                             n_reverted_steps: 0,
-                        })
+                        });
                     }
                     Err(e) => {
                         if !support_reverted {
@@ -555,14 +557,13 @@ impl ExecutionEntryPoint {
 
                         let n_reverted_steps =
                             (max_steps as usize) - resources_manager.cairo_usage.n_steps;
-                        Ok(ExecutionResult {
+                        return Ok(ExecutionResult {
                             call_info: None,
                             revert_error: Some(e.to_string()),
                             n_reverted_steps,
-                        })
+                        });
                     }
                 }
-                todo!()
             }
         }
     }
@@ -1153,8 +1154,166 @@ impl ExecutionEntryPoint {
     fn native_execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
-        contract_class: Arc<ContractClass>,
+        contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
     ) -> Result<CallInfo, TransactionError> {
-        todo!()
+        let sierra_program = contract_class.extract_sierra_program().unwrap();
+
+        let native_context = NativeContext::new();
+        let mut native_program = native_context.compile(&sierra_program).unwrap();
+        let contract_storage_state =
+            ContractStorageState::new(state, self.contract_address.clone());
+
+        let mut syscall_handler = SyscallHandler {
+            starknet_storage_state: contract_storage_state,
+            n_emitted_events: 0,
+            events: Vec::new(),
+            l2_to_l1_messages: Vec::new(),
+            n_sent_messages: 0,
+        };
+        native_program
+            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler))
+            .unwrap();
+
+        let syscall_addr = native_program
+            .get_metadata::<SyscallHandlerMeta>()
+            .unwrap()
+            .as_ptr()
+            .addr();
+
+        let fn_id = find_function_id(
+            &sierra_program,
+            // "erc20::erc20::erc_20::__constructor::constructor",
+            "erc20::erc20::erc_20::__wrapper_constructor",
+        );
+        let required_init_gas = native_program.get_required_init_gas(fn_id);
+
+        let params = json!([
+            // pedersen
+            null,
+            // range check
+            null,
+            // gas
+            u64::MAX,
+            // system
+            syscall_addr,
+            // The amount of params change depending on the contract function called
+            // Struct<Span<Array<felt>>>
+            [
+                // Span<Array<felt>>
+                [
+                    // contract state
+                    felt252_bigint(1), // contract address
+                    felt252_bigint(1), // contract address
+                    felt252_bigint(1), // contract address
+                    felt252_bigint(1), // contract address
+                    felt252_bigint(1), // contract address
+                                       // felt252_short_str("name"),   // name
+                                       // felt252_short_str("symbol"), // symbol
+                                       // felt252_bigint(0),           // decimals
+                                       // felt252_bigint(i64::MAX),    // initial supply
+                                       // felt252_bigint(4),           // contract address
+                                       // felt252_bigint(6),           // ??
+                ]
+            ]
+        ]);
+
+        // let increase_fn_id = find_function_id(
+        //     &sierra_program,
+        //     "wallet::wallet::SimpleWallet::__wrapper_increase_balance",
+        //     // "wallet::wallet::SimpleWallet::SimpleWallet::increase_balance",
+        // );
+        // let increase_required_init_gas = native_program.get_required_init_gas(increase_fn_id);
+
+        // let get_fn_id = find_function_id(
+        //     &sierra_program,
+        //     "wallet::wallet::SimpleWallet::__wrapper_get_balance",
+        // );
+        // let get_required_init_gas = native_program.get_required_init_gas(get_fn_id);
+
+        println!("SYSCALL ADDRESS: {}", syscall_addr);
+
+        // let params : Vec<_> = self.calldata.iter().map(|felt| {
+        //     felt.to_be_bytes()
+        // }).collect();
+
+        // let increase_params = json!([
+        //     (),
+        //     u64::MAX,
+        //     // system
+        //     syscall_addr,
+        //     [[felt252_bigint(11),]]
+        // ]);
+
+        // let get_params = json!([
+        //     // // pedersen
+        //     // null,
+        //     // // range check
+        //     // null,
+        //     (),
+        //     // gas
+        //     u64::MAX,
+        //     // system
+        //     syscall_addr,
+        //     // The amount of params change depending on the contract function called
+        //     // Struct<Span<Array<felt>>>
+        //     [
+        //         // Span<Array<felt>>
+        //         [
+        //             // contract state
+
+        //             // name
+        //             // felt252_short_str("name"),   // name
+        //             // felt252_short_str("symbol"), // symbol
+        //             // decimals
+        //                                 // felt252_bigint(i64::MAX),    // initial supply
+        //                                 // felt252_bigint(4),           // contract address
+        //                                 // felt252_bigint(6),           // ??
+        //         ]
+        //     ]
+        // ]);
+
+        // let mut increase_writer: Vec<u8> = Vec::new();
+        // let mut get_writer: Vec<u8> = Vec::new();
+        // let increase_returns = &mut serde_json::Serializer::new(&mut increase_writer);
+        // let get_returns = &mut serde_json::Serializer::new(&mut get_writer);
+        let mut writer: Vec<u8> = Vec::new();
+        let returns = &mut serde_json::Serializer::new(&mut writer);
+
+        let native_executor = NativeExecutor::new(native_program);
+
+        native_executor
+            .execute(fn_id, params, returns, required_init_gas)
+            .unwrap();
+
+        let result: String = String::from_utf8(writer).unwrap();
+        let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
+        // let value = serde_json::from_str::<serde_json::Value>(&result).unwrap();
+        // println!("OUTPUT: {}", value);
+
+        return Ok(CallInfo {
+            caller_address: self.caller_address.clone(),
+            call_type: Some(self.call_type.clone()),
+            contract_address: self.contract_address.clone(),
+            code_address: self.code_address.clone(),
+            class_hash: Some(
+                self.get_code_class_hash(syscall_handler.starknet_storage_state.state)?,
+            ),
+            entry_point_selector: Some(self.entry_point_selector.clone()),
+            entry_point_type: Some(self.entry_point_type),
+            calldata: self.calldata.clone(),
+            retdata: value.return_values,
+            execution_resources: None,
+            events: syscall_handler.events,
+            storage_read_values: syscall_handler.starknet_storage_state.read_values,
+            accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
+            failure_flag: value.failure_flag,
+            l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
+
+            // TODO
+            internal_calls: vec![],
+
+            // TODO
+            gas_consumed: 0,
+        });
     }
 }

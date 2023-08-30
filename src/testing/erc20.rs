@@ -52,14 +52,14 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let mut casm_classes_cache = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class);
-    contract_class_cache.insert(erc20_class_hash, test_contract_class);
+    casm_classes_cache.insert(class_hash, contract_class);
+    casm_classes_cache.insert(erc20_class_hash, test_contract_class);
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -70,7 +70,8 @@ fn test_erc20_cairo2() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+    let mut state =
+        CachedState::new(Arc::new(state_reader)).set_casm_classes_cache(casm_classes_cache);
 
     let name_ = Felt252::from_bytes_be(b"some-token");
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");

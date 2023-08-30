@@ -162,41 +162,39 @@ fn create_account_tx_test_state(
         INITIAL_BALANCE.clone(),
     )]);
 
-    let cached_state = CachedState::new(
-        {
-            let mut state_reader = InMemoryStateReader::default();
-            for (contract_address, class_hash) in address_to_class_hash {
-                let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
-                    .iter()
-                    .filter_map(|((address, storage_key), storage_value)| {
-                        (address == &contract_address).then_some((
-                            (address.clone(), felt_to_hash(storage_key)),
-                            storage_value.clone(),
-                        ))
-                    })
-                    .collect();
+    let cached_state = CachedState::new({
+        let mut state_reader = InMemoryStateReader::default();
+        for (contract_address, class_hash) in address_to_class_hash {
+            let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
+                .iter()
+                .filter_map(|((address, storage_key), storage_value)| {
+                    (address == &contract_address).then_some((
+                        (address.clone(), felt_to_hash(storage_key)),
+                        storage_value.clone(),
+                    ))
+                })
+                .collect();
 
-                let stored: HashMap<StorageEntry, Felt252> = storage_keys;
+            let stored: HashMap<StorageEntry, Felt252> = storage_keys;
 
-                state_reader
-                    .address_to_class_hash_mut()
-                    .insert(contract_address.clone(), class_hash);
+            state_reader
+                .address_to_class_hash_mut()
+                .insert(contract_address.clone(), class_hash);
 
-                state_reader
-                    .address_to_nonce_mut()
-                    .insert(contract_address.clone(), Felt252::zero());
-                state_reader.address_to_storage_mut().extend(stored);
-            }
-            for (class_hash, contract_class) in class_hash_to_class {
-                state_reader
-                    .class_hash_to_contract_class_mut()
-                    .insert(class_hash, contract_class);
-            }
-            Arc::new(state_reader)
-        },
-        Some(HashMap::new()),
-        Some(HashMap::new()),
-    );
+            state_reader
+                .address_to_nonce_mut()
+                .insert(contract_address.clone(), Felt252::zero());
+            state_reader.address_to_storage_mut().extend(stored);
+        }
+        for (class_hash, contract_class) in class_hash_to_class {
+            state_reader
+                .class_hash_to_contract_class_mut()
+                .insert(class_hash, contract_class);
+        }
+        Arc::new(state_reader)
+    })
+    .set_contract_classes_cache(HashMap::new())
+    .set_casm_classes_cache(HashMap::new());
 
     Ok((block_context, cached_state))
 }
@@ -206,11 +204,9 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
 
     let state_cache = ContractClassCache::new();
 
-    CachedState::new(
-        Arc::new(in_memory_state_reader),
-        Some(state_cache),
-        Some(HashMap::new()),
-    )
+    CachedState::new(Arc::new(in_memory_state_reader))
+        .set_contract_classes_cache(state_cache)
+        .set_casm_classes_cache(HashMap::new())
 }
 
 fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
@@ -233,10 +229,10 @@ fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
 
     CachedState::new_for_testing(
         Arc::new(in_memory_state_reader),
-        Some(contract_classes_cache),
         state_cache_after_invoke_tx(fee),
-        Some(HashMap::new()),
     )
+    .set_contract_classes_cache(contract_classes_cache)
+    .set_casm_classes_cache(HashMap::new())
 }
 
 fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
@@ -1577,45 +1573,43 @@ fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader>,
 ) {
     let fee = Felt252::from(6157);
-    let mut state_before = CachedState::new(
-        Arc::new(InMemoryStateReader::new(
-            HashMap::from([
-                (Address(0x101.into()), felt_to_hash(&0x111.into())),
-                (Address(0x100.into()), felt_to_hash(&0x110.into())),
-                (Address(0x1001.into()), felt_to_hash(&0x1010.into())),
-            ]),
-            HashMap::from([
-                (Address(0x101.into()), Default::default()),
-                (Address(0x100.into()), Default::default()),
-                (Address(0x1001.into()), Default::default()),
-            ]),
-            HashMap::from([(
-                (
-                    Address(0x1001.into()),
-                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
-                ),
-                INITIAL_BALANCE.clone(),
-            )]),
-            HashMap::from([
-                (
-                    felt_to_hash(&0x110.into()),
-                    ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
-                ),
-                (
-                    felt_to_hash(&0x111.into()),
-                    ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
-                ),
-                (
-                    felt_to_hash(&0x1010.into()),
-                    ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
-                ),
-            ]),
-            HashMap::new(),
-            HashMap::new(),
-        )),
-        Some(ContractClassCache::new()),
-        Some(HashMap::new()),
-    );
+    let mut state_before = CachedState::new(Arc::new(InMemoryStateReader::new(
+        HashMap::from([
+            (Address(0x101.into()), felt_to_hash(&0x111.into())),
+            (Address(0x100.into()), felt_to_hash(&0x110.into())),
+            (Address(0x1001.into()), felt_to_hash(&0x1010.into())),
+        ]),
+        HashMap::from([
+            (Address(0x101.into()), Default::default()),
+            (Address(0x100.into()), Default::default()),
+            (Address(0x1001.into()), Default::default()),
+        ]),
+        HashMap::from([(
+            (
+                Address(0x1001.into()),
+                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
+            ),
+            INITIAL_BALANCE.clone(),
+        )]),
+        HashMap::from([
+            (
+                felt_to_hash(&0x110.into()),
+                ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&0x111.into()),
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            ),
+            (
+                felt_to_hash(&0x1010.into()),
+                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            ),
+        ]),
+        HashMap::new(),
+        HashMap::new(),
+    )))
+    .set_contract_classes_cache(ContractClassCache::new())
+    .set_casm_classes_cache(HashMap::new());
     state_before.set_storage_at(
         &(
             Address(0x1001.into()),

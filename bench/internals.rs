@@ -61,7 +61,7 @@ fn deploy_account() {
     const RUNS: usize = 500;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+    let mut state = CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
     state
         .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
@@ -97,7 +97,7 @@ fn declare() {
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let state = CachedState::new(state_reader, Some(Default::default()), None);
+    let state = CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
     let block_context = &Default::default();
 
@@ -129,7 +129,7 @@ fn deploy() {
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+    let mut state = CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
     state
         .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
@@ -164,7 +164,7 @@ fn invoke() {
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+    let mut state = CachedState::new(state_reader).set_contract_classes_cache(Default::default());
 
     state
         .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
