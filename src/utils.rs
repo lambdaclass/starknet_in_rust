@@ -1,4 +1,5 @@
 use crate::core::errors::hash_errors::HashError;
+use crate::definitions::constants::FEE_TRANSFER_N_STORAGE_CHANGES_TO_CHARGE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::state_api::State;
 use crate::{
@@ -18,6 +19,7 @@ use cairo_vm::{
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha3::{Digest, Keccak256};
 use starknet_crypto::FieldElement;
 use std::{
@@ -183,7 +185,7 @@ pub fn calculate_tx_resources(
     let l1_gas_usage = calculate_tx_gas_usage(
         l2_to_l1_messages,
         n_modified_contracts,
-        n_storage_changes,
+        n_storage_changes + FEE_TRANSFER_N_STORAGE_CHANGES_TO_CHARGE,
         l1_handler_payload_size,
         n_deployments,
     );
@@ -343,6 +345,21 @@ pub(crate) fn parse_builtin_names(
             s => Err(TransactionError::InvalidBuiltinContractClass(s.to_string())),
         })
         .collect()
+}
+
+/// Parses an array of strings representing Felt252 as hex
+pub fn parse_felt_array(felt_strings: &[Value]) -> Vec<Felt252> {
+    let mut felts = vec![];
+
+    for felt in felt_strings {
+        let felt_string = felt.as_str().unwrap();
+        felts.push(match felt_string.starts_with("0x") {
+            true => Felt252::parse_bytes(felt_string[2..].as_bytes(), 16).unwrap(),
+            false => Felt252::parse_bytes(felt_string.as_bytes(), 16).unwrap(),
+        })
+    }
+
+    felts
 }
 
 //* -------------------

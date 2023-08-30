@@ -14,6 +14,13 @@ pub(crate) const N_DEFAULT_TOPICS: usize = 1; // Events have one default topic.
 pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
     (L1_TO_L2_MSG_HEADER_SIZE + 1) - CONSUMED_MSG_TO_L2_N_TOPICS;
 
+/// Sender and sequencer balance updates.
+pub(crate) const FEE_TRANSFER_N_STORAGE_CHANGES: usize = 2;
+
+/// Exclude the sequencer balance update, since it's charged once throught the batch.
+pub(crate) const FEE_TRANSFER_N_STORAGE_CHANGES_TO_CHARGE: usize =
+    FEE_TRANSFER_N_STORAGE_CHANGES - 1;
+
 lazy_static! {
     pub(crate) static ref QUERY_VERSION_BASE: Felt252 =
         felt_str!("340282366920938463463374607431768211456");
@@ -56,13 +63,14 @@ lazy_static! {
             ("ec_op_builtin".to_string(), N_STEPS_FEE_WEIGHT * 1024.0),
             ("poseidon_builtin".to_string(), N_STEPS_FEE_WEIGHT * 32.0),
             ("segment_arena_builtin".to_string(), N_STEPS_FEE_WEIGHT * 10.0),
+            ("keccak_builtin".to_string(), N_STEPS_FEE_WEIGHT * 2048.0), // 2**11
     ]);
     pub static ref DEFAULT_SEQUENCER_ADDRESS: Address = Address(felt_str!(
         "3711666a3506c99c9d78c4d4013409a87a962b7a0880a1c24af9fe193dafc01",
         16
     ));
     pub static ref DEFAULT_STARKNET_OS_CONFIG: StarknetOsConfig = StarknetOsConfig {
-        chain_id: StarknetChainId::TestNet,
+        chain_id: StarknetChainId::TestNet.to_felt(),
         fee_token_address: Address(felt_str!(
             "4c07059285c2607d528a4c5220ef1f64d8f01273c23cfd9dec68759f61b544",
             16
@@ -96,7 +104,7 @@ lazy_static! {
         felt_str!("617075754465154585683856897856256838130216341506379215893724690153393808813");
     /// Value generated from `get_selector_from_name('transfer')`.
     pub static ref TRANSFER_ENTRY_POINT_SELECTOR: Felt252 =
-        felt_str!("232670485425082704932579856502088130646006032362877466777181098476241604910");
+        felt_str!("83afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e", 16);
 
     /// Value generated from get_selector_from_name('__validate_declare__')
     pub static ref VALIDATE_DECLARE_ENTRY_POINT_SELECTOR: Felt252 =

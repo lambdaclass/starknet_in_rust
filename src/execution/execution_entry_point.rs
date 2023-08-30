@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
@@ -126,11 +128,8 @@ impl ExecutionEntryPoint {
                 })
             }
             CompiledClass::Casm(contract_class) => {
-                let mut tmp_state = CachedState::new(
-                    state.state_reader.clone(),
-                    state.contract_classes.clone(),
-                    state.casm_contract_classes.clone(),
-                );
+                let mut tmp_state =
+                    CachedState::new(state.state_reader.clone(), state.contract_classes.clone());
                 tmp_state.cache = state.cache.clone();
 
                 match self._execute(
@@ -331,7 +330,7 @@ impl ExecutionEntryPoint {
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
-        contract_class: Box<ContractClass>,
+        contract_class: Arc<ContractClass>,
         class_hash: [u8; 32],
     ) -> Result<CallInfo, TransactionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
@@ -436,7 +435,7 @@ impl ExecutionEntryPoint {
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
-        contract_class: Box<CasmContractClass>,
+        contract_class: Arc<CasmContractClass>,
         class_hash: [u8; 32],
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError> {

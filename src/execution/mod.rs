@@ -4,11 +4,9 @@ pub mod os_usage;
 
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::utils::parse_felt_array;
 use crate::{
-    definitions::{
-        block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-        transaction_type::TransactionType,
-    },
+    definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
     state::state_cache::StorageEntry,
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
@@ -21,6 +19,7 @@ use cairo_vm::{
 };
 use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
+use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,7 +118,7 @@ impl CallInfo {
         calls
     }
 
-    /// Returns a list of StarkNet Event objects collected during the execution, sorted by the order
+    /// Returns a list of Starknet Event objects collected during the execution, sorted by the order
     /// in which they were emitted.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
         let calls = self.gen_call_topology();
@@ -130,8 +129,11 @@ impl CallInfo {
         for call in calls {
             for ordered_event in call.events {
                 let event = Event::new(ordered_event.clone(), call.contract_address.clone());
-                starknet_events.remove(ordered_event.order as usize - 1);
-                starknet_events.insert(ordered_event.order as usize - 1, Some(event));
+                starknet_events.remove((ordered_event.order as isize - 1).max(0) as usize);
+                starknet_events.insert(
+                    (ordered_event.order as isize - 1).max(0) as usize,
+                    Some(event),
+                );
             }
         }
 
@@ -143,7 +145,7 @@ impl CallInfo {
         Ok(starknet_events.into_iter().flatten().collect())
     }
 
-    /// Returns a list of StarkNet L2ToL1MessageInfo objects collected during the execution, sorted
+    /// Returns a list of Starknet L2ToL1MessageInfo objects collected during the execution, sorted
     /// by the order in which they were sent.
     pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, TransactionError> {
         let calls = self.gen_call_topology();
@@ -229,6 +231,56 @@ impl Default for CallInfo {
             gas_consumed: 0,
             failure_flag: false,
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for CallInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        // Parse execution_resources
+        let execution_resources_value = value["execution_resources"].clone();
+
+        let execution_resources = ExecutionResources {
+            n_steps: serde_json::from_value(execution_resources_value["n_steps"].clone())
+                .map_err(serde::de::Error::custom)?,
+            n_memory_holes: serde_json::from_value(
+                execution_resources_value["n_memory_holes"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+            builtin_instance_counter: serde_json::from_value(
+                execution_resources_value["builtin_instance_counter"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+        };
+
+        // Parse retdata
+        let retdata_value = value["result"].clone();
+        let retdata = parse_felt_array(retdata_value.as_array().unwrap());
+
+        // Parse calldata
+        let calldata_value = value["calldata"].clone();
+        let calldata = parse_felt_array(calldata_value.as_array().unwrap());
+
+        // Parse internal calls
+        let internal_calls_value = value["internal_calls"].clone();
+        let mut internal_calls = vec![];
+
+        for call in internal_calls_value.as_array().unwrap() {
+            internal_calls
+                .push(serde_json::from_value(call.clone()).map_err(serde::de::Error::custom)?);
+        }
+
+        Ok(CallInfo {
+            execution_resources,
+            retdata,
+            calldata,
+            internal_calls,
+            ..Default::default()
+        })
     }
 }
 
@@ -370,7 +422,7 @@ impl TxInfoStruct {
     pub(crate) fn new(
         tx: TransactionExecutionContext,
         signature: Relocatable,
-        chain_id: StarknetChainId,
+        chain_id: Felt252,
     ) -> TxInfoStruct {
         TxInfoStruct {
             version: tx.version,
@@ -379,7 +431,7 @@ impl TxInfoStruct {
             signature_len: tx.signature.len(),
             signature,
             transaction_hash: tx.transaction_hash,
-            chain_id: chain_id.to_felt(),
+            chain_id,
             nonce: tx.nonce,
         }
     }
@@ -615,6 +667,26 @@ impl L2toL1MessageInfo {
 mod tests {
     use super::*;
     use crate::utils::{string_to_hash, Address};
+
+    #[test]
+    fn test_get_sorted_single_event() {
+        let address = Address(Felt252::zero());
+        let ordered_event = OrderedEvent::new(0, vec![], vec![]);
+        let event = Event::new(ordered_event.clone(), address.clone());
+        let internal_calls = vec![CallInfo {
+            events: vec![ordered_event],
+            ..Default::default()
+        }];
+        let call_info = CallInfo {
+            contract_address: address,
+            internal_calls,
+            ..Default::default()
+        };
+
+        let sorted_events = call_info.get_sorted_events().unwrap();
+
+        assert_eq!(sorted_events, vec![event]);
+    }
 
     #[test]
     fn non_optional_calls_test() {

@@ -1,5 +1,6 @@
 use super::{state_error::StarknetStateError, type_utils::ExecutionInfo};
 use crate::execution::execution_entry_point::ExecutionResult;
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -40,7 +41,7 @@ impl StarknetState {
         let block_context = context.unwrap_or_default();
         let state_reader = Arc::new(InMemoryStateReader::default());
 
-        let state = CachedState::new(state_reader, Some(HashMap::new()), Some(HashMap::new()));
+        let state = CachedState::new(state_reader, HashMap::new());
 
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
@@ -180,7 +181,7 @@ impl StarknetState {
         hash_value: Option<Felt252>,
         remaining_gas: u128,
     ) -> Result<(Address, TransactionExecutionInfo), StarknetStateError> {
-        let chain_id = self.block_context.starknet_os_config.chain_id.to_felt();
+        let chain_id = self.block_context.starknet_os_config.chain_id.clone();
         let deploy = match hash_value {
             None => Deploy::new(
                 contract_address_salt,
@@ -201,8 +202,10 @@ impl StarknetState {
         let contract_hash = deploy.contract_hash;
         let mut tx = Transaction::Deploy(deploy);
 
-        self.state
-            .set_contract_class(&contract_hash, &contract_class)?;
+        self.state.set_contract_class(
+            &contract_hash,
+            &CompiledClass::Deprecated(Arc::new(contract_class)),
+        )?;
 
         let tx_execution_info = self.execute_tx(&mut tx, remaining_gas)?;
         Ok((contract_address, tx_execution_info))
@@ -266,7 +269,7 @@ impl StarknetState {
     // ------------------------
 
     fn chain_id(&self) -> Felt252 {
-        self.block_context.starknet_os_config.chain_id.to_felt()
+        self.block_context.starknet_os_config.chain_id.clone()
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -330,6 +333,7 @@ mod tests {
         },
         execution::{CallType, OrderedL2ToL1Message},
         hash_utils::calculate_contract_address,
+        services::api::contract_classes::compiled_class::CompiledClass,
         state::state_cache::StorageEntry,
         utils::{calculate_sn_keccak, felt_to_hash},
     };
@@ -357,7 +361,7 @@ mod tests {
         .unwrap();
 
         let mut actual_resources = HashMap::new();
-        actual_resources.insert("l1_gas_usage".to_string(), 1224);
+        actual_resources.insert("l1_gas_usage".to_string(), 3672);
         actual_resources.insert("n_steps".to_string(), 0);
 
         let transaction_exec_info = TransactionExecutionInfo {
@@ -399,11 +403,10 @@ mod tests {
             starknet_state
                 .state
                 .contract_classes
-                .unwrap()
                 .get(&class_hash)
                 .unwrap()
                 .to_owned(),
-            contract_class
+            CompiledClass::Deprecated(Arc::new(contract_class))
         );
     }
 
@@ -419,7 +422,10 @@ mod tests {
         // hack store account contract
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+        );
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -440,11 +446,12 @@ mod tests {
         state_reader
             .address_to_storage_mut()
             .insert(storage_entry.clone(), storage.clone());
-        state_reader
-            .class_hash_to_contract_class_mut()
-            .insert(class_hash, contract_class.clone());
+        state_reader.class_hash_to_compiled_class_mut().insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+        );
 
-        let state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+        let state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
         //* --------------------------------------------
         //*    Create starknet state with previous data
@@ -468,7 +475,10 @@ mod tests {
 
         starknet_state
             .state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         // --------------------------------------------
@@ -573,9 +583,9 @@ mod tests {
         )
         .unwrap();
         let actual_resources = HashMap::from([
-            ("n_steps".to_string(), 2933),
-            ("l1_gas_usage".to_string(), 0),
-            ("range_check_builtin".to_string(), 70),
+            ("n_steps".to_string(), 3457),
+            ("l1_gas_usage".to_string(), 2448),
+            ("range_check_builtin".to_string(), 80),
             ("pedersen_builtin".to_string(), 16),
         ]);
 

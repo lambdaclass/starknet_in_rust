@@ -11,6 +11,7 @@ pub(crate) enum ResponseBody {
     GetBlockTimestamp(GetBlockTimestampResponse),
     GetExecutionInfo { exec_info_ptr: Relocatable },
     GetBlockHash(GetBlockHashResponse),
+    Keccak(KeccakResponse),
 }
 /// Wraps around any response body. It also contains the remaining gas after the execution.
 #[allow(unused)]
@@ -56,6 +57,13 @@ impl SyscallResponse {
             }
             Some(ResponseBody::GetBlockHash(get_block_hash_response)) => {
                 cairo_args.push(get_block_hash_response.block_hash.clone().into())
+            }
+            Some(ResponseBody::Keccak(KeccakResponse {
+                hash_low,
+                hash_high,
+            })) => {
+                cairo_args.push(hash_low.into());
+                cairo_args.push(hash_high.into());
             }
             None => {}
         }
@@ -109,4 +117,12 @@ pub struct CallContractResponse {
 pub struct GetBlockHashResponse {
     /// The returned hash.
     pub block_hash: Felt252,
+}
+
+/// Represents the response of the `keccak` syscall
+#[derive(Clone, Debug, PartialEq)]
+pub struct KeccakResponse {
+    /// The returned hash.
+    pub hash_low: Felt252,
+    pub hash_high: Felt252,
 }
