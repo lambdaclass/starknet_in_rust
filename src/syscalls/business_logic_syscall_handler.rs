@@ -5,11 +5,12 @@ use std::ops::Add;
 
 use super::syscall_handler_errors::SyscallHandlerError;
 use super::syscall_request::{
-    EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, StorageReadRequest,
-    StorageWriteRequest,
+    EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, KeccakRequest,
+    StorageReadRequest, StorageWriteRequest,
 };
 use super::syscall_response::{
-    DeployResponse, GetBlockHashResponse, GetBlockTimestampResponse, SyscallResponse,
+    DeployResponse, GetBlockHashResponse, GetBlockTimestampResponse, KeccakResponse,
+    SyscallResponse,
 };
 use super::{
     syscall_info::get_syscall_size_from_name,
@@ -58,6 +59,7 @@ use num_traits::{One, ToPrimitive, Zero};
 
 const STEP: u128 = 100;
 const SYSCALL_BASE: u128 = 100 * STEP;
+const KECCAK_ROUND_COST: u128 = 180000;
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> = {
@@ -79,8 +81,8 @@ lazy_static! {
             map.insert(1280709301550335749748_u128.into(), "emit_event");
             map.insert(25828017502874050592466629733_u128.into(), "storage_write");
             map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_timestamp".as_bytes())), "get_block_timestamp");
-
             map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes())), "get_block_number");
+            map.insert(Felt252::from_bytes_be("Keccak".as_bytes()), "keccak");
 
             map
     };
@@ -109,6 +111,7 @@ lazy_static! {
         map.insert("emit_event", SYSCALL_BASE + 10 * STEP);
         map.insert("send_message_to_l1", SYSCALL_BASE + 50 * STEP);
         map.insert("get_block_timestamp", 0);
+        map.insert("keccak", 0);
 
         map
     };
@@ -283,6 +286,14 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             }))
         };
 
+        // update syscall handler information
+        self.starknet_storage_state
+            .read_values
+            .extend(call_info.storage_read_values.clone());
+        self.starknet_storage_state
+            .accessed_keys
+            .extend(call_info.accessed_storage_keys.clone());
+
         self.internal_calls.push(call_info);
 
         Ok(SyscallResponse { gas, body })
@@ -401,7 +412,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         // Check and reduce gas (after validating the syscall selector for consistency wth the OS).
         let required_gas = SYSCALL_GAS_COST
             .get(syscall_name)
-            .map(|&x| x - SYSCALL_BASE)
+            .map(|&x| x.saturating_sub(SYSCALL_BASE))
             .ok_or(SyscallHandlerError::SelectorDoesNotHaveAssociatedGas(
                 selector.to_string(),
             ))?;
@@ -455,6 +466,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             }
             SyscallRequest::GetBlockHash(req) => self.get_block_hash(vm, req, remaining_gas),
             SyscallRequest::ReplaceClass(req) => self.replace_class(vm, req, remaining_gas),
+            SyscallRequest::Keccak(req) => self.keccak(vm, req, remaining_gas),
         }
     }
 
@@ -644,7 +656,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(
             res_segment,
-            self.block_context.starknet_os_config.chain_id.to_felt(),
+            self.block_context.starknet_os_config.chain_id.clone(),
         )?;
         res_segment = (res_segment + 1)?;
         vm.insert_value::<Felt252>(res_segment, tx_info.nonce.clone())?;
@@ -839,6 +851,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             "get_execution_info" => Ok(SyscallRequest::GetExecutionInfo),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
             "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
+            "keccak" => KeccakRequest::from_ptr(vm, syscall_ptr),
             _ => Err(SyscallHandlerError::UnknownSyscall(
                 syscall_name.to_string(),
             )),
@@ -943,5 +956,68 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             gas: remaining_gas,
             body: None,
         })
+    }
+
+    fn keccak(
+        &mut self,
+        vm: &mut VirtualMachine,
+        request: KeccakRequest,
+        remaining_gas: u128,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        let length = (request.input_end - request.input_start)?;
+        let mut gas = remaining_gas;
+
+        if length % 17 != 0 {
+            let response = self.failure_from_error_msg(vm, b"Invalid keccak input size")?;
+            return Ok(SyscallResponse {
+                gas,
+                body: Some(response),
+            });
+        }
+        let n_chunks = length / 17;
+        let mut state = [0u64; 25];
+        for i in 0..n_chunks {
+            // TODO: check this before the loop, taking care to preserve functionality.
+            if gas < KECCAK_ROUND_COST {
+                let response = self.failure_from_error_msg(vm, b"Syscall out of gas")?;
+                return Ok(SyscallResponse {
+                    gas,
+                    body: Some(response),
+                });
+            }
+            gas -= KECCAK_ROUND_COST;
+            let chunk_start = (request.input_start + i * 17)?;
+            let chunk = get_felt_range(vm, chunk_start, (chunk_start + 17)?)?;
+            for (i, val) in chunk.iter().enumerate() {
+                state[i] ^= val.to_u64().ok_or_else(|| {
+                    SyscallHandlerError::Conversion("Felt252".to_string(), "u64".to_string())
+                })?;
+            }
+            keccak::f1600(&mut state)
+        }
+        let hash_low = (Felt252::from(state[1]) << 64u32) + Felt252::from(state[0]);
+        let hash_high = (Felt252::from(state[3]) << 64u32) + Felt252::from(state[2]);
+        Ok(SyscallResponse {
+            gas,
+            body: Some(ResponseBody::Keccak(KeccakResponse {
+                hash_low,
+                hash_high,
+            })),
+        })
+    }
+
+    // TODO: refactor code to use this function
+    fn failure_from_error_msg(
+        &mut self,
+        vm: &mut VirtualMachine,
+        error_msg: &[u8],
+    ) -> Result<ResponseBody, SyscallHandlerError> {
+        let felt_encoded_msg = Felt252::from_bytes_be(error_msg);
+        let retdata_start =
+            self.allocate_segment(vm, vec![MaybeRelocatable::from(felt_encoded_msg)])?;
+        Ok(ResponseBody::Failure(FailureReason {
+            retdata_start,
+            retdata_end: (retdata_start + 1)?,
+        }))
     }
 }

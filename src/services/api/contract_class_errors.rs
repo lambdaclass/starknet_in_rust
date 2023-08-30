@@ -13,4 +13,8 @@ pub enum ContractClassError {
     NotACasmContractClass,
     #[error("Not a deprecated contract class")]
     NotADeprecatedContractClass,
+    #[error("Parse error")]
+    ParseError,
+    #[error("Program error: {0}")]
+    ProgramError(String),
 }

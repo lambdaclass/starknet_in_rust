@@ -211,7 +211,9 @@ mod test {
         sync::Arc,
     };
 
-    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+    use crate::services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    };
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
@@ -266,13 +268,16 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let mut block_context = BlockContext::default();
@@ -334,7 +339,7 @@ mod test {
                 ("n_steps".to_string(), 1229),
                 ("pedersen_builtin".to_string(), 13),
                 ("range_check_builtin".to_string(), 23),
-                ("l1_gas_usage".to_string(), 18471),
+                ("l1_gas_usage".to_string(), 19695),
             ]),
             tx_type: Some(TransactionType::L1Handler),
         }

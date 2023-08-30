@@ -1,5 +1,8 @@
 use crate::{
-    core::errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
+    core::errors::{
+        contract_address_errors::ContractAddressError, hash_errors::HashError,
+        state_errors::StateError,
+    },
     definitions::transaction_type::TransactionType,
     execution::os_usage::OsResources,
     syscalls::syscall_handler_errors::SyscallHandlerError,
@@ -25,6 +28,8 @@ pub enum TransactionError {
     InvalidMaxFee,
     #[error("The nonce field in Declare transactions of version 0 must be 0.")]
     InvalidNonce,
+    #[error("Couldn't convert from {0} to {1}")]
+    Conversion(String, String),
     #[error("The signature field in Declare transactions of version 0 must be an empty list.")]
     InvalidSignature,
     #[error("An InvokeFunction transaction (version != 0) must have a nonce.")]
@@ -47,6 +52,8 @@ pub enum TransactionError {
     ContractAddress(#[from] ContractAddressError),
     #[error(transparent)]
     Syscall(#[from] SyscallHandlerError),
+    #[error(transparent)]
+    HashError(#[from] HashError),
     #[error(transparent)]
     State(#[from] StateError),
     #[error("Calling other contracts during validate execution is forbidden")]

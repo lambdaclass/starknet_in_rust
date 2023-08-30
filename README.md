@@ -57,11 +57,28 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 ### Installation
 
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
+
+#### Linux (x86-64)
 ```bash
 $ make deps
 $ make build
 ```
+
+#### OSX (Apple Silicon)
+```bash
+$ make deps-macos
+$ make build
+```
+
 Check the [Makefile](/Makefile) for additional targets.
+
+#### RPC State Reader
+
+In order to use the RPC state reader add an Infura API key in a `.env` file at root:
+
+```
+INFURA_API_KEY={some_key}
+```
 
 #### How to manually install the script dependencies
 
@@ -93,6 +110,8 @@ You can find a tutorial on running contracts [here](/examples/contract_execution
 You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
 ### Testing
+
+[Add an Infura API key.](#rpc-state-reader)
 
 Run the following command:
 ```bash
