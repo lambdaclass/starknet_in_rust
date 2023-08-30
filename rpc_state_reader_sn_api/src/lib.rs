@@ -16,7 +16,7 @@ use starknet_api::block::{BlockNumber, BlockTimestamp};
 use starknet_api::core::{ChainId, ClassHash, EntryPointSelector};
 use starknet_api::deprecated_contract_class::EntryPointOffset;
 use starknet_api::hash::StarkFelt;
-use starknet_api::transaction::{InvokeTransaction, Transaction, TransactionHash};
+use starknet_api::transaction::{InvokeTransaction, Transaction as SNTransaction, TransactionHash};
 use starknet_api::{core::ContractAddress, hash::StarkHash, state::StorageKey};
 use std::collections::HashMap;
 use std::env;
@@ -129,7 +129,7 @@ pub struct RpcBlockInfo {
     /// The sequencer address of this block.
     pub sequencer_address: ContractAddress,
     /// The transactions of this block.
-    pub transactions: Vec<Transaction>,
+    pub transactions: Vec<SNTransaction>,
 }
 
 #[derive(Deserialize)]
@@ -302,16 +302,18 @@ impl<'de> Deserialize<'de> for TransactionTrace {
 }
 
 /// Freestanding deserialize method to avoid a new type.
-fn deserialize_transaction_json(transaction: serde_json::Value) -> serde_json::Result<Transaction> {
+fn deserialize_transaction_json(
+    transaction: serde_json::Value,
+) -> serde_json::Result<SNTransaction> {
     let tx_type: String = serde_json::from_value(transaction["type"].clone())?;
     let tx_version: String = serde_json::from_value(transaction["version"].clone())?;
 
     match tx_type.as_str() {
         "INVOKE" => match tx_version.as_str() {
-            "0x0" => Ok(Transaction::Invoke(InvokeTransaction::V0(
+            "0x0" => Ok(SNTransaction::Invoke(InvokeTransaction::V0(
                 serde_json::from_value(transaction)?,
             ))),
-            "0x1" => Ok(Transaction::Invoke(InvokeTransaction::V1(
+            "0x1" => Ok(SNTransaction::Invoke(InvokeTransaction::V1(
                 serde_json::from_value(transaction)?,
             ))),
             x => Err(serde::de::Error::custom(format!(
@@ -345,7 +347,7 @@ impl RpcState {
     }
 
     /// Requests the given transaction to the Feeder Gateway API.
-    pub fn get_transaction(&self, hash: &TransactionHash) -> Transaction {
+    pub fn get_transaction(&self, hash: &TransactionHash) -> SNTransaction {
         let params = ureq::json!({
             "jsonrpc": "2.0",
             "method": "starknet_getTransactionByHash",
@@ -356,10 +358,10 @@ impl RpcState {
 
         match result["type"].as_str().unwrap() {
             "INVOKE" => match result["version"].as_str().unwrap() {
-                "0x0" => Transaction::Invoke(InvokeTransaction::V0(
+                "0x0" => SNTransaction::Invoke(InvokeTransaction::V0(
                     serde_json::from_value(result).unwrap(),
                 )),
-                "0x1" => Transaction::Invoke(InvokeTransaction::V1(
+                "0x1" => SNTransaction::Invoke(InvokeTransaction::V1(
                     serde_json::from_value(result).unwrap(),
                 )),
                 _ => unreachable!(),
@@ -964,7 +966,7 @@ mod blockifier_transaction_tests {
 
         // Map starknet_api transaction to blockifier's
         let blockifier_tx = match sn_api_tx {
-            Transaction::Invoke(tx) => {
+            SNTransaction::Invoke(tx) => {
                 let invoke = InvokeTransaction { tx, tx_hash };
                 AccountTransaction::Invoke(invoke)
             }
@@ -1028,9 +1030,7 @@ mod blockifier_transaction_tests {
 
 mod starknet_in_rust_transaction_tests {
     use cairo_vm::felt::{felt_str, Felt252};
-    use starknet_api::{
-        contract_address, core::PatriciaKey, patricia_key, stark_felt, transaction::TransactionHash,
-    };
+    use starknet_api::{core::PatriciaKey, stark_felt, transaction::TransactionHash};
     use starknet_in_rust::{
         core::errors::state_errors::StateError,
         definitions::{
@@ -1050,7 +1050,7 @@ mod starknet_in_rust_transaction_tests {
             state_cache::StorageEntry,
             BlockInfo,
         },
-        transaction::Transaction,
+        transaction::{InvokeFunction, Transaction},
         utils::{Address, ClassHash},
     };
 
@@ -1083,8 +1083,8 @@ mod starknet_in_rust_transaction_tests {
                 )
                 .unwrap(),
             );
-            let bytes = self.0.get_nonce_at(&address).bytes();
-            Ok(Felt252::from_bytes_be(bytes))
+            let nonce = self.0.get_nonce_at(&address);
+            Ok(Felt252::from_bytes_be(nonce.bytes()))
         }
         fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
             let (contract_address, key) = storage_entry;
@@ -1096,8 +1096,8 @@ mod starknet_in_rust_transaction_tests {
             );
             let key =
                 StorageKey(PatriciaKey::try_from(StarkHash::new(key.clone()).unwrap()).unwrap());
-            let bytes = self.0.get_storage_at(&address, &key).bytes();
-            Ok(Felt252::from_bytes_be(bytes))
+            let value = self.0.get_storage_at(&address, &key);
+            Ok(Felt252::from_bytes_be(value.bytes()))
         }
         fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
             let address = ContractAddress(
@@ -1114,7 +1114,6 @@ mod starknet_in_rust_transaction_tests {
         tx_hash: &str,
         network: RpcChain,
         block_number: BlockNumber,
-        gas_price: u128,
     ) -> (
         TransactionExecutionInfo,
         TransactionTrace,
@@ -1129,14 +1128,16 @@ mod starknet_in_rust_transaction_tests {
 
         // Instantiate the RPC StateReader and the CachedState
         let rpc_reader = RpcStateReader(RpcState::new(network, block_number.into()));
+        let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
         // Get values for block context before giving ownership of the reader
-        let chain_id = rpc_reader.0.get_chain_name();
-        let starknet_os_config = StarknetOsConfig::new(
-            (chain_id.into() as StarknetChainId).to_felt(),
-            fee_token_address,
-            gas_price,
-        );
+        let chain_id = match rpc_reader.0.chain {
+            RpcChain::MainNet => StarknetChainId::MainNet,
+            RpcChain::TestNet => StarknetChainId::TestNet,
+            RpcChain::TestNet2 => StarknetChainId::TestNet2,
+        };
+        let starknet_os_config =
+            StarknetOsConfig::new(chain_id.to_felt(), fee_token_address, gas_price);
         let block_info = {
             let RpcBlockInfo {
                 block_number,
@@ -1161,7 +1162,12 @@ mod starknet_in_rust_transaction_tests {
 
         // Get transaction before giving ownership of the reader
         let tx_hash = TransactionHash(stark_felt!(tx_hash));
-        let sn_api_tx = rpc_reader.0.get_transaction(&tx_hash);
+        let tx = match rpc_reader.0.get_transaction(&tx_hash) {
+            SNTransaction::Invoke(tx) => {
+                Transaction::InvokeFunction(InvokeFunction::try_from(tx).unwrap())
+            }
+            _ => unimplemented!(),
+        };
 
         let trace = rpc_reader.0.get_transaction_trace(&tx_hash);
         let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
@@ -1181,16 +1187,6 @@ mod starknet_in_rust_transaction_tests {
             true,
         );
 
-        let tx: starknet_in_rust::transaction::invoke_function::InvokeFunction =
-            match rpc_reader.0.get_transaction(&tx_hash) {
-                starknet_api::transaction::Transaction::Invoke(x) => x.try_into().unwrap(),
-                _ => unimplemented!(),
-            }
-            .try_into()
-            .unwrap();
-
-        let tx = Transaction::InvokeFunction(tx);
-
         (
             tx.execute(&mut state, &block_context, u128::MAX).unwrap(),
             trace,
@@ -1205,13 +1201,21 @@ mod starknet_in_rust_transaction_tests {
         use super::*;
 
         #[test]
+        fn test_get_gas_price() {
+            let block = BlockValue::Number(BlockNumber(169928));
+            let rpc_state = RpcState::new(RpcChain::MainNet, block);
+
+            let price = rpc_state.get_gas_price(169928).unwrap();
+            assert_eq!(price, 22804578690);
+        }
+
+        #[test]
         #[ignore = "working on fixes"]
         fn test_recent_tx() {
             let (tx_info, trace, receipt) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
                 RpcChain::MainNet,
                 BlockNumber(169928),
-                17110275391107,
             );
 
             let TransactionExecutionInfo {
