@@ -86,14 +86,12 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
             where
                 A: SeqAccess<'de>,
             {
-                let (mut failure_flag_integer, mut return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
-                    (0, vec![]);
                 let mut last_element: Option<Value> = None;
                 while let Some(value) = seq.next_element::<Option<Value>>()? {
                     last_element = value;
                 }
 
-                let (mut failure_flag_integer, mut return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
+                let (failure_flag_integer, return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
                     serde_json::from_value::<(u64, Vec<Vec<Vec<Vec<u32>>>>)>(last_element.unwrap())
                         .unwrap();
 
