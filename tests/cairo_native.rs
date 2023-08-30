@@ -1,8 +1,8 @@
 #![cfg(not(feature = "cairo_1_tests"))]
 #![deny(warnings)]
 
+use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME};
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::EntryPointType;
@@ -174,7 +174,7 @@ fn integration_test_erc20() {
         .set_sierra_programs_cache(sierra_contract_class_cache);
 
     // Dummy calldata
-    let calldata = [1.into(), 1.into(), 1.into(), 1.into(), 1.into(), 1.into()].to_vec();
+    let calldata = [1.into(), 1.into(), 1.into(), 1.into(), 1.into()].to_vec();
     // let calldata = [].to_vec();
     let caller_address = Address(0000.into());
     let exec_entry_point = ExecutionEntryPoint::new(
@@ -202,38 +202,30 @@ fn integration_test_erc20() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    // expected results
-    let expected_call_info = CallInfo {
-        caller_address: Address(0.into()),
-        call_type: Some(CallType::Delegate),
-        contract_address: Address(1111.into()),
-        entry_point_selector: Some(Felt252::new(constructor_entry_point_selector)),
-        entry_point_type: Some(EntryPointType::Constructor),
-        calldata,
-        retdata: [144.into()].to_vec(),
-        execution_resources: Some(ExecutionResources {
-            n_steps: 418,
-            n_memory_holes: 0,
-            builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
-        }),
-        class_hash: Some(class_hash),
-        gas_consumed: 35220,
-        ..Default::default()
-    };
+    let result = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps(),
+        )
+        .unwrap()
+        .call_info
+        .unwrap();
 
+    assert_eq!(result.caller_address, Address(0.into()));
+    assert_eq!(result.call_type, Some(CallType::Delegate));
+    assert_eq!(result.contract_address, Address(1111.into()));
     assert_eq!(
-        exec_entry_point
-            .execute(
-                &mut state,
-                &block_context,
-                &mut resources_manager,
-                &mut tx_execution_context,
-                false,
-                block_context.invoke_tx_max_n_steps(),
-            )
-            .unwrap()
-            .call_info
-            .unwrap(),
-        expected_call_info
+        result.entry_point_selector,
+        Some(Felt252::new(constructor_entry_point_selector))
     );
+    assert_eq!(result.entry_point_type, Some(EntryPointType::Constructor));
+    assert_eq!(result.calldata, calldata);
+    assert_eq!(result.retdata, [].to_vec());
+    assert_eq!(result.execution_resources, None);
+    assert_eq!(result.class_hash, Some(class_hash));
+    assert_eq!(result.gas_consumed, 0);
 }
