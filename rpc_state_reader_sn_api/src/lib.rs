@@ -561,6 +561,7 @@ mod tests {
         hash::StarkFelt,
         stark_felt,
     };
+    use starknet_in_rust::transaction::InvokeFunction;
 
     use super::*;
 
@@ -653,6 +654,22 @@ mod tests {
         rpc_state.get_transaction(&tx_hash);
     }
 
+    #[test]
+    fn test_try_from_invoke() {
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
+        let tx_hash = TransactionHash(stark_felt!(
+            "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
+        ));
+
+        let tx = rpc_state.get_transaction(&tx_hash);
+        let parsed = match tx {
+            SNTransaction::Invoke(y) => InvokeFunction::try_from(y),
+            _ => unreachable!(),
+        };
+
+        assert!(parsed.is_ok());
+    }
+    
     #[test]
     fn test_get_block_info() {
         let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
