@@ -424,7 +424,7 @@ mod tests {
         //  ------------ contract data --------------------
         // hack store account contract
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash: [u8; 32] = felt_to_hash(&hash);
+        let class_hash = felt_to_hash(&hash);
         contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class.clone())),
