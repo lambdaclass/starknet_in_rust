@@ -151,18 +151,7 @@ impl Deploy {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        match self.contract_class.clone() {
-            CompiledClass::Casm(contract_class) => {
-                state.set_compiled_class(
-                    &Felt252::from_bytes_be(&self.contract_hash),
-                    contract_class.as_ref().clone(),
-                )?;
-            }
-            CompiledClass::Deprecated(contract_class) => {
-                state.set_contract_class(&self.contract_hash, &contract_class)?;
-            }
-        }
-
+        state.set_contract_class(&self.contract_hash, &self.contract_class)?;
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
 
         if self.constructor_entry_points_empty(self.contract_class.clone())? {
@@ -172,10 +161,10 @@ impl Deploy {
             self.invoke_constructor(state, block_context)
         }
     }
+
     /// Executes the contract without constructor
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
-
     pub fn handle_empty_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -328,7 +317,7 @@ mod tests {
     fn invoke_constructor_test() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state = CachedState::new(state_reader, HashMap::new());
 
         // Set contract_class
         let contract_class =
@@ -376,7 +365,7 @@ mod tests {
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state = CachedState::new(state_reader, HashMap::new());
 
         let contract_class =
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
@@ -386,7 +375,10 @@ mod tests {
         let class_hash_bytes = class_hash.to_be_bytes();
 
         state
-            .set_contract_class(&class_hash_bytes, &contract_class)
+            .set_contract_class(
+                &class_hash_bytes,
+                &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+            )
             .unwrap();
 
         let internal_deploy =
@@ -402,7 +394,7 @@ mod tests {
     fn deploy_contract_without_constructor_should_fail() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state = CachedState::new(state_reader, HashMap::new());
 
         let contract_path = "starknet_programs/amm.json";
         let contract_class = ContractClass::from_path(contract_path).unwrap();
@@ -413,7 +405,10 @@ mod tests {
         class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
 
         state
-            .set_contract_class(&class_hash_bytes, &contract_class)
+            .set_contract_class(
+                &class_hash_bytes,
+                &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+            )
             .unwrap();
 
         let internal_deploy = Deploy::new(

@@ -388,7 +388,7 @@ impl DeployAccount {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, sync::Arc};
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     use super::*;
     use crate::{
@@ -409,11 +409,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut _state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut _state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -445,11 +441,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -476,7 +468,9 @@ mod tests {
         .unwrap();
 
         let class_hash = internal_deploy.class_hash();
-        state.set_contract_class(class_hash, &contract).unwrap();
+        state
+            .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
+            .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
         assert_matches!(
             internal_deploy_error
@@ -497,11 +491,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -516,7 +506,9 @@ mod tests {
         .unwrap();
 
         let class_hash = internal_deploy.class_hash();
-        state.set_contract_class(class_hash, &contract).unwrap();
+        state
+            .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
+            .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
     }
 }
