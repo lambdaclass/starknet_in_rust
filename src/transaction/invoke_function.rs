@@ -501,10 +501,7 @@ mod tests {
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
-    use std::{
-        collections::HashMap,
-        sync::Arc, fs,
-    };
+    use std::{collections::HashMap, fs, sync::Arc};
 
     #[test]
     fn test_invoke_apply_without_fees() {
