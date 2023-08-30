@@ -480,6 +480,7 @@ impl<T: StateReader> State for CachedState<T> {
             CompiledClass::Deprecated(ref contract) => {
                 self.set_contract_class(class_hash, &contract.clone())?
             }
+            CompiledClass::Sierra(_) => todo!(),
         }
         Ok(contract)
     }

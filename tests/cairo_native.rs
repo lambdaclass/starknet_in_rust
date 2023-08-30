@@ -141,11 +141,18 @@ fn integration_test_erc20() {
     // ----------------------------- //
     let use_native = true;
 
-    let program_data = include_bytes!("../starknet_programs/cairo2/erc20.casm");
+    let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/erc20.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
 
-    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let entrypoints = contract_class.clone().entry_points_by_type;
+    // let program_data = include_bytes!("../starknet_programs/cairo2/erc20.casm");
 
+    // let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = sierra_contract_class.clone().entry_points_by_type;
     let constructor_entry_point_selector = &entrypoints.constructor.get(0).unwrap().selector;
 
     // Create state reader with class hash data
@@ -169,9 +176,7 @@ fn integration_test_erc20() {
 
     // Dummy calldata
     let calldata = [1.into(), 1.into(), 1.into(), 1.into(), 1.into()].to_vec();
-
     let caller_address = Address(0000.into());
-
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),

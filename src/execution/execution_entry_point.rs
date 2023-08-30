@@ -31,6 +31,7 @@ use crate::{
 };
 use cairo_lang_sierra::ProgramParser;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
+use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_native::context::NativeContext;
 use cairo_native::executor::NativeExecutor;
 use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
@@ -528,6 +529,40 @@ impl ExecutionEntryPoint {
                         })
                     }
                 }
+            }
+            CompiledClass::Sierra(contract_class) => {
+                let mut tmp_state = CachedState::new(
+                    state.state_reader.clone(),
+                    state.contract_classes.clone(),
+                    state.casm_contract_classes.clone(),
+                );
+                tmp_state.cache = state.cache.clone();
+
+                match self.native_execute(&mut tmp_state, contract_class) {
+                    Ok(call_info) => {
+                        let state_diff = StateDiff::from_cached_state(tmp_state)?;
+                        state.apply_state_update(&state_diff)?;
+                        Ok(ExecutionResult {
+                            call_info: Some(call_info),
+                            revert_error: None,
+                            n_reverted_steps: 0,
+                        })
+                    }
+                    Err(e) => {
+                        if !support_reverted {
+                            return Err(e);
+                        }
+
+                        let n_reverted_steps =
+                            (max_steps as usize) - resources_manager.cairo_usage.n_steps;
+                        Ok(ExecutionResult {
+                            call_info: None,
+                            revert_error: Some(e.to_string()),
+                            n_reverted_steps,
+                        })
+                    }
+                }
+                todo!()
             }
         }
     }
@@ -1113,5 +1148,13 @@ impl ExecutionEntryPoint {
                 call_result,
             )
         }
+    }
+
+    fn native_execute<S: StateReader>(
+        &self,
+        state: &mut CachedState<S>,
+        contract_class: Arc<ContractClass>,
+    ) -> Result<CallInfo, TransactionError> {
+        todo!()
     }
 }

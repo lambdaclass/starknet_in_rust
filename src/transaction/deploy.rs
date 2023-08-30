@@ -140,6 +140,7 @@ impl Deploy {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(_) => todo!(),
         }
     }
     /// Deploys the contract in the starknet network and calls its constructor if it has one.
@@ -161,6 +162,7 @@ impl Deploy {
             CompiledClass::Deprecated(contract_class) => {
                 state.set_contract_class(&self.contract_hash, &contract_class)?;
             }
+            CompiledClass::Sierra(_) => todo!(),
         }
 
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
