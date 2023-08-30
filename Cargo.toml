@@ -29,8 +29,8 @@ cairo-lang-utils = "2.1.0-rc4"
 cairo-lang-starknet = { workspace = true }
 cairo-lang-casm = { workspace = true }
 cairo-lang-runner = { workspace = true }
-cairo-lang-sierra.workspace = true
-cairo-lang-utils.workspace = true
+cairo-lang-sierra = { workspace = true }
+cairo-lang-utils = { workspace = true }
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 getset = "0.1.2"
 lazy_static = "1.4.0"
@@ -44,7 +44,7 @@ serde_json = { version = "1.0", features = [
 ] }
 sha3 = "0.10.1"
 # TODO: Replace with sha3. We should look how to integrate it correctly to calculate sn_keccak
-keccak = "0.1.3" 
+keccak = "0.1.3"
 starknet_api = { workspace = true }
 starknet-crypto = "0.5.1"
 thiserror = { workspace = true }
