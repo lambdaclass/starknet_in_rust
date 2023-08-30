@@ -1094,8 +1094,7 @@ mod starknet_in_rust_transaction_tests {
                 )
                 .unwrap(),
             );
-            let key =
-                StorageKey(PatriciaKey::try_from(StarkHash::new(*key).unwrap()).unwrap());
+            let key = StorageKey(PatriciaKey::try_from(StarkHash::new(*key).unwrap()).unwrap());
             let value = self.0.get_storage_at(&address, &key);
             Ok(Felt252::from_bytes_be(value.bytes()))
         }
