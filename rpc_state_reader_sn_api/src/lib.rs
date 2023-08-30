@@ -435,6 +435,21 @@ impl RpcState {
     pub fn get_contract_class(
         &self,
         class_hash: &starknet_api::core::ClassHash,
+    ) -> SNContractClass {
+        let params = ureq::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getClass",
+            "params": [self.block.to_value().unwrap(), class_hash.0.to_string()],
+            "id": 1
+        });
+
+        self.rpc_call_result(&params).unwrap()
+    }
+
+    // TODO: remove
+    pub fn get_contract_class_old(
+        &self,
+        class_hash: &starknet_api::core::ClassHash,
     ) -> BlockifierContractClass {
         let params = ureq::json!({
             "jsonrpc": "2.0",
@@ -832,6 +847,125 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+mod starknet_in_rust_transaction_tests {
+    use cairo_vm::felt::felt_str;
+    use starknet_api::{
+        contract_address,
+        core::{CompiledClassHash, Nonce, PatriciaKey},
+        patricia_key, stark_felt,
+        transaction::TransactionHash,
+    };
+    use starknet_in_rust::{
+        definitions::{
+            block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+            constants::*,
+        },
+        execution::TransactionExecutionInfo,
+        services::api::contract_classes::compiled_class::CompiledClass,
+        state::{cached_state::CachedState, state_api::StateReader},
+        utils::Address,
+    };
+
+    use super::*;
+
+    impl StateReader for RpcState {
+        fn get_contract_class(
+            &self,
+            class_hash: &starknet_in_rust::utils::ClassHash,
+        ) -> Result<CompiledClass, starknet_in_rust::core::errors::state_errors::StateError>
+        {
+            let class_hash = ClassHash(StarkFelt::new(*class_hash).unwrap());
+            let res = self.get_contract_class(&class_hash);
+            Ok(CompiledClass::from(res))
+        }
+
+        fn get_class_hash_at(
+            &self,
+            contract_address: &Address,
+        ) -> Result<
+            starknet_in_rust::utils::ClassHash,
+            starknet_in_rust::core::errors::state_errors::StateError,
+        > {
+            let key: u128 = contract_address.0.to_bigint().try_into().unwrap();
+            let contract_address = ContractAddress::from(key);
+            Ok(self
+                .get_class_hash_at(&contract_address)
+                .0
+                .bytes()
+                .try_into()
+                .expect("should be guaranteed since the inner is same size"))
+        }
+
+        fn get_nonce_at(
+            &self,
+            contract_address: &Address,
+        ) -> Result<cairo_vm::felt::Felt252, starknet_in_rust::core::errors::state_errors::StateError>
+        {
+            todo!()
+        }
+
+        fn get_storage_at(
+            &self,
+            storage_entry: &starknet_in_rust::state::state_cache::StorageEntry,
+        ) -> Result<cairo_vm::felt::Felt252, starknet_in_rust::core::errors::state_errors::StateError>
+        {
+            todo!()
+        }
+
+        fn get_compiled_class_hash(
+            &self,
+            class_hash: &starknet_in_rust::utils::ClassHash,
+        ) -> Result<
+            starknet_in_rust::utils::CompiledClassHash,
+            starknet_in_rust::core::errors::state_errors::StateError,
+        > {
+            todo!()
+        }
+    }
+
+    fn execute_tx_sir(
+        tx_hash: &str,
+        network: RpcChain,
+        block_number: BlockNumber,
+    ) -> TransactionExecutionInfo {
+        let tx_hash = tx_hash.strip_prefix("0x").unwrap();
+
+        // Instantiate the RPC StateReader and the CachedState
+        let rpc_reader = Arc::new(RpcState::new(network, block_number.into()));
+        let gas_price = rpc_reader.get_gas_price(block_number.0).unwrap();
+        let mut state = CachedState::new(rpc_reader.clone(), None, None);
+
+        let fee_token_address = Address(felt_str!(
+            "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            16
+        ));
+
+        let network: StarknetChainId = rpc_state.chain.into();
+        let starknet_os_config =
+            StarknetOsConfig::new(network.to_felt(), fee_token_address, gas_price);
+
+        let block_info = rpc_state.get_block_info(starknet_os_config.clone());
+
+        let block_context = BlockContext::new(
+            starknet_os_config,
+            DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT,
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            DEFAULT_INVOKE_TX_MAX_N_STEPS,
+            DEFAULT_VALIDATE_MAX_N_STEPS,
+            block_info,
+            Default::default(),
+            true,
+        );
+
+        let tx = rpc_state.get_transaction(tx_hash);
+
+        tx.execute(&mut state, &block_context, 0).unwrap()
+    }
+}
+
+#[cfg(test)]
 mod blockifier_transaction_tests {
     use blockifier::{
         block_context::BlockContext,
