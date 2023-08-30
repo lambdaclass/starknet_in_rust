@@ -136,9 +136,7 @@ impl ExecutionEntryPoint {
                 if let Some(casm_classes_cache) = &state.casm_contract_classes {
                     tmp_state = tmp_state.set_casm_classes_cache(casm_classes_cache.clone());
                 }
-                if let Some(sierra_programs_cache) = &state.sierra_programs {
-                    tmp_state = tmp_state.set_sierra_programs_cache(sierra_programs_cache.clone());
-                }
+                tmp_state = tmp_state.set_sierra_programs_cache(state.sierra_programs.clone());
                 tmp_state.cache = state.cache.clone();
 
                 match self._execute(

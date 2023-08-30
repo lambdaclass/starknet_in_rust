@@ -1,4 +1,4 @@
-use super::state_cache::StorageEntry;
+use super::{state_cache::StorageEntry, cached_state::SierraContractClass};
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
@@ -65,7 +65,7 @@ pub trait State {
     fn set_sierra_program(
         &mut self,
         compiled_class_hash: &Felt252,
-        sierra_program: Vec<BigUintAsHex>,
+        sierra_program: SierraContractClass,
     ) -> Result<(), StateError>;
 
     fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
