@@ -14,7 +14,9 @@ use crate::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::{
         cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
         state_cache::StorageEntry, BlockInfo,
@@ -149,14 +151,14 @@ pub fn create_account_tx_test_state(
                 state_reader.address_to_storage_mut().extend(stored);
             }
             for (class_hash, contract_class) in class_hash_to_class {
-                state_reader
-                    .class_hash_to_contract_class_mut()
-                    .insert(class_hash, contract_class);
+                state_reader.class_hash_to_compiled_class_mut().insert(
+                    class_hash,
+                    CompiledClass::Deprecated(Arc::new(contract_class)),
+                );
             }
             Arc::new(state_reader)
         },
-        Some(HashMap::new()),
-        Some(HashMap::new()),
+        HashMap::new(),
     );
 
     Ok((block_context, cached_state))

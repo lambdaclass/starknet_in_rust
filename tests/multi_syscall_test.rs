@@ -1,6 +1,7 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::{Num, Zero};
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -28,7 +29,7 @@ fn test_multiple_syscall() {
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -38,11 +39,7 @@ fn test_multiple_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        Arc::new(state_reader),
-        None,
-        Some(contract_class_cache.clone()),
-    );
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache.clone());
 
     // Create an execution entry point
     let calldata = [].to_vec();

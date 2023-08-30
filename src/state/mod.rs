@@ -166,7 +166,7 @@ impl StateDiff {
     where
         T: StateReader + Clone,
     {
-        let mut cache_state = CachedState::new(state_reader, None, None);
+        let mut cache_state = CachedState::new(state_reader, HashMap::new());
         let cache_storage_mapping = to_cache_state_storage_mapping(&self.storage_updates);
 
         cache_state.cache_mut().set_initial_values(
@@ -240,7 +240,7 @@ mod test {
     use crate::{
         state::in_memory_state_reader::InMemoryStateReader,
         state::{
-            cached_state::{CachedState, ContractClassCache},
+            cached_state::CachedState,
             state_api::StateReader,
             state_cache::{StateCache, StorageEntry},
         },
@@ -263,7 +263,7 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         let diff = StateDiff::from_cached_state(cached_state).unwrap();
 
@@ -323,7 +323,8 @@ mod test {
             .address_to_nonce
             .insert(contract_address.clone(), nonce);
 
-        let cached_state_original = CachedState::new(Arc::new(state_reader.clone()), None, None);
+        let cached_state_original =
+            CachedState::new(Arc::new(state_reader.clone()), HashMap::new());
 
         let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
 
@@ -370,12 +371,8 @@ mod test {
             storage_writes,
             HashMap::new(),
         );
-        let cached_state = CachedState::new_for_testing(
-            Arc::new(state_reader),
-            Some(ContractClassCache::new()),
-            cache,
-            None,
-        );
+        let cached_state =
+            CachedState::new_for_testing(Arc::new(state_reader), cache, HashMap::new());
 
         let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
 
