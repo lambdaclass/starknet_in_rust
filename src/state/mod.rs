@@ -35,7 +35,7 @@ pub struct BlockInfo {
 }
 
 impl BlockInfo {
-    pub fn empty(sequencer_address: Address) -> Self {
+    pub const fn empty(sequencer_address: Address) -> Self {
         BlockInfo {
             block_number: 0, // To do: In cairo-lang, this value is set to -1
             block_timestamp: 0,
@@ -44,7 +44,7 @@ impl BlockInfo {
         }
     }
 
-    pub fn validate_legal_progress(
+    pub const fn validate_legal_progress(
         &self,
         next_block_info: &BlockInfo,
     ) -> Result<(), TransactionError> {
@@ -102,7 +102,7 @@ impl ExecutionResourcesManager {
     }
 }
 
-#[derive(Default, Clone, PartialEq, Debug, Getters)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, Getters)]
 #[getset(get = "pub")]
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
@@ -112,7 +112,7 @@ pub struct StateDiff {
 }
 
 impl StateDiff {
-    pub fn new(
+    pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
         class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
