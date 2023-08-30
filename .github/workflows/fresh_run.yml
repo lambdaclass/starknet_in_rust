@@ -13,7 +13,7 @@ jobs:
         fail-fast: false
         matrix:
           include:
-          - os: ubuntu-22.04
+          - os: debian-12
             deps_suffix: ''
     runs-on: ${{ matrix.os }}
     name: "Make deps, build & test on fresh ${{ matrix.os }} system"
