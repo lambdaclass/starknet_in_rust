@@ -52,8 +52,7 @@ use cairo_vm::{
 use num_traits::Zero;
 use serde::de::SeqAccess;
 use serde::{de, Deserialize, Deserializer};
-use serde_json::json;
-use starknet::accounts::Execution;
+use serde_json::{json, Value};
 
 use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
@@ -86,23 +85,26 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
             where
                 A: SeqAccess<'de>,
             {
-                let gas_builtin = seq.next_element::<Option<u64>>()?.unwrap();
-                let range_check = seq.next_element::<Option<u64>>()?.unwrap();
-                let system = seq.next_element::<Option<u64>>()?.unwrap();
-                let (failure_flag_integer, return_values) = seq
-                    .next_element::<(u64, Vec<Vec<Vec<Vec<u32>>>>)>()?
-                    .unwrap();
-                let failure_flag = failure_flag_integer == 1;
+                let (mut failure_flag_integer, mut return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
+                    (0, vec![]);
+                let mut last_element: Option<Value> = None;
+                while let Some(value) = seq.next_element::<Option<Value>>()? {
+                    last_element = value;
+                }
+
+                let (mut failure_flag_integer, mut return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
+                    serde_json::from_value::<(u64, Vec<Vec<Vec<Vec<u32>>>>)>(last_element.unwrap())
+                        .unwrap();
 
                 Ok(NativeExecutionResult {
-                    gas_builtin,
-                    range_check,
-                    system,
+                    gas_builtin: None,
+                    range_check: None,
+                    system: None,
                     return_values: return_values[0][0]
                         .iter()
                         .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
                         .collect(),
-                    failure_flag: failure_flag,
+                    failure_flag: failure_flag_integer == 1,
                 })
             }
         }
@@ -206,7 +208,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
     }
 
     fn call_contract(
-        &self,
+        &mut self,
         address: cairo_vm::felt::Felt252,
         entrypoint_selector: cairo_vm::felt::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
@@ -1057,12 +1059,16 @@ impl ExecutionEntryPoint {
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
+        let contract_address = Address(1.into());
+
         let mut syscall_handler = SyscallHandler {
             starknet_storage_state: contract_storage_state,
             n_emitted_events: 0,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
             n_sent_messages: 0,
+            contract_address,
+            internal_calls: Vec::new(),
         };
         native_program
             .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler))
@@ -1089,21 +1095,50 @@ impl ExecutionEntryPoint {
             .map(|felt| felt252_bigint(felt.to_bigint()))
             .collect();
 
-        let params = json!([
-            // pedersen
-            null,
-            // range check
-            null,
-            // (),
-            // gas
-            u64::MAX,
-            // system
-            syscall_addr,
-            [
-                // Span<Array<felt>>
-                calldata
-            ]
-        ]);
+        let params = match self.entry_point_type {
+            EntryPointType::External => {
+                json!([
+                    (),
+                    // gas
+                    u64::MAX,
+                    // system
+                    syscall_addr,
+                    [
+                        // Span<Array<felt>>
+                        calldata
+                    ]
+                ])
+            }
+            EntryPointType::L1Handler => {
+                json!([
+                    (),
+                    // gas
+                    u64::MAX,
+                    // system
+                    syscall_addr,
+                    [
+                        // Span<Array<felt>>
+                        calldata
+                    ]
+                ])
+            }
+            EntryPointType::Constructor => {
+                json!([
+                    // pedersen
+                    null,
+                    // range check
+                    null,
+                    // gas
+                    u64::MAX,
+                    // system
+                    syscall_addr,
+                    [
+                        // Span<Array<felt>>
+                        calldata
+                    ]
+                ])
+            }
+        };
 
         println!("SYSCALL ADDRESS: {}", syscall_addr);
 
