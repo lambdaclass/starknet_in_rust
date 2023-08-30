@@ -492,8 +492,11 @@ impl TryFrom<starknet_api::transaction::InvokeTransaction> for InvokeFunction {
 mod tests {
     use super::*;
     use crate::{
-        services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+        services::api::contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        },
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         utils::calculate_sn_keccak,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -540,13 +543,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -609,13 +615,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -674,13 +683,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =
@@ -733,13 +745,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -798,13 +813,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =
@@ -857,13 +875,16 @@ mod tests {
             skip_nonce_check: false,
         };
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let block_context = BlockContext::default();
@@ -914,13 +935,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let mut block_context = BlockContext::default();
@@ -972,13 +996,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         internal_invoke_function
@@ -1035,13 +1062,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =
@@ -1178,13 +1208,9 @@ mod tests {
 
         let mut casm_contract_class_cache = HashMap::new();
 
-        casm_contract_class_cache.insert(class_hash, contract_class);
+        casm_contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
 
-        let mut state = CachedState::new(
-            Arc::new(state_reader),
-            None,
-            Some(casm_contract_class_cache),
-        );
+        let mut state = CachedState::new(Arc::new(state_reader), casm_contract_class_cache);
 
         let state_before_execution = state.clone();
 
