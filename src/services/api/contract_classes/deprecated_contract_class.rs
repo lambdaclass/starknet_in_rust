@@ -265,9 +265,7 @@ mod tests {
         felt::{felt_str, PRIME_STR},
         serde::deserialize_program::BuiltinName,
     };
-    use starknet_api::deprecated_contract_class::{
-        FunctionAbiEntry, FunctionAbiEntryType, FunctionAbiEntryWithType, TypedParameter,
-    };
+    use starknet_api::deprecated_contract_class::{FunctionAbiEntry, TypedParameter};
 
     #[test]
     fn deserialize_contract_class() {
@@ -333,34 +331,28 @@ mod tests {
         // This specific contract compiles with --no_debug_info
         let res = ContractClass::from_path("starknet_programs/fibonacci.json");
         let contract_class = res.expect("should be able to read file");
-
-        let expected_abi = Some(vec![ContractClassAbiEntry::Function(
-            FunctionAbiEntryWithType {
-                r#type: FunctionAbiEntryType::Function,
-                entry: FunctionAbiEntry {
-                    name: "fib".to_string(),
-                    inputs: vec![
-                        TypedParameter {
-                            name: "first_element".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                        TypedParameter {
-                            name: "second_element".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                        TypedParameter {
-                            name: "n".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                    ],
-                    outputs: vec![TypedParameter {
-                        name: "res".to_string(),
-                        r#type: "felt".to_string(),
-                    }],
-                    state_mutability: None,
+        let expected_abi = Some(vec![ContractClassAbiEntry::Function(FunctionAbiEntry {
+            name: "fib".to_string(),
+            inputs: vec![
+                TypedParameter {
+                    name: "first_element".to_string(),
+                    r#type: "felt".to_string(),
                 },
-            },
-        )]);
+                TypedParameter {
+                    name: "second_element".to_string(),
+                    r#type: "felt".to_string(),
+                },
+                TypedParameter {
+                    name: "n".to_string(),
+                    r#type: "felt".to_string(),
+                },
+            ],
+            outputs: vec![TypedParameter {
+                name: "res".to_string(),
+                r#type: "felt".to_string(),
+            }],
+            state_mutability: None,
+        })]);
         assert_eq!(contract_class.abi, expected_abi);
     }
 
