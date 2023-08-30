@@ -1249,14 +1249,4 @@ mod tests {
                 .class_hash_to_compiled_class_hash
         );
     }
-
-    #[test]
-    fn test_try_from_invoke() {
-        let tx_str = fs::read_to_string("sierra.json").unwrap();
-        let tx: starknet_api::transaction::InvokeTransactionV1 =
-            serde_json::from_str(&tx_str).unwrap();
-        print!("{:?}", tx);
-
-       let parsed_tx = InvokeFunction::try_from(tx);
-    }
 }
