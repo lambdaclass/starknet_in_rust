@@ -1047,6 +1047,7 @@ mod starknet_in_rust_transaction_tests {
         state::{
             cached_state::CachedState, state_api::StateReader, state_cache::StorageEntry, BlockInfo,
         },
+        transaction::Transaction,
         utils::{Address, ClassHash},
     };
 
@@ -1175,19 +1176,10 @@ mod starknet_in_rust_transaction_tests {
             true,
         );
 
-        // Map starknet_api transaction to blockifier's
-        let blockifier_tx = match sn_api_tx {
-            Transaction::Invoke(tx) => {
-                let invoke = InvokeTransaction { tx, tx_hash };
-                AccountTransaction::Invoke(invoke)
-            }
-            _ => unimplemented!(),
-        };
+        let tx: Transaction = rpc_reader.0.get_transaction(&tx_hash).try_into().unwrap();
 
         (
-            blockifier_tx
-                .execute(&mut state, &block_context, true, true)
-                .unwrap(),
+            tx.execute(&mut state, &block_context, true, true).unwrap(),
             trace,
             receipt,
         )
