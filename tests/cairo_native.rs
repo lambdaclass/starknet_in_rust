@@ -537,7 +537,6 @@ fn call_contract_test() {
     // Callee contract entrypoints
     let callee_entrypoints = callee_contract_class.clone().entry_points_by_type;
     let fn_selector = &callee_entrypoints.external.get(0).unwrap().selector;
-    // println!("FN SELECTOR: {}", fn_selector);
 
     // Create state reader with class hash data
     let mut sierra_contract_class_cache = HashMap::new();
@@ -580,6 +579,7 @@ fn call_contract_test() {
     let calldata = [fn_selector.into()].to_vec();
     let result = execute(
         &mut state,
+        &caller_address,
         call_contract_selector,
         &calldata,
         EntryPointType::External,
