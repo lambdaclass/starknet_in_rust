@@ -25,6 +25,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Set RUSTUP_HOME and PATH env vars
+      if: matrix.os == 'debian-12'
+      run: |
+        echo "RUSTUP_HOME=/root/.cargo" >> $GITHUB_ENV
+        echo "PATH=${PATH}:/root/.cargo/bin" >> $GITHUB_ENV
+
     - name: Install rust
       uses: dtolnay/rust-toolchain@stable
 
