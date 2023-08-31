@@ -53,6 +53,7 @@ use num_traits::Zero;
 use serde::de::SeqAccess;
 use serde::{de, Deserialize, Deserializer};
 use serde_json::{json, Value};
+use starknet_api::block;
 
 use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
@@ -136,10 +137,14 @@ where
 {
     pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
     pub(crate) contract_address: Address,
+    pub(crate) caller_address: Address,
+    pub(crate) entry_point_selector: Felt252,
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) n_emitted_events: u64,
     pub(crate) n_sent_messages: usize,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub(crate) tx_execution_context: TransactionExecutionContext,
+    pub(crate) block_context: BlockContext,
     // TODO: This may not be really needed for Cairo Native, just passing
     // it to be able to call the `execute` method of ExecutionEntrypoint.
     pub(crate) internal_calls: Vec<CallInfo>,
@@ -155,22 +160,26 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
         println!("Called `get_execution_info()` from MLIR.");
         Ok(ExecutionInfo {
             block_info: BlockInfo {
-                block_number: 1234,
-                block_timestamp: 2345,
-                sequencer_address: 3456.into(),
+                block_number: self.block_context.block_info.block_number,
+                block_timestamp: self.block_context.block_info.block_timestamp,
+                sequencer_address: self.block_context.block_info.sequencer_address.0.clone(),
             },
             tx_info: TxInfo {
-                version: 4567.into(),
-                account_contract_address: 5678.into(),
-                max_fee: 6789,
-                signature: vec![1248.into(), 2486.into()],
-                transaction_hash: 9876.into(),
-                chain_id: 8765.into(),
-                nonce: 7654.into(),
+                version: self.tx_execution_context.version.clone(),
+                account_contract_address: self
+                    .tx_execution_context
+                    .account_contract_address
+                    .0
+                    .clone(),
+                max_fee: self.tx_execution_context.max_fee,
+                signature: self.tx_execution_context.signature.clone(),
+                transaction_hash: self.tx_execution_context.transaction_hash.clone(),
+                chain_id: self.block_context.starknet_os_config.chain_id.clone(),
+                nonce: self.tx_execution_context.nonce.clone(),
             },
-            caller_address: 6543.into(),
-            contract_address: 5432.into(),
-            entry_point_selector: 4321.into(),
+            caller_address: self.caller_address.0.clone(),
+            contract_address: self.contract_address.0.clone(),
+            entry_point_selector: self.entry_point_selector.clone(),
         })
     }
 
@@ -585,7 +594,12 @@ impl ExecutionEntryPoint {
                 }
                 tmp_state.cache = state.cache.clone();
 
-                match self.native_execute(&mut tmp_state, contract_class) {
+                match self.native_execute(
+                    &mut tmp_state,
+                    contract_class,
+                    tx_execution_context,
+                    block_context,
+                ) {
                     Ok(call_info) => {
                         let state_diff = StateDiff::from_cached_state(tmp_state)?;
                         state.apply_state_update(&state_diff)?;
@@ -1028,6 +1042,8 @@ impl ExecutionEntryPoint {
         &self,
         state: &mut CachedState<S>,
         contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        tx_execution_context: &mut TransactionExecutionContext,
+        block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
         let entry_point = match self.entry_point_type {
             EntryPointType::External => contract_class
@@ -1057,16 +1073,18 @@ impl ExecutionEntryPoint {
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
-        let contract_address = Address(1.into());
-
         let mut syscall_handler = SyscallHandler {
             starknet_storage_state: contract_storage_state,
             n_emitted_events: 0,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
             n_sent_messages: 0,
-            contract_address,
+            contract_address: self.contract_address.clone(),
             internal_calls: Vec::new(),
+            caller_address: self.caller_address.clone(),
+            entry_point_selector: self.entry_point_selector.clone(),
+            tx_execution_context: tx_execution_context.clone(),
+            block_context: block_context.clone(),
         };
         native_program
             .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler))
