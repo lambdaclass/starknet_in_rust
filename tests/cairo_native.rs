@@ -323,6 +323,11 @@ fn call_contract_test() {
     let caller_entrypoints = caller_contract_class.clone().entry_points_by_type;
     let call_contract_selector = &caller_entrypoints.external.get(0).unwrap().selector;
 
+    // Callee contract entrypoints
+    let callee_entrypoints = callee_contract_class.clone().entry_points_by_type;
+    let fn_selector = &callee_entrypoints.external.get(0).unwrap().selector;
+    // println!("FN SELECTOR: {}", fn_selector);
+
     // Create state reader with class hash data
     let mut sierra_contract_class_cache = HashMap::new();
 
@@ -361,7 +366,7 @@ fn call_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader))
         .set_sierra_programs_cache(sierra_contract_class_cache);
 
-    let calldata = [1.into()].to_vec();
+    let calldata = [fn_selector.into()].to_vec();
     let result = execute(
         &mut state,
         call_contract_selector,
@@ -369,5 +374,5 @@ fn call_contract_test() {
         EntryPointType::External,
     );
 
-    println!("RETDATA: {:?}", result.retdata);
+    assert_eq!(result.retdata, [Felt252::new(44)]);
 }
