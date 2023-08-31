@@ -23,3 +23,7 @@ dotenv = "0.15.0"
 cairo-vm = "0.8.5"
 blockifier = "0.2.0-rc0"
 starknet_in_rust = { path = "../", version = "0.3.1" }
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
+test-case = "3.1.0"

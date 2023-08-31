@@ -161,7 +161,34 @@ impl RpcState {
         &self,
         params: &serde_json::Value,
     ) -> Result<T, RpcError> {
-        Self::deserialize_call(self.rpc_call_no_deserialize(params)?.into_json().unwrap())
+        #[cfg(test)]
+        {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            use std::path::Path;
+
+            let dir = Path::new("test-responses");
+            let mut hasher = DefaultHasher::new();
+            params.to_string().hash(&mut hasher);
+            let hash = hasher.finish();
+            let filename = format!("{}-{}.json", self.chain, hash);
+            let file = dir.join(filename);
+
+            if file.exists() {
+                let res = std::fs::read_to_string(file).unwrap();
+                serde_json::from_str(&res).map_err(|err| RpcError::RpcCall(err.to_string()))
+            } else {
+                let res: serde_json::Value = Self::deserialize_call(
+                    self.rpc_call_no_deserialize(params)?.into_json().unwrap(),
+                )?;
+                std::fs::write(file, res.to_string()).unwrap();
+                serde_json::from_value(res).map_err(|err| RpcError::RpcCall(err.to_string()))
+            }
+        }
+        #[cfg(not(test))]
+        {
+            Self::deserialize_call(self.rpc_call_no_deserialize(params)?.into_json().unwrap())
+        }
     }
 
     fn rpc_call_no_deserialize(
@@ -669,7 +696,7 @@ mod tests {
 
         assert!(parsed.is_ok());
     }
-    
+
     #[test]
     fn test_get_block_info() {
         let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
@@ -1212,7 +1239,9 @@ mod starknet_in_rust_transaction_tests {
 
     #[cfg(test)]
     mod test {
+        use pretty_assertions::assert_eq;
         use starknet_in_rust::execution::CallInfo;
+        use test_case::test_case;
 
         use super::*;
 
@@ -1225,13 +1254,48 @@ mod starknet_in_rust_transaction_tests {
             assert_eq!(price, 22804578690);
         }
 
-        #[test]
-        //#[ignore = "working on fixes"]
-        fn test_recent_tx() {
+        #[test_case(
+            "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955",
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c",
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x00eef6ba6741da8769192fac9d28c6631cf66f9e7c4e880b886ef6a2e550e4e2",
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x05649d037b60c0c83b16151dbf03ea0d8b5e035074c522976fe25e66477830fc",
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x0467d18b6dd5af4b552cf0ed38a69c302ecb9a030187ced79b33bfa366f46ed9",
+            RpcChain::MainNet
+        )]
+        fn test_case_tx(hash: &str, chain: RpcChain) {
+            // use latest block as placeholder, it doesn't really matter because we fetch the block from the tx receipt.
+            // should the rpc state hold a block value?
+            let rpc_state = RpcState::new(chain, BlockValue::Tag(BlockTag::Latest));
+
+            let tx_hash = hash.strip_prefix("0x").unwrap();
+            let tx_hash = TransactionHash(stark_felt!(tx_hash));
+            // we can get the block number of this tx with the receipt endpoint.
+            let tx_receipt = rpc_state.get_transaction_receipt(&tx_hash);
+
             let (tx_info, trace, receipt) = execute_tx(
-                "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+                hash,
                 RpcChain::MainNet,
-                BlockNumber(169928),
+                BlockNumber(tx_receipt.block_number),
             );
 
             let TransactionExecutionInfo {
