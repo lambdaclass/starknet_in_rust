@@ -63,12 +63,3 @@ jobs:
             FAILED_TARGET=test
         fi
         echo "FAILED_TARGET=$FAILED_TARGET" >> $GITHUB_ENV
-    - name: Create Issue
-      if: ${{ failure() }}
-      uses: JasonEtco/create-an-issue@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        OS: ${{ matrix.os}}
-        COMMIT_SHA: ${{ github.sha }}
-      with:
-        filename: .github/issue_template/fresh_run_failure.md
