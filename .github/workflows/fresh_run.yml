@@ -3,9 +3,11 @@ name: Install dependencies, build the project and run tests from zero
 on:
   merge_group:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ '**' ]
+    branches:
+      - '**'
 
 jobs:
   fresh_run:
