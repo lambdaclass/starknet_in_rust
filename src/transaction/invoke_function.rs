@@ -315,7 +315,6 @@ impl InvokeFunction {
         } else {
             state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
         }
-        // TODO: add balance not enough case.
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;

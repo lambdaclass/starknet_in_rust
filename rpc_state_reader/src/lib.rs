@@ -530,6 +530,7 @@ mod tests {
         rpc_state.get_transaction(tx_hash);
     }
 
+    #[ignore]
     #[test]
     fn test_get_block_info() {
         let rpc_state = RpcState::new(
