@@ -18,7 +18,7 @@ jobs:
           include:
           - os: debian-12
             deps_suffix: ''
-          - os: macos-12
+          - os: macOS
             deps_suffix: '-macos' 
     runs-on: ${{ matrix.os }}
     name: "Make deps, build & test on fresh ${{ matrix.os }} system"
