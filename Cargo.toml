@@ -60,6 +60,7 @@ serde_json_pythonic = { git = "https://github.com/xJonathanLEI/serde_json_python
 [dev-dependencies]
 assert_matches = "1.5.0"
 coverage-helper = "0.1.0"
+lru = "0.11.0"
 
 [[bench]]
 path = "bench/internals.rs"

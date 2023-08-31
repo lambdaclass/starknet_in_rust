@@ -14,7 +14,7 @@ use crate::{
     },
     state::{
         cached_state::CachedState,
-        contract_class_cache::PermanentContractClassCache,
+        contract_class_cache::ContractClassCache,
         state_api::{State, StateReader},
     },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
@@ -25,28 +25,30 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
-pub struct StarknetState {
-    pub state: CachedState<InMemoryStateReader, PermanentContractClassCache>,
+pub struct StarknetState<C>
+where
+    C: ContractClassCache,
+{
+    pub state: CachedState<InMemoryStateReader, C>,
     pub(crate) block_context: BlockContext,
     l2_to_l1_messages: HashMap<Vec<u8>, usize>,
     l2_to_l1_messages_log: Vec<StarknetMessageToL1>,
     events: Vec<Event>,
 }
 
-impl StarknetState {
-    pub fn new(context: Option<BlockContext>) -> Self {
+impl<C> StarknetState<C>
+where
+    C: ContractClassCache,
+{
+    pub fn new(context: Option<BlockContext>, contract_cache: Arc<C>) -> Self {
         let block_context = context.unwrap_or_default();
         let state_reader = Arc::new(InMemoryStateReader::default());
 
-        let state = CachedState::new(
-            state_reader,
-            Arc::new(PermanentContractClassCache::default()),
-        );
+        let state = CachedState::new(state_reader, contract_cache);
 
         let l2_to_l1_messages = HashMap::new();
         let l2_to_l1_messages_log = Vec::new();
@@ -63,7 +65,7 @@ impl StarknetState {
 
     pub fn new_with_states(
         block_context: Option<BlockContext>,
-        state: CachedState<InMemoryStateReader, PermanentContractClassCache>,
+        state: CachedState<InMemoryStateReader, C>,
     ) -> Self {
         let block_context = block_context.unwrap_or_default();
         let l2_to_l1_messages = HashMap::new();
@@ -339,13 +341,17 @@ mod tests {
         execution::{CallType, OrderedL2ToL1Message},
         hash_utils::calculate_contract_address,
         services::api::contract_classes::compiled_class::CompiledClass,
-        state::{contract_class_cache::ContractClassCache, state_cache::StorageEntry},
+        state::{
+            contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+            state_cache::StorageEntry,
+        },
         utils::{calculate_sn_keccak, felt_to_hash},
     };
 
     #[test]
     fn test_deploy() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut starknet_state =
+            StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
 
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
 
@@ -460,7 +466,8 @@ mod tests {
         //*    Create starknet state with previous data
         //* --------------------------------------------
 
-        let mut starknet_state = StarknetState::new(None);
+        let mut starknet_state =
+            StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
 
         starknet_state.state = state;
         starknet_state
@@ -531,7 +538,8 @@ mod tests {
         // 1) deploy fibonacci
         // 2) invoke call over fibonacci
 
-        let mut starknet_state = StarknetState::new(None);
+        let mut starknet_state =
+            StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let contract_address_salt: Felt252 = 1.into();
@@ -621,7 +629,8 @@ mod tests {
 
     #[test]
     fn test_execute_entry_point_raw() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut starknet_state =
+            StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
         let path = PathBuf::from("starknet_programs/fibonacci.json");
         let contract_class = ContractClass::from_path(path).unwrap();
         let contract_address_salt = 1.into();
@@ -646,7 +655,8 @@ mod tests {
 
     #[test]
     fn test_add_messages_and_events() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut starknet_state =
+            StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
         let test_msg_1 = OrderedL2ToL1Message {
             order: 0,
             to_address: Address(0.into()),
@@ -676,7 +686,8 @@ mod tests {
 
     #[test]
     fn test_consume_message_hash() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut starknet_state =
+            StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
         let test_msg_1 = OrderedL2ToL1Message {
             order: 0,
             to_address: Address(0.into()),
@@ -709,7 +720,8 @@ mod tests {
 
     #[test]
     fn test_consume_message_hash_twice_should_fail() {
-        let mut starknet_state = StarknetState::new(None);
+        let mut starknet_state =
+            StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
         let test_msg = OrderedL2ToL1Message {
             order: 0,
             to_address: Address(0.into()),

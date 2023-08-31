@@ -12,10 +12,11 @@
 use cairo_vm::felt::Felt252;
 use starknet_in_rust::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::contract_class_cache::PermanentContractClassCache,
     testing::state::StarknetState,
     utils::{calculate_sn_keccak, Address},
 };
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 fn main() {
     // replace this with the path to your compiled contract
@@ -47,7 +48,7 @@ fn test_contract(
     //* --------------------------------------------
     //*             Initialize state
     //* --------------------------------------------
-    let mut state = StarknetState::new(None);
+    let mut state = StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
 
     //* --------------------------------------------
     //*          Read contract from file

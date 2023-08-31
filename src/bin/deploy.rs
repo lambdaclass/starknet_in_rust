@@ -1,11 +1,12 @@
 use lazy_static::lazy_static;
 use starknet_in_rust::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::state::StarknetState,
+    state::contract_class_cache::PermanentContractClassCache, testing::state::StarknetState,
 };
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
+use std::sync::Arc;
 
 #[cfg(feature = "with_mimalloc")]
 #[global_allocator]
@@ -20,7 +21,8 @@ lazy_static! {
 
 fn main() {
     const RUNS: usize = 100;
-    let mut starknet_state = StarknetState::new(None);
+    let mut starknet_state =
+        StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
 
     for n in 0..RUNS {
         let contract_address_salt = n.into();
