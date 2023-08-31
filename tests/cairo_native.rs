@@ -3,6 +3,7 @@
 
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use num_bigint::BigUint;
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::EntryPointType;
@@ -135,11 +136,6 @@ fn integration_test() {
 
 #[test]
 fn integration_test_erc20() {
-    // ----------------------------- //
-    // CHANGE FOR CAIRO NATIVE USAGE //
-    // ----------------------------- //
-    let use_native = true;
-
     let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
             std::fs::read_to_string("starknet_programs/cairo2/erc20.sierra")
@@ -171,46 +167,21 @@ fn integration_test_erc20() {
     let mut state = CachedState::new(Arc::new(state_reader))
         .set_sierra_programs_cache(sierra_contract_class_cache);
 
-    // Dummy calldata
+    /*
+        1 recipient
+        2 name
+        3 decimals
+        4 initial_supply
+        5 symbol
+    */
     let calldata = [1.into(), 2.into(), 3.into(), 4.into(), 5.into()].to_vec();
-    let caller_address = Address(0000.into());
-    let exec_entry_point = ExecutionEntryPoint::new(
-        address,
-        calldata.clone(),
-        Felt252::new(constructor_entry_point_selector.clone()),
-        caller_address,
+
+    let result = execute(
+        &mut state,
+        constructor_entry_point_selector,
+        &calldata,
         EntryPointType::Constructor,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        u128::MAX,
     );
-
-    // Execute the entrypoint
-    let block_context = BlockContext::default();
-    let mut tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
-        use_native,
-    );
-    let mut resources_manager = ExecutionResourcesManager::default();
-
-    let result = exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap()
-        .call_info
-        .unwrap();
 
     assert_eq!(result.caller_address, Address(0.into()));
     assert_eq!(result.call_type, Some(CallType::Delegate));
@@ -226,20 +197,72 @@ fn integration_test_erc20() {
     assert_eq!(result.class_hash, Some(class_hash));
     assert_eq!(result.gas_consumed, 0);
 
-    let get_name_entry_point_selector = &entrypoints.external.get(1).unwrap().selector;
+    let get_decimals_entry_point_selector = &entrypoints.external.get(1).unwrap().selector;
+    let calldata = [].to_vec();
 
+    let result = execute(
+        &mut state,
+        get_decimals_entry_point_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert_eq!(result.caller_address, Address(0.into()));
+    assert_eq!(result.call_type, Some(CallType::Delegate));
+    assert_eq!(result.contract_address, Address(1111.into()));
+    assert_eq!(
+        result.entry_point_selector,
+        Some(Felt252::new(get_decimals_entry_point_selector))
+    );
+    assert_eq!(result.entry_point_type, Some(EntryPointType::External));
+    assert_eq!(result.calldata, calldata);
+    assert_eq!(result.retdata, [3.into()].to_vec());
+    assert_eq!(result.execution_resources, None);
+    assert_eq!(result.class_hash, Some(class_hash));
+    assert_eq!(result.gas_consumed, 0);
+
+    let allowance_entry_point_selector = &entrypoints.external.get(3).unwrap().selector;
+    let calldata = [1.into(), 1.into()].to_vec();
+
+    let result = execute(
+        &mut state,
+        allowance_entry_point_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert_eq!(result.caller_address, Address(0.into()));
+    assert_eq!(result.call_type, Some(CallType::Delegate));
+    assert_eq!(result.contract_address, Address(1111.into()));
+    assert_eq!(
+        result.entry_point_selector,
+        Some(Felt252::new(allowance_entry_point_selector))
+    );
+    assert_eq!(result.entry_point_type, Some(EntryPointType::External));
+    assert_eq!(result.calldata, calldata);
+    assert_eq!(result.retdata, [0.into()].to_vec());
+    assert_eq!(result.execution_resources, None);
+    assert_eq!(result.class_hash, Some(class_hash));
+    assert_eq!(result.gas_consumed, 0);
+}
+
+fn execute(
+    state: &mut CachedState<InMemoryStateReader>,
+    selector: &BigUint,
+    calldata: &[Felt252],
+    entrypoint_type: EntryPointType,
+) -> CallInfo {
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
 
     // Dummy calldata
-    let calldata = [].to_vec();
     let caller_address = Address(0000.into());
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
-        calldata.clone(),
-        Felt252::new(get_name_entry_point_selector.clone()),
+        calldata.to_vec(),
+        Felt252::new(selector),
         caller_address,
-        EntryPointType::External,
+        entrypoint_type,
         Some(CallType::Delegate),
         Some(class_hash),
         u128::MAX,
@@ -255,13 +278,13 @@ fn integration_test_erc20() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        use_native,
+        true,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let result = exec_entry_point
+    exec_entry_point
         .execute(
-            &mut state,
+            state,
             &block_context,
             &mut resources_manager,
             &mut tx_execution_context,
@@ -270,21 +293,7 @@ fn integration_test_erc20() {
         )
         .unwrap()
         .call_info
-        .unwrap();
-
-    assert_eq!(result.caller_address, Address(0.into()));
-    assert_eq!(result.call_type, Some(CallType::Delegate));
-    assert_eq!(result.contract_address, Address(1111.into()));
-    assert_eq!(
-        result.entry_point_selector,
-        Some(Felt252::new(get_name_entry_point_selector))
-    );
-    assert_eq!(result.entry_point_type, Some(EntryPointType::External));
-    assert_eq!(result.calldata, calldata);
-    assert_eq!(result.retdata, [12345.into()].to_vec());
-    assert_eq!(result.execution_resources, None);
-    assert_eq!(result.class_hash, Some(class_hash));
-    assert_eq!(result.gas_consumed, 0);
+        .unwrap()
 }
 
 #[test]
