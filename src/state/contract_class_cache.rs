@@ -1,11 +1,31 @@
+//! # Contract cache system
+//!
+//! The contract caches allow the application to keep some contracts within itself, providing them
+//! efficiently when they are needed.
+//!
+//! The trait `ContractClassCache` provides methods for retrieving and inserting elements into the
+//! cache. It also contains a method to extend the shared cache from an iterator so that it can be
+//! used with the private caches.
+//!
+//! TODO: Right now, it's impossible to implement the issue's `merge_caches` because
+//!   `ContractClassCache::extend` will be called already with the write lock in place. To solve
+//!   this, the lock may be pushed into the cache, but the methods will not be able to have
+//!   `&mut self` as the object.
+
 use crate::{services::api::contract_classes::compiled_class::CompiledClass, utils::ClassHash};
 use std::collections::HashMap;
 
+/// The contract class cache trait, which must be implemented by all caches.
 pub trait ContractClassCache {
+    /// Provides the stored contract class associated with a specific class hash, or `None` if not
+    /// present.
     fn get_contract_class(&self, class_hash: ClassHash) -> Option<CompiledClass>;
+    /// Inserts or replaces a contract class associated with a specific class hash.
     fn set_contract_class(&mut self, class_hash: ClassHash, compiled_class: CompiledClass);
 
-    fn merge_with<I>(&mut self, other: I)
+    /// Performs a bulk insert of contract classes from an iterator over pairs of the class hash and
+    /// its contract class.
+    fn extend<I>(&mut self, other: I)
     where
         I: IntoIterator<Item = (ClassHash, CompiledClass)>;
 }
@@ -44,6 +64,8 @@ pub trait ContractClassCache {
 //     state.contract_class_cache_private
 // }
 
+/// A contract class cache which stores nothing. In other words, using this as a cache means there's
+/// effectively no cache.
 #[derive(Clone, Copy, Debug, Default, Hash)]
 pub struct NullContractClassCache;
 
@@ -56,7 +78,7 @@ impl ContractClassCache for NullContractClassCache {
         // Nothing needs to be done here.
     }
 
-    fn merge_with<I>(&mut self, _other: I)
+    fn extend<I>(&mut self, _other: I)
     where
         I: IntoIterator<Item = (ClassHash, CompiledClass)>,
     {
@@ -64,6 +86,8 @@ impl ContractClassCache for NullContractClassCache {
     }
 }
 
+/// A contract class cache which stores everything. This cache is useful for testing but will
+/// probably end up taking all the memory available if the application is long running.
 #[derive(Clone, Debug, Default)]
 pub struct PermanentContractClassCache {
     storage: HashMap<ClassHash, CompiledClass>,
@@ -78,7 +102,7 @@ impl ContractClassCache for PermanentContractClassCache {
         self.storage.insert(class_hash, compiled_class);
     }
 
-    fn merge_with<I>(&mut self, other: I)
+    fn extend<I>(&mut self, other: I)
     where
         I: IntoIterator<Item = (ClassHash, CompiledClass)>,
     {
