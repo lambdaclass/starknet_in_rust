@@ -195,7 +195,7 @@ fn integration_test_erc20() {
 
     assert_eq!(result.caller_address, caller_address);
     assert_eq!(result.call_type, Some(CallType::Delegate));
-    assert_eq!(result.contract_address, Address(1111.into()));
+    assert_eq!(result.contract_address, Address(1112.into()));
     assert_eq!(
         result.entry_point_selector,
         Some(Felt252::new(constructor_entry_point_selector))
