@@ -383,9 +383,54 @@ impl DeployAccount {
     }
 }
 
+// ----------------------------------
+//      Try from starknet api
+// ----------------------------------
+
+impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
+    type Error = SyscallHandlerError;
+
+    fn try_from(
+        value: starknet_api::transaction::DeployAccountTransaction,
+    ) -> Result<Self, SyscallHandlerError> {
+        let max_fee = value.max_fee.0;
+        let version = Felt252::from_bytes_be(value.version.0.bytes());
+        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
+        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
+
+        let signature = value
+            .signature
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect();
+        let constructor_calldata = value
+            .constructor_calldata
+            .0
+            .as_ref()
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect();
+
+        let chain_id = Felt252::zero();
+
+        DeployAccount::new(
+            class_hash,
+            max_fee,
+            version,
+            nonce,
+            constructor_calldata,
+            signature,
+            contract_address_salt,
+            chain_id,
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, sync::Arc};
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     use super::*;
     use crate::{
@@ -406,11 +451,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut _state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut _state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -442,11 +483,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -473,7 +510,9 @@ mod tests {
         .unwrap();
 
         let class_hash = internal_deploy.class_hash();
-        state.set_contract_class(class_hash, &contract).unwrap();
+        state
+            .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
+            .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
         assert_matches!(
             internal_deploy_error
@@ -494,11 +533,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -513,7 +548,9 @@ mod tests {
         .unwrap();
 
         let class_hash = internal_deploy.class_hash();
-        state.set_contract_class(class_hash, &contract).unwrap();
+        state
+            .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
+            .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
     }
 }

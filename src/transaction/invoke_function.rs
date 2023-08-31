@@ -20,7 +20,7 @@ use crate::{
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 
 use super::{fee::charge_fee, Transaction};
 
@@ -397,12 +397,106 @@ pub(crate) fn preprocess_invoke_function_fields(
     }
 }
 
+// ----------------------------------
+//      Try from starknet api
+// ----------------------------------
+
+fn convert_invoke_v0(
+    value: starknet_api::transaction::InvokeTransactionV0,
+) -> Result<InvokeFunction, TransactionError> {
+    let contract_address = Address(Felt252::from_bytes_be(
+        value.contract_address.0.key().bytes(),
+    ));
+    let max_fee = value.max_fee.0;
+    let entry_point_selector = Felt252::from_bytes_be(value.entry_point_selector.0.bytes());
+    let version = Felt252::zero();
+    let nonce = None;
+    let chain_id = Felt252::zero();
+
+    let signature = value
+        .signature
+        .0
+        .iter()
+        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .collect();
+    let calldata = value
+        .calldata
+        .0
+        .as_ref()
+        .iter()
+        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .collect();
+
+    InvokeFunction::new(
+        contract_address,
+        entry_point_selector,
+        max_fee,
+        version,
+        calldata,
+        signature,
+        chain_id,
+        nonce,
+    )
+}
+
+fn convert_invoke_v1(
+    value: starknet_api::transaction::InvokeTransactionV1,
+) -> Result<InvokeFunction, TransactionError> {
+    let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
+    let max_fee = value.max_fee.0;
+    let version = Felt252::one();
+    let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+    let chain_id = Felt252::zero();
+    let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+
+    let signature = value
+        .signature
+        .0
+        .iter()
+        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .collect();
+    let calldata = value
+        .calldata
+        .0
+        .as_ref()
+        .iter()
+        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .collect();
+
+    InvokeFunction::new(
+        contract_address,
+        entry_point_selector,
+        max_fee,
+        version,
+        calldata,
+        signature,
+        chain_id,
+        Some(nonce),
+    )
+}
+
+impl TryFrom<starknet_api::transaction::InvokeTransaction> for InvokeFunction {
+    type Error = TransactionError;
+
+    fn try_from(
+        value: starknet_api::transaction::InvokeTransaction,
+    ) -> Result<Self, TransactionError> {
+        match value {
+            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0),
+            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+        services::api::contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        },
+        state::cached_state::CachedState,
+        state::in_memory_state_reader::InMemoryStateReader,
         utils::calculate_sn_keccak,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -449,13 +543,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -518,13 +615,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -583,13 +683,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =
@@ -642,13 +745,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let result = internal_invoke_function
@@ -707,13 +813,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =
@@ -766,13 +875,16 @@ mod tests {
             skip_nonce_check: false,
         };
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let block_context = BlockContext::default();
@@ -823,13 +935,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let mut block_context = BlockContext::default();
@@ -881,13 +996,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         internal_invoke_function
@@ -944,13 +1062,16 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let expected_error =
@@ -1087,13 +1208,9 @@ mod tests {
 
         let mut casm_contract_class_cache = HashMap::new();
 
-        casm_contract_class_cache.insert(class_hash, contract_class);
+        casm_contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
 
-        let mut state = CachedState::new(
-            Arc::new(state_reader),
-            None,
-            Some(casm_contract_class_cache),
-        );
+        let mut state = CachedState::new(Arc::new(state_reader), casm_contract_class_cache);
 
         let state_before_execution = state.clone();
 
