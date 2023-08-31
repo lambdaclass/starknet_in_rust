@@ -1145,33 +1145,36 @@ impl ExecutionEntryPoint {
             .unwrap();
 
         let result: String = String::from_utf8(writer).unwrap();
-        let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
+        // let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
+        let value = serde_json::from_str::<Value>(&result).unwrap();
+        println!("RETURN VALUES: {}", value);
+        todo!();
 
-        return Ok(CallInfo {
-            caller_address: self.caller_address.clone(),
-            call_type: Some(self.call_type.clone()),
-            contract_address: self.contract_address.clone(),
-            code_address: self.code_address.clone(),
-            class_hash: Some(
-                self.get_code_class_hash(syscall_handler.starknet_storage_state.state)?,
-            ),
-            entry_point_selector: Some(self.entry_point_selector.clone()),
-            entry_point_type: Some(self.entry_point_type),
-            calldata: self.calldata.clone(),
-            retdata: value.return_values,
-            execution_resources: None,
-            events: syscall_handler.events,
-            storage_read_values: syscall_handler.starknet_storage_state.read_values,
-            accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
-            failure_flag: value.failure_flag,
-            l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
+        // return Ok(CallInfo {
+        //     caller_address: self.caller_address.clone(),
+        //     call_type: Some(self.call_type.clone()),
+        //     contract_address: self.contract_address.clone(),
+        //     code_address: self.code_address.clone(),
+        //     class_hash: Some(
+        //         self.get_code_class_hash(syscall_handler.starknet_storage_state.state)?,
+        //     ),
+        //     entry_point_selector: Some(self.entry_point_selector.clone()),
+        //     entry_point_type: Some(self.entry_point_type),
+        //     calldata: self.calldata.clone(),
+        //     retdata: value.return_values,
+        //     execution_resources: None,
+        //     events: syscall_handler.events,
+        //     storage_read_values: syscall_handler.starknet_storage_state.read_values,
+        //     accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
+        //     failure_flag: value.failure_flag,
+        //     l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
 
-            // TODO
-            internal_calls: vec![],
+        //     // TODO
+        //     internal_calls: vec![],
 
-            // TODO
-            gas_consumed: 0,
-        });
+        //     // TODO
+        //     gas_consumed: 0,
+        // });
     }
 }
 
