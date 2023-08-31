@@ -54,7 +54,7 @@ use starknet_in_rust::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
@@ -200,7 +200,7 @@ fn create_account_tx_test_state() -> Result<
             }
             Arc::new(state_reader)
         },
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     Ok((block_context, cached_state))
@@ -211,7 +211,7 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader, PermanentContr
 
     CachedState::new(
         Arc::new(in_memory_state_reader),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     )
 }
 
@@ -243,7 +243,7 @@ fn expected_state_after_tx(
     CachedState::new_for_testing(
         Arc::new(in_memory_state_reader),
         state_cache_after_invoke_tx(fee),
-        Arc::new(RwLock::new(contract_classes_cache)),
+        Arc::new(contract_classes_cache),
     )
 }
 
@@ -534,13 +534,10 @@ fn test_create_account_tx_test_state() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        (&*state.contract_class_cache().read().unwrap())
+        (&*state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>(),
-        (&*expected_initial_state
-            .contract_class_cache()
-            .read()
-            .unwrap())
+        (&*expected_initial_state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>()
     );
@@ -887,13 +884,10 @@ fn test_declare_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        (&*state.contract_class_cache().read().unwrap())
+        (&*state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>(),
-        (&*expected_initial_state
-            .contract_class_cache()
-            .read()
-            .unwrap())
+        (&*expected_initial_state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>()
     );
@@ -978,13 +972,10 @@ fn test_declarev2_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        (&*state.contract_class_cache().read().unwrap())
+        (&*state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>(),
-        (&*expected_initial_state
-            .contract_class_cache()
-            .read()
-            .unwrap())
+        (&*expected_initial_state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>()
     );
@@ -1327,13 +1318,10 @@ fn test_invoke_tx_state() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        (&*state.contract_class_cache().read().unwrap())
+        (&*state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>(),
-        (&*expected_initial_state
-            .contract_class_cache()
-            .read()
-            .unwrap())
+        (&*expected_initial_state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>()
     );
@@ -1407,13 +1395,10 @@ fn test_invoke_with_declarev2_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        (&*state.contract_class_cache().read().unwrap())
+        (&*state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>(),
-        (&*expected_initial_state
-            .contract_class_cache()
-            .read()
-            .unwrap())
+        (&*expected_initial_state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>()
     );
@@ -1512,10 +1497,10 @@ fn test_deploy_account() {
 
     assert_eq!(&state.cache(), &state_before.cache());
     assert_eq!(
-        (&*state.contract_class_cache().read().unwrap())
+        (&*state.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>(),
-        (&*state_before.contract_class_cache().read().unwrap())
+        (&*state_before.contract_class_cache().clone())
             .into_iter()
             .collect::<Vec<_>>()
     );
@@ -1641,7 +1626,7 @@ fn expected_deploy_account_states() -> (
             ]),
             HashMap::new(),
         )),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     state_before.set_storage_at(
         &(
@@ -1655,8 +1640,7 @@ fn expected_deploy_account_states() -> (
 
     // Make the contract cache independent (otherwise tests will fail because the initial state's
     // cache will not be empty anymore).
-    *state_after.contract_class_cache_mut() =
-        Arc::new(RwLock::new(PermanentContractClassCache::default()));
+    *state_after.contract_class_cache_mut() = Arc::new(PermanentContractClassCache::default());
 
     state_after.cache_mut().nonce_initial_values_mut().insert(
         Address(felt_str!(

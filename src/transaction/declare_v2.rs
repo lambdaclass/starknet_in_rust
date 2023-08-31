@@ -470,12 +470,7 @@ mod tests {
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
     use num_traits::{One, Zero};
-    use std::{
-        fs::File,
-        io::BufReader,
-        path::PathBuf,
-        sync::{Arc, RwLock},
-    };
+    use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
     #[test]
     fn create_declare_v2_without_casm_contract_class_test() {
@@ -521,10 +516,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(
-            state_reader,
-            Arc::new(RwLock::new(casm_contract_class_cache)),
-        );
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
         assert!(internal_declare
@@ -593,10 +585,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(
-            state_reader,
-            Arc::new(RwLock::new(casm_contract_class_cache)),
-        );
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
         assert!(internal_declare
@@ -667,10 +656,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(
-            state_reader,
-            Arc::new(RwLock::new(casm_contract_class_cache)),
-        );
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
         assert!(internal_declare
@@ -739,10 +725,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(
-            state_reader,
-            Arc::new(RwLock::new(casm_contract_class_cache)),
-        );
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
         assert!(internal_declare
@@ -812,10 +795,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(
-            state_reader,
-            Arc::new(RwLock::new(casm_contract_class_cache)),
-        );
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         let expected_err = format!(
             "Invalid compiled class, expected class hash: {}, but received: {}",

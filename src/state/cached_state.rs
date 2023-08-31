@@ -15,7 +15,7 @@ use num_traits::Zero;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
@@ -28,13 +28,13 @@ pub struct CachedState<T: StateReader, C: ContractClassCache> {
     pub(crate) cache: StateCache,
 
     #[getset(get = "pub", get_mut = "pub")]
-    pub(crate) contract_class_cache: Arc<RwLock<C>>,
+    pub(crate) contract_class_cache: Arc<C>,
     pub(crate) contract_class_cache_private: RefCell<HashMap<ClassHash, CompiledClass>>,
 }
 
 impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
     /// Constructor, creates a new cached state.
-    pub fn new(state_reader: Arc<T>, contract_classes: Arc<RwLock<C>>) -> Self {
+    pub fn new(state_reader: Arc<T>, contract_classes: Arc<C>) -> Self {
         Self {
             cache: StateCache::default(),
             state_reader,
@@ -47,7 +47,7 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
     pub fn new_for_testing(
         state_reader: Arc<T>,
         cache: StateCache,
-        contract_classes: Arc<RwLock<C>>,
+        contract_classes: Arc<C>,
     ) -> Self {
         Self {
             cache,
@@ -147,11 +147,8 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
         let mut private_cache = self.contract_class_cache_private.borrow_mut();
         if let Some(compiled_class) = private_cache.get(class_hash) {
             return Ok(compiled_class.clone());
-        } else if let Some(compiled_class) = self
-            .contract_class_cache
-            .read()
-            .unwrap()
-            .get_contract_class(*class_hash)
+        } else if let Some(compiled_class) =
+            self.contract_class_cache().get_contract_class(*class_hash)
         {
             private_cache.insert(*class_hash, compiled_class.clone());
             return Ok(compiled_class);
@@ -168,9 +165,7 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
             {
                 return Ok(casm_class.clone());
             } else if let Some(casm_class) = self
-                .contract_class_cache
-                .read()
-                .unwrap()
+                .contract_class_cache()
                 .get_contract_class(*compiled_class_hash)
             {
                 self.contract_class_cache_private
@@ -401,11 +396,8 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         // deprecated contract classes dont have compiled class hashes, so we only have one case
         if let Some(compiled_class) = self.contract_class_cache_private.get_mut().get(class_hash) {
             return Ok(compiled_class.clone());
-        } else if let Some(compiled_class) = self
-            .contract_class_cache
-            .read()
-            .unwrap()
-            .get_contract_class(*class_hash)
+        } else if let Some(compiled_class) =
+            self.contract_class_cache().get_contract_class(*class_hash)
         {
             self.contract_class_cache_private
                 .get_mut()
@@ -424,9 +416,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             {
                 return Ok(casm_class.clone());
             } else if let Some(casm_class) = self
-                .contract_class_cache
-                .read()
-                .unwrap()
+                .contract_class_cache()
                 .get_contract_class(*compiled_class_hash)
             {
                 self.contract_class_cache_private
@@ -498,7 +488,7 @@ mod tests {
 
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         assert_eq!(
@@ -533,7 +523,7 @@ mod tests {
 
         let cached_state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         assert_eq!(
@@ -550,7 +540,7 @@ mod tests {
     fn cached_state_storage_test() {
         let mut cached_state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let storage_entry: StorageEntry = (Address(31.into()), [0; 32]);
@@ -575,7 +565,7 @@ mod tests {
 
         let mut cached_state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         assert!(cached_state
@@ -594,7 +584,7 @@ mod tests {
 
         let mut cached_state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         // set storage_key
@@ -628,7 +618,7 @@ mod tests {
 
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let result = cached_state
@@ -656,7 +646,7 @@ mod tests {
 
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         cached_state
@@ -687,7 +677,7 @@ mod tests {
 
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         cached_state
@@ -719,7 +709,7 @@ mod tests {
 
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let state_diff = StateDiff {
@@ -757,7 +747,7 @@ mod tests {
         let state_reader = InMemoryStateReader::default();
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let address_one = Address(1.into());

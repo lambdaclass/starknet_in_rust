@@ -12,10 +12,7 @@ use crate::{
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use getset::Getters;
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, sync::Arc};
 
 pub mod cached_state;
 pub mod contract_class_cache;
@@ -168,7 +165,7 @@ impl StateDiff {
     pub fn to_cached_state<T, C>(
         &self,
         state_reader: Arc<T>,
-        contract_class_cache: Arc<RwLock<C>>,
+        contract_class_cache: Arc<C>,
     ) -> Result<CachedState<T, C>, StateError>
     where
         T: StateReader + Clone,
@@ -254,10 +251,7 @@ mod test {
         utils::Address,
     };
     use cairo_vm::felt::Felt252;
-    use std::{
-        collections::HashMap,
-        sync::{Arc, RwLock},
-    };
+    use std::{collections::HashMap, sync::Arc};
 
     #[test]
     fn test_from_cached_state_without_updates() {
@@ -276,7 +270,7 @@ mod test {
 
         let cached_state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let diff = StateDiff::from_cached_state(cached_state).unwrap();
@@ -339,7 +333,7 @@ mod test {
 
         let cached_state_original = CachedState::new(
             Arc::new(state_reader.clone()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
@@ -347,15 +341,15 @@ mod test {
         let cached_state = diff
             .to_cached_state::<_, PermanentContractClassCache>(
                 Arc::new(state_reader),
-                Arc::new(RwLock::new(PermanentContractClassCache::default())),
+                Arc::new(PermanentContractClassCache::default()),
             )
             .unwrap();
 
         assert_eq!(
-            (&*cached_state_original.contract_class_cache().read().unwrap())
+            (&*cached_state_original.contract_class_cache().clone())
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
-            (&*cached_state.contract_class_cache().read().unwrap())
+            (&*cached_state.contract_class_cache().clone())
                 .into_iter()
                 .collect::<HashMap<_, _>>()
         );
@@ -399,7 +393,7 @@ mod test {
         let cached_state = CachedState::new_for_testing(
             Arc::new(state_reader),
             cache,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let mut diff = StateDiff::from_cached_state(cached_state).unwrap();

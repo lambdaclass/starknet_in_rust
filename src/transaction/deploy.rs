@@ -314,10 +314,7 @@ mod tests {
         },
         utils::calculate_sn_keccak,
     };
-    use std::{
-        collections::HashMap,
-        sync::{Arc, RwLock},
-    };
+    use std::{collections::HashMap, sync::Arc};
 
     #[test]
     fn invoke_constructor_test() {
@@ -325,7 +322,7 @@ mod tests {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         // Set contract_class
@@ -376,7 +373,7 @@ mod tests {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let contract_class =
@@ -408,7 +405,7 @@ mod tests {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let contract_path = "starknet_programs/amm.json";

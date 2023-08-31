@@ -195,16 +195,13 @@ mod tests {
         },
         transaction::{error::TransactionError, fee::charge_fee},
     };
-    use std::{
-        collections::HashMap,
-        sync::{Arc, RwLock},
-    };
+    use std::{collections::HashMap, sync::Arc};
 
     #[test]
     fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_error() {
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
@@ -233,7 +230,7 @@ mod tests {
     fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),

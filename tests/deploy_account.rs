@@ -23,10 +23,7 @@ use starknet_in_rust::{
     utils::Address,
     CasmContractClass, EntryPointType,
 };
-use std::{
-    collections::HashSet,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashSet, sync::Arc};
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -37,7 +34,7 @@ fn internal_deploy_account() {
     let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(
         state_reader,
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     let contract_class =
@@ -121,7 +118,7 @@ fn internal_deploy_account_cairo1() {
     let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(
         state_reader,
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     #[cfg(not(feature = "cairo_1_tests"))]

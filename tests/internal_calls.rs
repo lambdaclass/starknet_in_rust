@@ -20,7 +20,7 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address, ClassHash},
     EntryPointType,
 };
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 #[test]
 fn test_internal_calls() {
@@ -53,14 +53,14 @@ fn test_internal_calls() {
 
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new({
+        Arc::new({
             let cache = PermanentContractClassCache::default();
             cache.set_contract_class(
                 [0x01; 32],
                 CompiledClass::Deprecated(Arc::new(contract_class)),
             );
             cache
-        })),
+        }),
     );
 
     let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"a"));

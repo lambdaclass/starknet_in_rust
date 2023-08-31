@@ -78,7 +78,7 @@ fn integration_test() {
 
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new(contract_class_cache)),
+        Arc::new(contract_class_cache),
     );
 
     //* ------------------------------------
@@ -180,7 +180,7 @@ fn integration_test_cairo1() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new(contract_class_cache)),
+        Arc::new(contract_class_cache),
     );
 
     // Create an execution entry point

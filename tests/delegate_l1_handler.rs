@@ -19,10 +19,7 @@ use starknet_in_rust::{
     utils::Address,
     EntryPointType,
 };
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
+use std::{path::PathBuf, sync::Arc};
 
 #[test]
 fn delegate_l1_handler() {
@@ -83,10 +80,7 @@ fn delegate_l1_handler() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(
-        Arc::new(state_reader),
-        Arc::new(RwLock::new(contract_class_cache)),
-    );
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     //* ------------------------------------
     //*    Create execution entry point

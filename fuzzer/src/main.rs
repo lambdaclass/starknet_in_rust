@@ -24,13 +24,7 @@ use starknet_in_rust::{
     EntryPointType,
 };
 use std::{
-    collections::HashSet,
-    fs,
-    path::PathBuf,
-    process::Command,
-    sync::{Arc, RwLock},
-    thread,
-    time::Duration,
+    collections::HashSet, fs, path::PathBuf, process::Command, sync::Arc, thread, time::Duration,
 };
 
 fn main() {
@@ -132,10 +126,8 @@ fn main() {
             //*    Create state with previous data
             //* ---------------------------------------
 
-            let mut state = CachedState::new(
-                Arc::new(state_reader),
-                Arc::new(RwLock::new(contract_class_cache)),
-            );
+            let mut state =
+                CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
             //* ------------------------------------
             //*    Create execution entry point

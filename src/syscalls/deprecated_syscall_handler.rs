@@ -263,7 +263,7 @@ mod tests {
     };
     use cairo_vm::relocatable;
     use num_traits::Num;
-    use std::sync::{Arc, RwLock};
+    use std::sync::Arc;
 
     type DeprecatedBLSyscallHandler<'a> =
         crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
@@ -745,7 +745,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -784,7 +784,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -829,7 +829,7 @@ mod tests {
         // invoke syscall
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -900,7 +900,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -968,7 +968,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -1045,7 +1045,7 @@ mod tests {
         // Create SyscallHintProcessor
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
@@ -1142,7 +1142,7 @@ mod tests {
         // Create SyscallHintProcessor
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),

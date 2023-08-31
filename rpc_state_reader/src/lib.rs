@@ -741,7 +741,7 @@ mod transaction_tests {
         felt::felt_str,
         state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
     };
-    use std::sync::{Arc, RwLock};
+    use std::sync::Arc;
 
     fn test_tx(
         tx_hash: &str,
@@ -756,7 +756,7 @@ mod transaction_tests {
         let rpc_state = Arc::new(RpcState::new(network, block));
         let mut state = CachedState::new(
             rpc_state.clone(),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let fee_token_address = Address(felt_str!(

@@ -396,10 +396,7 @@ mod tests {
         state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::felt_to_hash,
     };
-    use std::{
-        path::PathBuf,
-        sync::{Arc, RwLock},
-    };
+    use std::{path::PathBuf, sync::Arc};
 
     #[test]
     fn get_state_selector() {
@@ -412,7 +409,7 @@ mod tests {
         let block_context = BlockContext::default();
         let mut _state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let internal_deploy = DeployAccount::new(
@@ -447,7 +444,7 @@ mod tests {
         let block_context = BlockContext::default();
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let internal_deploy = DeployAccount::new(
@@ -500,7 +497,7 @@ mod tests {
         let block_context = BlockContext::default();
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let internal_deploy = DeployAccount::new(

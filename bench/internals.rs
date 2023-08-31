@@ -22,10 +22,7 @@ use starknet_in_rust::{
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::{
-    hint::black_box,
-    sync::{Arc, RwLock},
-};
+use std::{hint::black_box, sync::Arc};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
@@ -71,7 +68,7 @@ fn deploy_account() {
     let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(
         state_reader,
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     state
@@ -113,7 +110,7 @@ fn declare() {
     let state_reader = Arc::new(InMemoryStateReader::default());
     let state = CachedState::new(
         state_reader,
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     let block_context = &Default::default();
@@ -148,7 +145,7 @@ fn deploy() {
     let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(
         state_reader,
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     state
@@ -189,7 +186,7 @@ fn invoke() {
     let state_reader = Arc::new(InMemoryStateReader::default());
     let mut state = CachedState::new(
         state_reader,
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     state

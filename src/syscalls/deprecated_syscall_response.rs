@@ -320,7 +320,7 @@ mod tests {
         utils::{get_integer, test_utils::vm},
     };
     use cairo_vm::relocatable;
-    use std::sync::{Arc, RwLock};
+    use std::sync::Arc;
 
     type DeprecatedBLSyscallHandler<'a> =
         crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
@@ -335,7 +335,7 @@ mod tests {
         // Initialize a VM and syscall handler
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();

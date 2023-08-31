@@ -14,10 +14,7 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use num_traits::Zero;
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, sync::Arc};
 
 pub mod erc20;
 pub mod state;
@@ -164,7 +161,7 @@ pub fn create_account_tx_test_state() -> Result<
             }
             Arc::new(state_reader)
         },
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     Ok((block_context, cached_state))

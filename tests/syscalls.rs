@@ -125,7 +125,7 @@ fn test_contract<'a>(
     };
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new(contract_class_cache)),
+        Arc::new(contract_class_cache),
     );
     storage_entries
         .into_iter()
@@ -1116,7 +1116,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new(contract_class_cache)),
+        Arc::new(contract_class_cache),
     );
 
     // arguments of deploy contract
@@ -1221,7 +1221,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new(contract_class_cache)),
+        Arc::new(contract_class_cache),
     );
 
     // arguments of deploy contract
@@ -1328,7 +1328,7 @@ fn deploy_cairo1_and_invoke() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new(contract_class_cache)),
+        Arc::new(contract_class_cache),
     );
 
     // arguments of deploy contract
@@ -1471,7 +1471,7 @@ fn send_messages_to_l1_different_contract_calls() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Arc::new(RwLock::new(contract_class_cache)),
+        Arc::new(contract_class_cache),
     );
 
     // Create an execution entry point

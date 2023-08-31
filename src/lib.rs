@@ -18,7 +18,7 @@ use crate::{
     utils::Address,
 };
 use cairo_vm::felt::Felt252;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 #[cfg(test)]
 #[macro_use]
@@ -52,7 +52,7 @@ pub mod utils;
 pub fn simulate_transaction<S: StateReader, C: ContractClassCache>(
     transactions: &[&Transaction],
     state: S,
-    contract_class_cache: Arc<RwLock<C>>,
+    contract_class_cache: Arc<C>,
     block_context: &BlockContext,
     remaining_gas: u128,
     skip_validate: bool,
@@ -83,7 +83,7 @@ pub fn simulate_transaction<S: StateReader, C: ContractClassCache>(
 pub fn estimate_fee<T, C>(
     transactions: &[Transaction],
     state: T,
-    contract_class_cache: Arc<RwLock<C>>,
+    contract_class_cache: Arc<C>,
     block_context: &BlockContext,
 ) -> Result<Vec<(u128, usize)>, TransactionError>
 where
@@ -173,7 +173,7 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
 pub fn estimate_message_fee<T, C>(
     l1_handler: &L1Handler,
     state: T,
-    contract_class_cache: Arc<RwLock<C>>,
+    contract_class_cache: Arc<C>,
     block_context: &BlockContext,
 ) -> Result<(u128, usize), TransactionError>
 where
@@ -252,10 +252,7 @@ mod test {
     use cairo_vm::felt::{felt_str, Felt252};
     use lazy_static::lazy_static;
     use num_traits::{Num, One, Zero};
-    use std::{
-        path::PathBuf,
-        sync::{Arc, RwLock},
-    };
+    use std::{path::PathBuf, sync::Arc};
 
     lazy_static! {
         // include_str! doesn't seem to work in CI
@@ -303,7 +300,7 @@ mod test {
         let estimated_fee = estimate_fee(
             &[transaction],
             state,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
             &block_context,
         )
         .unwrap();
@@ -337,10 +334,7 @@ mod test {
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
 
-        let mut state = CachedState::new(
-            Arc::new(state_reader),
-            Arc::new(RwLock::new(contract_class_cache)),
-        );
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
         let retdata = call_contract(
@@ -394,14 +388,12 @@ mod test {
 
         let state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         // Initialize state.contract_classes
         state
             .contract_class_cache()
-            .write()
-            .unwrap()
             .set_contract_class(
                 class_hash,
                 CompiledClass::Deprecated(Arc::new(contract_class)),
@@ -447,10 +439,7 @@ mod test {
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
 
-        let mut state = CachedState::new(
-            Arc::new(state_reader),
-            Arc::new(RwLock::new(contract_class_cache)),
-        );
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
         let invoke = InvokeFunction::new(
@@ -590,7 +579,7 @@ mod test {
         let context = simulate_transaction(
             &[&invoke_1, &invoke_2, &invoke_3],
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
             &block_context,
             1000,
             false,
@@ -693,7 +682,7 @@ mod test {
         let context = simulate_transaction(
             &[&invoke],
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
             &block_context,
             1000,
             true,
@@ -714,7 +703,7 @@ mod test {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -760,7 +749,7 @@ mod test {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let block_context = &Default::default();
@@ -801,7 +790,7 @@ mod test {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -869,7 +858,7 @@ mod test {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -998,7 +987,7 @@ mod test {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -1031,7 +1020,7 @@ mod test {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let state = CachedState::new(
             state_reader,
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         let block_context = &Default::default();

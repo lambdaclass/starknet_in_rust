@@ -1,24 +1,27 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, RwLock};
-
-use cairo_vm::vm::runners::builtin_runner::HASH_BUILTIN_NAME;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME};
+use crate::complex_contracts::utils::*;
+use cairo_vm::{
+    felt::Felt252,
+    vm::runners::{
+        builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
+        cairo_runner::ExecutionResources,
+    },
+};
 use num_traits::Zero;
-use starknet_in_rust::definitions::block_context::BlockContext;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
+    definitions::block_context::BlockContext,
     execution::{CallInfo, CallType},
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::cached_state::CachedState,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
+        ExecutionResourcesManager,
+    },
     transaction::error::TransactionError,
     utils::{calculate_sn_keccak, Address},
+    EntryPointType,
 };
-
-use crate::complex_contracts::utils::*;
-use starknet_in_rust::state::contract_class_cache::PermanentContractClassCache;
-use starknet_in_rust::state::state_api::StateReader;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 fn init_pool(
     calldata: &[Felt252],
@@ -58,7 +61,7 @@ fn amm_init_pool_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -127,7 +130,7 @@ fn amm_add_demo_tokens_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -205,7 +208,7 @@ fn amm_get_pool_token_balance() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -280,7 +283,7 @@ fn amm_swap_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -381,7 +384,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -420,7 +423,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -459,7 +462,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -498,7 +501,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -540,7 +543,7 @@ fn amm_get_account_token_balance_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(

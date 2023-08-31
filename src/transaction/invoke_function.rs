@@ -415,7 +415,7 @@ mod tests {
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
-    use std::sync::{Arc, RwLock};
+    use std::sync::Arc;
 
     #[test]
     fn test_invoke_apply_without_fees() {
@@ -459,7 +459,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -531,7 +531,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -599,7 +599,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -661,7 +661,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -729,7 +729,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -791,7 +791,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -851,7 +851,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -912,7 +912,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -978,7 +978,7 @@ mod tests {
 
         let mut state = CachedState::new(
             Arc::new(state_reader),
-            Arc::new(RwLock::new(PermanentContractClassCache::default())),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         state
@@ -1125,10 +1125,8 @@ mod tests {
         casm_contract_class_cache
             .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
 
-        let mut state = CachedState::new(
-            Arc::new(state_reader),
-            Arc::new(RwLock::new(casm_contract_class_cache)),
-        );
+        let mut state =
+            CachedState::new(Arc::new(state_reader), Arc::new(casm_contract_class_cache));
 
         let state_before_execution = state.clone();
 

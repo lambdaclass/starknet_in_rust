@@ -13,10 +13,7 @@ use starknet_in_rust::{
     testing::state::StarknetState,
     utils::Address,
 };
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
@@ -109,7 +106,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader, PermanentContractC
                 .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             Arc::new(state_reader)
         },
-        Arc::new(RwLock::new(PermanentContractClassCache::default())),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     cached_state
