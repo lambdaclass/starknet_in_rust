@@ -89,10 +89,9 @@ impl ExecutionResourcesManager {
         }
     }
 
-    pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) -> Option<()> {
-        self.syscall_counter
-            .get_mut(syscall_name)
-            .map(|val| *val += amount)
+    pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) {
+        *self.syscall_counter
+            .entry(syscall_name.to_string()).or_default() += amount
     }
 
     pub fn get_syscall_counter(&self, syscall_name: &str) -> Option<u64> {
@@ -295,8 +294,7 @@ mod test {
         );
 
         execution_resources_manager
-            .increment_syscall_counter("syscall1", 1)
-            .unwrap();
+            .increment_syscall_counter("syscall1", 1);
 
         assert_eq!(
             execution_resources_manager.get_syscall_counter("syscall1"),
