@@ -172,6 +172,13 @@ fn integration_test_erc20() {
         .set_sierra_programs_cache(sierra_contract_class_cache);
 
     // Dummy calldata
+    /*
+        1 recipient
+        2 name
+        3 decimals
+        4 initial_supply
+        5 symbol
+    */
     let calldata = [1.into(), 2.into(), 3.into(), 4.into(), 5.into()].to_vec();
     let caller_address = Address(0000.into());
     let exec_entry_point = ExecutionEntryPoint::new(
@@ -281,7 +288,7 @@ fn integration_test_erc20() {
     );
     assert_eq!(result.entry_point_type, Some(EntryPointType::External));
     assert_eq!(result.calldata, calldata);
-    assert_eq!(result.retdata, [12345.into()].to_vec());
+    assert_eq!(result.retdata, [3.into()].to_vec());
     assert_eq!(result.execution_resources, None);
     assert_eq!(result.class_hash, Some(class_hash));
     assert_eq!(result.gas_consumed, 0);

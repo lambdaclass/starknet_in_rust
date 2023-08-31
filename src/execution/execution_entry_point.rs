@@ -122,11 +122,11 @@ fn u32_vec_to_felt(u32_limbs: &[u32]) -> Felt252 {
     let mut ret = vec![];
 
     for limb in u32_limbs {
-        let bytes = limb.to_be_bytes();
+        let bytes = limb.to_le_bytes();
         ret.extend_from_slice(&bytes);
     }
 
-    Felt252::from_bytes_be(&ret)
+    Felt252::from_bytes_le(&ret)
 }
 
 #[derive(Debug)]
