@@ -293,8 +293,7 @@ mod test {
             Default::default(),
         );
 
-        execution_resources_manager
-            .increment_syscall_counter("syscall1", 1);
+        execution_resources_manager.increment_syscall_counter("syscall1", 1);
 
         assert_eq!(
             execution_resources_manager.get_syscall_counter("syscall1"),
@@ -310,8 +309,7 @@ mod test {
     fn execution_resources_manager_should_add_syscall_if_not_present() {
         let mut execution_resources_manager = super::ExecutionResourcesManager::default();
 
-        execution_resources_manager
-            .increment_syscall_counter("syscall1", 1);
+        execution_resources_manager.increment_syscall_counter("syscall1", 1);
 
         assert_eq!(
             execution_resources_manager.get_syscall_counter("syscall1"),
