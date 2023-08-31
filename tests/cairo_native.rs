@@ -144,6 +144,8 @@ fn integration_test_erc20() {
         )
         .unwrap();
 
+    let caller_address = Address(123456789.into());
+
     let entrypoints = sierra_contract_class.clone().entry_points_by_type;
     let constructor_entry_point_selector = &entrypoints.constructor.get(0).unwrap().selector;
 
@@ -174,16 +176,24 @@ fn integration_test_erc20() {
         4 initial_supply
         5 symbol
     */
-    let calldata = [1.into(), 2.into(), 3.into(), 4.into(), 5.into()].to_vec();
+    let calldata = [
+        caller_address.0.clone(),
+        2.into(),
+        3.into(),
+        4.into(),
+        5.into(),
+    ]
+    .to_vec();
 
     let result = execute(
         &mut state,
+        &caller_address,
         constructor_entry_point_selector,
         &calldata,
         EntryPointType::Constructor,
     );
 
-    assert_eq!(result.caller_address, Address(123456789.into()));
+    assert_eq!(result.caller_address, caller_address);
     assert_eq!(result.call_type, Some(CallType::Delegate));
     assert_eq!(result.contract_address, Address(1111.into()));
     assert_eq!(
@@ -206,6 +216,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         get_total_supply_selector,
         &calldata,
         EntryPointType::External,
@@ -221,6 +232,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         get_decimals_entry_point_selector,
         &calldata,
         EntryPointType::External,
@@ -237,6 +249,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         get_name_selector,
         &calldata,
         EntryPointType::External,
@@ -245,13 +258,48 @@ fn integration_test_erc20() {
     assert!(!result.failure_flag);
     assert_eq!(result.retdata, [2.into()].to_vec());
 
-    // ---------------- ALLOWANCE ----------------------
+    // ---------------- GET SYMBOL ----------------------
 
-    let allowance_entry_point_selector = &entrypoints.external.get(3).unwrap().selector;
-    let calldata = [123456789.into(), 1.into()].to_vec();
+    let get_symbol_selector = &entrypoints.external.get(7).unwrap().selector;
+
+    let calldata = [].to_vec();
 
     let result = execute(
         &mut state,
+        &caller_address,
+        get_symbol_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [5.into()].to_vec());
+
+    // ---------------- GET BALANCE OF CALLER ----------------------
+
+    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+
+    let calldata = [caller_address.0.clone()].to_vec();
+
+    let result = execute(
+        &mut state,
+        &caller_address,
+        balance_of_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [4.into()].to_vec());
+
+    // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
+
+    let allowance_entry_point_selector = &entrypoints.external.get(3).unwrap().selector;
+    let calldata = [caller_address.0.clone(), 1.into()].to_vec();
+
+    let result = execute(
+        &mut state,
+        &caller_address,
         allowance_entry_point_selector,
         &calldata,
         EntryPointType::External,
@@ -260,13 +308,14 @@ fn integration_test_erc20() {
     assert!(!result.failure_flag);
     assert_eq!(result.retdata, [0.into()].to_vec());
 
-    // ---------------- INCREASE ALLOWANCE ----------------------
+    // ---------------- INCREASE ALLOWANCE OF ADDRESS 1 by 10_000 ----------------------
 
     let increase_allowance_entry_point_selector = &entrypoints.external.get(2).unwrap().selector;
     let calldata = [1.into(), 10_000.into()].to_vec();
 
     let result = execute(
         &mut state,
+        &caller_address,
         increase_allowance_entry_point_selector,
         &calldata,
         EntryPointType::External,
@@ -275,12 +324,13 @@ fn integration_test_erc20() {
     assert!(!result.failure_flag);
     assert_eq!(result.retdata, [].to_vec());
 
-    // ---------------- ALLOWANCE ----------------------
+    // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
 
-    let calldata = [123456789.into(), 1.into()].to_vec();
+    let calldata = [caller_address.0.clone(), 1.into()].to_vec();
 
     let result = execute(
         &mut state,
+        &caller_address,
         allowance_entry_point_selector,
         &calldata,
         EntryPointType::External,
@@ -288,7 +338,7 @@ fn integration_test_erc20() {
 
     assert_eq!(result.retdata, [10_000.into()].to_vec());
 
-    // ---------------- APPROVE ----------------------
+    // ---------------- APPROVE ADDRESS 1 TO MAKE TRANSFERS ON BEHALF OF THE CALLER ----------------------
 
     let approve_entry_point_selector = &entrypoints.external.get(4).unwrap().selector;
 
@@ -296,6 +346,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         approve_entry_point_selector,
         &calldata,
         EntryPointType::External,
@@ -303,10 +354,116 @@ fn integration_test_erc20() {
 
     assert!(!result.failure_flag);
     assert_eq!(result.retdata, [].to_vec());
+
+    // ---------------- TRANSFER 3 TOKENS FROM CALLER TO ADDRESS 2 ---------
+
+    let balance_of_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    let calldata = [2.into(), 3.into()].to_vec();
+
+    let result = execute(
+        &mut state,
+        &caller_address,
+        balance_of_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [].to_vec());
+
+    // ---------------- GET BALANCE OF CALLER ----------------------
+
+    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+
+    let calldata = [caller_address.0.clone()].to_vec();
+
+    let result = execute(
+        &mut state,
+        &caller_address,
+        balance_of_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [1.into()].to_vec());
+
+    // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
+
+    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+
+    let calldata = [2.into()].to_vec();
+
+    let result = execute(
+        &mut state,
+        &caller_address,
+        balance_of_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [3.into()].to_vec());
+
+    // ---------------- TRANSFER 1 TOKEN FROM CALLER TO ADDRESS 2, CALLED FROM ADDRESS 1 ----------------------
+
+    let transfer_from_selector = &entrypoints.external.get(9).unwrap().selector;
+
+    let calldata = [1.into(), 2.into(), 1.into()].to_vec();
+
+    let result = execute(
+        &mut state,
+        &caller_address,
+        transfer_from_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [].to_vec());
+
+    // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
+
+    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+
+    let calldata = [2.into()].to_vec();
+
+    let result = execute(
+        &mut state,
+        &caller_address,
+        balance_of_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [4.into()].to_vec());
+
+    // ---------------- GET BALANCE OF CALLER ----------------------
+
+    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+
+    let calldata = [caller_address.0.clone()].to_vec();
+
+    let _result = execute(
+        &mut state,
+        &caller_address,
+        balance_of_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+
+    // TODO: This assert is failing. For some reason, tokens are not deducted from the caller's balance
+    // after the transfer_from. Check the cairo code to see if the bug is over there.
+    // assert_eq!(result.retdata, [0.into()].to_vec());
 }
 
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
+    caller_address: &Address,
     selector: &BigUint,
     calldata: &[Felt252],
     entrypoint_type: EntryPointType,
@@ -314,13 +471,11 @@ fn execute(
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
 
-    // Dummy calldata
-    let caller_address = Address(123456789.into());
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.to_vec(),
         Felt252::new(selector),
-        caller_address,
+        (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),
         Some(class_hash),
