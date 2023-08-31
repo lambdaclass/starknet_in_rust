@@ -198,6 +198,24 @@ fn integration_test_erc20() {
     assert_eq!(result.class_hash, Some(class_hash));
     assert_eq!(result.gas_consumed, 0);
 
+    // --------------- GET TOTAL SUPPLY -----------------
+
+    let get_total_supply_selector = &entrypoints.external.get(5).unwrap().selector;
+
+    let calldata = [].to_vec();
+
+    let result = execute(
+        &mut state,
+        get_total_supply_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [4.into()].to_vec());
+
+    // ---------------- GET DECIMALS ----------------------
+
     let get_decimals_entry_point_selector = &entrypoints.external.get(1).unwrap().selector;
     let calldata = [].to_vec();
 
@@ -210,6 +228,24 @@ fn integration_test_erc20() {
 
     assert!(!result.failure_flag);
     assert_eq!(result.retdata, [3.into()].to_vec());
+
+    // ---------------- GET NAME ----------------------
+
+    let get_name_selector = &entrypoints.external.get(6).unwrap().selector;
+
+    let calldata = [].to_vec();
+
+    let result = execute(
+        &mut state,
+        get_name_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [2.into()].to_vec());
+
+    // ---------------- ALLOWANCE ----------------------
 
     let allowance_entry_point_selector = &entrypoints.external.get(3).unwrap().selector;
     let calldata = [123456789.into(), 1.into()].to_vec();
@@ -224,6 +260,8 @@ fn integration_test_erc20() {
     assert!(!result.failure_flag);
     assert_eq!(result.retdata, [0.into()].to_vec());
 
+    // ---------------- INCREASE ALLOWANCE ----------------------
+
     let increase_allowance_entry_point_selector = &entrypoints.external.get(2).unwrap().selector;
     let calldata = [1.into(), 10_000.into()].to_vec();
 
@@ -237,6 +275,8 @@ fn integration_test_erc20() {
     assert!(!result.failure_flag);
     assert_eq!(result.retdata, [].to_vec());
 
+    // ---------------- ALLOWANCE ----------------------
+
     let calldata = [123456789.into(), 1.into()].to_vec();
 
     let result = execute(
@@ -247,6 +287,22 @@ fn integration_test_erc20() {
     );
 
     assert_eq!(result.retdata, [10_000.into()].to_vec());
+
+    // ---------------- APPROVE ----------------------
+
+    let approve_entry_point_selector = &entrypoints.external.get(4).unwrap().selector;
+
+    let calldata = [1.into(), 5_000.into()].to_vec();
+
+    let result = execute(
+        &mut state,
+        approve_entry_point_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    assert!(!result.failure_flag);
+    assert_eq!(result.retdata, [].to_vec());
 }
 
 fn execute(
