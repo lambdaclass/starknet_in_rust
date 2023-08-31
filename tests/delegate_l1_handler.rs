@@ -29,7 +29,7 @@ fn delegate_l1_handler() {
     //* --------------------------------------------
     //*    Create state reader with class hash data
     //* --------------------------------------------
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
     let nonce = Felt252::zero();
 
     // Add get_number.cairo contract to the state

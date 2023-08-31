@@ -63,7 +63,7 @@ fn storage_write_read() {
     let increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -206,7 +206,7 @@ fn library_call() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -370,7 +370,7 @@ fn call_contract_storage_write_read() {
     let increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -563,7 +563,7 @@ fn emit_event() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -679,7 +679,7 @@ fn deploy_cairo1_from_cairo1() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -783,7 +783,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -885,7 +885,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -990,7 +990,7 @@ fn deploy_cairo0_and_invoke() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -1118,7 +1118,7 @@ fn test_send_message_to_l1_syscall() {
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -1216,7 +1216,7 @@ fn test_get_execution_info() {
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -1315,7 +1315,7 @@ fn replace_class_internal() {
     let upgrade_selector = &entrypoints_a.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash_a: ClassHash = [1; 32];
@@ -1420,7 +1420,7 @@ fn replace_class_contract_call() {
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_a: ClassHash = [1; 32];
@@ -1599,7 +1599,7 @@ fn replace_class_contract_call_same_transaction() {
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_a: ClassHash = [1; 32];
@@ -1725,7 +1725,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_c: ClassHash = Felt252::one().to_be_bytes();
@@ -1849,7 +1849,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_c: ClassHash = Felt252::one().to_be_bytes();
@@ -1973,7 +1973,7 @@ fn call_contract_replace_class_cairo_0() {
     let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_c: ClassHash = Felt252::one().to_be_bytes();
@@ -2093,7 +2093,7 @@ fn test_out_of_gas_failure() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2174,7 +2174,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2254,7 +2254,7 @@ fn deploy_syscall_failure_in_constructor() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2348,7 +2348,7 @@ fn storage_read_no_value() {
     let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2423,7 +2423,7 @@ fn storage_read_unavailable_address_domain() {
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2501,7 +2501,7 @@ fn storage_write_unavailable_address_domain() {
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2577,7 +2577,7 @@ fn library_call_failure() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2693,7 +2693,7 @@ fn send_messages_to_l1_different_contract_calls() {
         .clone();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2820,7 +2820,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         .clone();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -2939,7 +2939,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
         .to_owned();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -3062,7 +3062,7 @@ fn keccak_syscall() {
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];

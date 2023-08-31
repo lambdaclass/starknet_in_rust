@@ -220,7 +220,7 @@ fn expected_state_after_tx(
 ) -> CachedState<InMemoryStateReader, PermanentContractClassCache> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    let mut contract_classes_cache = PermanentContractClassCache::default();
+    let contract_classes_cache = PermanentContractClassCache::default();
     contract_classes_cache.set_contract_class(
         felt_to_hash(&TEST_CLASS_HASH.clone()),
         CompiledClass::Deprecated(Arc::new(

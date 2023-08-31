@@ -1120,7 +1120,7 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut casm_contract_class_cache = PermanentContractClassCache::default();
+        let casm_contract_class_cache = PermanentContractClassCache::default();
 
         casm_contract_class_cache
             .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));

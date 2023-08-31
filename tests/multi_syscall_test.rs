@@ -26,7 +26,7 @@ fn test_multiple_syscall() {
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];

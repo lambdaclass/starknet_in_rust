@@ -13,7 +13,7 @@
 //!   `&mut self` as the object.
 
 use crate::{services::api::contract_classes::compiled_class::CompiledClass, utils::ClassHash};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::RwLock};
 
 /// The contract class cache trait, which must be implemented by all caches.
 pub trait ContractClassCache {
@@ -21,11 +21,11 @@ pub trait ContractClassCache {
     /// present.
     fn get_contract_class(&self, class_hash: ClassHash) -> Option<CompiledClass>;
     /// Inserts or replaces a contract class associated with a specific class hash.
-    fn set_contract_class(&mut self, class_hash: ClassHash, compiled_class: CompiledClass);
+    fn set_contract_class(&self, class_hash: ClassHash, compiled_class: CompiledClass);
 
     /// Performs a bulk insert of contract classes from an iterator over pairs of the class hash and
     /// its contract class.
-    fn extend<I>(&mut self, other: I)
+    fn extend<I>(&self, other: I)
     where
         I: IntoIterator<Item = (ClassHash, CompiledClass)>;
 }
@@ -74,11 +74,11 @@ impl ContractClassCache for NullContractClassCache {
         None
     }
 
-    fn set_contract_class(&mut self, _class_hash: ClassHash, _compiled_class: CompiledClass) {
+    fn set_contract_class(&self, _class_hash: ClassHash, _compiled_class: CompiledClass) {
         // Nothing needs to be done here.
     }
 
-    fn extend<I>(&mut self, _other: I)
+    fn extend<I>(&self, _other: I)
     where
         I: IntoIterator<Item = (ClassHash, CompiledClass)>,
     {
@@ -88,25 +88,36 @@ impl ContractClassCache for NullContractClassCache {
 
 /// A contract class cache which stores everything. This cache is useful for testing but will
 /// probably end up taking all the memory available if the application is long running.
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct PermanentContractClassCache {
-    storage: HashMap<ClassHash, CompiledClass>,
+    storage: RwLock<HashMap<ClassHash, CompiledClass>>,
 }
 
 impl ContractClassCache for PermanentContractClassCache {
     fn get_contract_class(&self, class_hash: ClassHash) -> Option<CompiledClass> {
-        self.storage.get(&class_hash).cloned()
+        self.storage.read().unwrap().get(&class_hash).cloned()
     }
 
-    fn set_contract_class(&mut self, class_hash: ClassHash, compiled_class: CompiledClass) {
-        self.storage.insert(class_hash, compiled_class);
+    fn set_contract_class(&self, class_hash: ClassHash, compiled_class: CompiledClass) {
+        self.storage
+            .write()
+            .unwrap()
+            .insert(class_hash, compiled_class);
     }
 
-    fn extend<I>(&mut self, other: I)
+    fn extend<I>(&self, other: I)
     where
         I: IntoIterator<Item = (ClassHash, CompiledClass)>,
     {
-        self.storage.extend(other);
+        self.storage.write().unwrap().extend(other);
+    }
+}
+
+impl Clone for PermanentContractClassCache {
+    fn clone(&self) -> Self {
+        Self {
+            storage: RwLock::new(self.storage.read().unwrap().clone()),
+        }
     }
 }
 
@@ -115,7 +126,7 @@ impl IntoIterator for PermanentContractClassCache {
     type IntoIter = <HashMap<ClassHash, CompiledClass> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.storage.into_iter()
+        self.storage.into_inner().unwrap().into_iter()
     }
 }
 
@@ -124,6 +135,6 @@ impl IntoIterator for &PermanentContractClassCache {
     type IntoIter = <HashMap<ClassHash, CompiledClass> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.storage.clone().into_iter()
+        self.storage.read().unwrap().clone().into_iter()
     }
 }

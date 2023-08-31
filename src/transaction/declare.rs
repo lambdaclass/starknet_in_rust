@@ -357,7 +357,7 @@ mod tests {
             ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
@@ -473,13 +473,16 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.set_contract_class(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -520,7 +523,7 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
@@ -589,7 +592,7 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
@@ -657,7 +660,7 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
@@ -739,7 +742,7 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
@@ -849,7 +852,7 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();

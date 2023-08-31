@@ -419,7 +419,7 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         // hack store account contract

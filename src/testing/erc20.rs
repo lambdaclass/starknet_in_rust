@@ -60,7 +60,7 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];

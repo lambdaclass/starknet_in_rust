@@ -321,7 +321,7 @@ mod test {
         let entrypoints = contract_class.clone().entry_points_by_type;
         let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
@@ -430,7 +430,7 @@ mod test {
         let entrypoints = contract_class.clone().entry_points_by_type;
         let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];

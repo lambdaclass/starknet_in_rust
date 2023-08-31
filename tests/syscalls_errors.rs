@@ -74,7 +74,7 @@ fn test_contract<'a>(
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
             let contract_class = ContractClass::from_path(contract_path)

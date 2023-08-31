@@ -94,7 +94,7 @@ fn test_contract<'a>(
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
-        let mut contract_class_cache = PermanentContractClassCache::default();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
             let contract_class = ContractClass::from_path(contract_path)
@@ -1089,7 +1089,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -1194,7 +1194,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -1301,7 +1301,7 @@ fn deploy_cairo1_and_invoke() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
@@ -1430,7 +1430,7 @@ fn send_messages_to_l1_different_contract_calls() {
         .to_owned();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];

@@ -54,7 +54,7 @@ fn test_internal_calls() {
     let mut state = CachedState::new(
         Arc::new(state_reader),
         Arc::new(RwLock::new({
-            let mut cache = PermanentContractClassCache::default();
+            let cache = PermanentContractClassCache::default();
             cache.set_contract_class(
                 [0x01; 32],
                 CompiledClass::Deprecated(Arc::new(contract_class)),

@@ -46,7 +46,7 @@ fn integration_storage_test() {
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     //  ------------ contract data --------------------
 
