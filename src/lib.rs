@@ -392,12 +392,10 @@ mod test {
         );
 
         // Initialize state.contract_classes
-        state
-            .contract_class_cache()
-            .set_contract_class(
-                class_hash,
-                CompiledClass::Deprecated(Arc::new(contract_class)),
-            );
+        state.contract_class_cache().set_contract_class(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
 
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
