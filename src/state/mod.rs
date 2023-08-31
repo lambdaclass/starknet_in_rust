@@ -29,7 +29,7 @@ pub struct BlockInfo {
     /// Timestamp of the beginning of the last block creation attempt.
     pub block_timestamp: u64,
     /// L1 gas price (in Wei) measured at the beginning of the last block creation attempt.
-    pub gas_price: u64,
+    pub gas_price: u128,
     /// The sequencer address of this block.
     pub sequencer_address: Address,
 }
