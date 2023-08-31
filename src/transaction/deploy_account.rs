@@ -1,9 +1,10 @@
-use super::fee::charge_fee;
+use super::fee::{calculate_tx_fee, charge_fee};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
+use crate::state::StateDiff;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -156,22 +157,46 @@ impl DeployAccount {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
-        let mut tx_info = self.apply(state, block_context)?;
+
+        let mut transactional_state = state.create_transactional();
+        let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
+
+        let actual_fee = calculate_tx_fee(
+            &tx_exec_info.actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
+
+        if let Some(revert_error) = tx_exec_info.revert_error.clone() {
+            // execution error
+            tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
+        } else if actual_fee > self.max_fee {
+            // max_fee exceeded
+            tx_exec_info = tx_exec_info.to_revert_error(
+                format!(
+                    "Calculated fee ({}) exceeds max fee ({})",
+                    actual_fee, self.max_fee
+                )
+                .as_str(),
+            );
+        } else {
+            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+        }
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let (fee_transfer_info, actual_fee) = charge_fee(
             state,
-            &tx_info.actual_resources,
+            &tx_exec_info.actual_resources,
             block_context,
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
 
-        tx_info.set_fee_info(actual_fee, fee_transfer_info);
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
-        Ok(tx_info)
+        Ok(tx_exec_info)
     }
 
     fn constructor_entry_points_empty(

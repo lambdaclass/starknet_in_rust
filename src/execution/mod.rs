@@ -610,11 +610,11 @@ impl TransactionExecutionInfo {
         Ok(sorted_messages)
     }
 
-    pub fn to_revert_error(self, revert_error: String) -> Self {
+    pub fn to_revert_error(self, revert_error: &str) -> Self {
         TransactionExecutionInfo {
             validate_info: None,
             call_info: None,
-            revert_error: Some(revert_error),
+            revert_error: Some(revert_error.to_string()),
             fee_transfer_info: None,
             ..self
         }

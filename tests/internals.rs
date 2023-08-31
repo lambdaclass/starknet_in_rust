@@ -1224,7 +1224,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
     let resources = HashMap::from([
         ("n_steps".to_string(), 3445),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 1224),
         ("range_check_builtin".to_string(), 82),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
@@ -1253,7 +1253,7 @@ fn expected_fib_transaction_execution_info(
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 7344),
+        ("l1_gas_usage".to_string(), 1224),
         ("pedersen_builtin".to_string(), 16),
         ("range_check_builtin".to_string(), 85),
     ]);
@@ -1300,17 +1300,19 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
     let max_fee = 3;
-    let actual_fee = 2483;
+    let actual_fee = 1259;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
     let result = invoke_tx.execute(state, block_context, 0).unwrap();
-    let mut expected_result =
-        expected_transaction_execution_info(block_context).to_revert_error(format!(
+    let mut expected_result = expected_transaction_execution_info(block_context).to_revert_error(
+        format!(
             "Calculated fee ({}) exceeds max fee ({})",
             actual_fee, max_fee
-        ));
+        )
+        .as_str(),
+    );
     expected_result.set_fee_info(max_fee, Some(expected_fee_transfer_info(max_fee)));
 
     assert_eq!(result, expected_result);
@@ -1493,7 +1495,7 @@ fn test_invoke_with_declarev2_tx() {
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let expected_fee = 6157;
+    let expected_fee = 3709;
 
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
@@ -1571,12 +1573,12 @@ fn test_deploy_account() {
         ("n_steps".to_string(), 3625),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 6120),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 6157);
+    assert_eq!(fee, 3709);
 
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
@@ -1606,11 +1608,161 @@ fn test_deploy_account() {
     assert_eq!(class_hash_from_state, *deploy_account_tx.class_hash());
 }
 
+#[test]
+fn test_deploy_account_revert() {
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
+
+    let expected_fee = 1;
+
+    let deploy_account_tx = DeployAccount::new(
+        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+        1,
+        TRANSACTION_VERSION.clone(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        StarknetChainId::TestNet.to_felt(),
+    )
+    .unwrap();
+
+    state.set_storage_at(
+        &(
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
+            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+        ),
+        INITIAL_BALANCE.clone(),
+    );
+
+    let (mut state_before, mut state_after) = expected_deploy_account_states();
+
+    assert_eq!(&state.cache(), &state_before.cache());
+    assert_eq!(&state.contract_classes(), &state_before.contract_classes());
+    assert_eq!(
+        &state.casm_contract_classes(),
+        &state_before.casm_contract_classes()
+    );
+
+    let tx_info = deploy_account_tx
+        .execute(&mut state, &block_context)
+        .unwrap();
+
+    assert_eq!(
+        state.casm_contract_classes(),
+        state_before.casm_contract_classes()
+    );
+
+    let mut state_reverted = state_before.clone();
+
+    // Add initial writes (these 'bypass' the transactional state because it's a state reader and
+    // it will cache initial values when looking for them).
+    state_reverted
+        .cache_mut()
+        .class_hash_initial_values_mut()
+        .extend(
+            state_after
+                .cache_mut()
+                .class_hash_initial_values_mut()
+                .clone(),
+        );
+    state_reverted
+        .cache_mut()
+        .nonce_initial_values_mut()
+        .extend(state_after.cache_mut().nonce_initial_values_mut().clone());
+    state_reverted
+        .cache_mut()
+        .storage_initial_values_mut()
+        .extend(state_after.cache_mut().storage_initial_values_mut().clone());
+    state_reverted
+        .cache_mut()
+        .storage_initial_values_mut()
+        .extend(state_after.cache_mut().storage_initial_values_mut().clone());
+
+    // Set storage writes related to the fee transfer
+    state_reverted
+        .cache_mut()
+        .storage_writes_mut()
+        .extend(state_after.cache_mut().storage_writes().clone());
+    state_reverted.set_storage_at(
+        &(
+            Address(0x1001.into()),
+            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+        ),
+        INITIAL_BALANCE.clone() - Felt252::one(), // minus the max fee that will be transfered
+    );
+    state_reverted.cache_mut().storage_writes_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
+        ),
+        Felt252::one(), // the max fee received by the sequencer
+    );
+
+    // Set nonce
+    state_reverted
+        .cache_mut()
+        .nonce_writes_mut()
+        .extend(state_after.cache_mut().nonce_writes_mut().clone());
+
+    assert_eq!(state.cache(), state_reverted.cache());
+
+    let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
+        &block_context,
+        deploy_account_tx.contract_address(),
+        expected_fee as u64,
+    );
+
+    let resources = HashMap::from([
+        ("n_steps".to_string(), 3625),
+        ("range_check_builtin".to_string(), 83),
+        ("pedersen_builtin".to_string(), 23),
+        ("l1_gas_usage".to_string(), 3672),
+    ]);
+
+    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+
+    assert_eq!(fee, 3709);
+
+    let mut expected_execution_info = TransactionExecutionInfo::new(
+        None,
+        None,
+        None,
+        None,
+        expected_fee,
+        // Entry **not** in blockifier.
+        // Default::default(),
+        resources,
+        TransactionType::DeployAccount.into(),
+    )
+    .to_revert_error(format!("Calculated fee ({}) exceeds max fee ({})", 3709, 1).as_str());
+
+    expected_execution_info.set_fee_info(expected_fee, expected_fee_transfer_call_info.into());
+
+    assert_eq!(tx_info, expected_execution_info);
+
+    let nonce_from_state = state
+        .get_nonce_at(deploy_account_tx.contract_address())
+        .unwrap();
+    assert_eq!(nonce_from_state, Felt252::one());
+
+    let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
+
+    validate_final_balances(&mut state, &block_context, &hash, expected_fee);
+
+    let class_hash_from_state = state
+        .get_class_hash_at(deploy_account_tx.contract_address())
+        .unwrap();
+    assert_eq!(class_hash_from_state, [0; 32]);
+}
+
 fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader>,
     CachedState<InMemoryStateReader>,
 ) {
-    let fee = Felt252::from(6157);
+    let fee = Felt252::from(3709);
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([
@@ -1669,15 +1821,6 @@ fn expected_deploy_account_states() -> (
         .cache_mut()
         .class_hash_initial_values_mut()
         .insert(Address(0x1001.into()), felt_to_hash(&0x1010.into()));
-    state_after
-        .cache_mut()
-        .class_hash_initial_values_mut()
-        .insert(
-            Address(felt_str!(
-                "386181506763903095743576862849245034886954647214831045800703908858571591162"
-            )),
-            [0; 32],
-        );
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),

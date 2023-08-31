@@ -228,6 +228,7 @@ mod tests {
 
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+    use crate::state::StateDiff;
     use crate::{
         add_segments, allocate_selector, any_box,
         definitions::{
@@ -1188,9 +1189,14 @@ mod tests {
         )
         .unwrap();
 
+        let mut transactional = state.create_transactional();
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &BlockContext::default(), 0)
+            .apply(&mut transactional, &BlockContext::default(), 0)
+            .unwrap();
+
+        state
+            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();
