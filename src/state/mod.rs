@@ -90,8 +90,10 @@ impl ExecutionResourcesManager {
     }
 
     pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) {
-        *self.syscall_counter
-            .entry(syscall_name.to_string()).or_default() += amount
+        *self
+            .syscall_counter
+            .entry(syscall_name.to_string())
+            .or_default() += amount
     }
 
     pub fn get_syscall_counter(&self, syscall_name: &str) -> Option<u64> {
