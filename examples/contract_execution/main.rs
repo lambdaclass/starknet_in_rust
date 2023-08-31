@@ -26,7 +26,7 @@ fn main() {
     let entry_point: &str = "factorial";
 
     // replace this with the arguments for the entrypoint
-    let calldata: Vec<Felt252> = [1.into(), 1.into(), 10.into()].to_vec();
+    let calldata: Vec<Felt252> = [10.into()].to_vec();
 
     let retdata = test_contract(contract_path, entry_point, calldata);
 
