@@ -24,6 +24,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Install rust
+      uses: dtolnay/rust-toolchain@stable
+
     - name: Install pyenv
       uses: "gabrielfalcao/pyenv-action@v13"
 
