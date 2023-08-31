@@ -22,7 +22,7 @@ fn main() {
     let ret_data = run_contract(
         "starknet_programs/factorial.json",
         "factorial",
-        [1.into(), 1.into(), 10.into()],
+        [10.into()],
         shared_cache,
     );
 
