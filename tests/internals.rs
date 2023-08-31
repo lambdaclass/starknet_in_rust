@@ -418,7 +418,7 @@ fn expected_validate_call_info(
 fn expected_fee_transfer_call_info(
     block_context: &BlockContext,
     account_address: &Address,
-    actual_fee: u64,
+    actual_fee: u128,
 ) -> CallInfo {
     CallInfo {
         entry_point_type: EntryPointType::External.into(),
@@ -1502,7 +1502,7 @@ fn test_deploy_account() {
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &block_context,
         deploy_account_tx.contract_address(),
-        expected_fee as u64,
+        expected_fee,
     );
 
     let resources = HashMap::from([
