@@ -252,11 +252,11 @@ fn execute(
     calldata: &[Felt252],
     entrypoint_type: EntryPointType,
 ) -> CallInfo {
-    let address = Address(1111.into());
+    let address = Address(1112.into());
     let class_hash: ClassHash = [1; 32];
 
     // Dummy calldata
-    let caller_address = Address(0000.into());
+    let caller_address = Address(1111.into());
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.to_vec(),
@@ -358,7 +358,7 @@ fn call_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader))
         .set_sierra_programs_cache(sierra_contract_class_cache);
 
-    let calldata = [].to_vec();
+    let calldata = [1.into()].to_vec();
     let result = execute(
         &mut state,
         call_contract_selector,

@@ -169,7 +169,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
                 nonce: 7654.into(),
             },
             caller_address: 6543.into(),
-            contract_address: 5432.into(),
+            contract_address: 1112.into(),
             entry_point_selector: 4321.into(),
         })
     }
@@ -1051,6 +1051,7 @@ impl ExecutionEntryPoint {
         };
 
         let sierra_program = contract_class.extract_sierra_program().unwrap();
+        // println!("{}", sierra_program.to_string());
 
         let native_context = NativeContext::new();
         let mut native_program = native_context.compile(&sierra_program).unwrap();
