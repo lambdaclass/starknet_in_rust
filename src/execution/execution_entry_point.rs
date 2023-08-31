@@ -28,16 +28,14 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
-use cairo_lang_sierra::ProgramParser;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_lang_starknet::contract;
 use cairo_native::context::NativeContext;
 use cairo_native::executor::NativeExecutor;
 use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
 use cairo_native::starknet::{
     BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
 };
-use cairo_native::utils::{felt252_bigint, felt252_short_str, find_function_id};
+use cairo_native::utils::felt252_bigint;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -52,8 +50,7 @@ use cairo_vm::{
 use num_traits::Zero;
 use serde::de::SeqAccess;
 use serde::{de, Deserialize, Deserializer};
-use serde_json::{json, Value};
-use starknet_api::block;
+use serde_json::Value;
 
 use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
@@ -236,11 +233,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
             u128::MAX,
         );
 
-        let ExecutionResult {
-            call_info,
-            revert_error,
-            ..
-        } = exec_entry_point
+        let ExecutionResult { call_info, .. } = exec_entry_point
             .execute(
                 self.starknet_storage_state.state,
                 // TODO: This fields dont make much sense in the Cairo Native context,
@@ -1104,7 +1097,7 @@ impl ExecutionEntryPoint {
             .unwrap()
             .id;
 
-        println!("FN ID: {}", fn_id);
+        println!("CALLING FUNCTION: {}", fn_id);
         let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
 
         let required_init_gas = native_program.get_required_init_gas(fn_id);
