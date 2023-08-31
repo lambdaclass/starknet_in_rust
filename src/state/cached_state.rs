@@ -490,46 +490,7 @@ impl<T: StateReader> State for CachedState<T> {
 pub type TransactionalCachedState<'a, T> = CachedState<TransactionalCachedStateReader<'a, T>>;
 
 impl<'a, T: StateReader> TransactionalCachedState<'a, T> {
-    pub fn update_initial_values_write_only(&mut self) -> Result<(), StateError> {
-        let transactional_reader = &self.state_reader;
-
-        for k in self.cache.nonce_writes.keys() {
-            if !self.cache.nonce_initial_values.contains_key(k) {
-                self.cache
-                    .nonce_initial_values
-                    .insert(k.clone(), transactional_reader.get_nonce_at(k)?);
-            }
-        }
-
-        for k in self.cache.class_hash_writes.keys() {
-            if !self.cache.class_hash_initial_values.contains_key(k) {
-                self.cache
-                    .class_hash_initial_values
-                    .insert(k.clone(), transactional_reader.get_class_hash_at(k)?);
-            }
-        }
-
-        for k in self.cache.storage_writes.keys() {
-            if !self.cache.storage_initial_values.contains_key(k) {
-                self.cache
-                    .storage_initial_values
-                    .insert(k.clone(), transactional_reader.get_storage_at(k)?);
-            }
-        }
-
-        // FIXME:
-        // for k in self.cache.compiled_class_hash_writes.keys() {
-        //     if !self.cache.compiled_class_hash_initial_values.contains_key(k) {
-        //         self.cache.compiled_class_hash_initial_values.insert(k.clone(), transactional_reader.get_storage_at(k)?);
-        //     }
-        // }
-
-        Ok(())
-    }
-
     pub fn count_actual_storage_changes(&mut self) -> Result<(usize, usize), StateError> {
-        self.update_initial_values_write_only()?;
-
         let storage_updates = subtract_mappings(
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),

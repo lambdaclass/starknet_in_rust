@@ -237,7 +237,6 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
-        // FIXME: why are we ignoring revert in the validation step?
         let validate_info =
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
         // Execute transaction
