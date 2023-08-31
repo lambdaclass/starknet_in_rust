@@ -1,5 +1,5 @@
 use super::{
-    deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, hint_code::*,
+    deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
     other_syscalls, syscall_handler::HintProcessorPostRun,
 };
 use crate::{state::state_api::StateReader, syscalls::syscall_handler_errors::SyscallHandlerError};
