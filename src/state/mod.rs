@@ -307,6 +307,19 @@ mod test {
     }
 
     #[test]
+    fn execution_resources_manager_should_add_syscall_if_not_present() {
+        let mut execution_resources_manager = super::ExecutionResourcesManager::default();
+
+        execution_resources_manager
+            .increment_syscall_counter("syscall1", 1);
+
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall1"),
+            Some(1)
+        );
+    }
+
+    #[test]
     fn state_diff_to_cached_state_should_return_correct_cached_state() {
         let mut state_reader = InMemoryStateReader::default();
 
