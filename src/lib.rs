@@ -153,7 +153,6 @@ pub fn call_contract<T: StateReader>(
         nonce,
         block_context.invoke_tx_max_n_steps(),
         version.into(),
-        false,
     );
 
     let ExecutionResult { call_info, .. } = execution_entrypoint.execute(

@@ -136,7 +136,6 @@ impl InvokeFunction {
             },
             n_steps,
             self.version.clone(),
-            false,
         ))
     }
 

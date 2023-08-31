@@ -97,7 +97,6 @@ fn integration_test() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        true,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -192,7 +191,6 @@ fn integration_test_cairo1() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        true,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

@@ -187,7 +187,6 @@ impl L1Handler {
             self.nonce.clone().ok_or(TransactionError::MissingNonce)?,
             n_steps,
             L1_HANDLER_VERSION.into(),
-            false,
         ))
     }
     pub(crate) fn create_for_simulation(

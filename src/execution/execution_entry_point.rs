@@ -1097,6 +1097,7 @@ impl ExecutionEntryPoint {
             .unwrap()
             .id;
 
+        println!();
         println!("CALLING FUNCTION: {}", fn_id);
         let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
 
@@ -1186,20 +1187,4 @@ impl ExecutionEntryPoint {
             gas_consumed: 0,
         });
     }
-}
-
-#[test]
-fn wallet_increase_and_read() {
-    // let increase_fn_id = find_function_id(
-    //     &sierra_program,
-    //     "wallet::wallet::SimpleWallet::__wrapper_increase_balance",
-    //     // "wallet::wallet::SimpleWallet::SimpleWallet::increase_balance",
-    // );
-    // let increase_required_init_gas = native_program.get_required_init_gas(increase_fn_id);
-
-    // let get_fn_id = find_function_id(
-    //     &sierra_program,
-    //     "wallet::wallet::SimpleWallet::__wrapper_get_balance",
-    // );
-    // let get_required_init_gas = native_program.get_required_init_gas(get_fn_id);
 }

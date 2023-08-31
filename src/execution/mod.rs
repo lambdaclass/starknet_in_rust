@@ -366,7 +366,6 @@ impl TransactionExecutionContext {
         nonce: Felt252,
         n_steps: u64,
         version: Felt252,
-        _use_cairo_native: bool,
     ) -> Self {
         let nonce = if version == 0.into() || version == *QUERY_VERSION_BASE {
             0.into()

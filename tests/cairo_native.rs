@@ -97,7 +97,6 @@ fn integration_test() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        true,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -188,6 +187,7 @@ fn integration_test_erc20() {
     let result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         constructor_entry_point_selector,
         &calldata,
         EntryPointType::Constructor,
@@ -195,7 +195,7 @@ fn integration_test_erc20() {
 
     assert_eq!(result.caller_address, caller_address);
     assert_eq!(result.call_type, Some(CallType::Delegate));
-    assert_eq!(result.contract_address, Address(1112.into()));
+    assert_eq!(result.contract_address, caller_address);
     assert_eq!(
         result.entry_point_selector,
         Some(Felt252::new(constructor_entry_point_selector))
@@ -217,6 +217,7 @@ fn integration_test_erc20() {
     let result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         get_total_supply_selector,
         &calldata,
         EntryPointType::External,
@@ -232,6 +233,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         &caller_address,
         get_decimals_entry_point_selector,
         &calldata,
@@ -250,6 +252,7 @@ fn integration_test_erc20() {
     let result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         get_name_selector,
         &calldata,
         EntryPointType::External,
@@ -266,6 +269,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         &caller_address,
         get_symbol_selector,
         &calldata,
@@ -284,6 +288,7 @@ fn integration_test_erc20() {
     let result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         balance_of_selector,
         &calldata,
         EntryPointType::External,
@@ -299,6 +304,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         &caller_address,
         allowance_entry_point_selector,
         &calldata,
@@ -316,6 +322,7 @@ fn integration_test_erc20() {
     let result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         increase_allowance_entry_point_selector,
         &calldata,
         EntryPointType::External,
@@ -330,6 +337,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         &caller_address,
         allowance_entry_point_selector,
         &calldata,
@@ -346,6 +354,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         &caller_address,
         approve_entry_point_selector,
         &calldata,
@@ -364,6 +373,7 @@ fn integration_test_erc20() {
     let result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         balance_of_selector,
         &calldata,
         EntryPointType::External,
@@ -380,6 +390,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         &caller_address,
         balance_of_selector,
         &calldata,
@@ -398,6 +409,7 @@ fn integration_test_erc20() {
     let result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         balance_of_selector,
         &calldata,
         EntryPointType::External,
@@ -414,6 +426,7 @@ fn integration_test_erc20() {
 
     let result = execute(
         &mut state,
+        &caller_address,
         &caller_address,
         transfer_from_selector,
         &calldata,
@@ -432,6 +445,7 @@ fn integration_test_erc20() {
     let result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         balance_of_selector,
         &calldata,
         EntryPointType::External,
@@ -449,6 +463,7 @@ fn integration_test_erc20() {
     let _result = execute(
         &mut state,
         &caller_address,
+        &caller_address,
         balance_of_selector,
         &calldata,
         EntryPointType::External,
@@ -459,55 +474,6 @@ fn integration_test_erc20() {
     // TODO: This assert is failing. For some reason, tokens are not deducted from the caller's balance
     // after the transfer_from. Check the cairo code to see if the bug is over there.
     // assert_eq!(result.retdata, [0.into()].to_vec());
-}
-
-fn execute(
-    state: &mut CachedState<InMemoryStateReader>,
-    caller_address: &Address,
-    selector: &BigUint,
-    calldata: &[Felt252],
-    entrypoint_type: EntryPointType,
-) -> CallInfo {
-    let address = Address(1112.into());
-    let class_hash: ClassHash = [1; 32];
-
-    let exec_entry_point = ExecutionEntryPoint::new(
-        address,
-        calldata.to_vec(),
-        Felt252::new(selector),
-        (*caller_address).clone(),
-        entrypoint_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        u128::MAX,
-    );
-
-    // Execute the entrypoint
-    let block_context = BlockContext::default();
-    let mut tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
-        true,
-    );
-    let mut resources_manager = ExecutionResourcesManager::default();
-
-    exec_entry_point
-        .execute(
-            state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap()
-        .call_info
-        .unwrap()
 }
 
 #[test]
@@ -580,10 +546,59 @@ fn call_contract_test() {
     let result = execute(
         &mut state,
         &caller_address,
+        &callee_address,
         call_contract_selector,
         &calldata,
         EntryPointType::External,
     );
 
     assert_eq!(result.retdata, [Felt252::new(44)]);
+}
+
+fn execute(
+    state: &mut CachedState<InMemoryStateReader>,
+    caller_address: &Address,
+    callee_address: &Address,
+    selector: &BigUint,
+    calldata: &[Felt252],
+    entrypoint_type: EntryPointType,
+) -> CallInfo {
+    let class_hash: ClassHash = [1; 32];
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        (*callee_address).clone(),
+        calldata.to_vec(),
+        Felt252::new(selector),
+        (*caller_address).clone(),
+        entrypoint_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        u128::MAX,
+    );
+
+    // Execute the entrypoint
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    exec_entry_point
+        .execute(
+            state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps(),
+        )
+        .unwrap()
+        .call_info
+        .unwrap()
 }
