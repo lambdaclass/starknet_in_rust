@@ -25,6 +25,7 @@ use utils::Address;
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
+extern crate phf_macros;
 
 // Re-exports
 pub use crate::services::api::contract_classes::deprecated_contract_class::{

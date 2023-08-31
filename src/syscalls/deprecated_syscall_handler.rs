@@ -21,6 +21,54 @@ use cairo_vm::{
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
 use std::{any::Any, collections::HashMap};
+use phf_macros::phf_map;
+
+enum SyscallHandler {
+    Deploy,
+    EmitEvent,
+    GetBlockNumber,
+    GetBlockTimestamp,
+    GetCallerAddress,
+    GetSequencerAddress,
+    LibraryCall,
+    LibraryCallL1Handler,
+    CallContract,
+    StorageRead,
+    StorageWrite,
+    SendMessageToL1,
+    GetTxSignature,
+    GetTxInfo,
+    GetContractAddress,
+    DelegateCall,
+    DelegateCallL1Handler,
+    ReplaceClass,
+    //Normal hint
+    AddrBoundPrime,
+    AddrIs250,
+}
+
+static HINT_CODES: phf::Map<&'static str, SyscallHandler> = phf_map! {
+    "DEPLOY" => SyscallHandler::Deploy,
+    "EMIT_EVENT_CODE" => SyscallHandler::EmitEvent,
+    "GET_BLOCK_NUMBER" => SyscallHandler::GetBlockNumber,
+    "GET_BLOCK_TIMESTAM" => SyscallHandler::GetBlockTimestamp,
+    "GET_CALLER_ADDRESS" => SyscallHandler::GetCallerAddress,
+    "GET_SEQUENCER_ADDRESS" => SyscallHandler::GetSequencerAddress,
+    "LIBRARY_CALL" => SyscallHandler::LibraryCall,
+    "LIBRARY_CALL_L1_HANDLER" => SyscallHandler::LibraryCallL1Handler,
+    "CALL_CONTRACT" => SyscallHandler::CallContract,
+    "STORAGE_READ" => SyscallHandler::StorageRead,
+    "STORAGE_WRITE" => SyscallHandler::StorageWrite,
+    "SEND_MESSAGE_TO_L1" => SyscallHandler::SendMessageToL1,
+    "GET_TX_SIGNATURE" => SyscallHandler::GetTxSignature,
+    "GET_TX_INFO" => SyscallHandler::GetTxInfo,
+    "GET_CONTRACT_ADDRESS" => SyscallHandler::GetContractAddress,
+    "DELEGATE_CALL" => SyscallHandler::DelegateCall,
+    "DELEGATE_L1_HANDLER" => SyscallHandler::DelegateCallL1Handler,
+    "REPLACE_CLASS" => SyscallHandler::ReplaceClass,
+    "ADDRBOUNDPRIME" => SyscallHandler::AddrBoundPrime,
+    "ADDRIS250" => SyscallHandler::AddrIs250,
+};
 
 /// Definition of the deprecated syscall hint processor with associated structs
 pub(crate) struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
@@ -71,87 +119,91 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
     ) -> Result<(), SyscallHandlerError> {
         // Match against specific syscall hint codes and call the appropriate handler
         let hint_data = hint_data
-            .downcast_ref::<HintProcessorData>()
-            .ok_or(SyscallHandlerError::WrongHintData)?;
+        .downcast_ref::<HintProcessorData>()
+        .ok_or(SyscallHandlerError::WrongHintData)?;
 
-        match hint_data.code.as_str() {
-            ADDR_BOUND_PRIME => other_syscalls::addr_bound_prime(vm, hint_data, constants),
-            ADDR_IS_250 => other_syscalls::addr_is_250(vm, hint_data),
-            DEPLOY => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.deploy(vm, syscall_ptr)
-            }
-            EMIT_EVENT_CODE => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.emit_event(vm, syscall_ptr)
-            }
-            GET_BLOCK_NUMBER => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_block_number(vm, syscall_ptr)
-            }
-            GET_BLOCK_TIMESTAMP => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_block_timestamp(vm, syscall_ptr)
-            }
-            GET_CALLER_ADDRESS => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_caller_address(vm, syscall_ptr)
-            }
-            GET_SEQUENCER_ADDRESS => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_sequencer_address(vm, syscall_ptr)
-            }
-            LIBRARY_CALL => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.library_call(vm, syscall_ptr)
-            }
-            LIBRARY_CALL_L1_HANDLER => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler
-                    .library_call_l1_handler(vm, syscall_ptr)
-            }
-            CALL_CONTRACT => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.call_contract(vm, syscall_ptr)
-            }
-            STORAGE_READ => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.storage_read(vm, syscall_ptr)
-            }
-            STORAGE_WRITE => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.storage_write(vm, syscall_ptr)
-            }
-            SEND_MESSAGE_TO_L1 => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.send_message_to_l1(vm, syscall_ptr)
-            }
-            GET_TX_SIGNATURE => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_tx_signature(vm, syscall_ptr)
-            }
-            GET_TX_INFO => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_tx_info(vm, syscall_ptr)
-            }
-            GET_CONTRACT_ADDRESS => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_contract_address(vm, syscall_ptr)
-            }
-            DELEGATE_CALL => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.delegate_call(vm, syscall_ptr)
-            }
-            DELEGATE_L1_HANDLER => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.delegate_l1_handler(vm, syscall_ptr)
-            }
-            REPLACE_CLASS => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.replace_class(vm, syscall_ptr)
-            }
-            _ => Err(SyscallHandlerError::NotImplemented(hint_data.code.clone())),
+        let hint_code = &hint_data.code;
+        if let Some(syscall) = HINT_CODES.get(hint_code) {
+            match syscall {
+            SyscallHandler::AddrBoundPrime => other_syscalls::addr_bound_prime(vm, hint_data, constants),
+            SyscallHandler::AddrIs250 => other_syscalls::addr_is_250(vm, hint_data),
+            SyscallHandler::Deploy => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.deploy(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::EmitEvent => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.emit_event(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::GetBlockNumber => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.get_block_number(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::GetBlockTimestamp => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.get_block_timestamp(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::GetCallerAddress => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.get_caller_address(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::GetSequencerAddress => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.get_sequencer_address(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::LibraryCall => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.library_call(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::LibraryCallL1Handler => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.library_call_l1_handler(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::CallContract => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.call_contract(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::StorageRead => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.storage_read(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::StorageWrite => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.storage_write(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::SendMessageToL1 => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.send_message_to_l1(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::GetTxSignature => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.get_tx_signature(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::GetTxInfo => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.get_tx_info(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::GetContractAddress => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.get_contract_address(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::DelegateCall => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.delegate_call(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::DelegateCallL1Handler => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.delegate_l1_handler(vm, syscall_ptr)?;
+            }),
+            SyscallHandler::ReplaceClass => Ok({
+            let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+            self.syscall_handler.replace_class(vm, syscall_ptr)?;
+            }),
         }
+     } else {
+        // Make sure to return a Result type here
+        return Err(SyscallHandlerError::NotImplemented(hint_data.code.clone()));
+    } 
     }
 }
 

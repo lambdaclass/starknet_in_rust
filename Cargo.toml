@@ -56,6 +56,8 @@ starknet = { workspace = true }
 base64 = { version = "0.21.0", default-features = false, features = ["alloc"] }
 flate2 = "1.0.25"
 serde_json_pythonic = { git = "https://github.com/xJonathanLEI/serde_json_pythonic", tag = "v0.1.2"}
+phf = "0.11"
+phf_macros = "0.11"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
@@ -65,3 +67,6 @@ coverage-helper = "0.1.0"
 path = "bench/internals.rs"
 name = "internals"
 harness = false
+
+[build-dependencies]
+phf_codegen = "0.11"
