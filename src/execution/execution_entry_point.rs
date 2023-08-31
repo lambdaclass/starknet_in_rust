@@ -1085,6 +1085,9 @@ impl ExecutionEntryPoint {
             .unwrap()
             .id;
 
+        println!("FN ID: {}", fn_id);
+        let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
+
         let required_init_gas = native_program.get_required_init_gas(fn_id);
 
         let calldata: Vec<_> = self
@@ -1093,52 +1096,44 @@ impl ExecutionEntryPoint {
             .map(|felt| felt252_bigint(felt.to_bigint()))
             .collect();
 
-        let params = match self.entry_point_type {
-            EntryPointType::External => {
-                json!([
-                    (),
-                    // gas
-                    u64::MAX,
-                    // system
-                    syscall_addr,
-                    [
-                        // Span<Array<felt>>
-                        calldata
-                    ]
-                ])
-            }
-            EntryPointType::L1Handler => {
-                json!([
-                    (),
-                    // gas
-                    u64::MAX,
-                    // system
-                    syscall_addr,
-                    [
-                        // Span<Array<felt>>
-                        calldata
-                    ]
-                ])
-            }
-            EntryPointType::Constructor => {
-                json!([
-                    // pedersen
-                    null,
-                    // range check
-                    null,
-                    // gas
-                    u64::MAX,
-                    // system
-                    syscall_addr,
-                    [
-                        // Span<Array<felt>>
-                        calldata
-                    ]
-                ])
-            }
-        };
+        /*
+            Below we construct `params`, the Serde value that MLIR expects. It consists of the following:
 
-        println!("SYSCALL ADDRESS: {}", syscall_addr);
+            - One `null` value for each builtin that is going to be used.
+            - The maximum amout of gas allowed by the call.
+            - `syscall_addr`, the address of the syscall handler.
+            - `calldata`, an array of Felt arguments to the method being called.
+
+            The code to construct it is complex and obscure for the following reason: because the amount of syscalls
+            to be called depends on the method, we don't know beforehand how many `null`s to append to the beginning
+            of the parameters. Ideally, we would like to use the `json!` macro to construct the `params`, but I found
+            no way of doing so; thus, string interpolation.
+
+            To know how many `null`s to append, we fetch the total amount of arguments for the function from
+            the sierra program, then substract 3 from it, to account for the other arguments (gas, syscall_addr, calldata).
+        */
+        let mut builtins_string = "".to_owned();
+        for _ in 0..(number_of_params - 3) {
+            builtins_string.push_str(&"null,");
+        }
+
+        let params: Value = serde_json::from_str(&format!(
+            "
+            [
+                {}
+                {},
+                {},
+                [
+                    {:?}
+                ]
+            ]
+        ",
+            builtins_string,
+            u64::MAX,
+            syscall_addr,
+            calldata
+        ))
+        .unwrap();
 
         let mut writer: Vec<u8> = Vec::new();
         let returns = &mut serde_json::Serializer::new(&mut writer);
