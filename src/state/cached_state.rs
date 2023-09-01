@@ -480,6 +480,15 @@ impl<T: StateReader> State for CachedState<T> {
                 return Ok(CompiledClass::Casm(Arc::new(casm_class.clone())));
             }
         }
+
+        if let Some(sierra_compiled_class) = self
+            .sierra_programs
+            .get(class_hash)
+        {
+            return Ok(CompiledClass::Sierra(Arc::new(
+                sierra_compiled_class.clone(),
+            )));
+        }
         // II: FETCHING FROM STATE_READER
         let contract = self.state_reader.get_contract_class(class_hash)?;
         match contract {
@@ -493,6 +502,7 @@ impl<T: StateReader> State for CachedState<T> {
             CompiledClass::Deprecated(ref contract) => {
                 self.set_contract_class(class_hash, &contract.clone())?
             }
+            CompiledClass::Sierra(_) => todo!(),
         }
         Ok(contract)
     }

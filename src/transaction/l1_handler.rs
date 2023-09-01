@@ -187,7 +187,6 @@ impl L1Handler {
             self.nonce.clone().ok_or(TransactionError::MissingNonce)?,
             n_steps,
             L1_HANDLER_VERSION.into(),
-            false,
         ))
     }
     pub(crate) fn create_for_simulation(
@@ -308,14 +307,14 @@ mod test {
                     10.into(),
                 ],
                 retdata: vec![],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 141,
                     n_memory_holes: 20,
                     builtin_instance_counter: HashMap::from([
                         ("range_check_builtin".to_string(), 6),
                         ("pedersen_builtin".to_string(), 2),
                     ]),
-                },
+                }),
                 events: vec![],
                 l2_to_l1_messages: vec![],
                 storage_read_values: vec![0.into()],

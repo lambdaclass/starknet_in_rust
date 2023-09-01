@@ -24,6 +24,7 @@ use starknet::core::types::ContractClass::{Legacy, Sierra};
 pub enum CompiledClass {
     Deprecated(Arc<ContractClass>),
     Casm(Arc<CasmContractClass>),
+    Sierra(Arc<SierraContractClass>),
 }
 
 impl TryInto<CasmContractClass> for CompiledClass {

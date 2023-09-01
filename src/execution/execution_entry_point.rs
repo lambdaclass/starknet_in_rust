@@ -1,5 +1,7 @@
+use std::fmt;
 use std::sync::Arc;
 
+use crate::core::errors::state_errors::StateError;
 use crate::services::api::contract_classes::deprecated_contract_class::{
     ContractEntryPoint, EntryPointType,
 };
@@ -27,6 +29,13 @@ use crate::{
     },
 };
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
+use cairo_native::context::NativeContext;
+use cairo_native::executor::NativeExecutor;
+use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
+use cairo_native::starknet::{
+    BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
+};
+use cairo_native::utils::felt252_bigint;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -38,10 +47,410 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
+use num_traits::Zero;
+use serde::de::SeqAccess;
+use serde::{de, Deserialize, Deserializer};
+use serde_json::Value;
 
 use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
 };
+
+#[derive(Debug)]
+pub struct NativeExecutionResult {
+    pub gas_builtin: Option<u64>,
+    pub range_check: Option<u64>,
+    pub system: Option<u64>,
+    pub failure_flag: bool,
+    pub return_values: Vec<Felt252>,
+}
+
+impl<'de> Deserialize<'de> for NativeExecutionResult {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct NativeExecutionResultVisitor;
+
+        impl<'de> de::Visitor<'de> for NativeExecutionResultVisitor {
+            type Value = NativeExecutionResult;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("Could not deserialize array of hexadecimal")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut last_element: Option<Value> = None;
+                while let Some(value) = seq.next_element::<Option<Value>>()? {
+                    last_element = value;
+                }
+
+                let (failure_flag_integer, return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
+                    serde_json::from_value::<(u64, Vec<Vec<Vec<Vec<u32>>>>)>(last_element.unwrap())
+                        .unwrap();
+
+                Ok(NativeExecutionResult {
+                    gas_builtin: None,
+                    range_check: None,
+                    system: None,
+                    return_values: return_values[0][0]
+                        .iter()
+                        .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
+                        .collect(),
+                    failure_flag: failure_flag_integer == 1,
+                })
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &[
+            "gas_builtin",
+            "range_check",
+            "system",
+            "return_values",
+            "failure_flag",
+        ];
+        deserializer.deserialize_struct("Duration", FIELDS, NativeExecutionResultVisitor)
+    }
+}
+
+fn u32_vec_to_felt(u32_limbs: &[u32]) -> Felt252 {
+    let mut ret = vec![];
+
+    for limb in u32_limbs {
+        let bytes = limb.to_le_bytes();
+        ret.extend_from_slice(&bytes);
+    }
+
+    Felt252::from_bytes_le(&ret)
+}
+
+#[derive(Debug)]
+struct SyscallHandler<'a, S>
+where
+    S: StateReader,
+{
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) contract_address: Address,
+    pub(crate) caller_address: Address,
+    pub(crate) entry_point_selector: Felt252,
+    pub(crate) events: Vec<OrderedEvent>,
+    pub(crate) n_emitted_events: u64,
+    pub(crate) n_sent_messages: usize,
+    pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub(crate) tx_execution_context: TransactionExecutionContext,
+    pub(crate) block_context: BlockContext,
+    // TODO: This may not be really needed for Cairo Native, just passing
+    // it to be able to call the `execute` method of ExecutionEntrypoint.
+    pub(crate) internal_calls: Vec<CallInfo>,
+}
+
+impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
+    fn get_block_hash(&self, block_number: u64) -> SyscallResult<cairo_vm::felt::Felt252> {
+        println!("Called `get_block_hash({block_number})` from MLIR.");
+        Ok(Felt252::from_bytes_be(b"get_block_hash ok"))
+    }
+
+    fn get_execution_info(&self) -> SyscallResult<cairo_native::starknet::ExecutionInfo> {
+        println!("Called `get_execution_info()` from MLIR.");
+        Ok(ExecutionInfo {
+            block_info: BlockInfo {
+                block_number: self.block_context.block_info.block_number,
+                block_timestamp: self.block_context.block_info.block_timestamp,
+                sequencer_address: self.block_context.block_info.sequencer_address.0.clone(),
+            },
+            tx_info: TxInfo {
+                version: self.tx_execution_context.version.clone(),
+                account_contract_address: self
+                    .tx_execution_context
+                    .account_contract_address
+                    .0
+                    .clone(),
+                max_fee: self.tx_execution_context.max_fee,
+                signature: self.tx_execution_context.signature.clone(),
+                transaction_hash: self.tx_execution_context.transaction_hash.clone(),
+                chain_id: self.block_context.starknet_os_config.chain_id.clone(),
+                nonce: self.tx_execution_context.nonce.clone(),
+            },
+            caller_address: self.caller_address.0.clone(),
+            contract_address: self.contract_address.0.clone(),
+            entry_point_selector: self.entry_point_selector.clone(),
+        })
+    }
+
+    fn deploy(
+        &self,
+        class_hash: cairo_vm::felt::Felt252,
+        contract_address_salt: cairo_vm::felt::Felt252,
+        calldata: &[cairo_vm::felt::Felt252],
+        deploy_from_zero: bool,
+    ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
+        println!("Called `deploy({class_hash}, {contract_address_salt}, {calldata:?}, {deploy_from_zero})` from MLIR.");
+        Ok((
+            class_hash + contract_address_salt,
+            calldata.iter().map(|x| x + &Felt252::new(1)).collect(),
+        ))
+    }
+
+    fn replace_class(&self, class_hash: cairo_vm::felt::Felt252) -> SyscallResult<()> {
+        println!("Called `replace_class({class_hash})` from MLIR.");
+        Ok(())
+    }
+
+    fn library_call(
+        &self,
+        class_hash: cairo_vm::felt::Felt252,
+        function_selector: cairo_vm::felt::Felt252,
+        calldata: &[cairo_vm::felt::Felt252],
+    ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
+        println!(
+            "Called `library_call({class_hash}, {function_selector}, {calldata:?})` from MLIR."
+        );
+        Ok(calldata.iter().map(|x| x * &Felt252::new(3)).collect())
+    }
+
+    fn call_contract(
+        &mut self,
+        address: cairo_vm::felt::Felt252,
+        entrypoint_selector: cairo_vm::felt::Felt252,
+        calldata: &[cairo_vm::felt::Felt252],
+    ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
+        println!(
+            "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from MLIR."
+        );
+        let address = Address(address);
+        let exec_entry_point = ExecutionEntryPoint::new(
+            address,
+            calldata.to_vec(),
+            entrypoint_selector,
+            self.contract_address.clone(),
+            EntryPointType::External,
+            Some(CallType::Call),
+            None,
+            // TODO: The remaining gas must be correctly set someway
+            u128::MAX,
+        );
+
+        let ExecutionResult { call_info, .. } = exec_entry_point
+            .execute(
+                self.starknet_storage_state.state,
+                // TODO: This fields dont make much sense in the Cairo Native context,
+                // they are only dummy values for the `execute` method.
+                &BlockContext::default(),
+                &mut ExecutionResourcesManager::default(),
+                &mut TransactionExecutionContext::default(),
+                false,
+                u64::MAX,
+            )
+            .unwrap();
+
+        let call_info = call_info.unwrap();
+
+        // update syscall handler information
+        self.starknet_storage_state
+            .read_values
+            .extend(call_info.storage_read_values.clone());
+        self.starknet_storage_state
+            .accessed_keys
+            .extend(call_info.accessed_storage_keys.clone());
+        self.internal_calls.push(call_info.clone());
+
+        Ok(call_info.retdata)
+    }
+
+    fn storage_read(
+        &mut self,
+        address_domain: u32,
+        address: cairo_vm::felt::Felt252,
+    ) -> SyscallResult<cairo_vm::felt::Felt252> {
+        println!("Called `storage_read({address_domain}, {address})` from MLIR.");
+        match self.starknet_storage_state.read(&address.to_be_bytes()) {
+            Ok(value) => Ok(value),
+            Err(_e @ StateError::Io(_)) => todo!(),
+            Err(_) => Ok(Felt252::zero()),
+        }
+    }
+
+    fn storage_write(
+        &mut self,
+        address_domain: u32,
+        address: cairo_vm::felt::Felt252,
+        value: cairo_vm::felt::Felt252,
+    ) -> SyscallResult<()> {
+        println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
+        Ok(self
+            .starknet_storage_state
+            .write(&address.to_be_bytes(), value))
+    }
+
+    fn emit_event(
+        &mut self,
+        keys: &[cairo_vm::felt::Felt252],
+        data: &[cairo_vm::felt::Felt252],
+    ) -> SyscallResult<()> {
+        let order = self.n_emitted_events;
+        println!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from MLIR.");
+        self.events
+            .push(OrderedEvent::new(order, keys.to_vec(), data.to_vec()));
+        self.n_emitted_events += 1;
+        Ok(())
+    }
+
+    fn send_message_to_l1(
+        &mut self,
+        to_address: cairo_vm::felt::Felt252,
+        payload: &[cairo_vm::felt::Felt252],
+    ) -> SyscallResult<()> {
+        println!("Called `send_message_to_l1({to_address}, {payload:?})` from MLIR.");
+        let addr = Address(to_address);
+        self.l2_to_l1_messages.push(OrderedL2ToL1Message::new(
+            self.n_sent_messages,
+            addr,
+            payload.to_vec(),
+        ));
+
+        // Update messages count.
+        self.n_sent_messages += 1;
+        Ok(())
+    }
+
+    fn keccak(&self, input: &[u64]) -> SyscallResult<cairo_native::starknet::U256> {
+        println!("Called `keccak({input:?})` from MLIR.");
+        Ok(U256(Felt252::from(1234567890).to_le_bytes()))
+    }
+
+    fn secp256k1_add(
+        &self,
+        _p0: cairo_native::starknet::Secp256k1Point,
+        _p1: cairo_native::starknet::Secp256k1Point,
+    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        todo!()
+    }
+
+    fn secp256k1_get_point_from_x(
+        &self,
+        _x: cairo_native::starknet::U256,
+        _y_parity: bool,
+    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        todo!()
+    }
+
+    fn secp256k1_get_xy(
+        &self,
+        _p: cairo_native::starknet::Secp256k1Point,
+    ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
+        todo!()
+    }
+
+    fn secp256k1_mul(
+        &self,
+        _p: cairo_native::starknet::Secp256k1Point,
+        _m: cairo_native::starknet::U256,
+    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        todo!()
+    }
+
+    fn secp256k1_new(
+        &self,
+        _x: cairo_native::starknet::U256,
+        _y: cairo_native::starknet::U256,
+    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        todo!()
+    }
+
+    fn secp256r1_add(
+        &self,
+        _p0: cairo_native::starknet::Secp256k1Point,
+        _p1: cairo_native::starknet::Secp256k1Point,
+    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        todo!()
+    }
+
+    fn secp256r1_get_point_from_x(
+        &self,
+        _x: cairo_native::starknet::U256,
+        _y_parity: bool,
+    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        todo!()
+    }
+
+    fn secp256r1_get_xy(
+        &self,
+        _p: cairo_native::starknet::Secp256k1Point,
+    ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
+        todo!()
+    }
+
+    fn secp256r1_mul(
+        &self,
+        _p: cairo_native::starknet::Secp256k1Point,
+        _m: cairo_native::starknet::U256,
+    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        todo!()
+    }
+
+    fn secp256r1_new(
+        &self,
+        _x: cairo_native::starknet::U256,
+        _y: cairo_native::starknet::U256,
+    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        todo!()
+    }
+
+    fn pop_log(&self) {
+        todo!()
+    }
+
+    fn set_account_contract_address(&self, _contract_address: cairo_vm::felt::Felt252) {
+        todo!()
+    }
+
+    fn set_block_number(&self, _block_number: u64) {
+        todo!()
+    }
+
+    fn set_block_timestamp(&self, _block_timestamp: u64) {
+        todo!()
+    }
+
+    fn set_caller_address(&self, _address: cairo_vm::felt::Felt252) {
+        todo!()
+    }
+
+    fn set_chain_id(&self, _chain_id: cairo_vm::felt::Felt252) {
+        todo!()
+    }
+
+    fn set_contract_address(&self, _address: cairo_vm::felt::Felt252) {
+        todo!()
+    }
+
+    fn set_max_fee(&self, _max_fee: u128) {
+        todo!()
+    }
+
+    fn set_nonce(&self, _nonce: cairo_vm::felt::Felt252) {
+        todo!()
+    }
+
+    fn set_sequencer_address(&self, _address: cairo_vm::felt::Felt252) {
+        todo!()
+    }
+
+    fn set_signature(&self, _signature: &[cairo_vm::felt::Felt252]) {
+        todo!()
+    }
+
+    fn set_transaction_hash(&self, _transaction_hash: cairo_vm::felt::Felt252) {
+        todo!()
+    }
+
+    fn set_version(&self, _version: cairo_vm::felt::Felt252) {
+        todo!()
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct ExecutionResult {
@@ -172,6 +581,41 @@ impl ExecutionEntryPoint {
                     }
                 }
             }
+            CompiledClass::Sierra(contract_class) => {
+                let mut tmp_state = CachedState::new(state.state_reader.clone());
+                tmp_state = tmp_state.set_sierra_programs_cache(state.sierra_programs.clone());
+                tmp_state.cache = state.cache.clone();
+
+                match self.native_execute(
+                    &mut tmp_state,
+                    contract_class,
+                    tx_execution_context,
+                    block_context,
+                ) {
+                    Ok(call_info) => {
+                        let state_diff = StateDiff::from_cached_state(tmp_state)?;
+                        state.apply_state_update(&state_diff)?;
+                        return Ok(ExecutionResult {
+                            call_info: Some(call_info),
+                            revert_error: None,
+                            n_reverted_steps: 0,
+                        });
+                    }
+                    Err(e) => {
+                        if !support_reverted {
+                            return Err(e);
+                        }
+
+                        let n_reverted_steps =
+                            (max_steps as usize) - resources_manager.cairo_usage.n_steps;
+                        return Ok(ExecutionResult {
+                            call_info: None,
+                            revert_error: Some(e.to_string()),
+                            n_reverted_steps,
+                        });
+                    }
+                }
+            }
         }
     }
 
@@ -261,7 +705,7 @@ impl ExecutionEntryPoint {
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata,
-            execution_resources: execution_resources.filter_unused_builtins(),
+            execution_resources: Some(execution_resources.filter_unused_builtins()),
             events,
             l2_to_l1_messages,
             storage_read_values: starknet_storage_state.read_values,
@@ -298,7 +742,7 @@ impl ExecutionEntryPoint {
                 .iter()
                 .map(|n| n.get_int_ref().cloned().unwrap_or_default())
                 .collect(),
-            execution_resources: execution_resources.filter_unused_builtins(),
+            execution_resources: Some(execution_resources.filter_unused_builtins()),
             events,
             l2_to_l1_messages,
             storage_read_values: starknet_storage_state.read_values,
@@ -446,9 +890,6 @@ impl ExecutionEntryPoint {
         class_hash: [u8; 32],
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError> {
-        if tx_execution_context.use_cairo_native {
-            dbg!("Use cairo native");
-        }
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
         // fetch selected entry point
@@ -587,5 +1028,162 @@ impl ExecutionEntryPoint {
             runner.hint_processor.syscall_handler.internal_calls,
             call_result,
         )
+    }
+
+    fn native_execute<S: StateReader>(
+        &self,
+        state: &mut CachedState<S>,
+        contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        tx_execution_context: &mut TransactionExecutionContext,
+        block_context: &BlockContext,
+    ) -> Result<CallInfo, TransactionError> {
+        let entry_point = match self.entry_point_type {
+            EntryPointType::External => contract_class
+                .entry_points_by_type
+                .external
+                .iter()
+                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .unwrap(),
+            EntryPointType::Constructor => contract_class
+                .entry_points_by_type
+                .constructor
+                .iter()
+                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .unwrap(),
+            EntryPointType::L1Handler => contract_class
+                .entry_points_by_type
+                .l1_handler
+                .iter()
+                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .unwrap(),
+        };
+
+        let sierra_program = contract_class.extract_sierra_program().unwrap();
+        // println!("{}", sierra_program.to_string());
+
+        let native_context = NativeContext::new();
+        let mut native_program = native_context.compile(&sierra_program).unwrap();
+        let contract_storage_state =
+            ContractStorageState::new(state, self.contract_address.clone());
+
+        let mut syscall_handler = SyscallHandler {
+            starknet_storage_state: contract_storage_state,
+            n_emitted_events: 0,
+            events: Vec::new(),
+            l2_to_l1_messages: Vec::new(),
+            n_sent_messages: 0,
+            contract_address: self.contract_address.clone(),
+            internal_calls: Vec::new(),
+            caller_address: self.caller_address.clone(),
+            entry_point_selector: self.entry_point_selector.clone(),
+            tx_execution_context: tx_execution_context.clone(),
+            block_context: block_context.clone(),
+        };
+        native_program
+            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler))
+            .unwrap();
+
+        let syscall_addr = native_program
+            .get_metadata::<SyscallHandlerMeta>()
+            .unwrap()
+            .as_ptr()
+            .addr();
+
+        let fn_id = &sierra_program
+            .funcs
+            .iter()
+            .find(|x| x.id.id == (entry_point.function_idx as u64))
+            .unwrap()
+            .id;
+
+        println!();
+        println!("CALLING FUNCTION: {}", fn_id);
+        let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
+
+        let required_init_gas = native_program.get_required_init_gas(fn_id);
+
+        let calldata: Vec<_> = self
+            .calldata
+            .iter()
+            .map(|felt| felt252_bigint(felt.to_bigint()))
+            .collect();
+
+        /*
+            Below we construct `params`, the Serde value that MLIR expects. It consists of the following:
+
+            - One `null` value for each builtin that is going to be used.
+            - The maximum amout of gas allowed by the call.
+            - `syscall_addr`, the address of the syscall handler.
+            - `calldata`, an array of Felt arguments to the method being called.
+
+            The code to construct it is complex and obscure for the following reason: because the amount of syscalls
+            to be called depends on the method, we don't know beforehand how many `null`s to append to the beginning
+            of the parameters. Ideally, we would like to use the `json!` macro to construct the `params`, but I found
+            no way of doing so; thus, string interpolation.
+
+            To know how many `null`s to append, we fetch the total amount of arguments for the function from
+            the sierra program, then substract 3 from it, to account for the other arguments (gas, syscall_addr, calldata).
+        */
+        let mut builtins_string = "".to_owned();
+        for _ in 0..(number_of_params - 3) {
+            builtins_string.push_str(&"null,");
+        }
+
+        let params: Value = serde_json::from_str(&format!(
+            "
+            [
+                {}
+                {},
+                {},
+                [
+                    {:?}
+                ]
+            ]
+        ",
+            builtins_string,
+            u64::MAX,
+            syscall_addr,
+            calldata
+        ))
+        .unwrap();
+
+        let mut writer: Vec<u8> = Vec::new();
+        let returns = &mut serde_json::Serializer::new(&mut writer);
+
+        let native_executor = NativeExecutor::new(native_program);
+
+        native_executor
+            .execute(fn_id, params, returns, required_init_gas)
+            .unwrap();
+
+        let result: String = String::from_utf8(writer).unwrap();
+        let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
+        // let value = serde_json::from_str::<Value>(&result).unwrap();
+
+        return Ok(CallInfo {
+            caller_address: self.caller_address.clone(),
+            call_type: Some(self.call_type.clone()),
+            contract_address: self.contract_address.clone(),
+            code_address: self.code_address.clone(),
+            class_hash: Some(
+                self.get_code_class_hash(syscall_handler.starknet_storage_state.state)?,
+            ),
+            entry_point_selector: Some(self.entry_point_selector.clone()),
+            entry_point_type: Some(self.entry_point_type),
+            calldata: self.calldata.clone(),
+            retdata: value.return_values,
+            execution_resources: None,
+            events: syscall_handler.events,
+            storage_read_values: syscall_handler.starknet_storage_state.read_values,
+            accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
+            failure_flag: value.failure_flag,
+            l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
+
+            // TODO
+            internal_calls: vec![],
+
+            // TODO
+            gas_consumed: 0,
+        });
     }
 }

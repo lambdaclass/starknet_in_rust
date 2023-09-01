@@ -11,7 +11,7 @@ with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
 
 [workspace]
-members = ["cli", "fuzzer", "rpc_state_reader"]
+members = ["cli", "fuzzer", "rpc_state_reader", "rpc_state_reader_sn_api"]
 
 [workspace.dependencies]
 cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
@@ -19,11 +19,11 @@ starknet_api = "0.3.0"
 num-traits = "0.2.15"
 starknet = "0.5.0"
 thiserror = "1.0.32"
-cairo-lang-starknet = "2.1.0-rc4"
-cairo-lang-casm = "2.1.0-rc4"
-cairo-lang-runner = "2.1.0-rc4"
-cairo-lang-sierra = "2.1.0-rc4"
-cairo-lang-utils = "2.1.0-rc4"
+cairo-lang-starknet = "2.2.0"
+cairo-lang-casm = "2.2.0"
+cairo-lang-runner = "2.2.0"
+cairo-lang-sierra = "2.2.0"
+cairo-lang-utils = "2.2.0"
 
 [dependencies]
 cairo-lang-starknet = { workspace = true }
@@ -32,7 +32,7 @@ cairo-lang-runner = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-utils = { workspace = true }
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", branch="fix_array_slice"}
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", branch="sir-integration"}
 getset = "0.1.2"
 lazy_static = "1.4.0"
 num-bigint = { version = "0.4", features = ["serde"] }

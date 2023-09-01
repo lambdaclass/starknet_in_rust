@@ -97,7 +97,6 @@ fn integration_test() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -110,10 +109,10 @@ fn integration_test() {
         calldata,
         retdata: [144.into()].to_vec(),
         class_hash: Some(class_hash),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 94,
             ..Default::default()
-        },
+        }),
         ..Default::default()
     };
 
@@ -192,7 +191,6 @@ fn integration_test_cairo1() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -205,11 +203,11 @@ fn integration_test_cairo1() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 418,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
-        },
+        }),
         class_hash: Some(class_hash),
         gas_consumed: 35220,
         ..Default::default()

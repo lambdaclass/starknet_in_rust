@@ -198,7 +198,6 @@ impl Declare {
             self.nonce.clone(),
             n_steps,
             self.version.clone(),
-            false,
         )
     }
 
@@ -418,10 +417,10 @@ mod tests {
             entry_point_type: Some(EntryPointType::External),
             calldata,
             class_hash: Some(expected_class_hash),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 

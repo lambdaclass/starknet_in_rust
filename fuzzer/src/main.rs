@@ -160,7 +160,6 @@ fn main() {
                 10.into(),
                 block_context.invoke_tx_max_n_steps(),
                 TRANSACTION_VERSION.clone(),
-                false,
             );
             let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -177,7 +176,7 @@ fn main() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata,
                 retdata: [Felt252::from_bytes_be(data_to_ascii(data).as_bytes())].to_vec(),
-                execution_resources: ExecutionResources::default(),
+                execution_resources: Some(ExecutionResources::default()),
                 class_hash: Some(class_hash),
                 storage_read_values: vec![Felt252::from_bytes_be(data_to_ascii(data).as_bytes())],
                 accessed_storage_keys: expected_accessed_storage_keys,

@@ -399,10 +399,10 @@ fn expected_validate_call_info(
         // Entries **not** in blockifier.
         class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
         call_type: Some(CallType::Call),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 13,
             ..Default::default()
-        },
+        }),
 
         ..Default::default()
     }
@@ -465,14 +465,14 @@ fn expected_fee_transfer_call_info(
             Felt252::zero(),
             Felt252::zero(),
         ],
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 529,
             n_memory_holes: 57,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
                 (HASH_BUILTIN_NAME.to_string(), 4),
             ]),
-        },
+        }),
         ..Default::default()
     }
 }
@@ -612,14 +612,14 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::zero()],
         retdata: vec![Felt252::from(1)],
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
                 (HASH_BUILTIN_NAME.to_string(), 4),
             ]),
-        },
+        }),
         l2_to_l1_messages: vec![],
         internal_calls: vec![],
         events: vec![OrderedEvent {
@@ -672,14 +672,14 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::zero()],
         retdata: vec![Felt252::from(1)],
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
             builtin_instance_counter: HashMap::from([
                 ("range_check_builtin".to_string(), 21),
                 ("pedersen_builtin".to_string(), 4),
             ]),
-        },
+        }),
         l2_to_l1_messages: vec![],
         internal_calls: vec![],
         events: vec![OrderedEvent {
@@ -850,14 +850,14 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
             ],
         ]),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
                 (HASH_BUILTIN_NAME.to_string(), 4),
             ]),
-        },
+        }),
         ..Default::default()
     }
 }
@@ -933,10 +933,10 @@ fn test_declare_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()],
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         }),
         None,
@@ -1034,10 +1034,10 @@ fn test_declarev2_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![contract_hash],
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         }),
         None,
@@ -1091,18 +1091,18 @@ fn expected_execute_call_info() -> CallInfo {
             internal_calls: vec![],
             contract_address: TEST_CONTRACT_ADDRESS.clone(),
             code_address: None,
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 22,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         }],
         events: vec![],
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 61,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
-        },
+        }),
         ..Default::default()
     }
 }
@@ -1134,14 +1134,14 @@ fn expected_fib_execute_call_info() -> CallInfo {
             Felt252::from(0),
         ],
         retdata: vec![Felt252::from(42)],
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
             n_steps: 157,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 160,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 4)]),
-        },
+        }),
         l2_to_l1_messages: vec![],
         internal_calls: vec![CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -1160,14 +1160,14 @@ fn expected_fib_execute_call_info() -> CallInfo {
             gas_consumed: 4380,
             #[cfg(feature = "cairo_1_tests")]
             gas_consumed: 4710,
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 #[cfg(not(feature = "cairo_1_tests"))]
                 n_steps: 118,
                 #[cfg(feature = "cairo_1_tests")]
                 n_steps: 121,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 3)]),
-            },
+            }),
             ..Default::default()
         }],
         events: vec![],
@@ -1193,11 +1193,11 @@ fn expected_validate_call_info_2() -> CallInfo {
             Felt252::from(1),
             Felt252::from(2),
         ],
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 21,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
-        },
+        }),
         ..Default::default()
     }
 }
@@ -1218,11 +1218,11 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
             Felt252::from(0),
             Felt252::from(0),
         ],
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 21,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 1)]),
-        },
+        }),
         ..Default::default()
     }
 }
@@ -2082,7 +2082,6 @@ fn test_library_call_with_declare_v2() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2121,14 +2120,14 @@ fn test_library_call_with_declare_v2() {
         gas_consumed: 30410,
         calldata: vec![1.into(), 1.into(), 10.into()],
         retdata: vec![89.into()], // fib(10)
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
             n_steps: 368,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 371,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 13)]),
-        },
+        }),
         ..Default::default()
     };
 
@@ -2145,14 +2144,14 @@ fn test_library_call_with_declare_v2() {
         gas_consumed: 113480,
         calldata,
         retdata: vec![89.into()], // fib(10)
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
             n_steps: 578,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 587,
             n_memory_holes: 1,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 16)]),
-        },
+        }),
         internal_calls: vec![expected_internal_call_info],
         ..Default::default()
     };

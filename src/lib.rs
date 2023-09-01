@@ -1,4 +1,5 @@
-#![deny(warnings)]
+#![feature(strict_provenance)]
+// #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
 use std::{collections::HashMap, sync::Arc};
@@ -152,7 +153,6 @@ pub fn call_contract<T: StateReader>(
         nonce,
         block_context.invoke_tx_max_n_steps(),
         version.into(),
-        false,
     );
 
     let ExecutionResult { call_info, .. } = execution_entrypoint.execute(

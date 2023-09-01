@@ -261,7 +261,6 @@ impl DeclareV2 {
             self.nonce.clone(),
             n_steps,
             self.version.clone(),
-            false,
         )
     }
 
@@ -617,13 +616,13 @@ mod tests {
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = &2.into() | &QUERY_VERSION_BASE.clone();
+            version = &Into::<Felt252>::into(2) | &QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = &1.into() | &QUERY_VERSION_BASE.clone();
+            version = &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 

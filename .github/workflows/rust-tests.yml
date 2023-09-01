@@ -33,6 +33,8 @@ jobs:
         ]
     name: Build Cairo programs
     runs-on: ubuntu-22.04
+    env:
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -137,6 +139,8 @@ jobs:
     name: Build with release profile
     needs: merge-caches
     runs-on: ubuntu-22.04
+    env:
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -146,6 +150,14 @@ jobs:
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
+    - name: add llvm deb repository
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      run: sudo apt-get install llvm-16 llvm-16-dev llvm-16-runtime clang-16 clang-tools-16 lld-16 libpolly-16-dev libmlir-16-dev mlir-16-tools
     - name: Checkout
       uses: actions/checkout@v3
     - name: Fetch programs
@@ -162,6 +174,8 @@ jobs:
     name: Lint with fmt and clippy
     needs: merge-caches
     runs-on: ubuntu-22.04
+    env:
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -171,6 +185,14 @@ jobs:
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
+    - name: add llvm deb repository
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      run: sudo apt-get install llvm-16 llvm-16-dev llvm-16-runtime clang-16 clang-tools-16 lld-16 libpolly-16-dev libmlir-16-dev mlir-16-tools
     - name: Checkout
       uses: actions/checkout@v3
     - name: Fetch programs
@@ -188,6 +210,7 @@ jobs:
   tests:
     env:
       INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     strategy:
       fail-fast: false
       matrix:
@@ -204,6 +227,14 @@ jobs:
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
+    - name: add llvm deb repository
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      run: sudo apt-get install llvm-16 llvm-16-dev llvm-16-runtime clang-16 clang-tools-16 lld-16 libpolly-16-dev libmlir-16-dev mlir-16-tools
     - name: Checkout
       uses: actions/checkout@v3
 
@@ -228,6 +259,8 @@ jobs:
     needs: merge-caches
     name: Generate and upload coverage report
     runs-on: ubuntu-22.04
+    env:
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -235,6 +268,14 @@ jobs:
       uses: dtolnay/rust-toolchain@nightly
       with:
         toolchain: ${{ env.RUST_TOOLCHAIN }}
+    - name: add llvm deb repository
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      run: sudo apt-get install llvm-16 llvm-16-dev llvm-16-runtime clang-16 clang-tools-16 lld-16 libpolly-16-dev libmlir-16-dev mlir-16-tools
 
     - name: Set nightly as default
       run: rustup default nightly
