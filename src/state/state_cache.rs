@@ -41,7 +41,7 @@ impl StateCache {
     #[allow(clippy::too_many_arguments)]
 
     /// Create a new StateCache with given initial and written values for testing
-    pub fn new(
+    pub const fn new(
         class_hash_initial_values: HashMap<Address, ClassHash>,
         compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
         nonce_initial_values: HashMap<Address, Felt252>,
@@ -82,7 +82,7 @@ impl StateCache {
 
     /// Creates a new instance of `StateCache` for testing purposes with the provided initial values and writes.
     #[allow(clippy::too_many_arguments)]
-    pub fn new_for_testing(
+    pub const fn new_for_testing(
         class_hash_initial_values: HashMap<Address, [u8; 32]>,
         compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
         nonce_initial_values: HashMap<Address, Felt252>,
