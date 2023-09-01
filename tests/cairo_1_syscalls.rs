@@ -829,6 +829,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
+        CompiledClass::Sierra(_) => unreachable!(),
         CompiledClass::Casm(_) => unreachable!(),
         CompiledClass::Sierra(_) => unreachable!(),
     };

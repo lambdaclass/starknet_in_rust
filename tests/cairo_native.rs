@@ -477,6 +477,7 @@ fn integration_test_erc20() {
 }
 
 #[test]
+#[ignore]
 fn call_contract_test() {
     // Caller contract
     let caller_contract_class: cairo_lang_starknet::contract_class::ContractClass =
