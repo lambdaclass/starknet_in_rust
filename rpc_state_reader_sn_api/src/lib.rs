@@ -669,7 +669,7 @@ mod tests {
 
         assert!(parsed.is_ok());
     }
-    
+
     #[test]
     fn test_get_block_info() {
         let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
