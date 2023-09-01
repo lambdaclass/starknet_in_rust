@@ -59,3 +59,4 @@ lcov.info
 .rusty-hook.toml
 !/starknet_programs/raw_contract_classes/*.json
 cairo-*.tar
+starknet-pypy-env/
