@@ -36,7 +36,7 @@ pub struct ContractEntryPoint {
 }
 
 impl ContractEntryPoint {
-    pub fn new(selector: Felt252, offset: usize) -> ContractEntryPoint {
+    pub const fn new(selector: Felt252, offset: usize) -> ContractEntryPoint {
         ContractEntryPoint { selector, offset }
     }
 }
