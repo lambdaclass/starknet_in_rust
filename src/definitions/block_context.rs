@@ -85,7 +85,7 @@ impl StarknetOsConfig {
     /// * `chain_id` - [`Felt252`] of the configured chain.
     /// * `fee_token_address` - Address of the token used when paying fees.
     /// * `gas_price` - Price of gas.
-    pub fn new(chain_id: Felt252, fee_token_address: Address, gas_price: u128) -> Self {
+    pub const fn new(chain_id: Felt252, fee_token_address: Address, gas_price: u128) -> Self {
         StarknetOsConfig {
             chain_id,
             fee_token_address,
@@ -139,7 +139,7 @@ impl BlockContext {
     ///     Example: for block number 6351, this includes the blocks 5327, 5328, ..., 6340, 6341.
     /// * `enforce_l1_handler_fee` - Whether to enforce the L1 handler fee.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub const fn new(
         starknet_os_config: StarknetOsConfig,
         contract_storage_commitment_tree_height: u64,
         global_state_commitment_tree_height: u64,
