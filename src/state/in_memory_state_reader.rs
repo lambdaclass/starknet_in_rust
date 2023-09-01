@@ -15,7 +15,7 @@ use std::collections::HashMap;
 ///
 /// This implementation is used for testing and debugging.
 /// It uses HashMaps to store the data.
-#[derive(Debug, MutGetters, Getters, PartialEq, Clone, Default)]
+#[derive(Debug, MutGetters, Getters, PartialEq, Eq, Clone, Default)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_class_hash: HashMap<Address, ClassHash>,
@@ -39,7 +39,7 @@ impl InMemoryStateReader {
     /// - `class_hash_to_contract_class` - A HashMap from class hashes to their contract classes.
     /// - `casm_contract_classes` - A [CasmClassCache].
     /// - `class_hash_to_compiled_class_hash` - A HashMap from class hashes to their compiled class hashes.
-    pub fn new(
+    pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
         address_to_storage: HashMap<StorageEntry, Felt252>,

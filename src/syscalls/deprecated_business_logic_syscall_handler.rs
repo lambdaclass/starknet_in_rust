@@ -452,7 +452,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))?;
 
         let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
-            revert_error.unwrap_or("Execution error".to_string()),
+            revert_error.unwrap_or_else(|| "Execution error".to_string()),
         ))?;
 
         let retdata = call_info.retdata.clone();
@@ -461,7 +461,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         Ok(retdata)
     }
 
-    pub(crate) fn get_block_info(&self) -> &BlockInfo {
+    pub(crate) const fn get_block_info(&self) -> &BlockInfo {
         &self.block_context.block_info
     }
 
