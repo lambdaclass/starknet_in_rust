@@ -5,6 +5,7 @@ use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
 use starknet::core::types::ContractClass;
 use starknet_in_rust::definitions::block_context::StarknetChainId;
+use starknet_in_rust::transaction::{Declare, DeclareV2, Deploy};
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     execution::CallInfo,
@@ -14,6 +15,7 @@ use starknet_in_rust::{
     utils::{parse_felt_array, Address, ClassHash, CompiledClassHash},
 };
 use std::env;
+use std::sync::Arc;
 use thiserror::Error;
 
 #[cfg(test)]
@@ -283,7 +285,7 @@ impl RpcState {
                     16
                 ));
 
-                let hash_felt = felt_str!(format!("{}", hash), 16);
+                let hash_felt = felt_str!(hash, 16);
                 let tx = InvokeFunction::new_with_tx_hash(
                     sender_address,
                     entry_point_selector,
@@ -305,6 +307,217 @@ impl RpcState {
                 // If we want to execute the first transaction the nonce check fails
                 // since get_nonce_at for that block returns 21 and the first tx has 20.
                 tx.create_for_simulation(false, false, false, false, true)
+            }
+            "DECLARE" => {
+                match u64::from_str_radix(
+                    response["result"]["version"]
+                        .as_str()
+                        .unwrap()
+                        .strip_prefix("0x")
+                        .unwrap(),
+                    16,
+                )
+                .unwrap()
+                {
+                    0x00 => unimplemented!("Version 0 of declare transactions are not supported"),
+                    0x01 => {
+                        let tx = Declare::new_with_tx_hash(
+                            match self
+                                .get_contract_class(
+                                    &felt_str!(
+                                        response["result"]["class_hash"]
+                                            .as_str()
+                                            .unwrap()
+                                            .strip_prefix("0x")
+                                            .unwrap(),
+                                        16
+                                    )
+                                    .to_be_bytes(),
+                                )
+                                .unwrap()
+                            {
+                                CompiledClass::Deprecated(x) => {
+                                    Arc::try_unwrap(x).unwrap_or_else(|x| x.as_ref().clone())
+                                }
+                                CompiledClass::Casm(_) => todo!(),
+                            },
+                            Address(felt_str!(
+                                response["result"]["sender_address"]
+                                    .as_str()
+                                    .unwrap()
+                                    .strip_prefix("0x")
+                                    .unwrap(),
+                                16
+                            )),
+                            u128::from_str_radix(
+                                response["result"]["max_fee"]
+                                    .as_str()
+                                    .unwrap()
+                                    .strip_prefix("0x")
+                                    .unwrap(),
+                                16,
+                            )
+                            .unwrap(),
+                            1.into(),
+                            response["result"]["signature"]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .map(|felt_as_value| {
+                                    felt_str!(
+                                        felt_as_value.as_str().unwrap().strip_prefix("0x").unwrap(),
+                                        16
+                                    )
+                                })
+                                .collect::<Vec<Felt252>>(),
+                            felt_str!(
+                                response["result"]["nonce"]
+                                    .as_str()
+                                    .unwrap()
+                                    .strip_prefix("0x")
+                                    .unwrap(),
+                                16
+                            ),
+                            felt_str!(hash, 16),
+                        )
+                        .unwrap();
+
+                        dbg!(tx);
+                        todo!()
+                    }
+                    0x02 => {
+                        let tx = DeclareV2::new_with_tx_hash(
+                            todo!(),
+                            Some(
+                                match self
+                                    .get_contract_class(
+                                        &felt_str!(
+                                            response["result"]["class_hash"]
+                                                .as_str()
+                                                .unwrap()
+                                                .strip_prefix("0x")
+                                                .unwrap(),
+                                            16
+                                        )
+                                        .to_be_bytes(),
+                                    )
+                                    .unwrap()
+                                {
+                                    CompiledClass::Deprecated(_) => panic!(),
+                                    CompiledClass::Casm(x) => {
+                                        Arc::try_unwrap(x).unwrap_or_else(|x| x.as_ref().clone())
+                                    }
+                                },
+                            ),
+                            felt_str!(
+                                response["result"]["compiled_class_hash"]
+                                    .as_str()
+                                    .unwrap()
+                                    .strip_prefix("0x")
+                                    .unwrap(),
+                                16
+                            ),
+                            Address(felt_str!(
+                                response["result"]["sender_address"]
+                                    .as_str()
+                                    .unwrap()
+                                    .strip_prefix("0x")
+                                    .unwrap(),
+                                16
+                            )),
+                            u128::from_str_radix(
+                                response["result"]["max_fee"]
+                                    .as_str()
+                                    .unwrap()
+                                    .strip_prefix("0x")
+                                    .unwrap(),
+                                16,
+                            )
+                            .unwrap(),
+                            2.into(),
+                            response["result"]["signature"]
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .map(|felt_as_value| {
+                                    felt_str!(
+                                        felt_as_value.as_str().unwrap().strip_prefix("0x").unwrap(),
+                                        16
+                                    )
+                                })
+                                .collect::<Vec<Felt252>>(),
+                            felt_str!(
+                                response["result"]["nonce"]
+                                    .as_str()
+                                    .unwrap()
+                                    .strip_prefix("0x")
+                                    .unwrap(),
+                                16
+                            ),
+                            felt_str!(hash, 16),
+                        )
+                        .unwrap();
+
+                        dbg!(tx);
+                        todo!()
+                    }
+                    _ => panic!("Unsupported declare transaction version."),
+                }
+            }
+            "DEPLOY" => {
+                let tx = Deploy::new_with_tx_hash(
+                    felt_str!(
+                        response["result"]["contract_address_salt"]
+                            .as_str()
+                            .unwrap()
+                            .strip_prefix("0x")
+                            .unwrap(),
+                        16
+                    ),
+                    match self
+                        .get_contract_class(
+                            &felt_str!(
+                                response["result"]["class_hash"]
+                                    .as_str()
+                                    .unwrap()
+                                    .strip_prefix("0x")
+                                    .unwrap(),
+                                16
+                            )
+                            .to_be_bytes(),
+                        )
+                        .unwrap()
+                    {
+                        CompiledClass::Deprecated(x) => {
+                            Arc::try_unwrap(x).unwrap_or_else(|x| x.as_ref().clone())
+                        }
+                        CompiledClass::Casm(_) => todo!(),
+                    },
+                    response["result"]["constructor_calldata"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|felt_as_value| {
+                            felt_str!(
+                                felt_as_value.as_str().unwrap().strip_prefix("0x").unwrap(),
+                                16
+                            )
+                        })
+                        .collect::<Vec<Felt252>>(),
+                    felt_str!(
+                        response["result"]["version"]
+                            .as_str()
+                            .unwrap()
+                            .strip_prefix("0x")
+                            .unwrap(),
+                        16
+                    ),
+                    felt_str!(hash, 16),
+                )
+                .unwrap();
+
+                dbg!(tx);
+                todo!()
             }
 
             _ => unimplemented!(),
@@ -526,6 +739,39 @@ mod tests {
             BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
         let tx_hash = "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955";
+
+        rpc_state.get_transaction(tx_hash);
+    }
+
+    #[test]
+    fn test_get_transaction_declare() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+        let tx_hash = "07856f54a0ba5fdbdbc289bf7129c9aa9f74aea00aa660ba9d4cb7c919330e4b";
+
+        rpc_state.get_transaction(tx_hash);
+    }
+
+    #[test]
+    fn test_get_transaction_declare_v2() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+        let tx_hash = "03d8beef48fbc5c8ec4890000928a69a5bfd0d49d7cb15c033de2108dd99d434";
+
+        rpc_state.get_transaction(tx_hash);
+    }
+
+    #[test]
+    fn test_get_transaction_deploy() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+        let tx_hash = "1d08158d139345d562276f0a085d9764e618eba788bed99a238903595b17022";
 
         rpc_state.get_transaction(tx_hash);
     }

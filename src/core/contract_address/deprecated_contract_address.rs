@@ -29,7 +29,7 @@ fn get_contract_entry_points(
     let entry_points = contract_class
         .entry_points_by_type()
         .get(entry_point_type)
-        .ok_or(ContractAddressError::NoneExistingEntryPointType)?;
+        .ok_or(ContractAddressError::NonexistentEntryPointType)?;
 
     let program_len = contract_class.program().iter_data().count();
 

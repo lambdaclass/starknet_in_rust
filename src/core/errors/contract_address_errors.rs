@@ -16,8 +16,8 @@ pub enum ContractAddressError {
     Program(#[from] ProgramError),
     #[error("Missing identifier: {0}")]
     MissingIdentifier(String),
-    #[error("None existing EntryPointType")]
-    NoneExistingEntryPointType,
+    #[error("Nonexistent EntryPointType")]
+    NonexistentEntryPointType,
     #[error("Invalid offset: {0}")]
     InvalidOffset(usize),
     #[error("Api version can't be None")]
