@@ -171,11 +171,11 @@ fn internal_deploy_account_cairo1() {
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3873;
+        n_steps = 3948;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3877;
+        n_steps = 3952;
     }
 
     assert_eq!(

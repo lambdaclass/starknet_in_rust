@@ -1224,7 +1224,7 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
 
 fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3445),
+        ("n_steps".to_string(), 4135),
         ("pedersen_builtin".to_string(), 16),
         ("l1_gas_usage".to_string(), 3672),
         ("range_check_builtin".to_string(), 82),
@@ -1247,17 +1247,17 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3541;
+        n_steps = 4231;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3544;
+        n_steps = 4234;
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
         ("l1_gas_usage".to_string(), 7344),
         ("pedersen_builtin".to_string(), 16),
-        ("range_check_builtin".to_string(), 85),
+        ("range_check_builtin".to_string(), 104),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
