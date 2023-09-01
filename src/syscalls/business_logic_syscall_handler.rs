@@ -258,7 +258,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
         let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
-            revert_error.unwrap_or("Execution error".to_string()),
+            revert_error.unwrap_or_else(|| "Execution error".to_string()),
         ))?;
 
         let retdata_maybe_reloc = call_info
@@ -376,7 +376,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
         let call_info = call_info.ok_or(StateError::CustomError(
-            revert_error.unwrap_or("Execution error".to_string()),
+            revert_error.unwrap_or_else(|| "Execution error".to_string()),
         ))?;
 
         self.internal_calls.push(call_info.clone());

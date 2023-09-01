@@ -1174,9 +1174,7 @@ mod tests {
     fn test_reverted_transaction_wrong_entry_point() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_bytes_be(&calculate_sn_keccak(
-                "factorial_".as_bytes(),
-            )),
+            entry_point_selector: Felt252::from_bytes_be(&calculate_sn_keccak(b"factorial_")),
             entry_point_type: EntryPointType::External,
             calldata: vec![],
             tx_type: TransactionType::InvokeFunction,

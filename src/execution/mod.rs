@@ -494,7 +494,7 @@ pub struct TransactionExecutionInfo {
 }
 
 impl TransactionExecutionInfo {
-    pub fn new(
+    pub const fn new(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
         revert_error: Option<String>,
@@ -553,7 +553,7 @@ impl TransactionExecutionInfo {
         }
     }
 
-    pub fn new_without_fee_info(
+    pub const fn new_without_fee_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
         revert_error: Option<String>,

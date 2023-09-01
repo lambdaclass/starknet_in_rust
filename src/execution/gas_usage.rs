@@ -105,7 +105,7 @@ pub fn get_message_segment_lenght(
 /// # Returns:
 ///
 /// The on-chain data segment length
-pub fn get_onchain_data_segment_length(
+pub const fn get_onchain_data_segment_length(
     n_modified_contracts: usize,
     n_storage_changes: usize,
     n_deployments: usize,
@@ -159,7 +159,7 @@ pub fn get_log_message_to_l1_emissions_cost(l2_to_l1_messages: &[L2toL1MessageIn
 /// # Returns:
 ///
 /// The cost of event emissions.
-pub fn get_event_emission_cost(topics: usize, l1_handler_payload_size: usize) -> usize {
+pub const fn get_event_emission_cost(topics: usize, l1_handler_payload_size: usize) -> usize {
     GAS_PER_LOG
         + (topics + N_DEFAULT_TOPICS) * GAS_PER_LOG_TOPIC
         + l1_handler_payload_size * GAS_PER_LOG_DATA_WORD
