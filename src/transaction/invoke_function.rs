@@ -245,7 +245,10 @@ impl InvokeFunction {
                 remaining_gas,
             )?
         };
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(Some((
+            &block_context.starknet_os_config.fee_token_address,
+            &self.contract_address,
+        )));
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![call_info.clone(), validate_info.clone()],
