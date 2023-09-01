@@ -560,7 +560,7 @@ fn call_echo_contract_test() {
     // Caller contract
     let caller_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
-            std::fs::read_to_string("starknet_programs/cairo2/caller.sierra")
+            std::fs::read_to_string("starknet_programs/cairo2/echo_caller.sierra")
                 .unwrap()
                 .as_str(),
         )
@@ -569,7 +569,7 @@ fn call_echo_contract_test() {
     // Callee contract
     let callee_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
-            std::fs::read_to_string("starknet_programs/cairo2/callee.sierra")
+            std::fs::read_to_string("starknet_programs/cairo2/echo.sierra")
                 .unwrap()
                 .as_str(),
         )
@@ -621,7 +621,7 @@ fn call_echo_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader))
         .set_sierra_programs_cache(sierra_contract_class_cache);
 
-    let calldata = [fn_selector.into()].to_vec();
+    let calldata = [fn_selector.into(), 99999999.into()].to_vec();
     let result = execute(
         &mut state,
         &caller_address,
@@ -631,7 +631,7 @@ fn call_echo_contract_test() {
         EntryPointType::External,
     );
 
-    assert_eq!(result.retdata, [Felt252::new(44)]);
+    assert_eq!(result.retdata, [Felt252::new(99999999)]);
 }
 
 fn execute(

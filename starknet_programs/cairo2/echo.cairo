@@ -11,7 +11,7 @@ mod Echo {
     }
 
     #[external(v0)]
-    fn echo(ref self: ContractState, val: felt252) -> felt252 {
-        felt252
+    fn echo(ref self: ContractState, value: felt252) -> felt252 {
+        value
     }
 }
