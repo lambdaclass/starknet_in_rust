@@ -383,18 +383,7 @@ impl RpcState {
         });
         let result = self.rpc_call::<serde_json::Value>(&params).unwrap()["result"].clone();
 
-        match result["type"].as_str().unwrap() {
-            "INVOKE" => match result["version"].as_str().unwrap() {
-                "0x0" => SNTransaction::Invoke(InvokeTransaction::V0(
-                    serde_json::from_value(result).unwrap(),
-                )),
-                "0x1" => SNTransaction::Invoke(InvokeTransaction::V1(
-                    serde_json::from_value(result).unwrap(),
-                )),
-                _ => unreachable!(),
-            },
-            _ => unimplemented!(),
-        }
+        deserialize_transaction_json(result).unwrap()
     }
 
     /// Gets the gas price of a given block.
@@ -1029,6 +1018,8 @@ mod blockifier_transaction_tests {
     #[cfg(test)]
     mod test {
         use blockifier::execution::entry_point::CallInfo;
+        use test_case::test_case;
+        use pretty_assertions::assert_eq;
 
         use super::*;
 
@@ -1068,6 +1059,70 @@ mod blockifier_transaction_tests {
             );
 
             assert_eq!(actual_fee.0, receipt.actual_fee);
+        }
+
+        #[test_case(
+            "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+            169928, // real block 169929
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+            90006, // real block 90007
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955",
+            90002, // real block 90003
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c",
+            155054, // invalid nonce
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x00eef6ba6741da8769192fac9d28c6631cf66f9e7c4e880b886ef6a2e550e4e2",
+            156105, // 156106
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x05649d037b60c0c83b16151dbf03ea0d8b5e035074c522976fe25e66477830fc",
+            181743, // 181744
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            "0x0467d18b6dd5af4b552cf0ed38a69c302ecb9a030187ced79b33bfa366f46ed9",
+            181754, // invalid nonce
+            RpcChain::MainNet
+        )]
+        fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
+            let (tx_info, trace, receipt) = execute_tx(
+                hash,
+                chain,
+                BlockNumber(block_number),
+            );
+
+            let TransactionExecutionInfo {
+                execute_call_info,
+                actual_fee,
+                ..
+            } = tx_info;
+
+            let CallInfo {
+                vm_resources,
+                inner_calls,
+                ..
+            } = execute_call_info.unwrap();
+
+            assert_eq!(vm_resources, trace.function_invocation.execution_resources, "execution resources mismatch");
+            assert_eq!(
+                inner_calls.len(),
+                trace.function_invocation.internal_calls.len(),
+                "internal calls length mismatch"
+            );
+
+            assert_eq!(actual_fee.0, receipt.actual_fee, "actual_fee mismatch");
         }
     }
 }
@@ -1290,11 +1345,7 @@ mod starknet_in_rust_transaction_tests {
             RpcChain::MainNet
         )]
         fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
-            let (tx_info, trace, receipt) = execute_tx(
-                hash,
-                chain,
-                BlockNumber(block_number),
-            );
+            let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
             let TransactionExecutionInfo {
                 call_info,
@@ -1310,14 +1361,14 @@ mod starknet_in_rust_transaction_tests {
 
             assert_eq!(
                 execution_resources,
-                trace.function_invocation.execution_resources
+                trace.function_invocation.execution_resources, "execution resources mismatch"
             );
             assert_eq!(
                 internal_calls.len(),
-                trace.function_invocation.internal_calls.len()
+                trace.function_invocation.internal_calls.len(), "internal calls length mismatch"
             );
 
-            assert_eq!(actual_fee, receipt.actual_fee);
+            assert_eq!(actual_fee, receipt.actual_fee, "actual_fee mismatch");
         }
     }
 }
