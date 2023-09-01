@@ -696,9 +696,9 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone() - Felt252::from(1252),
+            INITIAL_BALANCE.clone() - Felt252::from(2476),
             Felt252::zero(),
-            Felt252::from(1252),
+            Felt252::from(2476),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
@@ -920,7 +920,7 @@ fn test_declare_tx() {
         ("n_steps".to_string(), 2715),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1008,7 +1008,7 @@ fn test_declarev2_tx() {
         ("n_steps".to_string(), 2715),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 1224),
+        ("l1_gas_usage".to_string(), 2448),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1226,7 +1226,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
     let resources = HashMap::from([
         ("n_steps".to_string(), 4135),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 3672),
         ("range_check_builtin".to_string(), 101),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
@@ -1782,7 +1782,7 @@ fn test_state_for_declare_tx() {
     //     ])
     // );
 
-    let fee = Felt252::from(2476);
+    let fee = Felt252::from(3700);
 
     // Check state.cache
     assert_eq!(

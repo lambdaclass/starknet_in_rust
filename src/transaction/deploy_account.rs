@@ -213,7 +213,10 @@ impl DeployAccount {
             resources_manager,
             &[Some(constructor_call_info.clone()), validate_info.clone()],
             TransactionType::DeployAccount,
-            state.count_actual_storage_changes(),
+            state.count_actual_storage_changes(Some((
+                &block_context.starknet_os_config.fee_token_address,
+                &self.contract_address,
+            ))),
             None,
             0,
         )
