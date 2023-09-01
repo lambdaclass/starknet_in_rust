@@ -87,7 +87,6 @@ fn storage_write_read() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -266,7 +265,6 @@ fn library_call() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
@@ -417,7 +415,6 @@ fn call_contract_storage_write_read() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -592,7 +589,6 @@ fn emit_event() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -711,7 +707,6 @@ fn deploy_cairo1_from_cairo1() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -734,6 +729,7 @@ fn deploy_cairo1_from_cairo1() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -812,7 +808,6 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -835,6 +830,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
         CompiledClass::Casm(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -912,7 +908,6 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -935,6 +930,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
         CompiledClass::Casm(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1013,7 +1009,6 @@ fn deploy_cairo0_and_invoke() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1036,6 +1031,7 @@ fn deploy_cairo0_and_invoke() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
         CompiledClass::Casm(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1126,7 +1122,6 @@ fn test_send_message_to_l1_syscall() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1210,7 +1205,6 @@ fn test_get_execution_info() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1336,7 +1330,6 @@ fn replace_class_internal() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1443,7 +1436,6 @@ fn replace_class_contract_call() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1611,7 +1603,6 @@ fn replace_class_contract_call_same_transaction() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1729,7 +1720,6 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1845,7 +1835,6 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1957,7 +1946,6 @@ fn call_contract_replace_class_cairo_0() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2052,7 +2040,6 @@ fn test_out_of_gas_failure() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2130,7 +2117,6 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2217,7 +2203,6 @@ fn deploy_syscall_failure_in_constructor() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2280,7 +2265,6 @@ fn storage_read_no_value() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2353,7 +2337,6 @@ fn storage_read_unavailable_address_domain() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2429,7 +2412,6 @@ fn storage_write_unavailable_address_domain() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2540,7 +2522,6 @@ fn library_call_failure() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut expected_execution_resources = ExecutionResources::default();
@@ -2651,7 +2632,6 @@ fn send_messages_to_l1_different_contract_calls() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2772,7 +2752,6 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2891,7 +2870,6 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2970,7 +2948,6 @@ fn keccak_syscall() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();

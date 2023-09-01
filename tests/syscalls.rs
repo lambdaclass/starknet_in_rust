@@ -510,7 +510,6 @@ fn get_tx_info_syscall() {
                 3.into(),
                 n_steps,
                 version.clone(),
-                false,
             )),
             [],
             [],
@@ -643,7 +642,6 @@ fn get_tx_signature_syscall() {
                 3.into(),
                 n_steps,
                 0.into(),
-                false,
             )),
             [],
             [],
@@ -1135,7 +1133,6 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1158,6 +1155,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1235,7 +1233,6 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1260,6 +1257,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1337,7 +1335,6 @@ fn deploy_cairo1_and_invoke() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1360,6 +1357,7 @@ fn deploy_cairo1_and_invoke() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1470,7 +1468,6 @@ fn send_messages_to_l1_different_contract_calls() {
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         TRANSACTION_VERSION.clone(),
-        false,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
