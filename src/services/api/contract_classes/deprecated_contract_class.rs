@@ -331,7 +331,6 @@ mod tests {
         // This specific contract compiles with --no_debug_info
         let res = ContractClass::from_path("starknet_programs/fibonacci.json");
         let contract_class = res.expect("should be able to read file");
-
         let expected_abi = Some(vec![ContractClassAbiEntry::Function(FunctionAbiEntry {
             name: "fib".to_string(),
             inputs: vec![

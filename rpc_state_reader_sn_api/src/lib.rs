@@ -1166,7 +1166,6 @@ mod starknet_in_rust_transaction_tests {
             let block_timestamp = block_timestamp.0;
             let sequencer_address =
                 Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
-            let gas_price = gas_price as u64; // FIXME: possible issue
 
             BlockInfo {
                 block_number,
