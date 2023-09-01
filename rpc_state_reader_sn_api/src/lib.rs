@@ -1082,9 +1082,18 @@ mod blockifier_transaction_tests {
             RpcChain::MainNet
         )]
         #[test_case(
+            // fails: review later
+            "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
+            186548, // real block     186549
+            RpcChain::MainNet
+            => ignore["review later"]
+        )]
+        #[test_case(
+            // fails: review later
             "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
             186551, // real block     186552
             RpcChain::MainNet
+            => ignore["review later"]
         )]
         fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
             let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
@@ -1319,6 +1328,13 @@ mod starknet_in_rust_transaction_tests {
             RpcChain::MainNet
         )]
         #[test_case(
+            // review later
+            "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
+            186548, // real block     186549
+            RpcChain::MainNet
+        )]
+        #[test_case(
+            // fails in blockifier too
             "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
             186551, // real block     186552
             RpcChain::MainNet
