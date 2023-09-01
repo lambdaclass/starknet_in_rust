@@ -6,7 +6,10 @@ use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::compiled_class::CompiledClass,
     state::StateDiff,
-    utils::{subtract_mappings, to_cache_state_storage_mapping, Address, ClassHash},
+    utils::{
+        get_erc20_balance_var_addresses, subtract_mappings, to_cache_state_storage_mapping,
+        Address, ClassHash,
+    },
 };
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
@@ -268,8 +271,11 @@ impl<T: StateReader> State for CachedState<T> {
         Ok(())
     }
 
-    fn count_actual_storage_changes(&mut self) -> (usize, usize) {
-        let storage_updates = subtract_mappings(
+    fn count_actual_storage_changes(
+        &mut self,
+        fee_token_and_sender_address: Option<(&Address, &Address)>,
+    ) -> (usize, usize) {
+        let mut storage_updates = subtract_mappings(
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),
         );
@@ -300,6 +306,16 @@ impl<T: StateReader> State for CachedState<T> {
 
             modified_contracts.len()
         };
+
+        // Add fee transfer storage update before actually charging it, as it needs to be included in the
+        // calculation of the final fee.
+        if let Some((fee_token_address, sender_address)) = fee_token_and_sender_address {
+            let (sender_low_key, _) = get_erc20_balance_var_addresses(sender_address).unwrap();
+            storage_updates.insert(
+                (fee_token_address.clone(), sender_low_key),
+                Felt252::default(),
+            );
+        }
 
         (n_modified_contracts, storage_updates.len())
     }
@@ -705,13 +721,17 @@ mod tests {
             ((address_two, storage_key_two), Felt252::from(1)),
         ]);
 
+        let fee_token_address = Address(123.into());
+        let sender_address = Address(321.into());
+
         let expected_changes = {
-            let n_storage_updates = 3;
+            let n_storage_updates = 3 + 1; // + 1 fee transfer balance update
             let n_modified_contracts = 2;
 
             (n_modified_contracts, n_storage_updates)
         };
-        let changes = cached_state.count_actual_storage_changes();
+        let changes =
+            cached_state.count_actual_storage_changes(Some((&fee_token_address, &sender_address)));
 
         assert_eq!(changes, expected_changes);
     }
