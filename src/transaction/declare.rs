@@ -29,6 +29,8 @@ use num_traits::Zero;
 
 use super::fee::charge_fee;
 use super::{verify_version, Transaction};
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use std::sync::Arc;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
@@ -166,7 +168,10 @@ impl Declare {
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(Some((
+            &block_context.starknet_os_config.fee_token_address,
+            &self.sender_address,
+        )));
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![validate_info.clone()],
@@ -281,7 +286,10 @@ impl Declare {
             self.skip_fee_transfer,
         )?;
 
-        state.set_contract_class(&self.class_hash, &self.contract_class)?;
+        state.set_contract_class(
+            &self.class_hash,
+            &CompiledClass::Deprecated(Arc::new(self.contract_class.clone())),
+        )?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
@@ -332,7 +340,9 @@ mod tests {
             transaction_type::TransactionType,
         },
         execution::CallType,
-        services::api::contract_classes::deprecated_contract_class::ContractClass,
+        services::api::contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        },
         state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
         utils::{felt_to_hash, Address},
@@ -353,7 +363,10 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = hash.to_be_bytes();
 
-        contract_class_cache.insert(class_hash, contract_class.clone());
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+        );
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -369,7 +382,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -425,7 +438,7 @@ mod tests {
 
         let actual_resources = HashMap::from([
             ("n_steps".to_string(), 2715),
-            ("l1_gas_usage".to_string(), 1224),
+            ("l1_gas_usage".to_string(), 2448),
             ("range_check_builtin".to_string(), 63),
             ("pedersen_builtin".to_string(), 15),
         ]);
@@ -510,7 +523,10 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -526,7 +542,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+        let _state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -573,7 +589,10 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -589,7 +608,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let _state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+        let _state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -635,7 +654,10 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -651,7 +673,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -711,7 +733,10 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -727,7 +752,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -774,7 +799,7 @@ mod tests {
 
         let state_reader = Arc::new(InMemoryStateReader::default());
 
-        let mut state = CachedState::new(state_reader, Some(contract_class_cache), None);
+        let mut state = CachedState::new(state_reader, contract_class_cache);
 
         // There are no account contracts in the state, so the transaction should fail
         let fib_contract_class =
@@ -815,7 +840,10 @@ mod tests {
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(class_hash, contract_class);
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
 
         // store sender_address
         let sender_address = Address(1.into());
@@ -831,7 +859,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
         //* ---------------------------------------
         //*    Test declare with previous data

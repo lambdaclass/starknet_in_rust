@@ -60,7 +60,7 @@ pub(crate) struct DeprecatedGetBlockNumberResponse {
 }
 
 impl DeprecatedCallContractResponse {
-    pub(crate) fn new(retdata_size: usize, retdata: Relocatable) -> Self {
+    pub(crate) const fn new(retdata_size: usize, retdata: Relocatable) -> Self {
         Self {
             retdata_size,
             retdata,
@@ -86,19 +86,19 @@ pub(crate) struct DeprecatedDeployResponse {
 }
 
 impl DeprecatedGetTxInfoResponse {
-    pub fn new(tx_info: Relocatable) -> Self {
+    pub const fn new(tx_info: Relocatable) -> Self {
         DeprecatedGetTxInfoResponse { tx_info }
     }
 }
 
 impl DeprecatedGetBlockTimestampResponse {
-    pub(crate) fn new(block_timestamp: u64) -> Self {
+    pub(crate) const fn new(block_timestamp: u64) -> Self {
         DeprecatedGetBlockTimestampResponse { block_timestamp }
     }
 }
 
 impl DeprecatedGetSequencerAddressResponse {
-    pub(crate) fn new(sequencer_address: Address) -> Self {
+    pub(crate) const fn new(sequencer_address: Address) -> Self {
         Self { sequencer_address }
     }
 }
@@ -111,7 +111,7 @@ impl DeprecatedGetCallerAddressResponse {
 }
 
 impl DeprecatedGetTxSignatureResponse {
-    pub fn new(signature: Relocatable, signature_len: usize) -> Self {
+    pub const fn new(signature: Relocatable, signature_len: usize) -> Self {
         DeprecatedGetTxSignatureResponse {
             signature,
             signature_len,
@@ -119,24 +119,24 @@ impl DeprecatedGetTxSignatureResponse {
     }
 }
 impl DeprecatedGetContractAddressResponse {
-    pub fn new(contract_address: Address) -> Self {
+    pub const fn new(contract_address: Address) -> Self {
         DeprecatedGetContractAddressResponse { contract_address }
     }
 }
 
 impl DeprecatedStorageReadResponse {
-    pub fn new(value: Felt252) -> Self {
+    pub const fn new(value: Felt252) -> Self {
         DeprecatedStorageReadResponse { value }
     }
 }
 
 impl DeprecatedGetBlockNumberResponse {
-    pub(crate) fn new(block_number: u64) -> Self {
+    pub(crate) const fn new(block_number: u64) -> Self {
         Self { block_number }
     }
 }
 impl DeprecatedDeployResponse {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         contract_address: Felt252,
         constructor_retdata_size: Felt252,
         constructor_retdata: Relocatable,
@@ -309,7 +309,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::{collections::HashMap, sync::Arc};
 
     use super::*;
     use crate::{
@@ -330,7 +330,7 @@ mod tests {
     #[test]
     fn write_get_caller_address_response() {
         // Initialize a VM and syscall handler
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 

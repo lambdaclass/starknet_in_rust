@@ -188,13 +188,19 @@ mod tests {
     use crate::{
         definitions::block_context::BlockContext,
         execution::TransactionExecutionContext,
-        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
+        state::{
+            cached_state::{CachedState, ContractClassCache},
+            in_memory_state_reader::InMemoryStateReader,
+        },
         transaction::fee::charge_fee,
     };
 
     #[test]
     fn charge_fee_v0_max_fee_exceeded_should_charge_nothing() {
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            ContractClassCache::default(),
+        );
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
@@ -220,7 +226,10 @@ mod tests {
 
     #[test]
     fn charge_fee_v1_max_fee_exceeded_should_charge_max_fee() {
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            ContractClassCache::default(),
+        );
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
             ..Default::default()

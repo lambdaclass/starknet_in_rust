@@ -41,7 +41,7 @@ impl StateCache {
     #[allow(clippy::too_many_arguments)]
 
     /// Create a new StateCache with given initial and written values for testing
-    pub fn new(
+    pub const fn new(
         class_hash_initial_values: HashMap<Address, ClassHash>,
         compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
         nonce_initial_values: HashMap<Address, Felt252>,
@@ -82,7 +82,7 @@ impl StateCache {
 
     /// Creates a new instance of `StateCache` for testing purposes with the provided initial values and writes.
     #[allow(clippy::too_many_arguments)]
-    pub fn new_for_testing(
+    pub const fn new_for_testing(
         class_hash_initial_values: HashMap<Address, [u8; 32]>,
         compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
         nonce_initial_values: HashMap<Address, Felt252>,
@@ -219,6 +219,8 @@ impl StateCache {
 /// Unit tests for StateCache
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
 
     use super::*;
@@ -230,7 +232,7 @@ mod tests {
         let contract_class =
             ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
                 .unwrap();
-        let compiled_class = CompiledClass::Deprecated(Box::new(contract_class));
+        let compiled_class = CompiledClass::Deprecated(Arc::new(contract_class));
         let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class)]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(4.into()), [1; 32]), 18.into())]);

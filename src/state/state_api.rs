@@ -1,13 +1,10 @@
 use super::state_cache::StorageEntry;
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::StateDiff,
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::Felt252;
 
 pub trait StateReader {
@@ -30,7 +27,7 @@ pub trait State {
     fn set_contract_class(
         &mut self,
         class_hash: &ClassHash,
-        contract_class: &ContractClass,
+        contract_class: &CompiledClass,
     ) -> Result<(), StateError>;
 
     fn deploy_contract(
@@ -49,12 +46,6 @@ pub trait State {
         class_hash: ClassHash,
     ) -> Result<(), StateError>;
 
-    fn set_compiled_class(
-        &mut self,
-        compiled_class_hash: &Felt252,
-        casm_class: CasmContractClass,
-    ) -> Result<(), StateError>;
-
     fn set_compiled_class_hash(
         &mut self,
         class_hash: &Felt252,
@@ -63,7 +54,10 @@ pub trait State {
     fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
 
     /// Counts the amount of modified contracts and the updates to the storage
-    fn count_actual_storage_changes(&mut self) -> (usize, usize);
+    fn count_actual_storage_changes(
+        &mut self,
+        fee_token_and_sender_address: Option<(&Address, &Address)>,
+    ) -> (usize, usize);
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError>;
 

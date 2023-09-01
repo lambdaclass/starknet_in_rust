@@ -17,11 +17,7 @@ use std::sync::Arc;
 #[test]
 fn amm_proxy_init_pool_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -118,11 +114,7 @@ fn amm_proxy_init_pool_test() {
 #[test]
 fn amm_proxy_get_pool_token_balance_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -226,11 +218,7 @@ fn amm_proxy_get_pool_token_balance_test() {
 #[test]
 fn amm_proxy_add_demo_token_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -340,11 +328,7 @@ fn amm_proxy_add_demo_token_test() {
 #[test]
 fn amm_proxy_get_account_token_balance() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -467,11 +451,7 @@ fn amm_proxy_get_account_token_balance() {
 #[test]
 fn amm_proxy_swap() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,

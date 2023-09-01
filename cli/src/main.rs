@@ -23,7 +23,9 @@ use starknet_in_rust::{
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::read_abi,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::{cached_state::CachedState, state_api::State},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager, StateDiff},
     transaction::{error::TransactionError, InvokeFunction},
@@ -110,7 +112,10 @@ fn declare_parser(
     let contract_class =
         ContractClass::from_path(&args.contract).map_err(ContractAddressError::Program)?;
     let class_hash = compute_deprecated_class_hash(&contract_class)?;
-    cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
+    cached_state.set_contract_class(
+        &felt_to_hash(&class_hash),
+        &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+    )?;
 
     let tx_hash = calculate_declare_transaction_hash(
         &contract_class,
@@ -315,8 +320,7 @@ pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
         cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
             Arc::new(InMemoryStateReader::default()),
-            Some(HashMap::new()),
-            None,
+            HashMap::new(),
         )),
     });
 
