@@ -125,7 +125,7 @@ impl Deploy {
     }
 
     /// Returns the class hash of the deployed contract
-    pub fn class_hash(&self) -> ClassHash {
+    pub const fn class_hash(&self) -> ClassHash {
         self.contract_hash
     }
 
@@ -351,7 +351,7 @@ mod tests {
             class_hash_bytes
         );
 
-        let storage_key = calculate_sn_keccak("owner".as_bytes());
+        let storage_key = calculate_sn_keccak(b"owner");
 
         assert_eq!(
             state

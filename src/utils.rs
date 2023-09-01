@@ -585,7 +585,6 @@ mod test {
     }
 
     #[test]
-
     fn subtract_mappings_test() {
         let mut a = HashMap::new();
         let mut b = HashMap::new();
@@ -634,7 +633,6 @@ mod test {
     }
 
     #[test]
-
     fn to_cache_state_storage_mapping_test() {
         let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());
