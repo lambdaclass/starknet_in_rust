@@ -43,6 +43,8 @@ pub enum StateError {
     NoneCompiledClass(ClassHash),
     #[error("No compiled class hash found for class_hash {0:?}")]
     NoneCompiledHash(ClassHash),
+    #[error("No sierra program found for class_hash {0:?}")]
+    NoneSierraProgram(ClassHash),
     #[error("Missing casm class for hash {0:?}")]
     MissingCasmClass(ClassHash),
     #[error("No class hash declared in class_hash_to_contract_class")]

@@ -208,6 +208,16 @@ impl<T: StateReader> StateReader for CachedState<T> {
         // II: FETCHING FROM STATE_READER
         self.state_reader.get_contract_class(class_hash)
     }
+
+    fn get_sierra_program(
+        &self,
+        class_hash: &ClassHash,
+    ) -> Result<SierraContractClass, StateError> {
+        match self.sierra_programs.get(class_hash) {
+            Some(sierra_program) => Ok(sierra_program.clone()),
+            None => self.state_reader.get_sierra_program(class_hash),
+        }
+    }
 }
 
 impl<T: StateReader> State for CachedState<T> {
@@ -501,9 +511,15 @@ impl<T: StateReader> State for CachedState<T> {
 
     fn get_sierra_program(
         &mut self,
-        _class_hash: &ClassHash,
-    ) -> Result<Vec<cairo_lang_utils::bigint::BigUintAsHex>, StateError> {
-        todo!()
+        class_hash: &ClassHash,
+    ) -> Result<SierraContractClass, StateError> {
+        StateReader::get_sierra_program(self, class_hash).and_then(|program| {
+            // Store in cache if it's  not already there
+            if !self.sierra_programs.contains_key(class_hash) {
+                self.sierra_programs.insert(*class_hash, program.clone());
+            }
+            Ok(program)
+        })
     }
 }
 
@@ -520,6 +536,7 @@ mod tests {
     #[test]
     fn get_class_hash_and_nonce_from_state_reader() {
         let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
@@ -562,6 +579,7 @@ mod tests {
     #[test]
     fn get_contract_class_from_state_reader() {
         let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
@@ -659,6 +677,7 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
+            HashMap::new(),
         );
 
         let contract_address = Address(0.into());
@@ -679,6 +698,7 @@ mod tests {
     #[test]
     fn deploy_contract_address_in_use_error_test() {
         let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
@@ -714,6 +734,7 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
+            HashMap::new(),
         );
 
         let contract_address = Address(32123.into());
@@ -738,6 +759,7 @@ mod tests {
     #[test]
     fn cached_state_apply_state_update() {
         let state_reader = InMemoryStateReader::new(
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),

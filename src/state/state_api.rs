@@ -1,4 +1,4 @@
-use super::{state_cache::StorageEntry, cached_state::SierraContractClass};
+use super::{cached_state::SierraContractClass, state_cache::StorageEntry};
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
@@ -8,7 +8,6 @@ use crate::{
     utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::felt::Felt252;
 
 pub trait StateReader {
@@ -25,6 +24,9 @@ pub trait StateReader {
         &self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError>;
+    // Return the sierra program of the given class hash.
+    fn get_sierra_program(&self, class_hash: &ClassHash)
+        -> Result<SierraContractClass, StateError>;
 }
 
 pub trait State {
@@ -87,5 +89,5 @@ pub trait State {
     fn get_sierra_program(
         &mut self,
         class_hash: &ClassHash,
-    ) -> Result<Vec<BigUintAsHex>, StateError>;
+    ) -> Result<SierraContractClass, StateError>;
 }

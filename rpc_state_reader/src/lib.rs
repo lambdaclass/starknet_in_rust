@@ -417,6 +417,13 @@ impl StateReader for RpcState {
     ) -> Result<CompiledClassHash, StateError> {
         todo!()
     }
+
+    fn get_sierra_program(
+        &self,
+        _class_hash: &ClassHash,
+    ) -> Result<starknet_in_rust::state::cached_state::SierraContractClass, StateError> {
+        todo!()
+    }
 }
 
 #[cfg(test)]

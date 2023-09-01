@@ -1,3 +1,4 @@
+use super::cached_state::SierraContractClass;
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::{
@@ -33,6 +34,8 @@ pub struct InMemoryStateReader {
     pub(crate) casm_contract_classes: CasmClassCache,
     #[getset(get_mut = "pub")]
     pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
+    #[getset(get_mut = "pub")]
+    pub(crate) sierra_programs: HashMap<ClassHash, SierraContractClass>,
 }
 
 impl InMemoryStateReader {
@@ -52,6 +55,7 @@ impl InMemoryStateReader {
         class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
         casm_contract_classes: CasmClassCache,
         class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
+        sierra_programs: HashMap<ClassHash, SierraContractClass>,
     ) -> Self {
         Self {
             address_to_class_hash,
@@ -60,6 +64,7 @@ impl InMemoryStateReader {
             class_hash_to_contract_class,
             casm_contract_classes,
             class_hash_to_compiled_class_hash,
+            sierra_programs,
         }
     }
 
@@ -138,6 +143,16 @@ impl StateReader for InMemoryStateReader {
             Err(StateError::MissingCasmClass(compiled_class_hash))
         }
     }
+
+    fn get_sierra_program(
+        &self,
+        class_hash: &ClassHash,
+    ) -> Result<super::cached_state::SierraContractClass, StateError> {
+        self.sierra_programs
+            .get(class_hash)
+            .ok_or(StateError::NoneSierraProgram(*class_hash))
+            .cloned()
+    }
 }
 
 #[cfg(test)]
@@ -147,6 +162,7 @@ mod tests {
     #[test]
     fn get_contract_state_test() {
         let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
@@ -185,6 +201,7 @@ mod tests {
     #[test]
     fn get_contract_class_test() {
         let mut state_reader = InMemoryStateReader::new(
+            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),

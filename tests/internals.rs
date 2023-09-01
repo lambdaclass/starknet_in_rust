@@ -381,6 +381,7 @@ fn initial_in_memory_state_reader() -> InMemoryStateReader {
         ]),
         HashMap::new(),
         HashMap::new(),
+        HashMap::new(),
     )
 }
 
@@ -1605,6 +1606,7 @@ fn expected_deploy_account_states() -> (
                 ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
             ),
         ]),
+        HashMap::new(),
         HashMap::new(),
         HashMap::new(),
     )))
