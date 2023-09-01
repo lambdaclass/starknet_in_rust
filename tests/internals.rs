@@ -1227,7 +1227,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
         ("n_steps".to_string(), 4135),
         ("pedersen_builtin".to_string(), 16),
         ("l1_gas_usage".to_string(), 3672),
-        ("range_check_builtin".to_string(), 82),
+        ("range_check_builtin".to_string(), 101),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
