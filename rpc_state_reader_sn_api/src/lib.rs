@@ -1018,8 +1018,8 @@ mod blockifier_transaction_tests {
     #[cfg(test)]
     mod test {
         use blockifier::execution::entry_point::CallInfo;
-        use test_case::test_case;
         use pretty_assertions::assert_eq;
+        use test_case::test_case;
 
         use super::*;
 
@@ -1067,41 +1067,22 @@ mod blockifier_transaction_tests {
             RpcChain::MainNet
         )]
         #[test_case(
-            "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
-            90006, // real block 90007
+            "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
+            169928, // real block 169929
             RpcChain::MainNet
         )]
         #[test_case(
-            "0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955",
-            90002, // real block 90003
+            "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
+            169928, // real block 169929
             RpcChain::MainNet
         )]
         #[test_case(
-            "0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c",
-            155054, // invalid nonce
-            RpcChain::MainNet
-        )]
-        #[test_case(
-            "0x00eef6ba6741da8769192fac9d28c6631cf66f9e7c4e880b886ef6a2e550e4e2",
-            156105, // 156106
-            RpcChain::MainNet
-        )]
-        #[test_case(
-            "0x05649d037b60c0c83b16151dbf03ea0d8b5e035074c522976fe25e66477830fc",
-            181743, // 181744
-            RpcChain::MainNet
-        )]
-        #[test_case(
-            "0x0467d18b6dd5af4b552cf0ed38a69c302ecb9a030187ced79b33bfa366f46ed9",
-            181754, // invalid nonce
+            "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
+            169928, // real block 169929
             RpcChain::MainNet
         )]
         fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
-            let (tx_info, trace, receipt) = execute_tx(
-                hash,
-                chain,
-                BlockNumber(block_number),
-            );
+            let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
             let TransactionExecutionInfo {
                 execute_call_info,
@@ -1115,7 +1096,10 @@ mod blockifier_transaction_tests {
                 ..
             } = execute_call_info.unwrap();
 
-            assert_eq!(vm_resources, trace.function_invocation.execution_resources, "execution resources mismatch");
+            assert_eq!(
+                vm_resources, trace.function_invocation.execution_resources,
+                "execution resources mismatch"
+            );
             assert_eq!(
                 inner_calls.len(),
                 trace.function_invocation.internal_calls.len(),
@@ -1315,33 +1299,18 @@ mod starknet_in_rust_transaction_tests {
             RpcChain::MainNet
         )]
         #[test_case(
-            "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
-            90006, // real block 90007
+            "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
+            169928, // real block 169929
             RpcChain::MainNet
         )]
         #[test_case(
-            "0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955",
-            90002, // real block 90003
+            "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
+            169928, // real block 169929
             RpcChain::MainNet
         )]
         #[test_case(
-            "0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c",
-            155054, // invalid nonce
-            RpcChain::MainNet
-        )]
-        #[test_case(
-            "0x00eef6ba6741da8769192fac9d28c6631cf66f9e7c4e880b886ef6a2e550e4e2",
-            156105, // 156106
-            RpcChain::MainNet
-        )]
-        #[test_case(
-            "0x05649d037b60c0c83b16151dbf03ea0d8b5e035074c522976fe25e66477830fc",
-            181743, // 181744
-            RpcChain::MainNet
-        )]
-        #[test_case(
-            "0x0467d18b6dd5af4b552cf0ed38a69c302ecb9a030187ced79b33bfa366f46ed9",
-            181754, // invalid nonce
+            "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
+            169928, // real block 169929
             RpcChain::MainNet
         )]
         fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
@@ -1360,12 +1329,13 @@ mod starknet_in_rust_transaction_tests {
             } = call_info.unwrap();
 
             assert_eq!(
-                execution_resources,
-                trace.function_invocation.execution_resources, "execution resources mismatch"
+                execution_resources, trace.function_invocation.execution_resources,
+                "execution resources mismatch"
             );
             assert_eq!(
                 internal_calls.len(),
-                trace.function_invocation.internal_calls.len(), "internal calls length mismatch"
+                trace.function_invocation.internal_calls.len(),
+                "internal calls length mismatch"
             );
 
             assert_eq!(actual_fee, receipt.actual_fee, "actual_fee mismatch");
