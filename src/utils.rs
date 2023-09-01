@@ -288,7 +288,7 @@ pub fn get_storage_var_address(
         .collect::<Result<Vec<_>, _>>()?;
 
     let storage_var_name_hash =
-        FieldElement::from_bytes_be(&calculate_sn_keccak(&storage_var_name.as_bytes()))?;
+        FieldElement::from_bytes_be(&calculate_sn_keccak(storage_var_name.as_bytes()))?;
     let storage_key_hash = args
         .iter()
         .fold(storage_var_name_hash, |res, arg| pedersen_hash(&res, arg));
