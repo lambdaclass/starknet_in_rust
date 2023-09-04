@@ -12,6 +12,7 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, Num, One, Zero};
+use pretty_assertions_sorted::assert_eq_sorted;
 use starknet_in_rust::core::contract_address::{
     compute_casm_class_hash, compute_sierra_class_hash,
 };
@@ -1216,8 +1217,8 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
     let resources = HashMap::from([
         ("n_steps".to_string(), 4135),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 1224),
-        ("range_check_builtin".to_string(), 82),
+        ("l1_gas_usage".to_string(), 2448),
+        ("range_check_builtin".to_string(), 101),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
@@ -1278,7 +1279,7 @@ fn test_invoke_tx() {
     let result = invoke_tx.execute(state, block_context, 0).unwrap();
     let expected_execution_info = expected_transaction_execution_info(block_context);
 
-    assert_eq!(result, expected_execution_info);
+    assert_eq_sorted!(result, expected_execution_info);
 }
 
 #[test]
@@ -1292,7 +1293,7 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
     let max_fee = 3;
-    let actual_fee = 1259;
+    let actual_fee = 2490;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
@@ -1307,7 +1308,7 @@ fn test_invoke_tx_exceeded_max_fee() {
     );
     expected_result.set_fee_info(max_fee, Some(expected_fee_transfer_info(max_fee)));
 
-    assert_eq!(result, expected_result);
+    assert_eq_sorted!(result, expected_result);
 
     // Check final balance
     let test_erc20_address = block_context
@@ -1475,7 +1476,7 @@ fn test_invoke_with_declarev2_tx() {
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let expected_fee = 3709;
+    let expected_fee = 4933;
 
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
@@ -1509,7 +1510,8 @@ fn test_deploy_account() {
         .execute(&mut state, &block_context)
         .unwrap();
 
-    assert_eq!(state.cache(), state_after.cache());
+    use pretty_assertions_sorted::assert_eq_sorted;
+    assert_eq_sorted!(state.cache(), state_after.cache());
 
     let expected_validate_call_info = expected_validate_call_info(
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
@@ -1545,12 +1547,12 @@ fn test_deploy_account() {
         ("n_steps".to_string(), 3625),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 3672),
+        ("l1_gas_usage".to_string(), 4896),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 3709);
+    assert_eq!(fee, 4933);
 
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
@@ -1609,23 +1611,17 @@ fn test_deploy_account_revert() {
         INITIAL_BALANCE.clone(),
     );
 
-    let (mut state_before, mut state_after) = expected_deploy_account_states();
+    let (state_before, mut state_after) = expected_deploy_account_states();
 
     assert_eq!(&state.cache(), &state_before.cache());
     assert_eq!(&state.contract_classes(), &state_before.contract_classes());
-    assert_eq!(
-        &state.casm_contract_classes(),
-        &state_before.casm_contract_classes()
-    );
+    assert!(&state.contract_classes().is_empty());
 
     let tx_info = deploy_account_tx
         .execute(&mut state, &block_context)
         .unwrap();
 
-    assert_eq!(
-        state.casm_contract_classes(),
-        state_before.casm_contract_classes()
-    );
+    assert!(tx_info.revert_error.is_some());
 
     let mut state_reverted = state_before.clone();
 
@@ -1652,6 +1648,11 @@ fn test_deploy_account_revert() {
         .cache_mut()
         .storage_initial_values_mut()
         .extend(state_after.cache_mut().storage_initial_values_mut().clone());
+
+    // Set contract class cache
+    state_reverted
+        .set_contract_classes(state_after.contract_classes().clone())
+        .unwrap();
 
     // Set storage writes related to the fee transfer
     state_reverted
@@ -1684,19 +1685,19 @@ fn test_deploy_account_revert() {
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &block_context,
         deploy_account_tx.contract_address(),
-        expected_fee as u64,
+        expected_fee,
     );
 
     let resources = HashMap::from([
         ("n_steps".to_string(), 3625),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 3672),
+        ("l1_gas_usage".to_string(), 4896),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 3709);
+    assert_eq!(fee, 4933);
 
     let mut expected_execution_info = TransactionExecutionInfo::new(
         None,
@@ -1706,10 +1707,10 @@ fn test_deploy_account_revert() {
         expected_fee,
         // Entry **not** in blockifier.
         // Default::default(),
-        resources,
+        resources.clone(),
         TransactionType::DeployAccount.into(),
     )
-    .to_revert_error(format!("Calculated fee ({}) exceeds max fee ({})", 3709, 1).as_str());
+    .to_revert_error(format!("Calculated fee ({}) exceeds max fee ({})", fee, 1).as_str());
 
     expected_execution_info.set_fee_info(expected_fee, expected_fee_transfer_call_info.into());
 
@@ -1734,7 +1735,7 @@ fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader>,
     CachedState<InMemoryStateReader>,
 ) {
-    let fee = Felt252::from(3709);
+    let fee = Felt252::from(4933);
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([

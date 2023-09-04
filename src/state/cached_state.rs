@@ -392,6 +392,8 @@ impl<T: StateReader> State for CachedState<T> {
         if let Some(hash) = hash {
             Ok(*hash)
         } else {
+        dbg!("prev deploy");
+        dbg!(&std::any::type_name::<Self>());
             let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
             let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
             self.cache

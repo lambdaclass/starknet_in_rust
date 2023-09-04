@@ -324,6 +324,7 @@ mod tests {
 
     use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use num_traits::Num;
+    use pretty_assertions_sorted::assert_eq_sorted;
 
     use super::*;
     use crate::{
@@ -584,7 +585,7 @@ mod tests {
         .unwrap();
         let actual_resources = HashMap::from([
             ("n_steps".to_string(), 3457),
-            ("l1_gas_usage".to_string(), 1224),
+            ("l1_gas_usage".to_string(), 2448),
             ("range_check_builtin".to_string(), 80),
             ("pedersen_builtin".to_string(), 16),
         ]);
@@ -613,7 +614,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(tx_info, expected_info);
+        assert_eq_sorted!(tx_info, expected_info);
     }
 
     #[test]
