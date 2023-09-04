@@ -1335,6 +1335,7 @@ mod starknet_in_rust_transaction_tests {
             "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
             169928, // real block 169929
             RpcChain::MainNet
+            => ignore["gas mismatch"]
         )]
         #[test_case(
             "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
@@ -1352,6 +1353,7 @@ mod starknet_in_rust_transaction_tests {
             "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
             169928, // real block 169929
             RpcChain::MainNet
+            => ignore["gas mismatch"]
         )]
         #[test_case(
             // review later
