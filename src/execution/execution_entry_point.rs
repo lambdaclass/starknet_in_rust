@@ -225,7 +225,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for SyscallHandler<'a, S> {
             address,
             calldata.to_vec(),
             entrypoint_selector,
-            self.contract_address.clone(),
+            self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Call),
             None,
@@ -1080,6 +1080,7 @@ impl ExecutionEntryPoint {
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
         };
+
         native_program
             .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler))
             .unwrap();
@@ -1160,6 +1161,9 @@ impl ExecutionEntryPoint {
         let result: String = String::from_utf8(writer).unwrap();
         let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
         // let value = serde_json::from_str::<Value>(&result).unwrap();
+        // println!("VALUE: {}", value);
+
+        // todo!();
 
         return Ok(CallInfo {
             caller_address: self.caller_address.clone(),
@@ -1181,7 +1185,7 @@ impl ExecutionEntryPoint {
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
 
             // TODO
-            internal_calls: vec![],
+            internal_calls: syscall_handler.internal_calls,
 
             // TODO
             gas_consumed: 0,

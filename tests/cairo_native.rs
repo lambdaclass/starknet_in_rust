@@ -1,12 +1,14 @@
 #![cfg(not(feature = "cairo_1_tests"))]
 // #![deny(warnings)]
 
+use crate::CallType::Call;
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
-use starknet_in_rust::EntryPointType;
+use starknet_in_rust::execution::{Event, OrderedEvent};
+use starknet_in_rust::EntryPointType::{self, External};
 use starknet_in_rust::{
     definitions::constants::TRANSACTION_VERSION,
     execution::{
@@ -17,6 +19,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::{collections::HashMap, path::PathBuf};
 
@@ -631,7 +634,124 @@ fn call_echo_contract_test() {
         EntryPointType::External,
     );
 
-    assert_eq!(result.retdata, [Felt252::new(99999999)]);
+    assert_eq!(result.retdata, [Felt252::new(99999998)]);
+}
+
+#[test]
+fn call_events_contract_test() {
+    // Caller contract
+    let caller_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/caller.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // Callee contract
+    let callee_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/emit_event.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // Caller contract entrypoints
+    let caller_entrypoints = caller_contract_class.clone().entry_points_by_type;
+    let call_contract_selector = &caller_entrypoints.external.get(0).unwrap().selector;
+
+    // Event emmitter contract entrypoints
+    let callee_entrypoints = callee_contract_class.clone().entry_points_by_type;
+    let fn_selector = &callee_entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut sierra_contract_class_cache = HashMap::new();
+
+    // Caller contract data
+    let caller_address = Address(1111.into());
+    let caller_class_hash: ClassHash = [1; 32];
+    let caller_nonce = Felt252::zero();
+
+    // Callee contract data
+    let callee_address = Address(1112.into());
+    let callee_class_hash: ClassHash = [2; 32];
+    let callee_nonce = Felt252::zero();
+
+    sierra_contract_class_cache.insert(caller_class_hash, caller_contract_class);
+    sierra_contract_class_cache.insert(callee_class_hash, callee_contract_class);
+
+    let mut state_reader = InMemoryStateReader::default();
+
+    // Insert caller contract info into state reader
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(caller_address.clone(), caller_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(caller_address.clone(), caller_nonce);
+
+    // Insert callee contract info into state reader
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(callee_address.clone(), callee_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(callee_address.clone(), callee_nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader))
+        .set_sierra_programs_cache(sierra_contract_class_cache);
+
+    let calldata = [fn_selector.into()].to_vec();
+    let result = execute(
+        &mut state,
+        &caller_address,
+        &callee_address,
+        call_contract_selector,
+        &calldata,
+        EntryPointType::External,
+    );
+
+    let internal_call = CallInfo {
+        caller_address: Address(1111.into()),
+        call_type: Some(Call),
+        contract_address: Address(1112.into()),
+        code_address: None,
+        class_hash: Some([
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2,
+        ]),
+        entry_point_selector: Some(fn_selector.into()),
+        entry_point_type: Some(External),
+        calldata: Vec::new(),
+        retdata: vec![1234.into()],
+        execution_resources: None,
+        events: vec![OrderedEvent {
+            order: 0,
+            keys: vec![110.into()],
+            data: vec![1.into()],
+        }],
+        l2_to_l1_messages: Vec::new(),
+        storage_read_values: Vec::new(),
+        accessed_storage_keys: HashSet::new(),
+        internal_calls: Vec::new(),
+        gas_consumed: 0,
+        failure_flag: false,
+    };
+
+    let event = Event {
+        from_address: Address(1112.into()),
+        keys: vec![110.into()],
+        data: vec![1.into()],
+    };
+
+    assert_eq!(result.retdata, [1234.into()]);
+    assert_eq!(result.events, []);
+    assert_eq!(result.internal_calls, [internal_call]);
+
+    let sorted_events = result.get_sorted_events().unwrap();
+    assert_eq!(sorted_events, vec![event]);
 }
 
 fn execute(
