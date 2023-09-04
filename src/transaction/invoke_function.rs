@@ -1,7 +1,7 @@
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        block_context::BlockContext,
+        block_context::{BlockContext, StarknetChainId},
         constants::{
             EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
         },
@@ -446,7 +446,7 @@ fn convert_invoke_v1(
     let max_fee = value.max_fee.0;
     let version = Felt252::one();
     let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-    let chain_id = Felt252::zero();
+    let chain_id = StarknetChainId::MainNet.to_felt();
     let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
 
     let signature = value

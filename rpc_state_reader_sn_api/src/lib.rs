@@ -1298,6 +1298,22 @@ mod starknet_in_rust_transaction_tests {
         use super::*;
 
         #[test]
+        fn test_get_transaction_try_from() {
+            let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
+            let str_hash = "0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91";
+            let tx_hash = TransactionHash(stark_felt!(str_hash));
+
+            let sn_tx = rpc_state.get_transaction(&tx_hash);
+            match &sn_tx {
+                SNTransaction::Invoke(sn_tx) => {
+                    let tx = InvokeFunction::try_from(sn_tx.clone()).unwrap();
+                    assert_eq!(format!("0x{}", tx.hash_value().to_str_radix(16)), str_hash)
+                }
+                _ => unimplemented!(),
+            };
+        }
+
+        #[test]
         fn test_get_gas_price() {
             let block = BlockValue::Number(BlockNumber(169928));
             let rpc_state = RpcState::new(RpcChain::MainNet, block);
