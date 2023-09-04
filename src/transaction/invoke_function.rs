@@ -124,15 +124,10 @@ impl InvokeFunction {
     pub fn from_invoke_transaction(
         tx: starknet_api::transaction::InvokeTransaction,
         chain_id: StarknetChainId,
-        version: Felt252,
     ) -> Result<Self, TransactionError> {
         match tx {
-            starknet_api::transaction::InvokeTransaction::V0(v0) => {
-                convert_invoke_v0(v0, chain_id, version)
-            }
-            starknet_api::transaction::InvokeTransaction::V1(v1) => {
-                convert_invoke_v1(v1, chain_id, version)
-            }
+            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, chain_id),
+            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, chain_id),
         }
     }
 
@@ -423,7 +418,6 @@ pub(crate) fn preprocess_invoke_function_fields(
 fn convert_invoke_v0(
     value: starknet_api::transaction::InvokeTransactionV0,
     chain_id: StarknetChainId,
-    version: Felt252,
 ) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(
         value.contract_address.0.key().bytes(),
@@ -450,7 +444,7 @@ fn convert_invoke_v0(
         contract_address,
         entry_point_selector,
         max_fee,
-        version,
+        Felt252::new(0),
         calldata,
         signature,
         chain_id.to_felt(),
@@ -461,7 +455,6 @@ fn convert_invoke_v0(
 fn convert_invoke_v1(
     value: starknet_api::transaction::InvokeTransactionV1,
     chain_id: StarknetChainId,
-    version: Felt252,
 ) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
     let max_fee = value.max_fee.0;
@@ -486,7 +479,7 @@ fn convert_invoke_v1(
         contract_address,
         entry_point_selector,
         max_fee,
-        version,
+        Felt252::new(0),
         calldata,
         signature,
         chain_id.to_felt(),
@@ -506,7 +499,7 @@ mod tests {
         utils::calculate_sn_keccak,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use num_traits::{Num, One};
+    use num_traits::Num;
     use starknet_api::{
         core::{ContractAddress, Nonce, PatriciaKey},
         hash::{StarkFelt, StarkHash},
@@ -573,9 +566,7 @@ mod tests {
             ])),
         });
 
-        let tx_sir =
-            InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet, Felt252::one())
-                .unwrap();
+        let tx_sir = InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet).unwrap();
         assert_eq!(
             tx_sir.hash_value.to_str_radix(16),
             "5b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4"
