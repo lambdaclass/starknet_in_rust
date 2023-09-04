@@ -479,7 +479,7 @@ fn convert_invoke_v1(
         contract_address,
         entry_point_selector,
         max_fee,
-        Felt252::new(0),
+        Felt252::new(1),
         calldata,
         signature,
         chain_id.to_felt(),
