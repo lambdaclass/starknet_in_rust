@@ -9,6 +9,7 @@ use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::execution::{Event, OrderedEvent};
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType::{self, External};
 use starknet_in_rust::{
     definitions::constants::TRANSACTION_VERSION,
@@ -149,29 +150,40 @@ fn integration_test_erc20() {
         )
         .unwrap();
 
-    let caller_address = Address(123456789.into());
+    let casm_data = include_bytes!("../starknet_programs/cairo2/erc20.casm");
+    let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
 
-    let entrypoints = sierra_contract_class.clone().entry_points_by_type;
-    let constructor_entry_point_selector = &entrypoints.constructor.get(0).unwrap().selector;
+    let native_entrypoints = sierra_contract_class.clone().entry_points_by_type;
+    let native_constructor_selector = &native_entrypoints.constructor.get(0).unwrap().selector;
+
+    let casm_entrypoints = casm_contract_class.clone().entry_points_by_type;
+    let casm_constructor_selector = &casm_entrypoints.constructor.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
 
-    let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
+    let native_class_hash: ClassHash = [1; 32];
+    let casm_class_hash: ClassHash = [2; 32];
+
+    let caller_address = Address(123456789.into());
 
     contract_class_cache.insert(
-        class_hash,
+        native_class_hash,
         CompiledClass::Sierra(Arc::new(sierra_contract_class)),
     );
+    contract_class_cache.insert(
+        casm_class_hash,
+        CompiledClass::Casm(Arc::new(casm_contract_class)),
+    );
     let mut state_reader = InMemoryStateReader::default();
+    let nonce = Felt252::zero();
+
     state_reader
         .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash);
+        .insert(caller_address.clone(), casm_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce);
+        .insert(caller_address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
@@ -192,68 +204,140 @@ fn integration_test_erc20() {
     ]
     .to_vec();
 
-    let result = execute(
+    let vm_result = execute(
         &mut state,
         &caller_address,
         &caller_address,
-        constructor_entry_point_selector,
+        casm_constructor_selector,
         &calldata,
         EntryPointType::Constructor,
+        &casm_class_hash,
     );
 
-    assert_eq!(result.caller_address, caller_address);
-    assert_eq!(result.call_type, Some(CallType::Delegate));
-    assert_eq!(result.contract_address, caller_address);
-    assert_eq!(
-        result.entry_point_selector,
-        Some(Felt252::new(constructor_entry_point_selector))
+    let native_result = execute(
+        &mut state,
+        &caller_address,
+        &caller_address,
+        native_constructor_selector,
+        &calldata,
+        EntryPointType::Constructor,
+        &native_class_hash,
     );
-    assert_eq!(result.entry_point_type, Some(EntryPointType::Constructor));
-    assert_eq!(result.calldata, calldata);
-    assert!(!result.failure_flag);
-    assert_eq!(result.retdata, [].to_vec());
-    assert_eq!(result.execution_resources, None);
-    assert_eq!(result.class_hash, Some(class_hash));
-    assert_eq!(result.gas_consumed, 0);
+
+    assert_eq!(vm_result.caller_address, caller_address);
+    assert_eq!(vm_result.call_type, Some(CallType::Delegate));
+    assert_eq!(vm_result.contract_address, caller_address);
+    assert_eq!(
+        vm_result.entry_point_selector,
+        Some(Felt252::new(casm_constructor_selector))
+    );
+    assert_eq!(
+        vm_result.entry_point_type,
+        Some(EntryPointType::Constructor)
+    );
+    assert_eq!(vm_result.calldata, calldata);
+    assert!(!vm_result.failure_flag);
+    assert_eq!(vm_result.retdata, [].to_vec());
+    assert_eq!(vm_result.class_hash, Some(casm_class_hash));
+
+    assert_eq!(native_result.caller_address, caller_address);
+    assert_eq!(native_result.call_type, Some(CallType::Delegate));
+    assert_eq!(native_result.contract_address, caller_address);
+    assert_eq!(
+        native_result.entry_point_selector,
+        Some(Felt252::new(native_constructor_selector))
+    );
+    assert_eq!(
+        native_result.entry_point_type,
+        Some(EntryPointType::Constructor)
+    );
+    assert_eq!(native_result.calldata, calldata);
+    assert!(!native_result.failure_flag);
+    assert_eq!(native_result.retdata, [].to_vec());
+    assert_eq!(native_result.execution_resources, None);
+    assert_eq!(native_result.class_hash, Some(native_class_hash));
+    assert_eq!(native_result.gas_consumed, 0);
+
+    // TODO: Make these asserts work
+    // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
+    // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
 
     // --------------- GET TOTAL SUPPLY -----------------
 
-    let get_total_supply_selector = &entrypoints.external.get(5).unwrap().selector;
+    let native_get_total_supply_selector = &native_entrypoints.external.get(5).unwrap().selector;
+    let casm_get_total_supply_selector = &casm_entrypoints.external.get(5).unwrap().selector;
 
     let calldata = [].to_vec();
 
-    let result = execute(
+    let vm_result = execute(
         &mut state,
         &caller_address,
         &caller_address,
-        get_total_supply_selector,
+        casm_get_total_supply_selector,
         &calldata,
         EntryPointType::External,
+        &casm_class_hash,
     );
 
-    assert!(!result.failure_flag);
-    assert_eq!(result.retdata, [4.into()].to_vec());
+    let native_result = execute(
+        &mut state,
+        &caller_address,
+        &caller_address,
+        native_get_total_supply_selector,
+        &calldata,
+        EntryPointType::External,
+        &native_class_hash,
+    );
+
+    assert!(!vm_result.failure_flag);
+    assert_eq!(vm_result.retdata, [4.into()].to_vec());
+
+    assert!(!native_result.failure_flag);
+    assert_eq!(native_result.retdata, [4.into()].to_vec());
+
+    // TODO: Make these asserts work
+    // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
+    // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
 
     // ---------------- GET DECIMALS ----------------------
 
-    let get_decimals_entry_point_selector = &entrypoints.external.get(1).unwrap().selector;
+    let native_get_decimals_selector = &native_entrypoints.external.get(1).unwrap().selector;
+    let casm_get_decimals_selector = &casm_entrypoints.external.get(1).unwrap().selector;
     let calldata = [].to_vec();
+
+    let vm_result = execute(
+        &mut state,
+        &caller_address,
+        &caller_address,
+        casm_get_decimals_selector,
+        &calldata,
+        EntryPointType::External,
+        &casm_class_hash,
+    );
 
     let result = execute(
         &mut state,
         &caller_address,
         &caller_address,
-        get_decimals_entry_point_selector,
+        native_get_decimals_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
+
+    assert!(!vm_result.failure_flag);
+    assert_eq!(vm_result.retdata, [3.into()].to_vec());
 
     assert!(!result.failure_flag);
     assert_eq!(result.retdata, [3.into()].to_vec());
 
+    // TODO: Make these asserts work
+    // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
+    // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
+
     // ---------------- GET NAME ----------------------
 
-    let get_name_selector = &entrypoints.external.get(6).unwrap().selector;
+    let get_name_selector = &native_entrypoints.external.get(6).unwrap().selector;
 
     let calldata = [].to_vec();
 
@@ -264,6 +348,7 @@ fn integration_test_erc20() {
         get_name_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -271,7 +356,7 @@ fn integration_test_erc20() {
 
     // ---------------- GET SYMBOL ----------------------
 
-    let get_symbol_selector = &entrypoints.external.get(7).unwrap().selector;
+    let get_symbol_selector = &native_entrypoints.external.get(7).unwrap().selector;
 
     let calldata = [].to_vec();
 
@@ -282,6 +367,7 @@ fn integration_test_erc20() {
         get_symbol_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -289,7 +375,7 @@ fn integration_test_erc20() {
 
     // ---------------- GET BALANCE OF CALLER ----------------------
 
-    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+    let balance_of_selector = &native_entrypoints.external.get(8).unwrap().selector;
 
     let calldata = [caller_address.0.clone()].to_vec();
 
@@ -300,6 +386,7 @@ fn integration_test_erc20() {
         balance_of_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -307,7 +394,7 @@ fn integration_test_erc20() {
 
     // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
 
-    let allowance_entry_point_selector = &entrypoints.external.get(3).unwrap().selector;
+    let allowance_entry_point_selector = &native_entrypoints.external.get(3).unwrap().selector;
     let calldata = [caller_address.0.clone(), 1.into()].to_vec();
 
     let result = execute(
@@ -317,6 +404,7 @@ fn integration_test_erc20() {
         allowance_entry_point_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -324,7 +412,8 @@ fn integration_test_erc20() {
 
     // ---------------- INCREASE ALLOWANCE OF ADDRESS 1 by 10_000 ----------------------
 
-    let increase_allowance_entry_point_selector = &entrypoints.external.get(2).unwrap().selector;
+    let increase_allowance_entry_point_selector =
+        &native_entrypoints.external.get(2).unwrap().selector;
     let calldata = [1.into(), 10_000.into()].to_vec();
 
     let result = execute(
@@ -334,6 +423,7 @@ fn integration_test_erc20() {
         increase_allowance_entry_point_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -350,13 +440,14 @@ fn integration_test_erc20() {
         allowance_entry_point_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert_eq!(result.retdata, [10_000.into()].to_vec());
 
     // ---------------- APPROVE ADDRESS 1 TO MAKE TRANSFERS ON BEHALF OF THE CALLER ----------------------
 
-    let approve_entry_point_selector = &entrypoints.external.get(4).unwrap().selector;
+    let approve_entry_point_selector = &native_entrypoints.external.get(4).unwrap().selector;
 
     let calldata = [1.into(), 5_000.into()].to_vec();
 
@@ -367,6 +458,7 @@ fn integration_test_erc20() {
         approve_entry_point_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -374,7 +466,7 @@ fn integration_test_erc20() {
 
     // ---------------- TRANSFER 3 TOKENS FROM CALLER TO ADDRESS 2 ---------
 
-    let balance_of_selector = &entrypoints.external.get(0).unwrap().selector;
+    let balance_of_selector = &native_entrypoints.external.get(0).unwrap().selector;
 
     let calldata = [2.into(), 3.into()].to_vec();
 
@@ -385,6 +477,7 @@ fn integration_test_erc20() {
         balance_of_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -392,7 +485,7 @@ fn integration_test_erc20() {
 
     // ---------------- GET BALANCE OF CALLER ----------------------
 
-    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+    let balance_of_selector = &native_entrypoints.external.get(8).unwrap().selector;
 
     let calldata = [caller_address.0.clone()].to_vec();
 
@@ -403,6 +496,7 @@ fn integration_test_erc20() {
         balance_of_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -410,7 +504,7 @@ fn integration_test_erc20() {
 
     // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
 
-    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+    let balance_of_selector = &native_entrypoints.external.get(8).unwrap().selector;
 
     let calldata = [2.into()].to_vec();
 
@@ -421,6 +515,7 @@ fn integration_test_erc20() {
         balance_of_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -428,7 +523,7 @@ fn integration_test_erc20() {
 
     // ---------------- TRANSFER 1 TOKEN FROM CALLER TO ADDRESS 2, CALLED FROM ADDRESS 1 ----------------------
 
-    let transfer_from_selector = &entrypoints.external.get(9).unwrap().selector;
+    let transfer_from_selector = &native_entrypoints.external.get(9).unwrap().selector;
 
     let calldata = [1.into(), 2.into(), 1.into()].to_vec();
 
@@ -439,6 +534,7 @@ fn integration_test_erc20() {
         transfer_from_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -446,7 +542,7 @@ fn integration_test_erc20() {
 
     // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
 
-    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+    let balance_of_selector = &native_entrypoints.external.get(8).unwrap().selector;
 
     let calldata = [2.into()].to_vec();
 
@@ -457,6 +553,7 @@ fn integration_test_erc20() {
         balance_of_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -464,7 +561,7 @@ fn integration_test_erc20() {
 
     // ---------------- GET BALANCE OF CALLER ----------------------
 
-    let balance_of_selector = &entrypoints.external.get(8).unwrap().selector;
+    let balance_of_selector = &native_entrypoints.external.get(8).unwrap().selector;
 
     let calldata = [caller_address.0.clone()].to_vec();
 
@@ -475,6 +572,7 @@ fn integration_test_erc20() {
         balance_of_selector,
         &calldata,
         EntryPointType::External,
+        &native_class_hash,
     );
 
     assert!(!result.failure_flag);
@@ -563,6 +661,7 @@ fn call_contract_test() {
         call_contract_selector,
         &calldata,
         EntryPointType::External,
+        &caller_class_hash,
     );
 
     assert_eq!(result.retdata, [Felt252::new(44)]);
@@ -648,6 +747,7 @@ fn call_echo_contract_test() {
         call_contract_selector,
         &calldata,
         EntryPointType::External,
+        &caller_class_hash,
     );
 
     assert_eq!(result.retdata, [Felt252::new(99999999)]);
@@ -733,6 +833,7 @@ fn call_events_contract_test() {
         call_contract_selector,
         &calldata,
         EntryPointType::External,
+        &caller_class_hash,
     );
 
     let internal_call = CallInfo {
@@ -783,9 +884,8 @@ fn execute(
     selector: &BigUint,
     calldata: &[Felt252],
     entrypoint_type: EntryPointType,
+    class_hash: &ClassHash,
 ) -> CallInfo {
-    let class_hash: ClassHash = [1; 32];
-
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
         calldata.to_vec(),
@@ -793,7 +893,7 @@ fn execute(
         (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),
-        Some(class_hash),
+        Some(*class_hash),
         u128::MAX,
     );
 
