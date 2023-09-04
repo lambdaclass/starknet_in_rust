@@ -921,7 +921,7 @@ mod tests {
         state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
         syscalls::syscall_handler_errors::SyscallHandlerError,
-        utils::{test_utils::*, Address},
+        utils::{felt_to_hash, test_utils::*, Address},
     };
     use cairo_vm::felt::Felt252;
     use cairo_vm::hint_processor::hint_processor_definition::HintProcessorLogic;
@@ -936,8 +936,8 @@ mod tests {
         },
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
-    use num_traits::Zero;
-    use std::{any::Any, borrow::Cow, collections::HashMap};
+    use num_traits::{One, Zero};
+    use std::{any::Any, borrow::Cow, collections::HashMap, sync::Arc};
 
     type DeprecatedBLSyscallHandler<'a> =
         super::DeprecatedBLSyscallHandler<'a, InMemoryStateReader>;
@@ -1047,5 +1047,30 @@ mod tests {
             syscall_handler.syscall_storage_read(Address(Felt252::zero())),
             Ok(value) if value == Felt252::zero()
         );
+    }
+
+    #[test]
+    fn test_storage_write_update_initial_values() {
+        // Initialize state reader with value
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader.address_to_storage.insert(
+            (Address(Felt252::one()), felt_to_hash(&Felt252::one())),
+            Felt252::zero(),
+        );
+        // Create empty-cached state
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
+        // Perform write
+        assert!(syscall_handler
+            .syscall_storage_write(Address(Felt252::one()), Felt252::one())
+            .is_ok());
+        // Check that initial values have beed updated in the cache
+        assert_eq!(
+            state.cache().storage_initial_values,
+            HashMap::from([(
+                (Address(Felt252::one()), felt_to_hash(&Felt252::one())),
+                Felt252::zero()
+            )])
+        )
     }
 }
