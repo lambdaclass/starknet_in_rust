@@ -69,7 +69,7 @@ impl<H> StarknetRunner<H>
 where
     H: HintProcessor + HintProcessorPostRun,
 {
-    pub fn new(cairo_runner: CairoRunner, vm: VirtualMachine, hint_processor: H) -> Self {
+    pub const fn new(cairo_runner: CairoRunner, vm: VirtualMachine, hint_processor: H) -> Self {
         StarknetRunner {
             cairo_runner,
             vm,

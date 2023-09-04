@@ -537,14 +537,8 @@ impl ExecutionEntryPoint {
                 })
             }
             CompiledClass::Casm(contract_class) => {
-                let mut tmp_state = CachedState::new(state.state_reader.clone());
-                if let Some(contract_classes_cache) = &state.contract_classes {
-                    tmp_state =
-                        tmp_state.set_contract_classes_cache(contract_classes_cache.clone());
-                }
-                if let Some(casm_classes_cache) = &state.casm_contract_classes {
-                    tmp_state = tmp_state.set_casm_classes_cache(casm_classes_cache.clone());
-                }
+                let mut tmp_state =
+                    CachedState::new(state.state_reader.clone(), state.contract_classes.clone());
                 tmp_state.cache = state.cache.clone();
 
                 match self._execute(
@@ -580,16 +574,14 @@ impl ExecutionEntryPoint {
                     }
                 }
             }
-            CompiledClass::Sierra(contract_class) => {
-                let mut tmp_state = CachedState::new(state.state_reader.clone());
-                if let Some(sierra_programs_cache) = &state.sierra_programs {
-                    tmp_state = tmp_state.set_sierra_programs_cache(sierra_programs_cache.clone());
-                }
+            CompiledClass::Sierra(sierra_contract_class) => {
+                let mut tmp_state =
+                    CachedState::new(state.state_reader.clone(), state.contract_classes.clone());
                 tmp_state.cache = state.cache.clone();
 
                 match self.native_execute(
                     &mut tmp_state,
-                    contract_class,
+                    sierra_contract_class,
                     tx_execution_context,
                     block_context,
                 ) {
