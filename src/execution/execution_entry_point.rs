@@ -1191,8 +1191,6 @@ impl ExecutionEntryPoint {
 
         let result: String = String::from_utf8(writer).unwrap();
         let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
-        // let value = serde_json::from_str::<Value>(&result).unwrap();
-        println!("VALUE: {:?}", value);
 
         return Ok(CallInfo {
             caller_address: self.caller_address.clone(),
