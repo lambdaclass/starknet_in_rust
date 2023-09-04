@@ -20,7 +20,7 @@ use crate::{
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::{One, Zero};
+use num_traits::Zero;
 
 use super::{fee::charge_fee, Transaction};
 
@@ -120,6 +120,7 @@ impl InvokeFunction {
         })
     }
 
+    /// Creates a `InvokeFunction` from a starknet api `InvokeTransaction`.
     pub fn from_invoke_transaction(
         tx: starknet_api::transaction::InvokeTransaction,
         chain_id: StarknetChainId,
