@@ -216,7 +216,7 @@ impl DeployAccount {
             state.count_actual_storage_changes(Some((
                 &block_context.starknet_os_config.fee_token_address,
                 &self.contract_address,
-            ))),
+            )))?,
             None,
             0,
         )
