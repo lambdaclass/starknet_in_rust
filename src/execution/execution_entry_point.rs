@@ -28,6 +28,7 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
+use anyhow::Error;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_native::context::NativeContext;
 use cairo_native::executor::NativeExecutor;
@@ -88,20 +89,45 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
                     last_element = value;
                 }
 
-                let (failure_flag_integer, return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
-                    serde_json::from_value::<(u64, Vec<Vec<Vec<Vec<u32>>>>)>(last_element.unwrap())
-                        .unwrap();
+                // let (failure_flag_integer, return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
+                let (failure_flag, return_values): (u64, Value) =
+                    serde_json::from_value(last_element.unwrap()).unwrap();
 
-                Ok(NativeExecutionResult {
-                    gas_builtin: None,
-                    range_check: None,
-                    system: None,
-                    return_values: return_values[0][0]
-                        .iter()
-                        .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
-                        .collect(),
-                    failure_flag: failure_flag_integer == 1,
-                })
+                match failure_flag {
+                    0 => {
+                        let return_values: Vec<Vec<Vec<Vec<u32>>>> =
+                            serde_json::from_value(return_values).unwrap();
+
+                        return Ok(NativeExecutionResult {
+                            gas_builtin: None,
+                            range_check: None,
+                            system: None,
+                            return_values: return_values[0][0]
+                                .iter()
+                                .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
+                                .collect(),
+                            failure_flag: failure_flag == 1,
+                        });
+                    }
+
+                    1 => {
+                        let return_values: (Vec<u32>, Vec<Vec<u32>>) =
+                            serde_json::from_value(return_values).unwrap();
+
+                        return Ok(NativeExecutionResult {
+                            gas_builtin: None,
+                            range_check: None,
+                            system: None,
+                            failure_flag: failure_flag == 1,
+                            return_values: return_values
+                                .1
+                                .iter()
+                                .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
+                                .collect(),
+                        });
+                    }
+                    _ => return Err(de::Error::custom("expected failure flag to be 0 or 1")),
+                }
             }
         }
 
@@ -1092,6 +1118,10 @@ impl ExecutionEntryPoint {
 
         println!();
         println!("CALLING FUNCTION: {}", fn_id);
+        println!(
+            "FUNCTION SIGNATURE: {:?}",
+            sierra_program.funcs[fn_id.id as usize].signature
+        );
         let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
 
         let required_init_gas = native_program.get_required_init_gas(fn_id);
@@ -1153,9 +1183,7 @@ impl ExecutionEntryPoint {
         let result: String = String::from_utf8(writer).unwrap();
         let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
         // let value = serde_json::from_str::<Value>(&result).unwrap();
-        // println!("VALUE: {}", value);
-
-        // todo!();
+        println!("VALUE: {:?}", value);
 
         return Ok(CallInfo {
             caller_address: self.caller_address.clone(),
@@ -1175,8 +1203,6 @@ impl ExecutionEntryPoint {
             accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
             failure_flag: value.failure_flag,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
-
-            // TODO
             internal_calls: syscall_handler.internal_calls,
 
             // TODO
