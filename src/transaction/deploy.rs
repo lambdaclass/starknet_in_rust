@@ -286,7 +286,7 @@ impl Deploy {
     // ---------------
 
     /// Creates a Deploy transaction for simulate a deploy
-    pub(crate) fn create_for_simulation(
+    pub fn create_for_simulation(
         &self,
         skip_validate: bool,
         skip_execute: bool,

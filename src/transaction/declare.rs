@@ -293,7 +293,7 @@ impl Declare {
         Ok(tx_exec_info)
     }
 
-    pub(crate) fn create_for_simulation(
+    pub fn create_for_simulation(
         &self,
         skip_validate: bool,
         skip_execute: bool,

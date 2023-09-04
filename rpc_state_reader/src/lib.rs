@@ -382,8 +382,7 @@ impl RpcState {
                         )
                         .unwrap();
 
-                        dbg!(tx);
-                        todo!()
+                        tx.create_for_simulation(false, false, false, false)
                     }
                     0x02 => {
                         let tx = DeclareV2::new_with_tx_hash(
@@ -458,8 +457,7 @@ impl RpcState {
                         )
                         .unwrap();
 
-                        dbg!(tx);
-                        todo!()
+                        tx.create_for_simulation(false, false, false, false)
                     }
                     _ => panic!("Unsupported declare transaction version."),
                 }
@@ -516,8 +514,7 @@ impl RpcState {
                 )
                 .unwrap();
 
-                dbg!(tx);
-                todo!()
+                tx.create_for_simulation(false, false, false)
             }
             "DEPLOY_ACCOUNT" => {
                 let tx = DeployAccount::new_with_tx_hash(
@@ -589,8 +586,7 @@ impl RpcState {
                 )
                 .unwrap();
 
-                dbg!(tx);
-                todo!()
+                tx.create_for_simulation(false, false, false, false)
             }
 
             _ => unimplemented!(),
