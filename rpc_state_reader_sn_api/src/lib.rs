@@ -664,14 +664,13 @@ mod tests {
         ));
 
         let tx = rpc_state.get_transaction(&tx_hash);
-        let parsed = match tx {
+        match tx {
             SNTransaction::Invoke(tx) => {
                 InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet)
             }
             _ => unreachable!(),
-        };
-
-        assert!(parsed.is_ok());
+        }
+        .unwrap();
     }
 
     #[test]
