@@ -5,7 +5,7 @@ use serde_json::json;
 use serde_with::{serde_as, DeserializeAs};
 use starknet::core::types::ContractClass;
 use starknet_in_rust::definitions::block_context::StarknetChainId;
-use starknet_in_rust::transaction::{Declare, DeclareV2, Deploy};
+use starknet_in_rust::transaction::{Declare, DeclareV2, Deploy, DeployAccount};
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     execution::CallInfo,
@@ -519,6 +519,79 @@ impl RpcState {
                 dbg!(tx);
                 todo!()
             }
+            "DEPLOY_ACCOUNT" => {
+                let tx = DeployAccount::new_with_tx_hash(
+                    felt_str!(
+                        response["result"]["class_hash"]
+                            .as_str()
+                            .unwrap()
+                            .strip_prefix("0x")
+                            .unwrap(),
+                        16
+                    )
+                    .to_be_bytes(),
+                    u128::from_str_radix(
+                        response["result"]["max_fee"]
+                            .as_str()
+                            .unwrap()
+                            .strip_prefix("0x")
+                            .unwrap(),
+                        16,
+                    )
+                    .unwrap(),
+                    felt_str!(
+                        response["result"]["version"]
+                            .as_str()
+                            .unwrap()
+                            .strip_prefix("0x")
+                            .unwrap(),
+                        16
+                    ),
+                    felt_str!(
+                        response["result"]["nonce"]
+                            .as_str()
+                            .unwrap()
+                            .strip_prefix("0x")
+                            .unwrap(),
+                        16
+                    ),
+                    response["result"]["constructor_calldata"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|felt_as_value| {
+                            felt_str!(
+                                felt_as_value.as_str().unwrap().strip_prefix("0x").unwrap(),
+                                16
+                            )
+                        })
+                        .collect::<Vec<Felt252>>(),
+                    response["result"]["signature"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|felt_as_value| {
+                            felt_str!(
+                                felt_as_value.as_str().unwrap().strip_prefix("0x").unwrap(),
+                                16
+                            )
+                        })
+                        .collect::<Vec<Felt252>>(),
+                    felt_str!(
+                        response["result"]["contract_address_salt"]
+                            .as_str()
+                            .unwrap()
+                            .strip_prefix("0x")
+                            .unwrap(),
+                        16
+                    ),
+                    felt_str!(hash, 16),
+                )
+                .unwrap();
+
+                dbg!(tx);
+                todo!()
+            }
 
             _ => unimplemented!(),
         }
@@ -772,6 +845,17 @@ mod tests {
             BlockValue::Tag(serde_json::to_value("latest").unwrap()),
         );
         let tx_hash = "1d08158d139345d562276f0a085d9764e618eba788bed99a238903595b17022";
+
+        rpc_state.get_transaction(tx_hash);
+    }
+
+    #[test]
+    fn test_get_transaction_deploy_account() {
+        let rpc_state = RpcState::new(
+            RpcChain::MainNet,
+            BlockValue::Tag(serde_json::to_value("latest").unwrap()),
+        );
+        let tx_hash = "613e096ca1addc4c8a1bcb8b0e9f96c1493b5b70793307eea116af8e0c41494";
 
         rpc_state.get_transaction(tx_hash);
     }
