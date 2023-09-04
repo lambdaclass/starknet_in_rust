@@ -28,6 +28,7 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
+use anyhow::Error;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_native::context::NativeContext;
 use cairo_native::executor::NativeExecutor;
@@ -83,25 +84,60 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
             where
                 A: SeqAccess<'de>,
             {
+                // The last element of the sequence is stored. This is where the
+                // result of the MLIR execution will be.
                 let mut last_element: Option<Value> = None;
                 while let Some(value) = seq.next_element::<Option<Value>>()? {
                     last_element = value;
                 }
 
-                let (failure_flag_integer, return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
-                    serde_json::from_value::<(u64, Vec<Vec<Vec<Vec<u32>>>>)>(last_element.unwrap())
-                        .unwrap();
+                // The failure flag indicates if the execution was done successfully.
+                let (failure_flag, return_values): (u64, Value) =
+                    serde_json::from_value(last_element.unwrap()).unwrap();
 
-                Ok(NativeExecutionResult {
-                    gas_builtin: None,
-                    range_check: None,
-                    system: None,
-                    return_values: return_values[0][0]
-                        .iter()
-                        .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
-                        .collect(),
-                    failure_flag: failure_flag_integer == 1,
-                })
+                match failure_flag {
+                    // When the execution is successful, the return values are
+                    // stored in a nested vector. The innermost vector of u32
+                    // represents a field element.
+                    // TODO: This should be generalized for more return types
+                    0 => {
+                        let return_values: Vec<Vec<Vec<Vec<u32>>>> =
+                            serde_json::from_value(return_values).unwrap();
+
+                        return Ok(NativeExecutionResult {
+                            gas_builtin: None,
+                            range_check: None,
+                            system: None,
+                            return_values: return_values[0][0]
+                                .iter()
+                                .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
+                                .collect(),
+                            failure_flag: failure_flag == 1,
+                        });
+                    }
+
+                    // When the execution returns an error, the return values are
+                    // a tuple with an empty array in the first place (don't really know
+                    // why) and a vector of u32 vectors in the second. These represent a
+                    // felt encoded string that gives some details about the error.
+                    1 => {
+                        let return_values: (Vec<u32>, Vec<Vec<u32>>) =
+                            serde_json::from_value(return_values).unwrap();
+
+                        return Ok(NativeExecutionResult {
+                            gas_builtin: None,
+                            range_check: None,
+                            system: None,
+                            failure_flag: failure_flag == 1,
+                            return_values: return_values
+                                .1
+                                .iter()
+                                .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
+                                .collect(),
+                        });
+                    }
+                    _ => return Err(de::Error::custom("expected failure flag to be 0 or 1")),
+                }
             }
         }
 
@@ -112,7 +148,11 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
             "return_values",
             "failure_flag",
         ];
-        deserializer.deserialize_struct("Duration", FIELDS, NativeExecutionResultVisitor)
+        deserializer.deserialize_struct(
+            "NativeExecutionResult",
+            FIELDS,
+            NativeExecutionResultVisitor,
+        )
     }
 }
 
@@ -1090,7 +1130,6 @@ impl ExecutionEntryPoint {
             .unwrap()
             .id;
 
-        println!();
         println!("CALLING FUNCTION: {}", fn_id);
         let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
 
@@ -1153,9 +1192,7 @@ impl ExecutionEntryPoint {
         let result: String = String::from_utf8(writer).unwrap();
         let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
         // let value = serde_json::from_str::<Value>(&result).unwrap();
-        // println!("VALUE: {}", value);
-
-        // todo!();
+        println!("VALUE: {:?}", value);
 
         return Ok(CallInfo {
             caller_address: self.caller_address.clone(),
