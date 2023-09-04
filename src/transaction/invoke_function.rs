@@ -506,7 +506,7 @@ mod tests {
         utils::calculate_sn_keccak,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use num_traits::Num;
+    use num_traits::{Num, One};
     use starknet_api::{
         core::{ContractAddress, Nonce, PatriciaKey},
         hash::{StarkFelt, StarkHash},
