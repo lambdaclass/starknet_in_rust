@@ -8,6 +8,7 @@ use num_bigint::BigUint;
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::execution::{Event, OrderedEvent};
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::EntryPointType::{self, External};
 use starknet_in_rust::{
     definitions::constants::TRANSACTION_VERSION,
@@ -53,7 +54,10 @@ fn integration_test() {
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -66,8 +70,7 @@ fn integration_test() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state =
-        CachedState::new(Arc::new(state_reader)).set_contract_classes_cache(contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -152,13 +155,16 @@ fn integration_test_erc20() {
     let constructor_entry_point_selector = &entrypoints.constructor.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut sierra_contract_class_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    sierra_contract_class_cache.insert(class_hash, sierra_contract_class);
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -168,8 +174,7 @@ fn integration_test_erc20() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader))
-        .set_sierra_programs_cache(sierra_contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     /*
         1 recipient
@@ -508,7 +513,7 @@ fn call_contract_test() {
     let fn_selector = &callee_entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut sierra_contract_class_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
 
     // Caller contract data
     let caller_address = Address(1111.into());
@@ -520,8 +525,14 @@ fn call_contract_test() {
     let callee_class_hash: ClassHash = [2; 32];
     let callee_nonce = Felt252::zero();
 
-    sierra_contract_class_cache.insert(caller_class_hash, caller_contract_class);
-    sierra_contract_class_cache.insert(callee_class_hash, callee_contract_class);
+    contract_class_cache.insert(
+        caller_class_hash,
+        CompiledClass::Sierra(Arc::new(caller_contract_class)),
+    );
+    contract_class_cache.insert(
+        callee_class_hash,
+        CompiledClass::Sierra(Arc::new(callee_contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
 
@@ -542,8 +553,7 @@ fn call_contract_test() {
         .insert(callee_address.clone(), callee_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader))
-        .set_sierra_programs_cache(sierra_contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let calldata = [fn_selector.into()].to_vec();
     let result = execute(
@@ -587,7 +597,7 @@ fn call_echo_contract_test() {
     let fn_selector = &callee_entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut sierra_contract_class_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
 
     // Caller contract data
     let caller_address = Address(1111.into());
@@ -599,8 +609,15 @@ fn call_echo_contract_test() {
     let callee_class_hash: ClassHash = [2; 32];
     let callee_nonce = Felt252::zero();
 
-    sierra_contract_class_cache.insert(caller_class_hash, caller_contract_class);
-    sierra_contract_class_cache.insert(callee_class_hash, callee_contract_class);
+    contract_class_cache.insert(
+        caller_class_hash,
+        CompiledClass::Sierra(Arc::new(caller_contract_class)),
+    );
+
+    contract_class_cache.insert(
+        callee_class_hash,
+        CompiledClass::Sierra(Arc::new(callee_contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
 
@@ -621,8 +638,7 @@ fn call_echo_contract_test() {
         .insert(callee_address.clone(), callee_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader))
-        .set_sierra_programs_cache(sierra_contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let calldata = [fn_selector.into(), 99999999.into()].to_vec();
     let result = execute(
@@ -666,7 +682,7 @@ fn call_events_contract_test() {
     let fn_selector = &callee_entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut sierra_contract_class_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
 
     // Caller contract data
     let caller_address = Address(1111.into());
@@ -678,8 +694,15 @@ fn call_events_contract_test() {
     let callee_class_hash: ClassHash = [2; 32];
     let callee_nonce = Felt252::zero();
 
-    sierra_contract_class_cache.insert(caller_class_hash, caller_contract_class);
-    sierra_contract_class_cache.insert(callee_class_hash, callee_contract_class);
+    contract_class_cache.insert(
+        caller_class_hash,
+        CompiledClass::Sierra(Arc::new(caller_contract_class)),
+    );
+
+    contract_class_cache.insert(
+        callee_class_hash,
+        CompiledClass::Sierra(Arc::new(callee_contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
 
@@ -700,8 +723,7 @@ fn call_events_contract_test() {
         .insert(callee_address.clone(), callee_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader))
-        .set_sierra_programs_cache(sierra_contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let calldata = [fn_selector.into()].to_vec();
     let result = execute(

@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -15,6 +16,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
+use std::collections::HashMap;
 
 #[test]
 fn test_internal_calls() {
@@ -45,8 +47,13 @@ fn test_internal_calls() {
         .address_to_storage_mut()
         .insert(storage_entry, storage);
 
-    let mut state = CachedState::new(Arc::new(state_reader))
-        .set_contract_classes_cache([([0x01; 32], contract_class)].into_iter().collect());
+    let mut state = CachedState::new(
+        Arc::new(state_reader),
+        HashMap::from([(
+            [0x01; 32],
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        )]),
+    );
 
     let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"a"));
     let entry_point = ExecutionEntryPoint::new(

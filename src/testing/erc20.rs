@@ -10,7 +10,9 @@ use crate::{
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::{
         cached_state::CachedState,
         in_memory_state_reader::InMemoryStateReader,
@@ -52,14 +54,17 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut casm_classes_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    casm_classes_cache.insert(class_hash, contract_class);
-    casm_classes_cache.insert(erc20_class_hash, test_contract_class);
+    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.insert(
+        erc20_class_hash,
+        CompiledClass::Casm(Arc::new(test_contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -70,8 +75,7 @@ fn test_erc20_cairo2() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state =
-        CachedState::new(Arc::new(state_reader)).set_casm_classes_cache(casm_classes_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let name_ = Felt252::from_bytes_be(b"some-token");
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");
@@ -138,7 +142,10 @@ fn test_erc20_cairo2() {
         serde_json::from_slice(program_data_account).unwrap();
 
     state
-        .set_compiled_class(&felt_str!("1"), contract_class_account)
+        .set_contract_class(
+            &felt_str!("1").to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(contract_class_account)),
+        )
         .unwrap();
 
     let contract_address_salt =
@@ -177,7 +184,10 @@ fn test_erc20_cairo2() {
         serde_json::from_slice(program_data_account).unwrap();
 
     state
-        .set_compiled_class(&felt_str!("1"), contract_class_account)
+        .set_contract_class(
+            &felt_str!("1").to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(contract_class_account)),
+        )
         .unwrap();
 
     let contract_address_salt = felt_str!("123123123123123");
