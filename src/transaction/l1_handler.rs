@@ -128,7 +128,7 @@ impl L1Handler {
             )?
         };
 
-        let changes = state.count_actual_storage_changes(None);
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],

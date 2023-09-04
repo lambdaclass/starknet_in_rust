@@ -14,6 +14,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
+use starknet::core::types::FromByteArrayError;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -274,7 +275,7 @@ impl<T: StateReader> State for CachedState<T> {
     fn count_actual_storage_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> (usize, usize) {
+    ) -> Result<(usize, usize), FromByteArrayError> {
         let mut storage_updates = subtract_mappings(
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),
@@ -310,14 +311,14 @@ impl<T: StateReader> State for CachedState<T> {
         // Add fee transfer storage update before actually charging it, as it needs to be included in the
         // calculation of the final fee.
         if let Some((fee_token_address, sender_address)) = fee_token_and_sender_address {
-            let (sender_low_key, _) = get_erc20_balance_var_addresses(sender_address).unwrap();
+            let (sender_low_key, _) = get_erc20_balance_var_addresses(sender_address)?;
             storage_updates.insert(
                 (fee_token_address.clone(), sender_low_key),
                 Felt252::default(),
             );
         }
 
-        (n_modified_contracts, storage_updates.len())
+        Ok((n_modified_contracts, storage_updates.len()))
     }
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
@@ -730,8 +731,9 @@ mod tests {
 
             (n_modified_contracts, n_storage_updates)
         };
-        let changes =
-            cached_state.count_actual_storage_changes(Some((&fee_token_address, &sender_address)));
+        let changes = cached_state
+            .count_actual_storage_changes(Some((&fee_token_address, &sender_address)))
+            .unwrap();
 
         assert_eq!(changes, expected_changes);
     }
