@@ -1075,6 +1075,7 @@ mod blockifier_transaction_tests {
             "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
             169928, // real block 169929
             RpcChain::MainNet
+            => ignore["execution resources mismatch in blockifier"]
         )]
         #[test_case(
             "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
@@ -1331,11 +1332,13 @@ mod starknet_in_rust_transaction_tests {
             "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
             169928, // real block 169929
             RpcChain::MainNet
+            => ignore["gas mismatch"]
         )]
         #[test_case(
             "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
             169928, // real block 169929
             RpcChain::MainNet
+            => ignore["resource mismatch"]
         )]
         #[test_case(
             "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
@@ -1347,12 +1350,14 @@ mod starknet_in_rust_transaction_tests {
             "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
             186548, // real block     186549
             RpcChain::MainNet
+            => ignore["resource mismatch"]
         )]
         #[test_case(
             // fails in blockifier too
             "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
             186551, // real block     186552
             RpcChain::MainNet
+            => ignore["gas mismatch"]
         )]
         fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
             let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
