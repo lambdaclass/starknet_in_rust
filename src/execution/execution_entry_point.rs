@@ -84,16 +84,22 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
             where
                 A: SeqAccess<'de>,
             {
+                // The last element of the sequence is stored. This is where the
+                // result of the MLIR execution will be.
                 let mut last_element: Option<Value> = None;
                 while let Some(value) = seq.next_element::<Option<Value>>()? {
                     last_element = value;
                 }
 
-                // let (failure_flag_integer, return_values): (u64, Vec<Vec<Vec<Vec<u32>>>>) =
+                // The failure flag indicates if the execution was done successfully.
                 let (failure_flag, return_values): (u64, Value) =
                     serde_json::from_value(last_element.unwrap()).unwrap();
 
                 match failure_flag {
+                    // When the execution is successful, the return values are
+                    // stored in a nested vector. The innermost vector of u32
+                    // represents a field element.
+                    // TODO: This should be generalized for more return types
                     0 => {
                         let return_values: Vec<Vec<Vec<Vec<u32>>>> =
                             serde_json::from_value(return_values).unwrap();
@@ -110,6 +116,10 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
                         });
                     }
 
+                    // When the execution returns an error, the return values are
+                    // a tuple with an empty array in the first place (don't really know
+                    // why) and a vector of u32 vectors in the second. These represent a
+                    // felt encoded string that gives some details about the error.
                     1 => {
                         let return_values: (Vec<u32>, Vec<Vec<u32>>) =
                             serde_json::from_value(return_values).unwrap();
@@ -138,7 +148,11 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
             "return_values",
             "failure_flag",
         ];
-        deserializer.deserialize_struct("Duration", FIELDS, NativeExecutionResultVisitor)
+        deserializer.deserialize_struct(
+            "NativeExecutionResult",
+            FIELDS,
+            NativeExecutionResultVisitor,
+        )
     }
 }
 
@@ -1116,12 +1130,7 @@ impl ExecutionEntryPoint {
             .unwrap()
             .id;
 
-        println!();
         println!("CALLING FUNCTION: {}", fn_id);
-        println!(
-            "FUNCTION SIGNATURE: {:?}",
-            sierra_program.funcs[fn_id.id as usize].signature
-        );
         let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
 
         let required_init_gas = native_program.get_required_init_gas(fn_id);
