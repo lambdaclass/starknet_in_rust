@@ -463,7 +463,10 @@ mod utils {
 
     use cairo_lang_utils::bigint::BigUintAsHex;
     use starknet::core::types::{LegacyContractEntryPoint, LegacyEntryPointsByType};
-    use starknet_api::deprecated_contract_class::{EntryPoint, EntryPointType};
+    use starknet_api::{
+        deprecated_contract_class::{EntryPoint, EntryPointType},
+        transaction::DeclareTransaction,
+    };
 
     use super::*;
 
@@ -535,6 +538,24 @@ mod utils {
                     "unimplemented invoke version: {x}"
                 ))),
             },
+            "DECLARE" => match tx_version.as_str() {
+                "0x0" => Ok(SNTransaction::Declare(DeclareTransaction::V0(
+                    serde_json::from_value(transaction)?,
+                ))),
+                "0x1" => Ok(SNTransaction::Declare(DeclareTransaction::V1(
+                    serde_json::from_value(transaction)?,
+                ))),
+                "0x2" => Ok(SNTransaction::Declare(DeclareTransaction::V2(
+                    serde_json::from_value(transaction)?,
+                ))),
+                x => Err(serde::de::Error::custom(format!(
+                    "unimplemented declare version: {x}"
+                ))),
+            },
+            "DEPLOY" => Ok(SNTransaction::Deploy(serde_json::from_value(transaction)?)),
+            "DEPLOY_ACCOUNT" => Ok(SNTransaction::DeployAccount(serde_json::from_value(
+                transaction,
+            )?)),
             x => Err(serde::de::Error::custom(format!(
                 "unimplemented transaction type deserialization: {x}"
             ))),
@@ -639,6 +660,46 @@ mod tests {
         let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
+        ));
+
+        rpc_state.get_transaction(&tx_hash);
+    }
+
+    #[test]
+    fn test_get_transaction_declare() {
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockValue::Tag(BlockTag::Latest));
+        let tx_hash = TransactionHash(stark_felt!(
+            "07856f54a0ba5fdbdbc289bf7129c9aa9f74aea00aa660ba9d4cb7c919330e4b"
+        ));
+
+        rpc_state.get_transaction(&tx_hash);
+    }
+
+    #[test]
+    fn test_get_transaction_declare_v2() {
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockValue::Tag(BlockTag::Latest));
+        let tx_hash = TransactionHash(stark_felt!(
+            "03d8beef48fbc5c8ec4890000928a69a5bfd0d49d7cb15c033de2108dd99d434"
+        ));
+
+        rpc_state.get_transaction(&tx_hash);
+    }
+
+    #[test]
+    fn test_get_transaction_deploy() {
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockValue::Tag(BlockTag::Latest));
+        let tx_hash = TransactionHash(stark_felt!(
+            "1d08158d139345d562276f0a085d9764e618eba788bed99a238903595b17022"
+        ));
+
+        rpc_state.get_transaction(&tx_hash);
+    }
+
+    #[test]
+    fn test_get_transaction_deploy_account() {
+        let rpc_state = RpcState::new(RpcChain::MainNet, BlockValue::Tag(BlockTag::Latest));
+        let tx_hash = TransactionHash(stark_felt!(
+            "613e096ca1addc4c8a1bcb8b0e9f96c1493b5b70793307eea116af8e0c41494"
         ));
 
         rpc_state.get_transaction(&tx_hash);
