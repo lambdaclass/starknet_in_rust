@@ -577,7 +577,9 @@ mod tests {
         hash::StarkFelt,
         stark_felt,
     };
-    use starknet_in_rust::transaction::InvokeFunction;
+    use starknet_in_rust::{
+        definitions::block_context::StarknetChainId, transaction::InvokeFunction,
+    };
 
     use super::*;
 
@@ -679,7 +681,9 @@ mod tests {
 
         let tx = rpc_state.get_transaction(&tx_hash);
         let parsed = match tx {
-            SNTransaction::Invoke(y) => InvokeFunction::try_from(y),
+            SNTransaction::Invoke(tx) => {
+                InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet)
+            }
             _ => unreachable!(),
         };
 
@@ -1259,9 +1263,9 @@ mod starknet_in_rust_transaction_tests {
         // Get transaction before giving ownership of the reader
         let tx_hash = TransactionHash(stark_felt!(tx_hash));
         let tx = match rpc_reader.0.get_transaction(&tx_hash) {
-            SNTransaction::Invoke(tx) => {
-                Transaction::InvokeFunction(InvokeFunction::try_from(tx).unwrap())
-            }
+            SNTransaction::Invoke(tx) => Transaction::InvokeFunction(
+                InvokeFunction::from_invoke_transaction(tx, chain_id).unwrap(),
+            ),
             _ => unimplemented!(),
         };
 
@@ -1307,7 +1311,11 @@ mod starknet_in_rust_transaction_tests {
             let sn_tx = rpc_state.get_transaction(&tx_hash);
             match &sn_tx {
                 SNTransaction::Invoke(sn_tx) => {
-                    let tx = InvokeFunction::try_from(sn_tx.clone()).unwrap();
+                    let tx = InvokeFunction::from_invoke_transaction(
+                        sn_tx.clone(),
+                        StarknetChainId::MainNet,
+                    )
+                    .unwrap();
                     assert_eq!(format!("0x{}", tx.hash_value().to_str_radix(16)), str_hash)
                 }
                 _ => unimplemented!(),

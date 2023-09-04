@@ -182,7 +182,7 @@ impl Deploy {
 
         let resources_manager = ExecutionResourcesManager::default();
 
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
@@ -245,7 +245,7 @@ impl Deploy {
             block_context.validate_max_n_steps,
         )?;
 
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],

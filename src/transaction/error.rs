@@ -18,6 +18,7 @@ use cairo_vm::{
         trace_errors::TraceError, vm_errors::VirtualMachineError,
     },
 };
+use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -144,4 +145,6 @@ pub enum TransactionError {
     UnsupportedVersion(String),
     #[error("Invalid compiled class, expected class hash: {0}, but received: {1}")]
     InvalidCompiledClassHash(String, String),
+    #[error(transparent)]
+    FromByteArrayError(#[from] FromByteArrayError),
 }

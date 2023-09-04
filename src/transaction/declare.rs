@@ -168,7 +168,10 @@ impl Declare {
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(Some((
+            &block_context.starknet_os_config.fee_token_address,
+            &self.sender_address,
+        )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![validate_info.clone()],
@@ -435,7 +438,7 @@ mod tests {
 
         let actual_resources = HashMap::from([
             ("n_steps".to_string(), 2715),
-            ("l1_gas_usage".to_string(), 1224),
+            ("l1_gas_usage".to_string(), 2448),
             ("range_check_builtin".to_string(), 63),
             ("pedersen_builtin".to_string(), 15),
         ]);
