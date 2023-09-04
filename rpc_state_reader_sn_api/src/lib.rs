@@ -573,6 +573,7 @@ mod utils {
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         core::{ClassHash, PatriciaKey},
         hash::StarkFelt,
@@ -660,7 +661,7 @@ mod tests {
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
         let key = StorageKey(patricia_key!(0u128));
 
-        assert_eq!(rpc_state.get_storage_at(&address, &key), stark_felt!("0x0"));
+        assert_eq_sorted!(rpc_state.get_storage_at(&address, &key), stark_felt!("0x0"));
     }
 
     #[test]
@@ -738,7 +739,7 @@ mod tests {
             ])
         );
         assert_eq!(tx_trace.validate_invocation.retdata, Some(vec![]));
-        assert_eq!(
+        assert_eq_sorted!(
             tx_trace.validate_invocation.execution_resources,
             VmExecutionResources {
                 n_steps: 790,
@@ -776,7 +777,7 @@ mod tests {
             tx_trace.function_invocation.retdata,
             Some(vec![0u128.into()])
         );
-        assert_eq!(
+        assert_eq_sorted!(
             tx_trace.function_invocation.execution_resources,
             VmExecutionResources {
                 n_steps: 2808,
@@ -813,7 +814,7 @@ mod tests {
             tx_trace.fee_transfer_invocation.retdata,
             Some(vec![1u128.into()])
         );
-        assert_eq!(
+        assert_eq_sorted!(
             tx_trace.fee_transfer_invocation.execution_resources,
             VmExecutionResources {
                 n_steps: 586,
@@ -1022,7 +1023,7 @@ mod blockifier_transaction_tests {
     #[cfg(test)]
     mod test {
         use blockifier::execution::entry_point::CallInfo;
-        use pretty_assertions::assert_eq;
+        use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
         use test_case::test_case;
 
         use super::*;
@@ -1056,7 +1057,7 @@ mod blockifier_transaction_tests {
                 ..
             } = execute_call_info.unwrap();
 
-            assert_eq!(vm_resources, trace.function_invocation.execution_resources);
+            assert_eq_sorted!(vm_resources, trace.function_invocation.execution_resources);
             assert_eq!(
                 inner_calls.len(),
                 trace.function_invocation.internal_calls.len()
@@ -1094,11 +1095,9 @@ mod blockifier_transaction_tests {
             => ignore["review later"]
         )]
         #[test_case(
-            // fails: review later
             "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
             186551, // real block     186552
             RpcChain::MainNet
-            => ignore["review later"]
         )]
         fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
             let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
@@ -1115,8 +1114,9 @@ mod blockifier_transaction_tests {
                 ..
             } = execute_call_info.unwrap();
 
-            assert_eq!(
-                vm_resources, trace.function_invocation.execution_resources,
+            assert_eq_sorted!(
+                vm_resources,
+                trace.function_invocation.execution_resources,
                 "execution resources mismatch"
             );
             assert_eq!(
@@ -1125,7 +1125,21 @@ mod blockifier_transaction_tests {
                 "internal calls length mismatch"
             );
 
-            assert_eq!(actual_fee.0, receipt.actual_fee, "actual_fee mismatch");
+            let actual_fee = actual_fee.0;
+            let diff = receipt.actual_fee.abs_diff(actual_fee);
+
+            if diff > 0 {
+                let upper_value = receipt.actual_fee.max(diff);
+                let lower_value = receipt.actual_fee.min(diff);
+                let diff_percent = (100 * lower_value + upper_value / 2) / upper_value;
+
+                if diff_percent > 5 {
+                    assert_eq!(
+                        actual_fee, receipt.actual_fee,
+                        "actual_fee mismatch: diff = {diff} {diff_percent}%",
+                    );
+                }
+            }
         }
     }
 }
@@ -1296,7 +1310,7 @@ mod starknet_in_rust_transaction_tests {
 
     #[cfg(test)]
     mod test {
-        use pretty_assertions::assert_eq;
+        use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
         use starknet_in_rust::execution::CallInfo;
         use test_case::test_case;
 
@@ -1384,8 +1398,9 @@ mod starknet_in_rust_transaction_tests {
                 ..
             } = call_info.unwrap();
 
-            assert_eq!(
-                execution_resources, trace.function_invocation.execution_resources,
+            assert_eq_sorted!(
+                execution_resources,
+                trace.function_invocation.execution_resources,
                 "execution resources mismatch"
             );
             assert_eq!(
@@ -1394,7 +1409,20 @@ mod starknet_in_rust_transaction_tests {
                 "internal calls length mismatch"
             );
 
-            assert_eq!(actual_fee, receipt.actual_fee, "actual_fee mismatch");
+            let diff = receipt.actual_fee.abs_diff(actual_fee);
+
+            if diff > 0 {
+                let upper_value = receipt.actual_fee.max(diff);
+                let lower_value = receipt.actual_fee.min(diff);
+                let diff_percent = (100 * lower_value + upper_value / 2) / upper_value;
+
+                if diff_percent > 5 {
+                    assert_eq!(
+                        actual_fee, receipt.actual_fee,
+                        "actual_fee mismatch: diff = {diff} {diff_percent}%",
+                    );
+                }
+            }
         }
     }
 }

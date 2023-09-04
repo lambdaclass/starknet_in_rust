@@ -25,5 +25,5 @@ blockifier = "0.2.0-rc0"
 starknet_in_rust = { path = "../", version = "0.3.1" }
 
 [dev-dependencies]
-pretty_assertions = "1.4.0"
+pretty_assertions_sorted = "1.2.3"
 test-case = "3.1.0"
