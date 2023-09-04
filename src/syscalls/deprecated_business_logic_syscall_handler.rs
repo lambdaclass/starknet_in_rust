@@ -819,8 +819,9 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         address: Address,
         value: Felt252,
     ) -> Result<(), SyscallHandlerError> {
-        self.starknet_storage_state
-            .write(&felt_to_hash(&address.0), value);
+        let address = felt_to_hash(&address.0);
+        self.starknet_storage_state.read(&address)?;
+        self.starknet_storage_state.write(&address, value);
 
         Ok(())
     }
