@@ -126,7 +126,8 @@ mod tests {
     /// Test the correctness of the compute_sierra_class_hash function for a specific testnet contract.
     #[test]
     fn test_declare_tx_from_testnet() {
-        let file = File::open("starknet_programs/cairo2/events.sierra").unwrap();
+        let file = File::open("starknet_programs/raw_contract_classes/0x113bf26d112a164297e04381212c9bd7409f07591f0a04f539bdf56693eaaf3.sierra").unwrap();
+        // 0x113bf26d112a164297e04381212c9bd7409f07591f0a04f539bdf56693eaaf3
         let reader = BufReader::new(file);
 
         let sierra_contract_class: SierraContractClass = serde_json::from_reader(reader).unwrap();

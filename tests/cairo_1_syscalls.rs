@@ -269,7 +269,7 @@ fn library_call() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 255,
+        n_steps: 247,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 259,
         n_memory_holes: 8,
@@ -277,7 +277,7 @@ fn library_call() {
     };
     let expected_execution_resources_internal_call = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 84,
+        n_steps: 80,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
         n_memory_holes: 5,
@@ -320,7 +320,7 @@ fn library_call() {
         storage_read_values: vec![],
         accessed_storage_keys: HashSet::new(),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 78650,
+        gas_consumed: 78250,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 78980,
         ..Default::default()
@@ -1144,8 +1144,18 @@ fn test_send_message_to_l1_syscall() {
         payload: vec![555.into(), 666.into()],
     }];
 
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_n_steps = 46;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_n_steps = 50;
+
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_gas_consumed = 9640;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_gas_consumed = 10040;
+
     let expected_execution_resources = ExecutionResources {
-        n_steps: 50,
+        n_steps: expected_n_steps,
         n_memory_holes: 0,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
     };
@@ -1159,7 +1169,7 @@ fn test_send_message_to_l1_syscall() {
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
         execution_resources: Some(expected_execution_resources),
-        gas_consumed: 10040,
+        gas_consumed: expected_gas_consumed,
         ..Default::default()
     };
 
@@ -1239,8 +1249,18 @@ fn test_get_execution_info() {
         address.0.clone(),
     ];
 
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_n_steps = 213;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_n_steps = 268;
+
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_gas_consumed = 22980;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_gas_consumed = 28580;
+
     let expected_execution_resources = ExecutionResources {
-        n_steps: 268,
+        n_steps: expected_n_steps,
         n_memory_holes: 4,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
     };
@@ -1254,7 +1274,7 @@ fn test_get_execution_info() {
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: Some(expected_execution_resources),
-        gas_consumed: 28580,
+        gas_consumed: expected_gas_consumed,
         ..Default::default()
     };
 

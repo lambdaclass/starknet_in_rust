@@ -703,16 +703,16 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
             ],
             [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
+            ],
+            [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ],
-            [
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
             ],
         ]),
     }
@@ -738,7 +738,7 @@ fn declare_tx() -> Declare {
 
 fn declarev2_tx() -> DeclareV2 {
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
+    let program_data = include_bytes!("../starknet_programs/raw_contract_classes/fibonacci.sierra");
     #[cfg(feature = "cairo_1_tests")]
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
@@ -1135,7 +1135,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
         retdata: vec![Felt252::from(42)],
         execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 157,
+            n_steps: 153,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 160,
             n_memory_holes: 0,
@@ -1156,12 +1156,12 @@ fn expected_fib_execute_call_info() -> CallInfo {
             contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
             code_address: None,
             #[cfg(not(feature = "cairo_1_tests"))]
-            gas_consumed: 4380,
+            gas_consumed: 3980,
             #[cfg(feature = "cairo_1_tests")]
             gas_consumed: 4710,
             execution_resources: Some(ExecutionResources {
                 #[cfg(not(feature = "cairo_1_tests"))]
-                n_steps: 118,
+                n_steps: 114,
                 #[cfg(feature = "cairo_1_tests")]
                 n_steps: 121,
                 n_memory_holes: 0,
@@ -1251,7 +1251,7 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3541;
+        n_steps = 3537;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
@@ -2113,14 +2113,14 @@ fn test_library_call_with_declare_v2() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 30080,
+        gas_consumed: 29680,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 30410,
         calldata: vec![1.into(), 1.into(), 10.into()],
         retdata: vec![89.into()], // fib(10)
         execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 368,
+            n_steps: 364,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 371,
             n_memory_holes: 0,
@@ -2137,14 +2137,14 @@ fn test_library_call_with_declare_v2() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 112490,
+        gas_consumed: 111690,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 113480,
         calldata,
         retdata: vec![89.into()], // fib(10)
         execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 578,
+            n_steps: 570,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 587,
             n_memory_holes: 1,

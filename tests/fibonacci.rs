@@ -204,12 +204,12 @@ fn integration_test_cairo1() {
         calldata,
         retdata: [144.into()].to_vec(),
         execution_resources: Some(ExecutionResources {
-            n_steps: 418,
+            n_steps: 414,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
         }),
         class_hash: Some(class_hash),
-        gas_consumed: 35220,
+        gas_consumed: 34820,
         ..Default::default()
     };
 
