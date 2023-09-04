@@ -185,12 +185,13 @@ impl RpcState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct TransactionTrace {
     pub validate_invocation: RpcCallInfo,
-    pub function_invocation: RpcCallInfo,
+    pub function_invocation: Option<RpcCallInfo>,
     pub fee_transfer_invocation: RpcCallInfo,
     pub signature: Vec<StarkFelt>,
+    pub revert_error: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
@@ -277,30 +278,6 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
     }
 }
 
-impl<'de> Deserialize<'de> for TransactionTrace {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
-
-        let validate_invocation = value["validate_invocation"].clone();
-        let function_invocation = value["function_invocation"].clone();
-        let fee_transfer_invocation = value["fee_transfer_invocation"].clone();
-        let signature_value = value["signature"].clone();
-
-        Ok(TransactionTrace {
-            validate_invocation: serde_json::from_value(validate_invocation)
-                .map_err(serde::de::Error::custom)?,
-            function_invocation: serde_json::from_value(function_invocation)
-                .map_err(serde::de::Error::custom)?,
-            fee_transfer_invocation: serde_json::from_value(fee_transfer_invocation)
-                .map_err(serde::de::Error::custom)?,
-            signature: serde_json::from_value(signature_value).map_err(serde::de::Error::custom)?,
-        })
-    }
-}
-
 impl RpcState {
     /// Requests the transaction trace to the Feeder Gateway API.
     /// It's useful for testing the transaction outputs like:
@@ -318,7 +295,7 @@ impl RpcState {
         .call()
         .unwrap();
 
-        serde_json::from_str(&response.into_string().unwrap()).unwrap()
+        serde_json::from_value(response.into_json().unwrap()).unwrap()
     }
 
     /// Requests the given transaction to the Feeder Gateway API.
@@ -724,7 +701,7 @@ mod tests {
         assert_eq!(tx_trace.validate_invocation.internal_calls.len(), 1);
 
         assert_eq!(
-            tx_trace.function_invocation.calldata,
+            tx_trace.function_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("1"),
                 stark_felt!("690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232"),
@@ -744,11 +721,15 @@ mod tests {
             ])
         );
         assert_eq!(
-            tx_trace.function_invocation.retdata,
+            tx_trace.function_invocation.as_ref().unwrap().retdata,
             Some(vec![0u128.into()])
         );
         assert_eq!(
-            tx_trace.function_invocation.execution_resources,
+            tx_trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources,
             VmExecutionResources {
                 n_steps: 2808,
                 n_memory_holes: 136,
@@ -758,15 +739,32 @@ mod tests {
                 ]),
             }
         );
-        assert_eq!(tx_trace.function_invocation.internal_calls.len(), 1);
         assert_eq!(
-            tx_trace.function_invocation.internal_calls[0]
+            tx_trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
                 .internal_calls
                 .len(),
             1
         );
         assert_eq!(
-            tx_trace.function_invocation.internal_calls[0].internal_calls[0]
+            tx_trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
+                .internal_calls[0]
+                .internal_calls
+                .len(),
+            1
+        );
+        assert_eq!(
+            tx_trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
+                .internal_calls[0]
+                .internal_calls[0]
                 .internal_calls
                 .len(),
             7
@@ -1025,13 +1023,24 @@ mod blockifier_transaction_tests {
                 ..
             } = execute_call_info.unwrap();
 
-            assert_eq!(vm_resources, trace.function_invocation.execution_resources);
+            assert_eq!(actual_fee.0, receipt.actual_fee);
+            assert_eq!(
+                vm_resources,
+                trace
+                    .function_invocation
+                    .as_ref()
+                    .unwrap()
+                    .execution_resources
+            );
             assert_eq!(
                 inner_calls.len(),
-                trace.function_invocation.internal_calls.len()
+                trace
+                    .function_invocation
+                    .as_ref()
+                    .unwrap()
+                    .internal_calls
+                    .len()
             );
-
-            assert_eq!(actual_fee.0, receipt.actual_fee);
         }
     }
 }
@@ -1238,11 +1247,20 @@ mod starknet_in_rust_transaction_tests {
 
             assert_eq!(
                 execution_resources,
-                trace.function_invocation.execution_resources
+                trace
+                    .function_invocation
+                    .as_ref()
+                    .unwrap()
+                    .execution_resources
             );
             assert_eq!(
                 internal_calls.len(),
-                trace.function_invocation.internal_calls.len()
+                trace
+                    .function_invocation
+                    .as_ref()
+                    .unwrap()
+                    .internal_calls
+                    .len()
             );
 
             assert_eq!(actual_fee, receipt.actual_fee);
