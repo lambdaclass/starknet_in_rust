@@ -301,31 +301,6 @@ impl<'de> Deserialize<'de> for TransactionTrace {
     }
 }
 
-/// Freestanding deserialize method to avoid a new type.
-fn deserialize_transaction_json(
-    transaction: serde_json::Value,
-) -> serde_json::Result<SNTransaction> {
-    let tx_type: String = serde_json::from_value(transaction["type"].clone())?;
-    let tx_version: String = serde_json::from_value(transaction["version"].clone())?;
-
-    match tx_type.as_str() {
-        "INVOKE" => match tx_version.as_str() {
-            "0x0" => Ok(SNTransaction::Invoke(InvokeTransaction::V0(
-                serde_json::from_value(transaction)?,
-            ))),
-            "0x1" => Ok(SNTransaction::Invoke(InvokeTransaction::V1(
-                serde_json::from_value(transaction)?,
-            ))),
-            x => Err(serde::de::Error::custom(format!(
-                "unimplemented invoke version: {x}"
-            ))),
-        },
-        x => Err(serde::de::Error::custom(format!(
-            "unimplemented transaction type deserialization: {x}"
-        ))),
-    }
-}
-
 impl RpcState {
     /// Requests the transaction trace to the Feeder Gateway API.
     /// It's useful for testing the transaction outputs like:
@@ -355,19 +330,7 @@ impl RpcState {
             "id": 1
         });
         let result = self.rpc_call::<serde_json::Value>(&params).unwrap()["result"].clone();
-
-        match result["type"].as_str().unwrap() {
-            "INVOKE" => match result["version"].as_str().unwrap() {
-                "0x0" => SNTransaction::Invoke(InvokeTransaction::V0(
-                    serde_json::from_value(result).unwrap(),
-                )),
-                "0x1" => SNTransaction::Invoke(InvokeTransaction::V1(
-                    serde_json::from_value(result).unwrap(),
-                )),
-                _ => unreachable!(),
-            },
-            _ => unimplemented!(),
-        }
+        utils::deserialize_transaction_json(result).unwrap()
     }
 
     /// Gets the gas price of a given block.
@@ -413,7 +376,7 @@ impl RpcState {
             .as_array()
             .unwrap()
             .iter()
-            .filter_map(|result| deserialize_transaction_json(result.clone()).ok())
+            .filter_map(|result| utils::deserialize_transaction_json(result.clone()).ok())
             .collect();
 
         RpcBlockInfo {
@@ -543,14 +506,39 @@ mod utils {
         entry_points_by_type_map
     }
 
-    // Uncompresses a Gz Encoded vector of bytes and returns a string or error
-    // Here &[u8] implements BufRead
+    /// Uncompresses a Gz Encoded vector of bytes and returns a string or error
+    /// Here &[u8] implements BufRead
     pub(crate) fn decode_reader(bytes: Vec<u8>) -> io::Result<String> {
         use flate2::bufread;
         let mut gz = bufread::GzDecoder::new(&bytes[..]);
         let mut s = String::new();
         gz.read_to_string(&mut s)?;
         Ok(s)
+    }
+
+    /// Freestanding deserialize method to avoid a new type.
+    pub(crate) fn deserialize_transaction_json(
+        transaction: serde_json::Value,
+    ) -> serde_json::Result<SNTransaction> {
+        let tx_type: String = serde_json::from_value(transaction["type"].clone())?;
+        let tx_version: String = serde_json::from_value(transaction["version"].clone())?;
+
+        match tx_type.as_str() {
+            "INVOKE" => match tx_version.as_str() {
+                "0x0" => Ok(SNTransaction::Invoke(InvokeTransaction::V0(
+                    serde_json::from_value(transaction)?,
+                ))),
+                "0x1" => Ok(SNTransaction::Invoke(InvokeTransaction::V1(
+                    serde_json::from_value(transaction)?,
+                ))),
+                x => Err(serde::de::Error::custom(format!(
+                    "unimplemented invoke version: {x}"
+                ))),
+            },
+            x => Err(serde::de::Error::custom(format!(
+                "unimplemented transaction type deserialization: {x}"
+            ))),
+        }
     }
 }
 
@@ -1018,7 +1006,6 @@ mod blockifier_transaction_tests {
         }
 
         #[test]
-        //#[ignore = "working on fixes"]
         fn test_recent_tx() {
             let (tx_info, trace, receipt) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
@@ -1229,7 +1216,7 @@ mod starknet_in_rust_transaction_tests {
         }
 
         #[test]
-        //#[ignore = "working on fixes"]
+        #[ignore = "working on fixes"]
         fn test_recent_tx() {
             let (tx_info, trace, receipt) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
