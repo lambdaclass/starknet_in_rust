@@ -1175,8 +1175,6 @@ impl ExecutionEntryPoint {
             accessed_storage_keys: syscall_handler.starknet_storage_state.accessed_keys,
             failure_flag: value.failure_flag,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
-
-            // TODO
             internal_calls: syscall_handler.internal_calls,
 
             // TODO
