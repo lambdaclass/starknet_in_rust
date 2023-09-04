@@ -1018,6 +1018,7 @@ mod blockifier_transaction_tests {
         }
 
         #[test]
+        //#[ignore = "working on fixes"]
         fn test_recent_tx() {
             let (tx_info, trace, receipt) = execute_tx(
                 "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
