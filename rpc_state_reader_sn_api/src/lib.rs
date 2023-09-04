@@ -556,12 +556,15 @@ mod utils {
 
 #[cfg(test)]
 mod tests {
+    use cairo_vm::felt::felt_str;
     use starknet_api::{
         core::{ClassHash, PatriciaKey},
         hash::StarkFelt,
         stark_felt,
     };
-    use starknet_in_rust::transaction::InvokeFunction;
+    use starknet_in_rust::{
+        definitions::block_context::StarknetChainId, transaction::InvokeFunction,
+    };
 
     use super::*;
 
@@ -663,7 +666,11 @@ mod tests {
 
         let tx = rpc_state.get_transaction(&tx_hash);
         let parsed = match tx {
-            SNTransaction::Invoke(y) => InvokeFunction::try_from(y),
+            SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(
+                tx,
+                StarknetChainId::MainNet,
+                felt_str!("0x1"),
+            ),
             _ => unreachable!(),
         };
 
@@ -1178,9 +1185,9 @@ mod starknet_in_rust_transaction_tests {
         // Get transaction before giving ownership of the reader
         let tx_hash = TransactionHash(stark_felt!(tx_hash));
         let tx = match rpc_reader.0.get_transaction(&tx_hash) {
-            SNTransaction::Invoke(tx) => {
-                Transaction::InvokeFunction(InvokeFunction::try_from(tx).unwrap())
-            }
+            SNTransaction::Invoke(tx) => Transaction::InvokeFunction(
+                InvokeFunction::from_invoke_transaction(tx, chain_id, felt_str!("0x1")).unwrap(),
+            ),
             _ => unimplemented!(),
         };
 
