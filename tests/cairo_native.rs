@@ -258,6 +258,12 @@ fn integration_test_erc20() {
     assert_eq!(native_result.class_hash, Some(native_class_hash));
     assert_eq!(native_result.gas_consumed, 0);
 
+    assert_eq!(vm_result.events, native_result.events);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
     // TODO: Make these asserts work
     // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
     // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
@@ -295,6 +301,12 @@ fn integration_test_erc20() {
     assert!(!native_result.failure_flag);
     assert_eq!(native_result.retdata, [4.into()].to_vec());
 
+    assert_eq!(vm_result.events, native_result.events);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
     // TODO: Make these asserts work
     // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
     // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
@@ -315,7 +327,7 @@ fn integration_test_erc20() {
         &casm_class_hash,
     );
 
-    let result = execute(
+    let native_result = execute(
         &mut state,
         &caller_address,
         &caller_address,
@@ -328,9 +340,15 @@ fn integration_test_erc20() {
     assert!(!vm_result.failure_flag);
     assert_eq!(vm_result.retdata, [3.into()].to_vec());
 
-    assert!(!result.failure_flag);
-    assert_eq!(result.retdata, [3.into()].to_vec());
+    assert!(!native_result.failure_flag);
+    assert_eq!(native_result.retdata, [3.into()].to_vec());
 
+    assert_eq!(vm_result.events, native_result.events);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
     // TODO: Make these asserts work
     // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
     // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
