@@ -650,7 +650,7 @@ fn call_echo_contract_test() {
         EntryPointType::External,
     );
 
-    assert_eq!(result.retdata, [Felt252::new(99999998)]);
+    assert_eq!(result.retdata, [Felt252::new(99999999)]);
 }
 
 #[test]
@@ -667,7 +667,7 @@ fn call_events_contract_test() {
     // Callee contract
     let callee_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
-            std::fs::read_to_string("starknet_programs/cairo2/emit_event.sierra")
+            std::fs::read_to_string("starknet_programs/cairo2/event_emitter.sierra")
                 .unwrap()
                 .as_str(),
         )
