@@ -105,6 +105,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
     }
 
     /// Returns storage data for a given storage entry.
+    /// Returns zero as default value if missing
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         self.cache
             .get_storage(storage_entry)
