@@ -6,7 +6,20 @@ use crate::services::api::contract_classes::deprecated_contract_class::{
 };
 use crate::state::cached_state::CachedState;
 use crate::state::StateDiff;
+
+#[cfg(feature = "cairo-native")]
 use crate::syscalls::native_syscall_handler::NativeSyscallHandler;
+#[cfg(feature = "cairo-native")]
+use cairo_native::context::NativeContext;
+#[cfg(feature = "cairo-native")]
+use cairo_native::execution_result::NativeExecutionResult;
+#[cfg(feature = "cairo-native")]
+use cairo_native::executor::NativeExecutor;
+#[cfg(feature = "cairo-native")]
+use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
+#[cfg(feature = "cairo-native")]
+use cairo_native::utils::felt252_bigint;
+
 use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
@@ -29,11 +42,6 @@ use crate::{
     },
 };
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_native::context::NativeContext;
-use cairo_native::execution_result::NativeExecutionResult;
-use cairo_native::executor::NativeExecutor;
-use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
-use cairo_native::utils::felt252_bigint;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -622,6 +630,20 @@ impl ExecutionEntryPoint {
         )
     }
 
+    #[cfg(not(feature = "cairo-native"))]
+    fn native_execute<S: StateReader>(
+        &self,
+        _state: &mut CachedState<S>,
+        _contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        _tx_execution_context: &mut TransactionExecutionContext,
+        _block_context: &BlockContext,
+    ) -> Result<CallInfo, TransactionError> {
+        Err(TransactionError::SierraCompileError(
+            "This version of SiR was compiled without the Cairo Native feature".to_string(),
+        ))
+    }
+
+    #[cfg(feature = "cairo-native")]
     fn native_execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
