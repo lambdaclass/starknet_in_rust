@@ -128,7 +128,7 @@ impl L1Handler {
             )?
         };
 
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
@@ -336,7 +336,7 @@ mod test {
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources: HashMap::from([
-                ("n_steps".to_string(), 1229),
+                ("n_steps".to_string(), 1319),
                 ("pedersen_builtin".to_string(), 13),
                 ("range_check_builtin".to_string(), 23),
                 ("l1_gas_usage".to_string(), 19695),

@@ -340,7 +340,7 @@ impl RpcState {
                 .to_string()
                 .parse::<u64>()
                 .unwrap(),
-            gas_price: *starknet_os_config.gas_price() as u64,
+            gas_price: *starknet_os_config.gas_price(),
             sequencer_address: starknet_os_config.fee_token_address().clone(),
         }
     }
@@ -568,7 +568,7 @@ mod tests {
                 .to_string()
                 .parse::<u64>()
                 .unwrap(),
-            gas_price: gas_price_u128 as u64,
+            gas_price: gas_price_u128,
             sequencer_address: fee_token_address,
         };
 
