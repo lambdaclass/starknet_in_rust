@@ -157,6 +157,15 @@ mod tests {
     }
 
     #[test]
+    fn get_storage_returns_zero_if_missing() {
+        let state_reader = InMemoryStateReader::default();
+        assert!(state_reader
+            .get_storage_at(&(Address(Felt252::one()), Felt252::one().to_be_bytes()))
+            .unwrap()
+            .is_zero())
+    }
+
+    #[test]
     fn get_contract_state_test() {
         let mut state_reader = InMemoryStateReader::new(
             HashMap::new(),
