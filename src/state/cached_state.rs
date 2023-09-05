@@ -339,11 +339,18 @@ impl<T: StateReader> State for CachedState<T> {
 
     /// Returns storage data for a given storage entry.
     /// Returns zero as default value if missing
-    fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        self.cache
-            .get_storage(storage_entry)
-            .map(|v| Ok(v.clone()))
-            .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
+    /// Adds the value to the cache's inital_values if not present
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
+        match self.cache.get_storage(storage_entry) {
+            Some(value) => Ok(value.clone()),
+            None => {
+                let value = self.state_reader.get_storage_at(storage_entry)?;
+                self.cache
+                    .storage_initial_values
+                    .insert(storage_entry.clone(), value.clone());
+                Ok(value)
+            }
+        }
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
