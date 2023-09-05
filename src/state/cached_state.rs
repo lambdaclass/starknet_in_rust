@@ -14,7 +14,6 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
-use starknet::core::types::FromByteArrayError;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -275,7 +274,8 @@ impl<T: StateReader> State for CachedState<T> {
     fn count_actual_storage_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<(usize, usize), FromByteArrayError> {
+    ) -> Result<(usize, usize), StateError> {
+        self.update_initial_values_of_write_only_access()?;
         let mut storage_updates = subtract_mappings(
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),
@@ -429,6 +429,56 @@ impl<T: StateReader> State for CachedState<T> {
             }
         }
         Ok(contract)
+    }
+}
+
+impl<T: StateReader> CachedState<T> {
+    // Updates the cache's storage_initial_values according to those in storage_writes
+    // If a key is present in the storage_writes but not in storage_initial_values,
+    // the initial value for that key will be fetched from the state_reader and inserted into the cache's storage_initial_values
+    // The same process is applied to class hash and nonce values.
+    fn update_initial_values_of_write_only_access(&mut self) -> Result<(), StateError> {
+        // Update storage_initial_values with keys in storage_writes
+        for contract_storage_key in self.cache.storage_writes.keys() {
+            if !self
+                .cache
+                .storage_initial_values
+                .contains_key(contract_storage_key)
+            {
+                // This key was first accessed via write, so we need to cache its initial value
+                self.cache.storage_initial_values.insert(
+                    contract_storage_key.clone(),
+                    self.state_reader.get_storage_at(contract_storage_key)?,
+                );
+            }
+        }
+        for contract_address in self.cache.class_hash_writes.keys() {
+            if !self
+                .cache
+                .class_hash_initial_values
+                .contains_key(contract_address)
+            {
+                // This key was first accessed via write, so we need to cache its initial value
+                self.cache.class_hash_initial_values.insert(
+                    contract_address.clone(),
+                    self.state_reader.get_class_hash_at(contract_address)?,
+                );
+            }
+        }
+        for contract_address in self.cache.nonce_writes.keys() {
+            if !self
+                .cache
+                .nonce_initial_values
+                .contains_key(contract_address)
+            {
+                // This key was first accessed via write, so we need to cache its initial value
+                self.cache.nonce_initial_values.insert(
+                    contract_address.clone(),
+                    self.state_reader.get_nonce_at(contract_address)?,
+                );
+            }
+        }
+        Ok(())
     }
 }
 
