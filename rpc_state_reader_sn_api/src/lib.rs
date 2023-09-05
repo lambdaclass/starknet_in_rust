@@ -1247,11 +1247,14 @@ mod starknet_in_rust_transaction_tests {
 
             assert_eq!(
                 execution_resources,
-                trace
-                    .function_invocation
-                    .as_ref()
-                    .unwrap()
-                    .execution_resources
+                Some(
+                    trace
+                        .function_invocation
+                        .as_ref()
+                        .unwrap()
+                        .execution_resources
+                        .clone()
+                )
             );
             assert_eq!(
                 internal_calls.len(),
