@@ -424,34 +424,14 @@ impl<T: StateReader> CachedState<T> {
                 .contains_key(storage_entry)
             {
                 // This key was first accessed via write, so we need to cache its initial value
-                // If the value is not in the state_reader we should initialize it as zero
-                // Note: consider changing the behaviour of state_reader.get_storage_at to return zero as default
-                let value = match self.state_reader.get_storage_at(storage_entry) {
-                    Ok(value) => {
-                        value
-                    }
-                    Err(
-                        StateError::EmptyKeyInStorage
-                        | StateError::NoneStoragLeaf(_)
-                        | StateError::NoneStorage(_)
-                        | StateError::NoneContractState(_),
-                    ) => Felt252::zero(),
-                    Err(e) => {
-                        return Err(e);
-                    }
-                };
                 self.cache.storage_initial_values.insert(
                     storage_entry.clone(),
-                    value,
+                    self.state_reader.get_storage_at(storage_entry)?,
                 );
             }
         }
         for address in self.cache.class_hash_writes.keys() {
-            if !self
-                .cache
-                .class_hash_initial_values
-                .contains_key(address)
-            {
+            if !self.cache.class_hash_initial_values.contains_key(address) {
                 // This key was first accessed via write, so we need to cache its initial value
                 self.cache.class_hash_initial_values.insert(
                     address.clone(),
@@ -783,11 +763,14 @@ mod tests {
         assert_eq!(changes, expected_changes);
 
         // Check that the initial values were updated when counting changes
-        assert_eq!(cached_state.cache.storage_initial_values, HashMap::from([
-            ((address_one.clone(), storage_key_one), Felt252::from(1)),
-            ((address_one, storage_key_two), Felt252::from(0)),
-            ((address_two.clone(), storage_key_one), Felt252::from(0)),
-            ((address_two, storage_key_two), Felt252::from(0)),
-        ]))
+        assert_eq!(
+            cached_state.cache.storage_initial_values,
+            HashMap::from([
+                ((address_one.clone(), storage_key_one), Felt252::from(1)),
+                ((address_one, storage_key_two), Felt252::from(0)),
+                ((address_two.clone(), storage_key_one), Felt252::from(0)),
+                ((address_two, storage_key_two), Felt252::from(0)),
+            ])
+        )
     }
 }
