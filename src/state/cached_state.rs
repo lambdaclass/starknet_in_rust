@@ -440,29 +440,29 @@ impl<T: StateReader> CachedState<T> {
     // The same process is applied to class hash and nonce values.
     fn update_initial_values_of_write_only_accesses(&mut self) -> Result<(), StateError> {
         // Update storage_initial_values with keys in storage_writes
-        for contract_storage_key in self.cache.storage_writes.keys() {
+        for storage_entry in self.cache.storage_writes.keys() {
             if !self
                 .cache
                 .storage_initial_values
-                .contains_key(contract_storage_key)
+                .contains_key(storage_entry)
             {
                 // This key was first accessed via write, so we need to cache its initial value
                 self.cache.storage_initial_values.insert(
-                    contract_storage_key.clone(),
-                    self.state_reader.get_storage_at(contract_storage_key)?,
+                    storage_entry.clone(),
+                    self.state_reader.get_storage_at(storage_entry)?,
                 );
             }
         }
-        for contract_address in self.cache.class_hash_writes.keys() {
+        for address in self.cache.class_hash_writes.keys() {
             if !self
                 .cache
                 .class_hash_initial_values
-                .contains_key(contract_address)
+                .contains_key(address)
             {
                 // This key was first accessed via write, so we need to cache its initial value
                 self.cache.class_hash_initial_values.insert(
-                    contract_address.clone(),
-                    self.state_reader.get_class_hash_at(contract_address)?,
+                    address.clone(),
+                    self.state_reader.get_class_hash_at(address)?,
                 );
             }
         }
