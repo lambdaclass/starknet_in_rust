@@ -1,0 +1,72 @@
+name: Install dependencies, build the project and run tests from zero
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  fresh_run:
+    strategy:
+        fail-fast: false
+        matrix:
+          include:
+          - os: debian-12
+            deps_suffix: ''
+    runs-on: ${{ matrix.os }}
+    env:
+      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
+    name: "Make deps, build & test on fresh ${{ matrix.os }} system"
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set RUSTUP_HOME and PATH env vars
+      if: matrix.os == 'debian-12'
+      run: |
+        echo "RUSTUP_HOME=/root/.cargo" >> $GITHUB_ENV
+        echo "PATH=${PATH}:/root/.cargo/bin" >> $GITHUB_ENV
+    - name: Install rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: add llvm deb repository
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      run: sudo apt-get install llvm-16 llvm-16-dev llvm-16-runtime clang-16 clang-tools-16 lld-16 libpolly-16-dev libmlir-16-dev mlir-16-tools
+
+    - name: Install pyenv
+      uses: "gabrielfalcao/pyenv-action@v13"
+
+    - name: Run make deps${{ matrix.deps_suffix }}
+      id: deps
+      run: make deps${{ matrix.deps_suffix }}
+
+    - name: Run make build
+      id: build
+      run: make build
+
+    - name: Run make test
+      id: test
+      env:
+        INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+      run: |
+        . starknet-venv/bin/activate; \
+        make test
+    - name: Check which step failed
+      if: failure()
+      run: |
+        if [ ${{ steps.deps.outcome }} = failure ]; then
+            FAILED_TARGET=deps${{ matrix.deps_suffix }}
+        elif [ ${{ steps.build.outcome }} = failure ]; then
+            FAILED_TARGET=build
+        else 
+            FAILED_TARGET=test
+        fi
+        echo "FAILED_TARGET=$FAILED_TARGET" >> $GITHUB_ENV
