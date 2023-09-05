@@ -132,9 +132,20 @@ impl StateReader for InMemoryStateReader {
 
 #[cfg(test)]
 mod tests {
+    use num_traits::One;
+
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use std::sync::Arc;
+
+    #[test]
+    fn get_storage_returns_zero_if_missing() {
+        let state_reader = InMemoryStateReader::default();
+        assert!(state_reader
+            .get_storage_at(&(Address(Felt252::one()), Felt252::one().to_be_bytes()))
+            .unwrap()
+            .is_zero())
+    }
 
     #[test]
     fn get_contract_state_test() {
