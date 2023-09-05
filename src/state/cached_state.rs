@@ -71,25 +71,12 @@ impl<T: StateReader> CachedState<T> {
 
 impl<T: StateReader> StateReader for CachedState<T> {
     /// Returns the class hash for a given contract address.
+    /// Returns zero as default value if missing
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        if self.cache.get_class_hash(contract_address).is_none() {
-            match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(class_hash) => {
-                    return Ok(class_hash);
-                }
-                Err(StateError::NoneContractState(_)) => {
-                    return Ok([0; 32]);
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
-
         self.cache
             .get_class_hash(contract_address)
-            .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
-            .cloned()
+            .map(|a| Ok(*a))
+            .unwrap_or_else(|| self.state_reader.get_class_hash_at(contract_address))
     }
 
     /// Returns the nonce for a given contract address.
@@ -306,22 +293,20 @@ impl<T: StateReader> State for CachedState<T> {
         Ok((n_modified_contracts, storage_updates.len()))
     }
 
+    /// Returns the class hash for a given contract address.
+    /// Returns zero as default value if missing
+    /// Adds the value to the cache's inital_values if not present
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        if self.cache.get_class_hash(contract_address).is_none() {
-            let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(class_hash) => class_hash,
-                Err(StateError::NoneContractState(_)) => [0; 32],
-                Err(e) => return Err(e),
-            };
-            self.cache
-                .class_hash_initial_values
-                .insert(contract_address.clone(), class_hash);
+        match self.cache.get_class_hash(contract_address) {
+            Some(class_hash) => Ok(*class_hash),
+            None => {
+                let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
+                self.cache
+                    .class_hash_initial_values
+                    .insert(contract_address.clone(), class_hash);
+                Ok(class_hash)
+            }
         }
-
-        self.cache
-            .get_class_hash(contract_address)
-            .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
-            .cloned()
     }
 
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
