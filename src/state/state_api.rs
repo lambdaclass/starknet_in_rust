@@ -16,6 +16,7 @@ pub trait StateReader {
     /// Returns the nonce of the given contract instance.
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError>;
     /// Returns the storage value under the given key in the given contract instance.
+    /// Returns zero by default if the value is not present
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError>;
     /// Return the class hash of the given casm contract class
     fn get_compiled_class_hash(
@@ -65,6 +66,8 @@ pub trait State {
     /// Default: 0 for an uninitialized contract address.
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError>;
 
+    /// Returns storage data for a given storage entry.
+    /// Returns zero as default value if missing
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError>;
 
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError>;
