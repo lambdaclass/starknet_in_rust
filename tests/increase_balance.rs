@@ -112,7 +112,7 @@ fn hello_starknet_increase_balance() {
 
     let mut expected_accessed_storage_keys = HashSet::new();
     expected_accessed_storage_keys.insert(expected_key);
-    let expected_storage_read_values = vec![Felt252::zero()];
+    let expected_storage_read_values = vec![Felt252::zero(), Felt252::zero()];
 
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),

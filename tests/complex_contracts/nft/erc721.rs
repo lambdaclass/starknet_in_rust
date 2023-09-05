@@ -474,7 +474,7 @@ fn erc721_test_approve() {
     let expected_read_result = vec![];
 
     // Checks only the storage variable ERC721_operator_approvals
-    let storage_read_values = vec![Felt252::from(666), Felt252::from(666)];
+    let storage_read_values = vec![Felt252::from(666), Felt252::zero(), Felt252::from(666)];
 
     // Ask for the owner of the token
     let mut accessed_storage_keys =
@@ -577,7 +577,7 @@ fn erc721_set_approval_for_all() {
     let expected_read_result = vec![];
 
     // Only writes in operator_approvals
-    let storage_read_values = vec![];
+    let storage_read_values = vec![Felt252::zero()];
 
     // Writes to the operator the new set value
     let accessed_storage_keys = get_accessed_keys(
@@ -696,14 +696,20 @@ fn erc721_transfer_from_test() {
     accessed_storage_keys.insert(balance_to);
 
     let expected_read_values = vec![
-        Felt252::from(666),
-        Felt252::from(666),
-        Felt252::from(666),
-        Felt252::from(666),
-        Felt252::from(1),
-        Felt252::zero(),
-        Felt252::zero(),
-        Felt252::zero(),
+        666.into(),
+        666.into(),
+        666.into(),
+        0.into(),
+        666.into(),
+        1.into(),
+        0.into(),
+        1.into(),
+        0.into(),
+        0.into(),
+        0.into(),
+        0.into(),
+        0.into(),
+        666.into(),
     ];
 
     let approval_event_hash = Felt252::from_bytes_be(&calculate_sn_keccak("Approval".as_bytes()));
