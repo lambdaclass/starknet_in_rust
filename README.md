@@ -98,7 +98,22 @@ In Mac you'll also need to tell the script where to find the gmp lib:
 export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib
 ```
 
+### Cairo Native support
 
+Starknet in Rust can be integrated with [Cairo Native](https://github.com/lambdaclass/cairo_native), which makes the execution of sierra programs possible through native machine code. To use it, the following needs to be setup:
+
+- Rust needs to be switched to its `nightly` version by running
+  ```
+  rustup default nightly
+  ```
+- LLVM `16` needs to be installed and the `MLIR_SYS_160_PREFIX` environment variable needs to point to said installation. In macOS, run
+  ```
+  brew install llvm@16
+  export MLIR_SYS_160_PREFIX=/opt/homebrew/opt/llvm@16
+  ```
+  and you're set.
+
+Afterwards, compiling with the feature flag `cairo-native` will enable native execution. You can check out some example test code that uses it under `tests/cairo_native.rs`.
 
 ## 🚀 Usage
 
