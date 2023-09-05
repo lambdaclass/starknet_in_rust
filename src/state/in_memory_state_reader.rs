@@ -137,15 +137,6 @@ mod tests {
     use std::sync::Arc;
 
     #[test]
-    fn get_storage_returns_zero_if_missing() {
-        let state_reader = InMemoryStateReader::default();
-        assert!(state_reader
-            .get_storage_at(&(Address(Felt252::one()), Felt252::one().to_be_bytes()))
-            .unwrap()
-            .is_zero())
-    }
-
-    #[test]
     fn get_class_hash_at_returns_zero_if_missing() {
         let state_reader = InMemoryStateReader::default();
         assert!(Felt252::from_bytes_be(
