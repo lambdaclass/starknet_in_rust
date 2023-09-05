@@ -835,7 +835,6 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
         CompiledClass::Sierra(_) => unreachable!(),
         CompiledClass::Casm(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
