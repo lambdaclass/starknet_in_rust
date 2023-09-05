@@ -284,7 +284,7 @@ pub fn get_storage_var_address(
 
     let args = args
         .iter()
-        .map(|felt| felt_to_field_element(felt))
+        .map(felt_to_field_element)
         .collect::<Result<Vec<_>, _>>()?;
 
     let storage_var_name_hash =

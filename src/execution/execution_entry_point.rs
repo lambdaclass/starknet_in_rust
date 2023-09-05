@@ -1,4 +1,3 @@
-use std::fmt;
 use std::sync::Arc;
 
 use crate::services::api::contract_classes::deprecated_contract_class::{
@@ -19,7 +18,12 @@ use cairo_native::executor::NativeExecutor;
 use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
 #[cfg(feature = "cairo-native")]
 use cairo_native::utils::felt252_bigint;
+#[cfg(feature = "cairo-native")]
+use serde_json::Value;
 
+use super::{
+    CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
+};
 use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
@@ -52,11 +56,6 @@ use cairo_vm::{
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources, RunResources},
         vm_core::VirtualMachine,
     },
-};
-use serde_json::Value;
-
-use super::{
-    CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
 };
 
 #[derive(Debug, Default)]
@@ -195,11 +194,11 @@ impl ExecutionEntryPoint {
                     Ok(call_info) => {
                         let state_diff = StateDiff::from_cached_state(tmp_state)?;
                         state.apply_state_update(&state_diff)?;
-                        return Ok(ExecutionResult {
+                        Ok(ExecutionResult {
                             call_info: Some(call_info),
                             revert_error: None,
                             n_reverted_steps: 0,
-                        });
+                        })
                     }
                     Err(e) => {
                         if !support_reverted {
@@ -208,11 +207,11 @@ impl ExecutionEntryPoint {
 
                         let n_reverted_steps =
                             (max_steps as usize) - resources_manager.cairo_usage.n_steps;
-                        return Ok(ExecutionResult {
+                        Ok(ExecutionResult {
                             call_info: None,
                             revert_error: Some(e.to_string()),
                             n_reverted_steps,
-                        });
+                        })
                     }
                 }
             }
@@ -673,7 +672,6 @@ impl ExecutionEntryPoint {
         };
 
         let sierra_program = contract_class.extract_sierra_program().unwrap();
-        // println!("{}", sierra_program.to_string());
 
         let native_context = NativeContext::new();
         let mut native_program = native_context.compile(&sierra_program).unwrap();
@@ -711,7 +709,6 @@ impl ExecutionEntryPoint {
             .unwrap()
             .id;
 
-        println!("CALLING FUNCTION: {}", fn_id);
         let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
 
         let required_init_gas = native_program.get_required_init_gas(fn_id);

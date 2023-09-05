@@ -589,7 +589,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 
     pub(crate) fn storage_write(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request =
@@ -879,7 +879,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 
     pub(crate) fn replace_class(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("replace_class", vm, syscall_ptr)

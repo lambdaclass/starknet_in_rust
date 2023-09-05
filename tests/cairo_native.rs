@@ -1,5 +1,4 @@
 #![cfg(not(feature = "cairo_1_tests"))]
-// #![deny(warnings)]
 
 #[cfg(feature = "cairo-native")]
 use crate::CallType::Call;
