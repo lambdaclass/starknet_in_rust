@@ -155,9 +155,6 @@ impl RpcState {
         .map_err(|err| {
             RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string())
         })?;
-        println!("{}",  "Fourth function, I'm reaching this point 1");
-
-        println!("{}",  response.clone());
         serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
     }
 }
@@ -332,9 +329,7 @@ impl RpcState {
             "params": [self.block.to_value()],
             "id": 1
         });
-        println!("{}", "Third function, I'm reaching this point 1");
         let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
-        println!("{}", "Third function, I'm reaching this point 2");
 
         starknet_in_rust::state::BlockInfo {
             block_number: block_info["result"]["block_number"]
@@ -588,12 +583,9 @@ mod tests {
             RpcChain::TestNet2,
             BlockValue::Number(serde_json::to_value(838683).unwrap()),
         );
-
         let tx_hash_str = "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc";
         let tx_hash = felt_str!(format!("{}", tx_hash_str), 16);
-
         let tx_trace = state_reader.get_transaction_trace(tx_hash);
-
         assert_eq!(
             tx_trace.signature,
             vec![
@@ -634,6 +626,7 @@ mod tests {
                 felt_str!("38bd34c31a0a5c", 16),
             ]
         );
+
         assert_eq!(tx_trace.validate_invocation.retdata, vec![]);
         assert_eq!(
             tx_trace.validate_invocation.execution_resources,
@@ -675,6 +668,7 @@ mod tests {
                 felt_str!("38bd34c31a0a5c", 16),
             ]
         );
+
         assert_eq!(tx_trace.function_invocation.retdata, vec![0.into()]);
         assert_eq!(
             tx_trace.function_invocation.execution_resources,
@@ -687,6 +681,7 @@ mod tests {
                 ]),
             }
         );
+
         assert_eq!(tx_trace.function_invocation.internal_calls.len(), 1);
         assert_eq!(
             tx_trace.function_invocation.internal_calls[0]
@@ -712,6 +707,7 @@ mod tests {
                 felt_str!("0", 16),
             ]
         );
+
         assert_eq!(tx_trace.fee_transfer_invocation.retdata, vec![1.into()]);
         assert_eq!(
             tx_trace.fee_transfer_invocation.execution_resources,
@@ -753,37 +749,26 @@ mod transaction_tests {
         block_number: u64,
         gas_price: u128,
     ) -> TransactionExecutionInfo {
-        println!("{}", "Second function, I'm reaching this point 1");
-
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
-        println!("{}", "Second function, I'm reaching this point 2");
 
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
-        println!("{}", "Second function, I'm reaching this point 3");
 
         let rpc_state = Arc::new(RpcState::new(network, block));
-        println!("{}", "Second function, I'm reaching this point 4");
 
         let mut state = CachedState::new(rpc_state.clone(), HashMap::new());
-        println!("{}", "Second function, I'm reaching this point 5");
 
         let fee_token_address = Address(felt_str!(
             "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
             16
         ));
-        println!("{}", "Second function, I'm reaching this point 6");
 
 
         let network: StarknetChainId = rpc_state.chain.into();
         let starknet_os_config =
             StarknetOsConfig::new(network.to_felt(), fee_token_address, gas_price);
-            println!("{}", "Second function, I'm reaching this point 7");
-
 
         let block_info = rpc_state.get_block_info(starknet_os_config.clone());
-        println!("{}", "Second function, I'm reaching this point 8");
-
 
         let block_context = BlockContext::new(
             starknet_os_config,
@@ -797,11 +782,8 @@ mod transaction_tests {
             true,
         );
 
-        println!("{}", "Second function, I'm reaching this point 9");
 
         let tx = rpc_state.get_transaction(tx_hash);
-        println!("{}", "Second function, I'm reaching this point 10");
-
 
         tx.execute(&mut state, &block_context, 0).unwrap()
     }
@@ -859,27 +841,16 @@ mod transaction_tests {
     /// - Link to Explorer: https://testnet.starkscan.co/tx/0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf
     #[test]
     fn test_0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf() {
-        println!("{}", "I'm reaching this point 1");
         let result = test_tx(
             "0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf",
             RpcChain::TestNet,
             838683,
             2917470325,
         );
-        println!("{}", "I'm reaching this point 2");
-
         dbg!(&result.actual_resources);
-        println!("{}", "I'm reaching this point 3");
-
         dbg!(&result.actual_fee); // test=7252831227950, explorer=7207614784695, diff=45216443255 (0.06%)
-        println!("{}", "I'm reaching this point 4");
-
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
-        println!("{}", "I'm reaching this point 5");
-
         dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
-        println!("{}", "I'm reaching this point 6");
-
     }
 
     /// - Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
@@ -933,17 +904,22 @@ mod transaction_tests {
     /// - Link to explorer: https://starkscan.co/tx/0x026a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c
     #[test]
     fn test_0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c() {
+        println!("{}", "work 0");
         let result = test_tx(
             "0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c",
             RpcChain::MainNet,
             155054,
             33977120598,
         );
-
+        println!("{}", "work 1");
         dbg!(&result.actual_resources);
+        println!("{}", "work 2");
         dbg!(&result.actual_fee); // test=6361070805216, explorer=47292465953700, diff=5888146145679 (0.13%)
+        println!("{}", "work 3");
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
+        println!("{}", "work 4");
         dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
+        println!("{}", "work 5");
     }
 
     // Fails because there is a problem with get_compiled_class_hash
