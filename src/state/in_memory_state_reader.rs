@@ -97,11 +97,11 @@ impl StateReader for InMemoryStateReader {
     }
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        let storage = self
+        Ok(self
             .address_to_storage
             .get(storage_entry)
-            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()));
-        storage.cloned()
+            .cloned()
+            .unwrap_or_default())
     }
 
     fn get_compiled_class_hash(
