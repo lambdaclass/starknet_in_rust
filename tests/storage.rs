@@ -124,7 +124,7 @@ fn integration_storage_test() {
             ..Default::default()
         }),
         class_hash: Some(class_hash),
-        storage_read_values: vec![42.into()],
+        storage_read_values: vec![0.into(), 42.into()],
         accessed_storage_keys: expected_accessed_storage_keys,
         ..Default::default()
     };

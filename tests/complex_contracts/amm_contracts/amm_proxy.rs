@@ -1,6 +1,7 @@
 use crate::complex_contracts::utils::*;
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
@@ -84,6 +85,7 @@ fn amm_proxy_init_pool_test() {
         }),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
+        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
         ..Default::default()
     }];
 
@@ -288,7 +290,7 @@ fn amm_proxy_add_demo_token_test() {
         entry_point_selector: Some(amm_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
-        storage_read_values: vec![0.into(), 0.into()],
+        storage_read_values: vec![0.into(), 0.into(), 0.into(), 0.into()],
         execution_resources: Some(ExecutionResources {
             n_steps: 397,
             n_memory_holes: 42,
@@ -539,8 +541,18 @@ fn amm_proxy_swap() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
         retdata: [90.into()].to_vec(),
-        storage_read_values: [100.into(), 1000.into(), 1000.into(), 100.into(), 200.into()]
-            .to_vec(),
+        storage_read_values: [
+            100.into(),
+            1000.into(),
+            1000.into(),
+            100.into(),
+            100.into(),
+            1000.into(),
+            200.into(),
+            200.into(),
+            1000.into(),
+        ]
+        .to_vec(),
         execution_resources: Some(ExecutionResources {
             n_steps: 826,
             n_memory_holes: 92,
