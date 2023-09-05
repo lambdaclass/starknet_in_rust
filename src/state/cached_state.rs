@@ -275,7 +275,8 @@ impl<T: StateReader> State for CachedState<T> {
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
     ) -> Result<(usize, usize), StateError> {
-        self.update_initial_values_of_write_only_access()?;
+        self.update_initial_values_of_write_only_accesses()?;
+
         let mut storage_updates = subtract_mappings(
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),
@@ -437,7 +438,7 @@ impl<T: StateReader> CachedState<T> {
     // If a key is present in the storage_writes but not in storage_initial_values,
     // the initial value for that key will be fetched from the state_reader and inserted into the cache's storage_initial_values
     // The same process is applied to class hash and nonce values.
-    fn update_initial_values_of_write_only_access(&mut self) -> Result<(), StateError> {
+    fn update_initial_values_of_write_only_accesses(&mut self) -> Result<(), StateError> {
         // Update storage_initial_values with keys in storage_writes
         for contract_storage_key in self.cache.storage_writes.keys() {
             if !self
