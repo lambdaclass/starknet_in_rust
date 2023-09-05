@@ -79,11 +79,11 @@ impl InMemoryStateReader {
 
 impl StateReader for InMemoryStateReader {
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        let class_hash = self
+        Ok(self
             .address_to_class_hash
             .get(contract_address)
-            .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
-        class_hash.cloned()
+            .cloned()
+            .unwrap_or_default())
     }
 
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
