@@ -51,7 +51,7 @@ impl<T: StateReader> CachedState<T> {
     pub fn new_for_testing(
         state_reader: Arc<T>,
         cache: StateCache,
-        contract_classes: ContractClassCache,
+        _contract_classes: ContractClassCache,
     ) -> Self {
         Self {
             cache,
