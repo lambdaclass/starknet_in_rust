@@ -447,9 +447,25 @@ impl<T: StateReader> CachedState<T> {
                 .contains_key(storage_entry)
             {
                 // This key was first accessed via write, so we need to cache its initial value
+                // If the value is not in the state_reader we should initialize it as zero
+                // Note: consider changing the behaviour of state_reader.get_storage_at to return zero as default
+                let value = match self.state_reader.get_storage_at(storage_entry) {
+                    Ok(value) => {
+                        value
+                    }
+                    Err(
+                        StateError::EmptyKeyInStorage
+                        | StateError::NoneStoragLeaf(_)
+                        | StateError::NoneStorage(_)
+                        | StateError::NoneContractState(_),
+                    ) => Felt252::zero(),
+                    Err(e) => {
+                        return Err(e);
+                    }
+                };
                 self.cache.storage_initial_values.insert(
                     storage_entry.clone(),
-                    self.state_reader.get_storage_at(storage_entry)?,
+                    value,
                 );
             }
         }
@@ -756,18 +772,14 @@ mod tests {
     /// This test calculate the number of actual storage changes.
     #[test]
     fn count_actual_storage_changes_test() {
+        let state_reader = InMemoryStateReader::default();
+
+        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
+
         let address_one = Address(1.into());
         let address_two = Address(2.into());
         let storage_key_one = Felt252::from(1).to_be_bytes();
         let storage_key_two = Felt252::from(2).to_be_bytes();
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader.address_to_storage.insert((address_one.clone(), storage_key_two), Felt252::from(0));
-        state_reader.address_to_storage.insert((address_two.clone(), storage_key_one), Felt252::from(0));
-        state_reader.address_to_storage.insert((address_two.clone(), storage_key_two), Felt252::from(0));
-
-        let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
 
         cached_state.cache.storage_initial_values =
             HashMap::from([((address_one.clone(), storage_key_one), Felt252::from(1))]);
