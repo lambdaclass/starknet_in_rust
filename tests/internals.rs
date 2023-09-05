@@ -642,13 +642,17 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
@@ -656,7 +660,7 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
             ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
@@ -1300,7 +1304,6 @@ fn test_invoke_tx() {
     // transaction.
     let result = invoke_tx.execute(state, block_context, 0).unwrap();
     let expected_execution_info = expected_transaction_execution_info(block_context);
-
     assert_eq!(result, expected_execution_info);
 }
 
