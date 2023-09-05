@@ -76,7 +76,7 @@ impl<T: StateReader> StateReader for CachedState<T> {
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
         self.cache
             .get_class_hash(contract_address)
-            .map(|a| Ok(a.clone()))
+            .map(|a| Ok(*a))
             .unwrap_or_else(|| self.state_reader.get_class_hash_at(contract_address))
     }
 
@@ -313,7 +313,7 @@ impl<T: StateReader> State for CachedState<T> {
     /// Adds the value to the cache's inital_values if not present
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         match self.cache.get_class_hash(contract_address) {
-            Some(class_hash) => Ok(class_hash.clone()),
+            Some(class_hash) => Ok(*class_hash),
             None => {
                 let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
                 self.cache
