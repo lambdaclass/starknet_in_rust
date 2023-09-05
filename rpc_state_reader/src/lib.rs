@@ -155,6 +155,9 @@ impl RpcState {
         .map_err(|err| {
             RpcError::Cast("Response".to_owned(), "String".to_owned(), err.to_string())
         })?;
+        println!("{}",  "Fourth function, I'm reaching this point 1");
+
+        println!("{}",  response.clone());
         serde_json::from_str(&response).map_err(|err| RpcError::RpcCall(err.to_string()))
     }
 }
@@ -329,8 +332,9 @@ impl RpcState {
             "params": [self.block.to_value()],
             "id": 1
         });
-
+        println!("{}", "Third function, I'm reaching this point 1");
         let block_info: serde_json::Value = self.rpc_call(&get_block_info_params).unwrap();
+        println!("{}", "Third function, I'm reaching this point 2");
 
         starknet_in_rust::state::BlockInfo {
             block_number: block_info["result"]["block_number"]
@@ -749,23 +753,37 @@ mod transaction_tests {
         block_number: u64,
         gas_price: u128,
     ) -> TransactionExecutionInfo {
+        println!("{}", "Second function, I'm reaching this point 1");
+
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
+        println!("{}", "Second function, I'm reaching this point 2");
 
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
+        println!("{}", "Second function, I'm reaching this point 3");
+
         let rpc_state = Arc::new(RpcState::new(network, block));
+        println!("{}", "Second function, I'm reaching this point 4");
+
         let mut state = CachedState::new(rpc_state.clone(), HashMap::new());
+        println!("{}", "Second function, I'm reaching this point 5");
 
         let fee_token_address = Address(felt_str!(
             "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
             16
         ));
+        println!("{}", "Second function, I'm reaching this point 6");
+
 
         let network: StarknetChainId = rpc_state.chain.into();
         let starknet_os_config =
             StarknetOsConfig::new(network.to_felt(), fee_token_address, gas_price);
+            println!("{}", "Second function, I'm reaching this point 7");
+
 
         let block_info = rpc_state.get_block_info(starknet_os_config.clone());
+        println!("{}", "Second function, I'm reaching this point 8");
+
 
         let block_context = BlockContext::new(
             starknet_os_config,
@@ -779,7 +797,11 @@ mod transaction_tests {
             true,
         );
 
+        println!("{}", "Second function, I'm reaching this point 9");
+
         let tx = rpc_state.get_transaction(tx_hash);
+        println!("{}", "Second function, I'm reaching this point 10");
+
 
         tx.execute(&mut state, &block_context, 0).unwrap()
     }
@@ -837,17 +859,27 @@ mod transaction_tests {
     /// - Link to Explorer: https://testnet.starkscan.co/tx/0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf
     #[test]
     fn test_0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf() {
+        println!("{}", "I'm reaching this point 1");
         let result = test_tx(
             "0x074dab0828ec1b6cfde5188c41d41af1c198192a7d118217f95a802aa923dacf",
             RpcChain::TestNet,
             838683,
             2917470325,
         );
+        println!("{}", "I'm reaching this point 2");
 
         dbg!(&result.actual_resources);
+        println!("{}", "I'm reaching this point 3");
+
         dbg!(&result.actual_fee); // test=7252831227950, explorer=7207614784695, diff=45216443255 (0.06%)
+        println!("{}", "I'm reaching this point 4");
+
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
+        println!("{}", "I'm reaching this point 5");
+
         dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
+        println!("{}", "I'm reaching this point 6");
+
     }
 
     /// - Transaction Hash: 0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
