@@ -5,7 +5,6 @@ use crate::{
     state::StateDiff,
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::felt::Felt252;
 use starknet::core::types::FromByteArrayError;

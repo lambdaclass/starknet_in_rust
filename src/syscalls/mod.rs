@@ -4,6 +4,7 @@ pub mod deprecated_syscall_handler;
 pub mod deprecated_syscall_request;
 pub mod deprecated_syscall_response;
 pub mod hint_code;
+pub mod native_syscall_handler;
 pub mod other_syscalls;
 pub mod syscall_handler;
 pub mod syscall_handler_errors;
