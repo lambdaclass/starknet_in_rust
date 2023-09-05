@@ -8,7 +8,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
-use num_traits::Zero;
 use std::collections::HashMap;
 
 /// A [StateReader] that holds all the data in memory.
@@ -88,12 +87,11 @@ impl StateReader for InMemoryStateReader {
     }
 
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
-        let default = Felt252::zero();
-        let nonce = self
+        Ok(self
             .address_to_nonce
             .get(contract_address)
-            .unwrap_or(&default);
-        Ok(nonce.clone())
+            .cloned()
+            .unwrap_or_default())
     }
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
