@@ -11,11 +11,11 @@ with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
 
 [workspace]
-members = ["cli", "fuzzer", "rpc_state_reader"]
+members = ["cli", "fuzzer", "rpc_state_reader", "rpc_state_reader_sn_api"]
 
 [workspace.dependencies]
 cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
-starknet_api = "0.3.0"
+starknet_api = "0.4.1"
 num-traits = "0.2.15"
 starknet = "0.5.0"
 thiserror = "1.0.32"
@@ -44,7 +44,7 @@ serde_json = { version = "1.0", features = [
 ] }
 sha3 = "0.10.1"
 # TODO: Replace with sha3. We should look how to integrate it correctly to calculate sn_keccak
-keccak = "0.1.3" 
+keccak = "0.1.3"
 starknet_api = { workspace = true }
 starknet-crypto = "0.5.1"
 thiserror = { workspace = true }
