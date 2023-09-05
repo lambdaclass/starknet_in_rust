@@ -28,7 +28,6 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
-use anyhow::Error;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_native::context::NativeContext;
 use cairo_native::executor::NativeExecutor;
@@ -64,6 +63,7 @@ pub struct NativeExecutionResult {
     pub system: Option<u64>,
     pub failure_flag: bool,
     pub return_values: Vec<Felt252>,
+    pub error_msg: Option<String>,
 }
 
 impl<'de> Deserialize<'de> for NativeExecutionResult {
@@ -113,6 +113,7 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
                                 .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
                                 .collect(),
                             failure_flag: failure_flag == 1,
+                            error_msg: None,
                         });
                     }
 
@@ -124,16 +125,24 @@ impl<'de> Deserialize<'de> for NativeExecutionResult {
                         let return_values: (Vec<u32>, Vec<Vec<u32>>) =
                             serde_json::from_value(return_values).unwrap();
 
+                        let felt_error: Vec<Felt252> = return_values
+                            .1
+                            .iter()
+                            .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
+                            .collect();
+
+                        let str_error = String::from_utf8(felt_error[0].to_be_bytes().to_vec())
+                            .unwrap()
+                            .trim_start_matches('\0')
+                            .to_owned();
+
                         return Ok(NativeExecutionResult {
                             gas_builtin: None,
                             range_check: None,
                             system: None,
                             failure_flag: failure_flag == 1,
-                            return_values: return_values
-                                .1
-                                .iter()
-                                .map(|felt_bytes| u32_vec_to_felt(felt_bytes))
-                                .collect(),
+                            return_values: vec![0.into()],
+                            error_msg: Some(str_error),
                         });
                     }
                     _ => return Err(de::Error::custom("expected failure flag to be 0 or 1")),
