@@ -32,7 +32,7 @@ jobs:
           compile-cairo-2-sierra,
         ]
     name: Build Cairo programs
-    runs-on: debian-12
+    runs-on: ubuntu-22.04
     env:
       MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
@@ -73,7 +73,7 @@ jobs:
   # TODO: remove this cache once the workflow finishes
   merge-caches:
     name: Merge Cairo programs cache
-    runs-on: debian-12
+    runs-on: ubuntu-22.04
     needs: build-programs
     steps:
     - name: Checkout
@@ -138,7 +138,7 @@ jobs:
   build:
     name: Build with release profile
     needs: merge-caches
-    runs-on: debian-12
+    runs-on: ubuntu-22.04
     env:
       MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
@@ -173,7 +173,7 @@ jobs:
   lint:
     name: Lint with fmt and clippy
     needs: merge-caches
-    runs-on: debian-12
+    runs-on: ubuntu-22.04
     env:
       MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
@@ -217,7 +217,7 @@ jobs:
         target: [ test-cairo-1, test-cairo-2, test-doctests ]
     name: Run tests
     needs: merge-caches
-    runs-on: debian-12
+    runs-on: ubuntu-22.04
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -258,7 +258,7 @@ jobs:
   coverage:
     needs: merge-caches
     name: Generate and upload coverage report
-    runs-on: debian-12
+    runs-on: ubuntu-22.04
     env:
       MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
