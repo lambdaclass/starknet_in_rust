@@ -704,13 +704,13 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone() - Felt252::from(2476),
+            INITIAL_BALANCE.clone() - Felt252::from(1252),
             Felt252::zero(),
-            INITIAL_BALANCE.clone() - Felt252::from(2476),
+            INITIAL_BALANCE.clone() - Felt252::from(1252),
             Felt252::zero(),
-            Felt252::from(2476),
+            Felt252::from(1252),
             Felt252::zero(),
-            Felt252::from(2476),
+            Felt252::from(1252),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
@@ -1272,7 +1272,7 @@ fn expected_fib_transaction_execution_info(
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 7344),
+        ("l1_gas_usage".to_string(), 4896),
         ("pedersen_builtin".to_string(), 16),
         ("range_check_builtin".to_string(), 104),
     ]);
@@ -1455,7 +1455,7 @@ fn test_invoke_with_declarev2_tx() {
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let expected_fee = 6157;
+    let expected_fee = 3709;
 
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
@@ -1530,7 +1530,7 @@ fn test_deploy_account() {
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 3709);
+    assert_eq!(fee, expected_fee);
 
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
@@ -1797,7 +1797,7 @@ fn test_state_for_declare_tx() {
     //     ])
     // );
 
-    let fee = Felt252::from(3700);
+    let fee = Felt252::from(2476);
 
     // Check state.cache
     assert_eq!(
