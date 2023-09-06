@@ -108,28 +108,12 @@ impl<T: StateReader> StateReader for CachedState<T> {
     }
 
     /// Returns storage data for a given storage entry.
+    /// Returns zero as default value if missing
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        if self.cache.get_storage(storage_entry).is_none() {
-            match self.state_reader.get_storage_at(storage_entry) {
-                Ok(storage) => {
-                    return Ok(storage);
-                }
-                Err(
-                    StateError::EmptyKeyInStorage
-                    | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_)
-                    | StateError::NoneContractState(_),
-                ) => return Ok(Felt252::zero()),
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
-
         self.cache
             .get_storage(storage_entry)
-            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
-            .cloned()
+            .map(|v| Ok(v.clone()))
+            .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
@@ -356,27 +340,20 @@ impl<T: StateReader> State for CachedState<T> {
             .clone())
     }
 
+    /// Returns storage data for a given storage entry.
+    /// Returns zero as default value if missing
+    /// Adds the value to the cache's inital_values if not present
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        if self.cache.get_storage(storage_entry).is_none() {
-            let value = match self.state_reader.get_storage_at(storage_entry) {
-                Ok(value) => value,
-                Err(
-                    StateError::EmptyKeyInStorage
-                    | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_)
-                    | StateError::NoneContractState(_),
-                ) => Felt252::zero(),
-                Err(e) => return Err(e),
-            };
-            self.cache
-                .storage_initial_values
-                .insert(storage_entry.clone(), value);
+        match self.cache.get_storage(storage_entry) {
+            Some(value) => Ok(value.clone()),
+            None => {
+                let value = self.state_reader.get_storage_at(storage_entry)?;
+                self.cache
+                    .storage_initial_values
+                    .insert(storage_entry.clone(), value.clone());
+                Ok(value)
+            }
         }
-
-        self.cache
-            .get_storage(storage_entry)
-            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
-            .cloned()
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
