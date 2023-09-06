@@ -1,4 +1,4 @@
-bianename: rust-tests
+name: rust-tests
 
 on:
   merge_group:
