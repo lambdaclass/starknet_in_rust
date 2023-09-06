@@ -329,7 +329,7 @@ impl RpcState {
                 .to_string()
                 .parse::<u64>()
                 .unwrap(),
-            gas_price: *starknet_os_config.gas_price() as u64,
+            gas_price: *starknet_os_config.gas_price(),
             sequencer_address: starknet_os_config.fee_token_address().clone(),
         }
     }
@@ -543,7 +543,7 @@ mod tests {
                 .to_string()
                 .parse::<u64>()
                 .unwrap(),
-            gas_price: gas_price_u128 as u64,
+            gas_price: gas_price_u128,
             sequencer_address: fee_token_address,
         };
 
@@ -715,7 +715,7 @@ mod transaction_tests {
         felt::felt_str,
         state::cached_state::CachedState,
     };
-    use std::sync::Arc;
+    use std::{collections::HashMap, sync::Arc};
 
     fn test_tx(
         tx_hash: &str,
@@ -728,7 +728,7 @@ mod transaction_tests {
         // Instantiate the RPC StateReader and the CachedState
         let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
         let rpc_state = Arc::new(RpcState::new(network, block));
-        let mut state = CachedState::new(rpc_state.clone(), None, None);
+        let mut state = CachedState::new(rpc_state.clone(), HashMap::new());
 
         let fee_token_address = Address(felt_str!(
             "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
