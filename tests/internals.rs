@@ -1243,7 +1243,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
     let resources = HashMap::from([
         ("n_steps".to_string(), 4135),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 3672),
+        ("l1_gas_usage".to_string(), 2448),
         ("range_check_builtin".to_string(), 101),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
@@ -1525,12 +1525,12 @@ fn test_deploy_account() {
         ("n_steps".to_string(), 3625),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 6120),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 6157);
+    assert_eq!(fee, 3709);
 
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
@@ -1564,7 +1564,7 @@ fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader>,
     CachedState<InMemoryStateReader>,
 ) {
-    let fee = Felt252::from(6157);
+    let fee = Felt252::from(3709);
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([
