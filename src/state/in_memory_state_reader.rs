@@ -8,7 +8,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
-use num_traits::Zero;
 use std::collections::HashMap;
 
 /// A [StateReader] that holds all the data in memory.
@@ -80,20 +79,19 @@ impl InMemoryStateReader {
 
 impl StateReader for InMemoryStateReader {
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        let class_hash = self
+        Ok(self
             .address_to_class_hash
             .get(contract_address)
-            .ok_or_else(|| StateError::NoneContractState(contract_address.clone()));
-        class_hash.cloned()
+            .cloned()
+            .unwrap_or_default())
     }
 
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
-        let default = Felt252::zero();
-        let nonce = self
+        Ok(self
             .address_to_nonce
             .get(contract_address)
-            .unwrap_or(&default);
-        Ok(nonce.clone())
+            .cloned()
+            .unwrap_or_default())
     }
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
@@ -132,11 +130,22 @@ impl StateReader for InMemoryStateReader {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::One;
+    use num_traits::{One, Zero};
 
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use std::sync::Arc;
+
+    #[test]
+    fn get_class_hash_at_returns_zero_if_missing() {
+        let state_reader = InMemoryStateReader::default();
+        assert!(Felt252::from_bytes_be(
+            &state_reader
+                .get_class_hash_at(&Address(Felt252::one()))
+                .unwrap()
+        )
+        .is_zero())
+    }
 
     #[test]
     fn get_storage_returns_zero_if_missing() {

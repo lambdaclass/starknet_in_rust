@@ -14,7 +14,6 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
-use starknet::core::types::FromByteArrayError;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -72,25 +71,12 @@ impl<T: StateReader> CachedState<T> {
 
 impl<T: StateReader> StateReader for CachedState<T> {
     /// Returns the class hash for a given contract address.
+    /// Returns zero as default value if missing
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        if self.cache.get_class_hash(contract_address).is_none() {
-            match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(class_hash) => {
-                    return Ok(class_hash);
-                }
-                Err(StateError::NoneContractState(_)) => {
-                    return Ok([0; 32]);
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
-
         self.cache
             .get_class_hash(contract_address)
-            .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
-            .cloned()
+            .map(|a| Ok(*a))
+            .unwrap_or_else(|| self.state_reader.get_class_hash_at(contract_address))
     }
 
     /// Returns the nonce for a given contract address.
@@ -259,7 +245,9 @@ impl<T: StateReader> State for CachedState<T> {
     fn count_actual_storage_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<(usize, usize), FromByteArrayError> {
+    ) -> Result<(usize, usize), StateError> {
+        self.update_initial_values_of_write_only_accesses()?;
+
         let mut storage_updates = subtract_mappings(
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),
@@ -302,22 +290,20 @@ impl<T: StateReader> State for CachedState<T> {
         Ok((modified_contracts.len(), storage_updates.len()))
     }
 
+    /// Returns the class hash for a given contract address.
+    /// Returns zero as default value if missing
+    /// Adds the value to the cache's inital_values if not present
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        if self.cache.get_class_hash(contract_address).is_none() {
-            let class_hash = match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(class_hash) => class_hash,
-                Err(StateError::NoneContractState(_)) => [0; 32],
-                Err(e) => return Err(e),
-            };
-            self.cache
-                .class_hash_initial_values
-                .insert(contract_address.clone(), class_hash);
+        match self.cache.get_class_hash(contract_address) {
+            Some(class_hash) => Ok(*class_hash),
+            None => {
+                let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
+                self.cache
+                    .class_hash_initial_values
+                    .insert(contract_address.clone(), class_hash);
+                Ok(class_hash)
+            }
         }
-
-        self.cache
-            .get_class_hash(contract_address)
-            .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
-            .cloned()
     }
 
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
@@ -403,6 +389,52 @@ impl<T: StateReader> State for CachedState<T> {
             }
         }
         Ok(contract)
+    }
+}
+
+impl<T: StateReader> CachedState<T> {
+    // Updates the cache's storage_initial_values according to those in storage_writes
+    // If a key is present in the storage_writes but not in storage_initial_values,
+    // the initial value for that key will be fetched from the state_reader and inserted into the cache's storage_initial_values
+    // The same process is applied to class hash and nonce values.
+    fn update_initial_values_of_write_only_accesses(&mut self) -> Result<(), StateError> {
+        // Update storage_initial_values with keys in storage_writes
+        for storage_entry in self.cache.storage_writes.keys() {
+            if !self
+                .cache
+                .storage_initial_values
+                .contains_key(storage_entry)
+            {
+                // This key was first accessed via write, so we need to cache its initial value
+                self.cache.storage_initial_values.insert(
+                    storage_entry.clone(),
+                    self.state_reader.get_storage_at(storage_entry)?,
+                );
+            }
+        }
+        for address in self.cache.class_hash_writes.keys() {
+            if !self.cache.class_hash_initial_values.contains_key(address) {
+                // This key was first accessed via write, so we need to cache its initial value
+                self.cache.class_hash_initial_values.insert(
+                    address.clone(),
+                    self.state_reader.get_class_hash_at(address)?,
+                );
+            }
+        }
+        for contract_address in self.cache.nonce_writes.keys() {
+            if !self
+                .cache
+                .nonce_initial_values
+                .contains_key(contract_address)
+            {
+                // This key was first accessed via write, so we need to cache its initial value
+                self.cache.nonce_initial_values.insert(
+                    contract_address.clone(),
+                    self.state_reader.get_nonce_at(contract_address)?,
+                );
+            }
+        }
+        Ok(())
     }
 }
 
@@ -680,6 +712,7 @@ mod tests {
     #[test]
     fn count_actual_storage_changes_test() {
         let state_reader = InMemoryStateReader::default();
+
         let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         let address_one = Address(1.into());
@@ -691,9 +724,9 @@ mod tests {
             HashMap::from([((address_one.clone(), storage_key_one), Felt252::from(1))]);
         cached_state.cache.storage_writes = HashMap::from([
             ((address_one.clone(), storage_key_one), Felt252::from(1)),
-            ((address_one, storage_key_two), Felt252::from(1)),
+            ((address_one.clone(), storage_key_two), Felt252::from(1)),
             ((address_two.clone(), storage_key_one), Felt252::from(1)),
-            ((address_two, storage_key_two), Felt252::from(1)),
+            ((address_two.clone(), storage_key_two), Felt252::from(1)),
         ]);
 
         let fee_token_address = Address(123.into());
@@ -710,5 +743,16 @@ mod tests {
             .unwrap();
 
         assert_eq!(changes, expected_changes);
+
+        // Check that the initial values were updated when counting changes
+        assert_eq!(
+            cached_state.cache.storage_initial_values,
+            HashMap::from([
+                ((address_one.clone(), storage_key_one), Felt252::from(1)),
+                ((address_one, storage_key_two), Felt252::from(0)),
+                ((address_two.clone(), storage_key_one), Felt252::from(0)),
+                ((address_two, storage_key_two), Felt252::from(0)),
+            ])
+        )
     }
 }

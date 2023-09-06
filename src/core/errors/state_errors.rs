@@ -3,6 +3,7 @@ use crate::{
     state::state_cache::StorageEntry,
     utils::{Address, ClassHash},
 };
+use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -53,4 +54,6 @@ pub enum StateError {
     Io(#[from] std::io::Error),
     #[error("{0:?}")]
     CustomError(String),
+    #[error(transparent)]
+    ByteArray(#[from] FromByteArrayError),
 }
