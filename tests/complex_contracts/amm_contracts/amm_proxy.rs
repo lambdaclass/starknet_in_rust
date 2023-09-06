@@ -91,6 +91,7 @@ fn amm_proxy_init_pool_test() {
         },
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
+        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
         ..Default::default()
     }];
 
@@ -301,7 +302,7 @@ fn amm_proxy_add_demo_token_test() {
         entry_point_selector: Some(amm_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
-        storage_read_values: vec![0.into(), 0.into()],
+        storage_read_values: vec![0.into(), 0.into(), 0.into(), 0.into()],
         execution_resources: ExecutionResources {
             n_steps: 397,
             n_memory_holes: 42,
@@ -558,8 +559,18 @@ fn amm_proxy_swap() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
         retdata: [90.into()].to_vec(),
-        storage_read_values: [100.into(), 1000.into(), 1000.into(), 100.into(), 200.into()]
-            .to_vec(),
+        storage_read_values: [
+            100.into(),
+            1000.into(),
+            1000.into(),
+            100.into(),
+            100.into(),
+            1000.into(),
+            200.into(),
+            200.into(),
+            1000.into(),
+        ]
+        .to_vec(),
         execution_resources: ExecutionResources {
             n_steps: 826,
             n_memory_holes: 92,

@@ -427,7 +427,7 @@ fn expected_validate_call_info(
 fn expected_fee_transfer_call_info(
     block_context: &BlockContext,
     account_address: &Address,
-    actual_fee: u64,
+    actual_fee: u128,
 ) -> CallInfo {
     CallInfo {
         entry_point_type: EntryPointType::External.into(),
@@ -477,6 +477,10 @@ fn expected_fee_transfer_call_info(
         ]),
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
@@ -651,13 +655,17 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
@@ -665,7 +673,7 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
             ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
@@ -709,27 +717,31 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone() - Felt252::from(1252),
+            INITIAL_BALANCE.clone() - Felt252::from(2476),
             Felt252::zero(),
-            Felt252::from(1252),
+            INITIAL_BALANCE.clone() - Felt252::from(2476),
+            Felt252::zero(),
+            Felt252::from(2476),
+            Felt252::zero(),
+            Felt252::from(2476),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
-            [
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ],
-            [
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+            ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
+            ],
+            [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
         ]),
     }
@@ -845,27 +857,32 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ],
-            [
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
             ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+            ],
         ]),
+
         execution_resources: ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
@@ -937,7 +954,7 @@ fn test_declare_tx() {
         ("n_steps".to_string(), 2715),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1029,7 +1046,7 @@ fn test_declarev2_tx() {
         ("n_steps".to_string(), 2715),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 1224),
+        ("l1_gas_usage".to_string(), 2448),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1245,10 +1262,10 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
 
 fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3445),
+        ("n_steps".to_string(), 4135),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 2448),
-        ("range_check_builtin".to_string(), 82),
+        ("l1_gas_usage".to_string(), 3672),
+        ("range_check_builtin".to_string(), 101),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
@@ -1268,17 +1285,17 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3541;
+        n_steps = 4231;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3544;
+        n_steps = 4234;
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
         ("l1_gas_usage".to_string(), 7344),
         ("pedersen_builtin".to_string(), 16),
-        ("range_check_builtin".to_string(), 85),
+        ("range_check_builtin".to_string(), 104),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
@@ -1308,7 +1325,6 @@ fn test_invoke_tx() {
     // transaction.
     let result = invoke_tx.execute(state, block_context, 0).unwrap();
     let expected_execution_info = expected_transaction_execution_info(block_context);
-
     assert_eq!(result, expected_execution_info);
 }
 
@@ -1538,7 +1554,7 @@ fn test_deploy_account() {
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &block_context,
         deploy_account_tx.contract_address(),
-        expected_fee as u64,
+        expected_fee,
     );
 
     let resources = HashMap::from([
@@ -1823,7 +1839,7 @@ fn test_state_for_declare_tx() {
     //     ])
     // );
 
-    let fee = Felt252::from(2476);
+    let fee = Felt252::from(3700);
 
     // Check state.cache
     assert_eq!(

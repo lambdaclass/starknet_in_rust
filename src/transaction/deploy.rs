@@ -126,7 +126,7 @@ impl Deploy {
     }
 
     /// Returns the class hash of the deployed contract
-    pub fn class_hash(&self) -> ClassHash {
+    pub const fn class_hash(&self) -> ClassHash {
         self.contract_hash
     }
 
@@ -183,7 +183,7 @@ impl Deploy {
 
         let resources_manager = ExecutionResourcesManager::default();
 
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
@@ -246,7 +246,7 @@ impl Deploy {
             block_context.validate_max_n_steps,
         )?;
 
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
@@ -357,7 +357,7 @@ mod tests {
             class_hash_bytes
         );
 
-        let storage_key = calculate_sn_keccak("owner".as_bytes());
+        let storage_key = calculate_sn_keccak(b"owner");
 
         assert_eq!(
             state

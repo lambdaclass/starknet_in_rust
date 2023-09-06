@@ -63,7 +63,7 @@ pub fn compute_sierra_class_hash(
     let abi = serde_json_pythonic::to_string_pythonic(
         &contract_class
             .abi
-            .clone()
+            .as_ref()
             .ok_or(ContractAddressError::MissingAbi)?
             .items,
     )

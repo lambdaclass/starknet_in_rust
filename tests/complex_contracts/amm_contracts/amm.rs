@@ -105,6 +105,7 @@ fn amm_init_pool_test() {
         },
         class_hash: Some(class_hash),
         accessed_storage_keys,
+        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
         ..Default::default()
     };
 
@@ -193,7 +194,12 @@ fn amm_add_demo_tokens_test() {
         },
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys_add_demo_token,
-        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
+        storage_read_values: vec![
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
+        ],
         ..Default::default()
     };
 
@@ -368,6 +374,10 @@ fn amm_swap_test() {
             10000.into(),
             100.into(),
             100.into(),
+            10000.into(),
+            100.into(),
+            100.into(),
+            10000.into(),
         ]
         .to_vec(),
         ..Default::default()

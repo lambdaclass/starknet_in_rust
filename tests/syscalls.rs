@@ -192,7 +192,7 @@ fn call_contract_syscall() {
         None,
         [],
         [],
-        [10.into()],
+        [0.into(), 10.into()],
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2u8; 32],
@@ -231,7 +231,7 @@ fn call_contract_syscall() {
                     "1785358123477195475640323002883645042461033713657726545236059599395452130340"
                 )),
                 entry_point_type: Some(EntryPointType::External),
-                storage_read_values: vec![10.into()],
+                storage_read_values: vec![10.into(), 10.into()],
                 accessed_storage_keys: [[
                     3, 189, 169, 58, 108, 116, 165, 116, 249, 48, 17, 133, 28, 149, 186, 141, 157,
                     76, 34, 41, 77, 210, 154, 246, 164, 151, 207, 138, 139, 182, 155, 161,
@@ -687,7 +687,7 @@ fn library_call_syscall() {
         None,
         [],
         [],
-        [11.into()],
+        [0.into(), 11.into()],
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2; 32],
@@ -724,7 +724,7 @@ fn library_call_syscall() {
                     "1785358123477195475640323002883645042461033713657726545236059599395452130340"
                 )),
                 entry_point_type: Some(EntryPointType::External),
-                storage_read_values: vec![10.into()],
+                storage_read_values: vec![10.into(), 10.into()],
                 accessed_storage_keys: [[
                     3, 189, 169, 58, 108, 116, 165, 116, 249, 48, 17, 133, 28, 149, 186, 141, 157,
                     76, 34, 41, 77, 210, 154, 246, 164, 151, 207, 138, 139, 182, 155, 161,
@@ -802,6 +802,7 @@ fn library_call_l1_handler_syscall() {
             ]]
             .into_iter()
             .collect(),
+            storage_read_values: vec![0.into()],
             execution_resources: ExecutionResources {
                 n_steps: 40,
                 ..Default::default()
@@ -1000,7 +1001,7 @@ fn test_deploy_and_call_contract_syscall() {
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![4.into()],
             retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
-            storage_read_values: vec![constructor_constant],
+            storage_read_values: vec![constructor_constant.clone()],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
             execution_resources: ExecutionResources {
                 n_steps: 52,
@@ -1025,7 +1026,7 @@ fn test_deploy_and_call_contract_syscall() {
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![new_constant.clone()],
             retdata: vec![],
-            storage_read_values: vec![],
+            storage_read_values: vec![constructor_constant],
             accessed_storage_keys: HashSet::from([constant_storage_key]),
             execution_resources: ExecutionResources {
                 n_steps: 40,

@@ -28,13 +28,13 @@ pub struct BlockInfo {
     /// Timestamp of the beginning of the last block creation attempt.
     pub block_timestamp: u64,
     /// L1 gas price (in Wei) measured at the beginning of the last block creation attempt.
-    pub gas_price: u64,
+    pub gas_price: u128,
     /// The sequencer address of this block.
     pub sequencer_address: Address,
 }
 
 impl BlockInfo {
-    pub fn empty(sequencer_address: Address) -> Self {
+    pub const fn empty(sequencer_address: Address) -> Self {
         BlockInfo {
             block_number: 0, // To do: In cairo-lang, this value is set to -1
             block_timestamp: 0,
@@ -43,7 +43,7 @@ impl BlockInfo {
         }
     }
 
-    pub fn validate_legal_progress(
+    pub const fn validate_legal_progress(
         &self,
         next_block_info: &BlockInfo,
     ) -> Result<(), TransactionError> {
@@ -88,10 +88,11 @@ impl ExecutionResourcesManager {
         }
     }
 
-    pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) -> Option<()> {
-        self.syscall_counter
-            .get_mut(syscall_name)
-            .map(|val| *val += amount)
+    pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) {
+        *self
+            .syscall_counter
+            .entry(syscall_name.to_string())
+            .or_default() += amount
     }
 
     pub fn get_syscall_counter(&self, syscall_name: &str) -> Option<u64> {
@@ -101,7 +102,7 @@ impl ExecutionResourcesManager {
     }
 }
 
-#[derive(Default, Clone, PartialEq, Debug, Getters)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, Getters)]
 #[getset(get = "pub")]
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
@@ -111,7 +112,7 @@ pub struct StateDiff {
 }
 
 impl StateDiff {
-    pub fn new(
+    pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
         class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
@@ -302,9 +303,7 @@ mod test {
             Default::default(),
         );
 
-        execution_resources_manager
-            .increment_syscall_counter("syscall1", 1)
-            .unwrap();
+        execution_resources_manager.increment_syscall_counter("syscall1", 1);
 
         assert_eq!(
             execution_resources_manager.get_syscall_counter("syscall1"),
@@ -313,6 +312,18 @@ mod test {
         assert_eq!(
             execution_resources_manager.get_syscall_counter("syscall2"),
             Some(0)
+        );
+    }
+
+    #[test]
+    fn execution_resources_manager_should_add_syscall_if_not_present() {
+        let mut execution_resources_manager = super::ExecutionResourcesManager::default();
+
+        execution_resources_manager.increment_syscall_counter("syscall1", 1);
+
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall1"),
+            Some(1)
         );
     }
 

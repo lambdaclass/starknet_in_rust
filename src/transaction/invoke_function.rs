@@ -2,7 +2,7 @@ use super::{fee::charge_fee, Transaction};
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        block_context::BlockContext,
+        block_context::{BlockContext, StarknetChainId},
         constants::{
             EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
         },
@@ -120,6 +120,17 @@ impl InvokeFunction {
             skip_fee_transfer: false,
             skip_nonce_check: false,
         })
+    }
+
+    /// Creates a `InvokeFunction` from a starknet api `InvokeTransaction`.
+    pub fn from_invoke_transaction(
+        tx: starknet_api::transaction::InvokeTransaction,
+        chain_id: StarknetChainId,
+    ) -> Result<Self, TransactionError> {
+        match tx {
+            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, chain_id),
+            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, chain_id),
+        }
     }
 
     fn get_execution_context(
@@ -247,7 +258,10 @@ impl InvokeFunction {
                 remaining_gas,
             )?
         };
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(Some((
+            &block_context.starknet_os_config.fee_token_address,
+            &self.contract_address,
+        )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &vec![call_info.clone(), validate_info.clone()],
@@ -405,15 +419,14 @@ pub(crate) fn preprocess_invoke_function_fields(
 
 fn convert_invoke_v0(
     value: starknet_api::transaction::InvokeTransactionV0,
+    chain_id: StarknetChainId,
 ) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(
         value.contract_address.0.key().bytes(),
     ));
     let max_fee = value.max_fee.0;
     let entry_point_selector = Felt252::from_bytes_be(value.entry_point_selector.0.bytes());
-    let version = Felt252::zero();
     let nonce = None;
-    let chain_id = Felt252::zero();
 
     let signature = value
         .signature
@@ -433,22 +446,21 @@ fn convert_invoke_v0(
         contract_address,
         entry_point_selector,
         max_fee,
-        version,
+        Felt252::new(0),
         calldata,
         signature,
-        chain_id,
+        chain_id.to_felt(),
         nonce,
     )
 }
 
 fn convert_invoke_v1(
     value: starknet_api::transaction::InvokeTransactionV1,
+    chain_id: StarknetChainId,
 ) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
     let max_fee = value.max_fee.0;
-    let version = Felt252::one();
     let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-    let chain_id = Felt252::zero();
     let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
 
     let signature = value
@@ -469,25 +481,12 @@ fn convert_invoke_v1(
         contract_address,
         entry_point_selector,
         max_fee,
-        version,
+        Felt252::new(1),
         calldata,
         signature,
-        chain_id,
+        chain_id.to_felt(),
         Some(nonce),
     )
-}
-
-impl TryFrom<starknet_api::transaction::InvokeTransaction> for InvokeFunction {
-    type Error = TransactionError;
-
-    fn try_from(
-        value: starknet_api::transaction::InvokeTransaction,
-    ) -> Result<Self, TransactionError> {
-        match value {
-            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0),
-            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -1179,9 +1178,7 @@ mod tests {
     fn test_reverted_transaction_wrong_entry_point() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_bytes_be(&calculate_sn_keccak(
-                "factorial_".as_bytes(),
-            )),
+            entry_point_selector: Felt252::from_bytes_be(&calculate_sn_keccak(b"factorial_")),
             entry_point_type: EntryPointType::External,
             calldata: vec![],
             tx_type: TransactionType::InvokeFunction,

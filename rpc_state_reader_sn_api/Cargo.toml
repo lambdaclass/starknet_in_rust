@@ -22,3 +22,4 @@ serde_with = "3.0.0"
 dotenv = "0.15.0"
 cairo-vm = "0.8.5"
 blockifier = "0.2.0-rc0"
+starknet_in_rust = { path = "../", version = "0.3.1" }

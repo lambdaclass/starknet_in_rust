@@ -304,7 +304,7 @@ mod test {
             &block_context,
         )
         .unwrap();
-        assert_eq!(estimated_fee[0], (2483, 2448));
+        assert_eq!(estimated_fee[0], (3707, 3672));
     }
 
     #[test]
@@ -407,7 +407,7 @@ mod test {
             &block_context,
         )
         .unwrap();
-        assert_eq!(estimated_fee, (19708, 19695));
+        assert_eq!(estimated_fee, (19709, 19695));
     }
 
     #[test]
@@ -1081,7 +1081,7 @@ mod test {
                 block_context
             )
             .unwrap(),
-            [(0, 3672), (0, 2448)]
+            [(0, 3672), (0, 3672)]
         );
     }
 

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 ///
 /// This implementation is used for testing and debugging.
 /// It uses HashMaps to store the data.
-#[derive(Debug, MutGetters, Getters, PartialEq, Clone, Default)]
+#[derive(Debug, MutGetters, Getters, PartialEq, Eq, Clone, Default)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_class_hash: HashMap<Address, ClassHash>,
@@ -39,7 +39,7 @@ impl InMemoryStateReader {
     /// - `class_hash_to_contract_class` - A HashMap from class hashes to their contract classes.
     /// - `casm_contract_classes` - A [CasmClassCache].
     /// - `class_hash_to_compiled_class_hash` - A HashMap from class hashes to their compiled class hashes.
-    pub fn new(
+    pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
         address_to_storage: HashMap<StorageEntry, Felt252>,
@@ -97,11 +97,11 @@ impl StateReader for InMemoryStateReader {
     }
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        let storage = self
+        Ok(self
             .address_to_storage
             .get(storage_entry)
-            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()));
-        storage.cloned()
+            .cloned()
+            .unwrap_or_default())
     }
 
     fn get_compiled_class_hash(
@@ -132,9 +132,20 @@ impl StateReader for InMemoryStateReader {
 
 #[cfg(test)]
 mod tests {
+    use num_traits::One;
+
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use std::sync::Arc;
+
+    #[test]
+    fn get_storage_returns_zero_if_missing() {
+        let state_reader = InMemoryStateReader::default();
+        assert!(state_reader
+            .get_storage_at(&(Address(Felt252::one()), Felt252::one().to_be_bytes()))
+            .unwrap()
+            .is_zero())
+    }
 
     #[test]
     fn get_contract_state_test() {
