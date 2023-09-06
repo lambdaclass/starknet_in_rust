@@ -60,6 +60,12 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
             contract_class_cache_private: RefCell::new(HashMap::new()),
         }
     }
+
+    pub fn drain_private_contract_class_cache(
+        &self,
+    ) -> impl Iterator<Item = (ClassHash, CompiledClass)> {
+        self.contract_class_cache_private.take().into_iter()
+    }
 }
 
 impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
