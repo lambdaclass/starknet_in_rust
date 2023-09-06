@@ -1135,10 +1135,8 @@ mod starknet_in_rust_transaction_tests {
 
         fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
             let address = ContractAddress(
-                PatriciaKey::try_from(
-                    StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
-                )
-                .unwrap(),
+                PatriciaKey::try_from(StarkHash::new(contract_address.0.to_be_bytes()).unwrap())
+                    .unwrap(),
             );
             let mut bytes = [0u8; 32];
             bytes.copy_from_slice(self.0.get_class_hash_at(&address).0.bytes());
@@ -1148,7 +1146,7 @@ mod starknet_in_rust_transaction_tests {
         fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
             let address = ContractAddress(
                 PatriciaKey::try_from(
-                    StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
+                    StarkHash::new(contract_address.0.to_be_bytes()).unwrap(),
                 )
                 .unwrap(),
             );
@@ -1159,7 +1157,7 @@ mod starknet_in_rust_transaction_tests {
             let (contract_address, key) = storage_entry;
             let address = ContractAddress(
                 PatriciaKey::try_from(
-                    StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
+                    StarkHash::new(contract_address.0.to_be_bytes()).unwrap(),
                 )
                 .unwrap(),
             );

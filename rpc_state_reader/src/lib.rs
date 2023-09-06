@@ -18,17 +18,12 @@ use thiserror::Error;
 
 #[cfg(test)]
 use {
-    starknet_in_rust::transaction::{Declare, Deploy, DeployAccount},
-    std::sync::Arc,
-};
-
-#[cfg(test)]
-use ::{
     cairo_vm::felt::felt_str,
     starknet_in_rust::{
         definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR,
-        transaction::{InvokeFunction, Transaction},
+        transaction::{Declare, Deploy, DeployAccount, InvokeFunction, Transaction},
     },
+    std::sync::Arc,
 };
 
 /// Starknet chains supported in Infura.
