@@ -169,7 +169,6 @@ impl serde_json::ser::Formatter for PythonDefaultFormatter {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
-
 pub struct CairoContractDefinition<'a> {
     /// Contract ABI, which has no schema definition.
     pub abi: serde_json::Value,
@@ -257,7 +256,7 @@ pub(crate) fn compute_hinted_class_hash(
                 None => {}
             }
             // We don't know what this type is supposed to be, but if its missing it is null.
-            if let Some(serde_json::Value::Null) = vals.get_mut("flow_tracking_data") {
+            if vals.get("flow_tracking_data") == Some(&serde_json::Value::Null) {
                 vals.remove("flow_tracking_data");
             }
 

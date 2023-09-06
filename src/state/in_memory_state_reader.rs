@@ -1,26 +1,22 @@
 use super::cached_state::SierraContractClass;
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::{CasmClassCache, UNINITIALIZED_CLASS_HASH},
-        state_api::StateReader,
-        state_cache::StorageEntry,
+        cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader, state_cache::StorageEntry,
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 /// A [StateReader] that holds all the data in memory.
 ///
 /// This implementation is used for testing and debugging.
 /// It uses HashMaps to store the data.
-#[derive(Debug, MutGetters, Getters, PartialEq, Clone, Default)]
+#[derive(Debug, MutGetters, Getters, PartialEq, Eq, Clone, Default)]
 pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_class_hash: HashMap<Address, ClassHash>,
@@ -29,9 +25,7 @@ pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_storage: HashMap<StorageEntry, Felt252>,
     #[getset(get_mut = "pub")]
-    pub class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
-    #[getset(get_mut = "pub")]
-    pub(crate) casm_contract_classes: CasmClassCache,
+    pub class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
     #[getset(get_mut = "pub")]
     pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
     #[getset(get_mut = "pub")]
@@ -48,12 +42,11 @@ impl InMemoryStateReader {
     /// - `class_hash_to_contract_class` - A HashMap from class hashes to their contract classes.
     /// - `casm_contract_classes` - A [CasmClassCache].
     /// - `class_hash_to_compiled_class_hash` - A HashMap from class hashes to their compiled class hashes.
-    pub fn new(
+    pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
         address_to_storage: HashMap<StorageEntry, Felt252>,
-        class_hash_to_contract_class: HashMap<ClassHash, ContractClass>,
-        casm_contract_classes: CasmClassCache,
+        class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
         class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
         sierra_programs: HashMap<ClassHash, SierraContractClass>,
     ) -> Self {
@@ -61,8 +54,7 @@ impl InMemoryStateReader {
             address_to_class_hash,
             address_to_nonce,
             address_to_storage,
-            class_hash_to_contract_class,
-            casm_contract_classes,
+            class_hash_to_compiled_class,
             class_hash_to_compiled_class_hash,
             sierra_programs,
         }
@@ -84,13 +76,10 @@ impl InMemoryStateReader {
         &self,
         compiled_class_hash: &CompiledClassHash,
     ) -> Result<CompiledClass, StateError> {
-        if let Some(compiled_class) = self.casm_contract_classes.get(compiled_class_hash) {
-            return Ok(CompiledClass::Casm(Arc::new(compiled_class.clone())));
+        match self.class_hash_to_compiled_class.get(compiled_class_hash) {
+            Some(compiled_class) => Ok(compiled_class.clone()),
+            None => Err(StateError::NoneCompiledClass(*compiled_class_hash)),
         }
-        if let Some(compiled_class) = self.class_hash_to_contract_class.get(compiled_class_hash) {
-            return Ok(CompiledClass::Deprecated(Arc::new(compiled_class.clone())));
-        }
-        Err(StateError::NoneCompiledClass(*compiled_class_hash))
     }
 }
 
@@ -132,9 +121,10 @@ impl StateReader for InMemoryStateReader {
 
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // Deprecated contract classes dont have a compiled_class_hash, we dont need to fetch it
-        if let Some(compiled_class) = self.class_hash_to_contract_class.get(class_hash) {
-            return Ok(CompiledClass::Deprecated(Arc::new(compiled_class.clone())));
+        if let Some(compiled_class) = self.class_hash_to_compiled_class.get(class_hash) {
+            return Ok(compiled_class.clone());
         }
+
         let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
         if compiled_class_hash != *UNINITIALIZED_CLASS_HASH {
             let compiled_class = self.get_compiled_class(&compiled_class_hash)?;
@@ -158,11 +148,12 @@ impl StateReader for InMemoryStateReader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
+    use std::sync::Arc;
 
     #[test]
     fn get_contract_state_test() {
         let mut state_reader = InMemoryStateReader::new(
-            HashMap::new(),
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
@@ -207,7 +198,6 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             HashMap::new(),
-            HashMap::new(),
         );
 
         let contract_class_key = [0; 32];
@@ -215,9 +205,10 @@ mod tests {
             ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
                 .unwrap();
 
-        state_reader
-            .class_hash_to_contract_class
-            .insert([0; 32], contract_class.clone());
+        state_reader.class_hash_to_compiled_class.insert(
+            [0; 32],
+            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+        );
         assert_eq!(
             state_reader
                 .get_contract_class(&contract_class_key)

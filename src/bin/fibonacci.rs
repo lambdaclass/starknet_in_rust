@@ -5,9 +5,13 @@ use num_traits::Zero;
 
 use lazy_static::lazy_static;
 use starknet_in_rust::{
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
-    testing::state::StarknetState, utils::Address,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::cached_state::CachedState,
+    state::in_memory_state_reader::InMemoryStateReader,
+    testing::state::StarknetState,
+    utils::Address,
 };
 
 #[cfg(feature = "with_mimalloc")]
@@ -68,23 +72,28 @@ fn main() {
 }
 
 fn create_initial_state() -> CachedState<InMemoryStateReader> {
-    CachedState::new({
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(CONTRACT_ADDRESS.clone(), *CONTRACT_CLASS_HASH);
+    let cached_state = CachedState::new(
+        {
+            let mut state_reader = InMemoryStateReader::default();
+            state_reader
+                .address_to_class_hash_mut()
+                .insert(CONTRACT_ADDRESS.clone(), *CONTRACT_CLASS_HASH);
 
-        state_reader
-            .address_to_nonce_mut()
-            .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
-        state_reader
-            .class_hash_to_contract_class_mut()
-            .insert(*CONTRACT_CLASS_HASH, CONTRACT_CLASS.clone());
+            state_reader
+                .address_to_nonce_mut()
+                .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+            state_reader.class_hash_to_compiled_class_mut().insert(
+                *CONTRACT_CLASS_HASH,
+                CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+            );
 
-        state_reader
-            .address_to_storage_mut()
-            .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
-        Arc::new(state_reader)
-    })
-    .set_contract_classes_cache(HashMap::new())
+            state_reader
+                .address_to_storage_mut()
+                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
+            Arc::new(state_reader)
+        },
+        HashMap::new(),
+    );
+
+    cached_state
 }

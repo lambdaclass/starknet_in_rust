@@ -5,6 +5,7 @@ use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
@@ -26,6 +27,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::sync::Arc;
 
 /// Represents a declare transaction in the starknet network.
 /// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
@@ -318,7 +320,10 @@ impl DeclareV2 {
             (info, gas)
         };
 
-        let storage_changes = state.count_actual_storage_changes();
+        let storage_changes = state.count_actual_storage_changes(Some((
+            &block_context.starknet_os_config.fee_token_address,
+            &self.sender_address,
+        )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[execution_result.call_info.clone()],
@@ -372,8 +377,14 @@ impl DeclareV2 {
             ));
         }
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
-        state.set_compiled_class(&self.compiled_class_hash, casm_class)?;
-        state.set_sierra_program(&self.sierra_class_hash, self.sierra_contract_class.clone())?;
+        state.set_contract_class(
+            &self.compiled_class_hash.to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(casm_class)),
+        )?;
+        state.set_sierra_program(
+            &self.sierra_class_hash,
+            self.sierra_contract_class.clone(),
+        )?;
 
         Ok(())
     }
@@ -511,8 +522,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader)
-            .set_casm_classes_cache(casm_contract_class_cache)
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache)
             .set_sierra_programs_cache(HashMap::new());
 
         // call compile and store
@@ -582,8 +592,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader)
-            .set_casm_classes_cache(casm_contract_class_cache)
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache)
             .set_sierra_programs_cache(HashMap::new());
 
         // call compile and store
@@ -655,8 +664,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader)
-            .set_casm_classes_cache(casm_contract_class_cache)
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache)
             .set_sierra_programs_cache(HashMap::new());
 
         // call compile and store
@@ -726,8 +734,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader)
-            .set_casm_classes_cache(casm_contract_class_cache)
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache)
             .set_sierra_programs_cache(HashMap::new());
 
         // call compile and store
@@ -798,8 +805,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader)
-            .set_casm_classes_cache(casm_contract_class_cache)
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache)
             .set_sierra_programs_cache(HashMap::new());
 
         let expected_err = format!(
