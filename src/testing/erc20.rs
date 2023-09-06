@@ -58,7 +58,6 @@ fn test_erc20_cairo2() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
-    let compiled_class_hash: ClassHash = [3; 32];
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -149,10 +148,7 @@ fn test_erc20_cairo2() {
         )
         .unwrap();
     state
-        .set_compiled_class_hash(
-            &felt_str!("1"),
-            &Felt252::from_bytes_be(&compiled_class_hash),
-        )
+        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash))
         .unwrap();
 
     let contract_address_salt =
@@ -197,10 +193,7 @@ fn test_erc20_cairo2() {
         )
         .unwrap();
     state
-        .set_compiled_class_hash(
-            &felt_str!("1"),
-            &Felt252::from_bytes_be(&compiled_class_hash),
-        )
+        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash))
         .unwrap();
 
     let contract_address_salt = felt_str!("123123123123123");

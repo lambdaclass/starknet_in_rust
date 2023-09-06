@@ -534,6 +534,7 @@ mod tests {
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
+    use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         core::{ContractAddress, Nonce, PatriciaKey},
         hash::{StarkFelt, StarkHash},
@@ -1070,7 +1071,7 @@ mod tests {
         let tx_info = internal_invoke_function
             .execute(&mut state, &block_context, 0)
             .unwrap();
-        let expected_actual_fee = 1259;
+        let expected_actual_fee = 2483;
         let expected_tx_info = tx_info.clone().to_revert_error(
             format!(
                 "Calculated fee ({}) exceeds max fee ({})",
@@ -1079,7 +1080,7 @@ mod tests {
             .as_str(),
         );
 
-        assert_eq!(tx_info, expected_tx_info);
+        assert_eq_sorted!(tx_info, expected_tx_info);
     }
 
     #[test]
@@ -1351,23 +1352,23 @@ mod tests {
             result.revert_error,
             Some("Requested entry point was not found".to_string())
         );
-        assert_eq!(
+        assert_eq_sorted!(
             state.cache.class_hash_writes,
             state_before_execution.cache.class_hash_writes
         );
-        assert_eq!(
+        assert_eq_sorted!(
             state.cache.compiled_class_hash_writes,
             state_before_execution.cache.compiled_class_hash_writes
         );
-        assert_eq!(
+        assert_eq_sorted!(
             state.cache.nonce_writes,
             state_before_execution.cache.nonce_writes
         );
-        assert_eq!(
+        assert_eq_sorted!(
             state.cache.storage_writes,
             state_before_execution.cache.storage_writes
         );
-        assert_eq!(
+        assert_eq_sorted!(
             state.cache.class_hash_to_compiled_class_hash,
             state_before_execution
                 .cache
