@@ -213,7 +213,7 @@ impl StarknetState {
 
     pub fn execute_tx(
         &mut self,
-        tx: &mut Transaction,
+        tx: &Transaction,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, StarknetStateError> {
         let tx = tx.execute(&mut self.state, &self.block_context, remaining_gas)?;

@@ -98,7 +98,7 @@ CAIRO_2_COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.ca
 CAIRO_2_COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm, $(CAIRO_2_COMPILED_SIERRA_CONTRACTS))
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo
-	$(STARKNET_COMPILE_CAIRO_2) --single-file $< $@
+	$(STARKNET_COMPILE_CAIRO_2) --single-file $< $@ --replace-ids
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 	$(STARKNET_SIERRA_COMPILE_CAIRO_2) --add-pythonic-hints $< $@
@@ -147,6 +147,8 @@ check: compile-cairo compile-starknet
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
+	pyenv install -s pypy3.9-7.3.9
+	pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest --version 0.9.49
@@ -187,6 +189,9 @@ test-cairo-1:
 
 test-cairo-2:
 	cargo nextest run --workspace --all-targets
+
+test-cairo-native:
+	cargo nextest run --workspace --test cairo_native --features=cairo-native
 
 test-doctests:
 	cargo test --workspace --doc

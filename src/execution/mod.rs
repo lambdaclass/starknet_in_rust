@@ -42,14 +42,14 @@ pub struct CallInfo {
     pub entry_point_selector: Option<Felt252>,
     pub entry_point_type: Option<EntryPointType>,
     pub calldata: Vec<Felt252>,
-    pub retdata: Vec<Felt252>,                           // Chequear
-    pub execution_resources: Option<ExecutionResources>, // No
-    pub events: Vec<OrderedEvent>,                       // Chequear
-    pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,    // Mismo que events
-    pub storage_read_values: Vec<Felt252>,               // Mismo que arriba
-    pub accessed_storage_keys: HashSet<ClassHash>,       // Mismo
-    pub internal_calls: Vec<CallInfo>,                   // Chequear
-    pub gas_consumed: u128,                              // Chequear
+    pub retdata: Vec<Felt252>,
+    pub execution_resources: Option<ExecutionResources>,
+    pub events: Vec<OrderedEvent>,
+    pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub storage_read_values: Vec<Felt252>,
+    pub accessed_storage_keys: HashSet<ClassHash>,
+    pub internal_calls: Vec<CallInfo>,
+    pub gas_consumed: u128,
     pub failure_flag: bool,
 }
 

@@ -875,7 +875,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
 
     fn send_message_to_l1(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         request: SendMessageToL1Request,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {

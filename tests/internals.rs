@@ -470,6 +470,10 @@ fn expected_fee_transfer_call_info(
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
         ],
@@ -639,13 +643,17 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
@@ -653,7 +661,7 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
             ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
@@ -699,10 +707,18 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone() - Felt252::from(2476),
             Felt252::zero(),
+            INITIAL_BALANCE.clone() - Felt252::from(2476),
+            Felt252::zero(),
+            Felt252::from(2476),
+            Felt252::zero(),
             Felt252::from(2476),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
+            [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
+            ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
@@ -714,10 +730,6 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ],
-            [
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
         ]),
     }
@@ -833,27 +845,32 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ],
-            [
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
             ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+            ],
         ]),
+
         execution_resources: Some(ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
@@ -1288,7 +1305,6 @@ fn test_invoke_tx() {
     // transaction.
     let result = invoke_tx.execute(state, block_context, 0).unwrap();
     let expected_execution_info = expected_transaction_execution_info(block_context);
-
     assert_eq!(result, expected_execution_info);
 }
 
@@ -1594,8 +1610,7 @@ fn expected_deploy_account_states() -> (
         )),
         HashMap::new(),
     )
-    .set_contract_classes_cache(ContractClassCache::new())
-    .set_casm_classes_cache(HashMap::new());
+    .set_contract_classes_cache(HashMap::new());
     state_before.set_storage_at(
         &(
             Address(0x1001.into()),
