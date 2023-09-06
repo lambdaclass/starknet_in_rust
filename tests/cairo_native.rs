@@ -1,24 +1,14 @@
-#![cfg(not(feature = "cairo_1_tests"))]
+#![cfg(all(feature = "cairo-native", not(feature = "cairo_1_tests")))]
 
-#[cfg(feature = "cairo-native")]
 use crate::CallType::Call;
-#[cfg(feature = "cairo-native")]
 use cairo_vm::felt::Felt252;
-#[cfg(feature = "cairo-native")]
 use num_bigint::BigUint;
-#[cfg(feature = "cairo-native")]
 use num_traits::Zero;
-#[cfg(feature = "cairo-native")]
 use starknet_in_rust::definitions::block_context::BlockContext;
-#[cfg(feature = "cairo-native")]
 use starknet_in_rust::execution::{Event, OrderedEvent};
-#[cfg(feature = "cairo-native")]
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
-#[cfg(feature = "cairo-native")]
 use starknet_in_rust::CasmContractClass;
-#[cfg(feature = "cairo-native")]
 use starknet_in_rust::EntryPointType::{self, External};
-#[cfg(feature = "cairo-native")]
 use starknet_in_rust::{
     definitions::constants::TRANSACTION_VERSION,
     execution::{
@@ -28,15 +18,11 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
-#[cfg(feature = "cairo-native")]
 use std::collections::HashMap;
-#[cfg(feature = "cairo-native")]
 use std::collections::HashSet;
-#[cfg(feature = "cairo-native")]
 use std::sync::Arc;
 
 #[test]
-#[cfg(feature = "cairo-native")]
 fn integration_test_erc20() {
     let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
@@ -497,7 +483,6 @@ fn integration_test_erc20() {
 }
 
 #[test]
-#[cfg(feature = "cairo-native")]
 fn call_contract_test() {
     // Caller contract
     let caller_contract_class: cairo_lang_starknet::contract_class::ContractClass =
@@ -583,7 +568,6 @@ fn call_contract_test() {
 }
 
 #[test]
-#[cfg(feature = "cairo-native")]
 fn call_echo_contract_test() {
     // Caller contract
     let caller_contract_class: cairo_lang_starknet::contract_class::ContractClass =
@@ -794,7 +778,6 @@ fn call_events_contract_test() {
     assert_eq!(sorted_events, vec![event]);
 }
 
-#[cfg(feature = "cairo-native")]
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,
