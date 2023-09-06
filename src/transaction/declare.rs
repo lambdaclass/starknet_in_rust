@@ -438,7 +438,7 @@ mod tests {
 
         let actual_resources = HashMap::from([
             ("n_steps".to_string(), 2715),
-            ("l1_gas_usage".to_string(), 2448),
+            ("l1_gas_usage".to_string(), 1224),
             ("range_check_builtin".to_string(), 63),
             ("pedersen_builtin".to_string(), 15),
         ]);

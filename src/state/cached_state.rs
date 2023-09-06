@@ -253,32 +253,28 @@ impl<T: StateReader> State for CachedState<T> {
             self.cache.storage_initial_values.clone(),
         );
 
-        let n_modified_contracts = {
-            let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
+        let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
 
-            let class_hash_updates: Vec<_> = subtract_mappings(
-                self.cache.class_hash_writes.clone(),
-                self.cache.class_hash_initial_values.clone(),
-            )
-            .keys()
-            .cloned()
-            .collect();
+        let class_hash_updates: Vec<_> = subtract_mappings(
+            self.cache.class_hash_writes.clone(),
+            self.cache.class_hash_initial_values.clone(),
+        )
+        .keys()
+        .cloned()
+        .collect();
 
-            let nonce_updates: Vec<_> = subtract_mappings(
-                self.cache.nonce_writes.clone(),
-                self.cache.nonce_initial_values.clone(),
-            )
-            .keys()
-            .cloned()
-            .collect();
+        let nonce_updates: Vec<_> = subtract_mappings(
+            self.cache.nonce_writes.clone(),
+            self.cache.nonce_initial_values.clone(),
+        )
+        .keys()
+        .cloned()
+        .collect();
 
-            let mut modified_contracts: HashSet<Address> = HashSet::new();
-            modified_contracts.extend(storage_unique_updates);
-            modified_contracts.extend(class_hash_updates);
-            modified_contracts.extend(nonce_updates);
-
-            modified_contracts.len()
-        };
+        let mut modified_contracts: HashSet<Address> = HashSet::new();
+        modified_contracts.extend(storage_unique_updates);
+        modified_contracts.extend(class_hash_updates);
+        modified_contracts.extend(nonce_updates);
 
         // Add fee transfer storage update before actually charging it, as it needs to be included in the
         // calculation of the final fee.
@@ -288,9 +284,10 @@ impl<T: StateReader> State for CachedState<T> {
                 (fee_token_address.clone(), sender_low_key),
                 Felt252::default(),
             );
+            modified_contracts.remove(fee_token_address);
         }
 
-        Ok((n_modified_contracts, storage_updates.len()))
+        Ok((modified_contracts.len(), storage_updates.len()))
     }
 
     /// Returns the class hash for a given contract address.
