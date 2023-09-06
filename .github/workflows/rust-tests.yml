@@ -32,7 +32,7 @@ jobs:
           compile-cairo-2-sierra,
         ]
     name: Build Cairo programs
-    runs-on: ubuntu-22.04
+    runs-on: debian-12
     env:
       MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
@@ -49,17 +49,17 @@ jobs:
         key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         restore-keys: ${{ matrix.program-target }}-cache-
 
-    # This is not pretty, but we need `make` to see the compiled programs are
-    # actually newer than the sources, otherwise it will try to rebuild them
-    - name: Restore timestamps
-      uses: chetan/git-restore-mtime-action@v1
-
     - name: Python3 Build
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
         cache: 'pip'
+
+    # This is not pretty, but we need `make` to see the compiled programs are
+    # actually newer than the sources, otherwise it will try to rebuild them
+    - name: Restore timestamps
+      uses: chetan/git-restore-mtime-action@v1
 
     - name: Install deps
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
@@ -73,7 +73,7 @@ jobs:
   # TODO: remove this cache once the workflow finishes
   merge-caches:
     name: Merge Cairo programs cache
-    runs-on: ubuntu-22.04
+    runs-on: debian-12
     needs: build-programs
     steps:
     - name: Checkout
@@ -138,7 +138,7 @@ jobs:
   build:
     name: Build with release profile
     needs: merge-caches
-    runs-on: ubuntu-22.04
+    runs-on: debian-12
     env:
       MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
@@ -173,7 +173,7 @@ jobs:
   lint:
     name: Lint with fmt and clippy
     needs: merge-caches
-    runs-on: ubuntu-22.04
+    runs-on: debian-12
     env:
       MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
@@ -217,7 +217,7 @@ jobs:
         target: [ test-cairo-1, test-cairo-2, test-doctests ]
     name: Run tests
     needs: merge-caches
-    runs-on: ubuntu-22.04
+    runs-on: debian-12
     steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -258,7 +258,7 @@ jobs:
   coverage:
     needs: merge-caches
     name: Generate and upload coverage report
-    runs-on: ubuntu-22.04
+    runs-on: debian-12
     env:
       MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
     steps:
