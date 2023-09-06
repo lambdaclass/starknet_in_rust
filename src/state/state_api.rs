@@ -6,7 +6,6 @@ use crate::{
     utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_vm::felt::Felt252;
-use starknet::core::types::FromByteArrayError;
 
 pub trait StateReader {
     /// Returns the contract class of the given class hash or compiled class hash.
@@ -60,7 +59,7 @@ pub trait State {
     fn count_actual_storage_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<(usize, usize), FromByteArrayError>;
+    ) -> Result<(usize, usize), StateError>;
 
     /// Returns the class hash of the contract class at the given address.
     /// Returns zero by default if the value is not present
