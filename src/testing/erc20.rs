@@ -58,6 +58,7 @@ fn test_erc20_cairo2() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
+    let compiled_class_hash: ClassHash = [3; 32];
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -147,6 +148,12 @@ fn test_erc20_cairo2() {
             &CompiledClass::Casm(Arc::new(contract_class_account)),
         )
         .unwrap();
+    state
+        .set_compiled_class_hash(
+            &felt_str!("1"),
+            &Felt252::from_bytes_be(&compiled_class_hash),
+        )
+        .unwrap();
 
     let contract_address_salt =
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
@@ -172,9 +179,9 @@ fn test_erc20_cairo2() {
 
     let account_address_1 = internal_deploy_account
         .execute(&mut state, &Default::default())
-        .unwrap()
+        .expect("failed to execute internal_deploy_account")
         .validate_info
-        .unwrap()
+        .expect("validate_info missing")
         .contract_address;
 
     // ACCOUNT 2
@@ -187,6 +194,12 @@ fn test_erc20_cairo2() {
         .set_contract_class(
             &felt_str!("1").to_be_bytes(),
             &CompiledClass::Casm(Arc::new(contract_class_account)),
+        )
+        .unwrap();
+    state
+        .set_compiled_class_hash(
+            &felt_str!("1"),
+            &Felt252::from_bytes_be(&compiled_class_hash),
         )
         .unwrap();
 

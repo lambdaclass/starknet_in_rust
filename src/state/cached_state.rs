@@ -127,19 +127,13 @@ impl<T: StateReader> StateReader for CachedState<T> {
     // TODO: check if that the proper way to store it (converting hash to address)
     /// Returned the compiled class hash for a given class hash.
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
-        if self
-            .cache
-            .class_hash_to_compiled_class_hash
-            .get(class_hash)
-            .is_none()
+        if let Some(compiled_class_hash) =
+            self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            return self.state_reader.get_compiled_class_hash(class_hash);
+            Ok(*compiled_class_hash)
+        } else {
+            self.state_reader.get_compiled_class_hash(class_hash)
         }
-        self.cache
-            .class_hash_to_compiled_class_hash
-            .get(class_hash)
-            .ok_or_else(|| StateError::NoneCompiledClass(*class_hash))
-            .cloned()
     }
 
     /// Returns the contract class for a given class hash.
@@ -370,10 +364,8 @@ impl<T: StateReader> State for CachedState<T> {
         if let Some(hash) = hash {
             Ok(*hash)
         } else {
-            dbg!("prev deploy");
-            dbg!(&std::any::type_name::<Self>());
             let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
-            let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
+            let address = Address(Felt252::from_bytes_be(class_hash));
             self.cache
                 .class_hash_initial_values
                 .insert(address, compiled_class_hash);
@@ -564,19 +556,13 @@ impl<'a, T: StateReader> StateReader for TransactionalCachedStateReader<'a, T> {
 
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
-        if self
-            .cache
-            .class_hash_to_compiled_class_hash
-            .get(class_hash)
-            .is_none()
+        if let Some(compiled_class_hash) =
+            self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            return self.state_reader.get_compiled_class_hash(class_hash);
+            Ok(*compiled_class_hash)
+        } else {
+            self.state_reader.get_compiled_class_hash(class_hash)
         }
-        self.cache
-            .class_hash_to_compiled_class_hash
-            .get(class_hash)
-            .ok_or_else(|| StateError::NoneCompiledClass(*class_hash))
-            .cloned()
     }
 
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
