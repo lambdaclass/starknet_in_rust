@@ -173,8 +173,8 @@ pub fn execute_tx(
 #[test]
 fn test_get_transaction_try_from() {
     let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
-    let str_hash = "0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91";
-    let tx_hash = TransactionHash(stark_felt!(str_hash));
+    let str_hash = stark_felt!("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91");
+    let tx_hash = TransactionHash(str_hash);
 
     let sn_tx = rpc_state.get_transaction(&tx_hash);
     match &sn_tx {
@@ -182,7 +182,7 @@ fn test_get_transaction_try_from() {
             let tx =
                 InvokeFunction::from_invoke_transaction(sn_tx.clone(), StarknetChainId::MainNet)
                     .unwrap();
-            assert_eq!(format!("0x{}", tx.hash_value().to_str_radix(16)), str_hash)
+            assert_eq!(tx.hash_value().to_be_bytes().as_slice(), str_hash.bytes())
         }
         _ => unimplemented!(),
     };
@@ -270,17 +270,13 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         "internal calls length mismatch"
     );
 
-    let diff = receipt.actual_fee.abs_diff(actual_fee);
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
 
-    if diff > 0 {
-        let upper_value = receipt.actual_fee.max(diff);
-        let lower_value = receipt.actual_fee.min(diff);
-        let diff_percent = (100 * lower_value + upper_value / 2) / upper_value;
-
-        if diff_percent > 5 {
+        if diff >= 5 {
             assert_eq!(
                 actual_fee, receipt.actual_fee,
-                "actual_fee mismatch: diff = {diff} {diff_percent}%",
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }
     }

@@ -241,13 +241,11 @@ fn blockifier_test_recent_tx() {
     "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
     169928, // real block 169929
     RpcChain::MainNet
-    => ignore["gas mismatch"]
 )]
 #[test_case(
     "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
     169928, // real block 169929
     RpcChain::MainNet
-    => ignore["gas mismatch"]
 )]
 #[test_case(
     "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
@@ -259,7 +257,6 @@ fn blockifier_test_recent_tx() {
     "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
     169928, // real block 169929
     RpcChain::MainNet
-    => ignore["gas mismatch"]
 )]
 #[test_case(
     // review later
@@ -273,7 +270,6 @@ fn blockifier_test_recent_tx() {
     "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
     186551, // real block     186552
     RpcChain::MainNet
-    => ignore["gas mismatch"]
 )]
 fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
@@ -291,17 +287,13 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     } = execute_call_info.unwrap();
 
     let actual_fee = actual_fee.0;
-    let diff = receipt.actual_fee.abs_diff(actual_fee);
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
 
-    if diff > 0 {
-        let upper_value = receipt.actual_fee.max(diff);
-        let lower_value = receipt.actual_fee.min(diff);
-        let diff_percent = (100 * lower_value + upper_value / 2) / upper_value;
-
-        if diff_percent > 5 {
+        if diff >= 5 {
             assert_eq!(
                 actual_fee, receipt.actual_fee,
-                "actual_fee mismatch: diff = {diff} {diff_percent}%",
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }
     }
