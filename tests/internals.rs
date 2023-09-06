@@ -937,7 +937,7 @@ fn test_declare_tx() {
         ("n_steps".to_string(), 2715),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 3672),
+        ("l1_gas_usage".to_string(), 2448),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1025,7 +1025,7 @@ fn test_declarev2_tx() {
         ("n_steps".to_string(), 2715),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 1224),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1568,7 +1568,6 @@ fn expected_deploy_account_states() -> (
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([
-                (Address(0x101.into()), felt_to_hash(&0x111.into())),
                 (Address(0x100.into()), felt_to_hash(&0x110.into())),
                 (Address(0x1001.into()), felt_to_hash(&0x1010.into())),
             ]),
