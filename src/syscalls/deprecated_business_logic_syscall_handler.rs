@@ -1062,7 +1062,10 @@ mod tests {
             Felt252::zero(),
         );
         // Create empty-cached state
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         // Perform write
         assert!(syscall_handler

@@ -1062,10 +1062,8 @@ mod starknet_in_rust_transaction_tests {
         execution::TransactionExecutionInfo,
         services::api::contract_classes::compiled_class::CompiledClass,
         state::{
-            cached_state::{CachedState, ContractClassCache},
-            state_api::StateReader,
-            state_cache::StorageEntry,
-            BlockInfo,
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            state_api::StateReader, state_cache::StorageEntry, BlockInfo,
         },
         transaction::{InvokeFunction, Transaction},
         utils::{Address, ClassHash},
@@ -1187,8 +1185,8 @@ mod starknet_in_rust_transaction_tests {
         let trace = rpc_reader.0.get_transaction_trace(&tx_hash);
         let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
 
-        let class_cache = ContractClassCache::default();
-        let mut state = CachedState::new(Arc::new(rpc_reader), class_cache);
+        let class_cache = PermanentContractClassCache::default();
+        let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
 
         let block_context = BlockContext::new(
             starknet_os_config,

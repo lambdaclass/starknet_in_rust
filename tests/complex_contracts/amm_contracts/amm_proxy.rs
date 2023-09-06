@@ -1,5 +1,6 @@
 use crate::complex_contracts::utils::*;
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
+use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_in_rust::{
     definitions::block_context::BlockContext,
