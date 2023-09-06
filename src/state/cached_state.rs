@@ -14,6 +14,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
+use starknet::core::types::FromByteArrayError;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -115,28 +116,12 @@ impl<T: StateReader> StateReader for CachedState<T> {
     }
 
     /// Returns storage data for a given storage entry.
+    /// Returns zero as default value if missing
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        if self.cache.get_storage(storage_entry).is_none() {
-            match self.state_reader.get_storage_at(storage_entry) {
-                Ok(storage) => {
-                    return Ok(storage);
-                }
-                Err(
-                    StateError::EmptyKeyInStorage
-                    | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_)
-                    | StateError::NoneContractState(_),
-                ) => return Ok(Felt252::zero()),
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
-
         self.cache
             .get_storage(storage_entry)
-            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
-            .cloned()
+            .map(|v| Ok(v.clone()))
+            .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
@@ -285,7 +270,7 @@ impl<T: StateReader> State for CachedState<T> {
     fn count_actual_storage_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> (usize, usize) {
+    ) -> Result<(usize, usize), FromByteArrayError> {
         let mut storage_updates = subtract_mappings(
             self.cache.storage_writes.clone(),
             self.cache.storage_initial_values.clone(),
@@ -321,14 +306,14 @@ impl<T: StateReader> State for CachedState<T> {
         // Add fee transfer storage update before actually charging it, as it needs to be included in the
         // calculation of the final fee.
         if let Some((fee_token_address, sender_address)) = fee_token_and_sender_address {
-            let (sender_low_key, _) = get_erc20_balance_var_addresses(sender_address).unwrap();
+            let (sender_low_key, _) = get_erc20_balance_var_addresses(sender_address)?;
             storage_updates.insert(
                 (fee_token_address.clone(), sender_low_key),
                 Felt252::default(),
             );
         }
 
-        (n_modified_contracts, storage_updates.len())
+        Ok((n_modified_contracts, storage_updates.len()))
     }
 
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
@@ -363,27 +348,20 @@ impl<T: StateReader> State for CachedState<T> {
             .clone())
     }
 
+    /// Returns storage data for a given storage entry.
+    /// Returns zero as default value if missing
+    /// Adds the value to the cache's inital_values if not present
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        if self.cache.get_storage(storage_entry).is_none() {
-            let value = match self.state_reader.get_storage_at(storage_entry) {
-                Ok(value) => value,
-                Err(
-                    StateError::EmptyKeyInStorage
-                    | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_)
-                    | StateError::NoneContractState(_),
-                ) => Felt252::zero(),
-                Err(e) => return Err(e),
-            };
-            self.cache
-                .storage_initial_values
-                .insert(storage_entry.clone(), value);
+        match self.cache.get_storage(storage_entry) {
+            Some(value) => Ok(value.clone()),
+            None => {
+                let value = self.state_reader.get_storage_at(storage_entry)?;
+                self.cache
+                    .storage_initial_values
+                    .insert(storage_entry.clone(), value.clone());
+                Ok(value)
+            }
         }
-
-        self.cache
-            .get_storage(storage_entry)
-            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
-            .cloned()
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
@@ -392,8 +370,8 @@ impl<T: StateReader> State for CachedState<T> {
         if let Some(hash) = hash {
             Ok(*hash)
         } else {
-        dbg!("prev deploy");
-        dbg!(&std::any::type_name::<Self>());
+            dbg!("prev deploy");
+            dbg!(&std::any::type_name::<Self>());
             let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
             let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
             self.cache
@@ -926,8 +904,9 @@ mod tests {
 
             (n_modified_contracts, n_storage_updates)
         };
-        let changes =
-            cached_state.count_actual_storage_changes(Some((&fee_token_address, &sender_address)));
+        let changes = cached_state
+            .count_actual_storage_changes(Some((&fee_token_address, &sender_address)))
+            .unwrap();
 
         assert_eq!(changes, expected_changes);
     }
