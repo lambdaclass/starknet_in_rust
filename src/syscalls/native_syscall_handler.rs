@@ -41,8 +41,19 @@ where
 
 impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> {
     fn get_block_hash(&self, block_number: u64) -> SyscallResult<cairo_vm::felt::Felt252> {
+        // Todo: define error message when block is not found 
+        // should return same message than vm 
         println!("Called `get_block_hash({block_number})` from MLIR.");
-        Ok(Felt252::from_bytes_be(b"get_block_hash ok"))
+        let block = dbg!(&self.block_context.blocks).get(&block_number);
+        match block {
+            Some(block) => {
+                let block_hash = block.header.block_hash.to_owned(); 
+                Ok(Felt252::from_bytes_be(block_hash.0.bytes()))
+            }, 
+            None => {
+                todo!("Not implemented")
+            }
+        }
     }
 
     fn get_execution_info(&self) -> SyscallResult<cairo_native::starknet::ExecutionInfo> {
