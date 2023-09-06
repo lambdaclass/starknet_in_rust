@@ -383,14 +383,10 @@ impl<T: StateReader> State for CachedState<T> {
 
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
-        let hash = self
-            .cache
-            .class_hash_to_compiled_class_hash
-            .get(class_hash)
-            .cloned();
+        let hash = self.cache.class_hash_to_compiled_class_hash.get(class_hash);
         if let Some(hash) = hash {
             self.add_hit();
-            Ok(hash)
+            Ok(*hash)
         } else {
             self.add_miss();
             let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
