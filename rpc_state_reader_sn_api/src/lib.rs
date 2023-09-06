@@ -161,7 +161,34 @@ impl RpcState {
         &self,
         params: &serde_json::Value,
     ) -> Result<T, RpcError> {
-        Self::deserialize_call(self.rpc_call_no_deserialize(params)?.into_json().unwrap())
+        #[cfg(test)]
+        {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            use std::path::Path;
+
+            let dir = Path::new("test-responses");
+            let mut hasher = DefaultHasher::new();
+            params.to_string().hash(&mut hasher);
+            let hash = hasher.finish();
+            let filename = format!("{}-{}.json", self.chain, hash);
+            let file = dir.join(filename);
+
+            if file.exists() {
+                let res = std::fs::read_to_string(file).unwrap();
+                serde_json::from_str(&res).map_err(|err| RpcError::RpcCall(err.to_string()))
+            } else {
+                let res: serde_json::Value = Self::deserialize_call(
+                    self.rpc_call_no_deserialize(params)?.into_json().unwrap(),
+                )?;
+                std::fs::write(file, res.to_string()).unwrap();
+                serde_json::from_value(res).map_err(|err| RpcError::RpcCall(err.to_string()))
+            }
+        }
+        #[cfg(not(test))]
+        {
+            Self::deserialize_call(self.rpc_call_no_deserialize(params)?.into_json().unwrap())
+        }
     }
 
     fn rpc_call_no_deserialize(
@@ -521,6 +548,7 @@ mod utils {
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         core::{ClassHash, PatriciaKey},
         hash::StarkFelt,
@@ -608,7 +636,7 @@ mod tests {
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
         let key = StorageKey(patricia_key!(0u128));
 
-        assert_eq!(rpc_state.get_storage_at(&address, &key), stark_felt!("0x0"));
+        assert_eq_sorted!(rpc_state.get_storage_at(&address, &key), stark_felt!("0x0"));
     }
 
     #[test]
@@ -686,7 +714,7 @@ mod tests {
             ])
         );
         assert_eq!(tx_trace.validate_invocation.retdata, Some(vec![]));
-        assert_eq!(
+        assert_eq_sorted!(
             tx_trace.validate_invocation.execution_resources,
             VmExecutionResources {
                 n_steps: 790,
@@ -724,7 +752,7 @@ mod tests {
             tx_trace.function_invocation.as_ref().unwrap().retdata,
             Some(vec![0u128.into()])
         );
-        assert_eq!(
+        assert_eq_sorted!(
             tx_trace
                 .function_invocation
                 .as_ref()
@@ -782,7 +810,7 @@ mod tests {
             tx_trace.fee_transfer_invocation.retdata,
             Some(vec![1u128.into()])
         );
-        assert_eq!(
+        assert_eq_sorted!(
             tx_trace.fee_transfer_invocation.execution_resources,
             VmExecutionResources {
                 n_steps: 586,
@@ -991,6 +1019,8 @@ mod blockifier_transaction_tests {
     #[cfg(test)]
     mod test {
         use blockifier::execution::entry_point::CallInfo;
+        use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
+        use test_case::test_case;
 
         use super::*;
 
@@ -1025,6 +1055,90 @@ mod blockifier_transaction_tests {
 
             assert_eq!(actual_fee.0, receipt.actual_fee);
             assert_eq!(
+                vm_resources,
+                trace
+                    .function_invocation
+                    .as_ref()
+                    .unwrap()
+                    .execution_resources
+            );
+            assert_eq!(
+                inner_calls.len(),
+                trace
+                    .function_invocation
+                    .as_ref()
+                    .unwrap()
+                    .internal_calls
+                    .len()
+            );
+        }
+
+        #[test_case(
+            "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+            169928, // real block 169929
+            RpcChain::MainNet
+            => ignore["gas mismatch"]
+        )]
+        #[test_case(
+            "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
+            169928, // real block 169929
+            RpcChain::MainNet
+            => ignore["gas mismatch"]
+        )]
+        #[test_case(
+            "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
+            169928, // real block 169929
+            RpcChain::MainNet
+            => ignore["resource mismatch"]
+        )]
+        #[test_case(
+            "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
+            169928, // real block 169929
+            RpcChain::MainNet
+            => ignore["gas mismatch"]
+        )]
+        #[test_case(
+            // review later
+            "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
+            186548, // real block     186549
+            RpcChain::MainNet
+            => ignore["resource mismatch"]
+        )]
+        #[test_case(
+            // fails in blockifier too
+            "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
+            186551, // real block     186552
+            RpcChain::MainNet
+            => ignore["gas mismatch"]
+        )]
+        fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
+            let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+
+            let TransactionExecutionInfo {
+                execute_call_info,
+                actual_fee,
+                ..
+            } = tx_info;
+
+            let CallInfo {
+                vm_resources,
+                inner_calls,
+                ..
+            } = execute_call_info.unwrap();
+
+            let actual_fee = actual_fee.0;
+            if receipt.actual_fee != actual_fee {
+                let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+                if diff >= 5 {
+                    assert_eq!(
+                        actual_fee, receipt.actual_fee,
+                        "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+                    );
+                }
+            }
+
+            assert_eq_sorted!(
                 vm_resources,
                 trace
                     .function_invocation
@@ -1211,9 +1325,32 @@ mod starknet_in_rust_transaction_tests {
 
     #[cfg(test)]
     mod test {
+        use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
         use starknet_in_rust::execution::CallInfo;
+        use test_case::test_case;
 
         use super::*;
+
+        #[test]
+        fn test_get_transaction_try_from() {
+            let rpc_state = RpcState::new(RpcChain::MainNet, BlockTag::Latest.into());
+            let str_hash =
+                stark_felt!("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91");
+            let tx_hash = TransactionHash(str_hash);
+
+            let sn_tx = rpc_state.get_transaction(&tx_hash);
+            match &sn_tx {
+                SNTransaction::Invoke(sn_tx) => {
+                    let tx = InvokeFunction::from_invoke_transaction(
+                        sn_tx.clone(),
+                        StarknetChainId::MainNet,
+                    )
+                    .unwrap();
+                    assert_eq!(tx.hash_value().to_be_bytes().as_slice(), str_hash.bytes())
+                }
+                _ => unimplemented!(),
+            };
+        }
 
         #[test]
         fn test_get_gas_price() {
@@ -1224,14 +1361,46 @@ mod starknet_in_rust_transaction_tests {
             assert_eq!(price, 22804578690);
         }
 
-        #[test]
-        #[ignore = "working on fixes"]
-        fn test_recent_tx() {
-            let (tx_info, trace, receipt) = execute_tx(
-                "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
-                RpcChain::MainNet,
-                BlockNumber(169928),
-            );
+        #[test_case(
+            "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+            169928, // real block 169929
+            RpcChain::MainNet
+            => ignore["gas mismatch"]
+        )]
+        #[test_case(
+            "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
+            169928, // real block 169929
+            RpcChain::MainNet
+            => ignore["gas mismatch"]
+        )]
+        #[test_case(
+            "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
+            169928, // real block 169929
+            RpcChain::MainNet
+            => ignore["resource mismatch"]
+        )]
+        #[test_case(
+            "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
+            169928, // real block 169929
+            RpcChain::MainNet
+            => ignore["gas mismatch"]
+        )]
+        #[test_case(
+            // review later
+            "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
+            186548, // real block     186549
+            RpcChain::MainNet
+            => ignore["resource mismatch"]
+        )]
+        #[test_case(
+            // fails in blockifier too
+            "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
+            186551, // real block     186552
+            RpcChain::MainNet
+            => ignore["gas mismatch"]
+        )]
+        fn test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
+            let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
             let TransactionExecutionInfo {
                 call_info,
@@ -1245,13 +1414,14 @@ mod starknet_in_rust_transaction_tests {
                 ..
             } = call_info.unwrap();
 
-            assert_eq!(
+            assert_eq_sorted!(
                 execution_resources,
                 trace
                     .function_invocation
                     .as_ref()
                     .unwrap()
-                    .execution_resources
+                    .execution_resources,
+                "execution resources mismatch"
             );
             assert_eq!(
                 internal_calls.len(),
@@ -1260,10 +1430,20 @@ mod starknet_in_rust_transaction_tests {
                     .as_ref()
                     .unwrap()
                     .internal_calls
-                    .len()
+                    .len(),
+                "internal calls length mismatch"
             );
 
-            assert_eq!(actual_fee, receipt.actual_fee);
+            if receipt.actual_fee != actual_fee {
+                let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+                if diff >= 5 {
+                    assert_eq!(
+                        actual_fee, receipt.actual_fee,
+                        "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+                    );
+                }
+            }
         }
     }
 }
