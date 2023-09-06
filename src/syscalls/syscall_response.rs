@@ -76,7 +76,7 @@ impl SyscallResponse {
 // ----------------------
 
 /// Represents the response of get_block_timestamp syscall.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GetBlockTimestampResponse {
     /// The block timestamp.
     pub timestamp: Felt252,
@@ -104,7 +104,7 @@ pub struct FailureReason {
 }
 
 /// Represents the response of call_contract syscall
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CallContractResponse {
     /// The retdata segment start.
     pub retdata_start: Relocatable,
@@ -113,14 +113,14 @@ pub struct CallContractResponse {
 }
 
 /// Represents the response of get_block_hash syscall
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GetBlockHashResponse {
     /// The returned hash.
     pub block_hash: Felt252,
 }
 
 /// Represents the response of the `keccak` syscall
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeccakResponse {
     /// The returned hash.
     pub hash_low: Felt252,

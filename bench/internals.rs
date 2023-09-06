@@ -11,13 +11,15 @@ use starknet_in_rust::{
         constants::{TRANSACTION_VERSION, VALIDATE_ENTRY_POINT_SELECTOR},
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::{hint::black_box, sync::Arc};
+use std::{collections::HashMap, hint::black_box, sync::Arc};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
@@ -61,10 +63,13 @@ fn deploy_account() {
     const RUNS: usize = 500;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+    let mut state = CachedState::new(state_reader, HashMap::new());
 
     state
-        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+        .set_contract_class(
+            &CLASS_HASH_BYTES,
+            &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+        )
         .unwrap();
 
     let block_context = &Default::default();
@@ -97,7 +102,7 @@ fn declare() {
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let state = CachedState::new(state_reader, Some(Default::default()), None);
+    let state = CachedState::new(state_reader, HashMap::new());
 
     let block_context = &Default::default();
 
@@ -129,10 +134,13 @@ fn deploy() {
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+    let mut state = CachedState::new(state_reader, HashMap::new());
 
     state
-        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+        .set_contract_class(
+            &CLASS_HASH_BYTES,
+            &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+        )
         .unwrap();
 
     let block_context = &Default::default();
@@ -164,10 +172,13 @@ fn invoke() {
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+    let mut state = CachedState::new(state_reader, HashMap::new());
 
     state
-        .set_contract_class(&CLASS_HASH_BYTES, &CONTRACT_CLASS)
+        .set_contract_class(
+            &CLASS_HASH_BYTES,
+            &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
+        )
         .unwrap();
 
     let block_context = &Default::default();
