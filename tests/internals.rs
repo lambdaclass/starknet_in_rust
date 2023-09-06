@@ -1659,6 +1659,13 @@ fn expected_deploy_account_states() -> (
         ),
         Felt252::zero(),
     );
+    state_after.cache_mut().storage_initial_values_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+        ),
+        Felt252::zero(),
+    );
     state_after.cache_mut().nonce_writes_mut().insert(
         Address(felt_str!(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
