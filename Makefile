@@ -188,7 +188,10 @@ test-cairo-1:
 	cargo nextest run --workspace --all-targets --features=cairo_1_tests
 
 test-cairo-2:
-	cargo nextest run --workspace --all-targets --features=cairo-native
+	cargo nextest run --workspace --all-targets
+
+test-cairo-native:
+	cargo nextest run --workspace --test cairo_native --features=cairo-native
 
 test-doctests:
 	cargo test --workspace --doc

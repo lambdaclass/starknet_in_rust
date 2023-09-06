@@ -1,4 +1,4 @@
-name: Install dependencies, build the project and run tests from zero
+name: Test Cairo Native Integration
 
 on:
   merge_group:
@@ -48,24 +48,16 @@ jobs:
       id: deps
       run: make deps${{ matrix.deps_suffix }}
 
-    - name: Run make build
-      id: build
-      run: make build
-
-    - name: Run make test
-      id: test
-      env:
-        INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+    - name: Run make test-cairo-native
+      id: test-cairo-native
       run: |
         . starknet-venv/bin/activate; \
-        make test
+        make test-cairo-native
     - name: Check which step failed
       if: failure()
       run: |
         if [ ${{ steps.deps.outcome }} = failure ]; then
             FAILED_TARGET=deps${{ matrix.deps_suffix }}
-        elif [ ${{ steps.build.outcome }} = failure ]; then
-            FAILED_TARGET=build
         else 
             FAILED_TARGET=test
         fi
