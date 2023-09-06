@@ -152,7 +152,7 @@ impl Deploy {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        match self.contract_class.clone() {
+        match self.contract_class {
             CompiledClass::Sierra(_) => todo!(),
             _ => {
                 state.set_contract_class(&self.contract_hash, &self.contract_class)?;
