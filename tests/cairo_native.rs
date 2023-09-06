@@ -34,6 +34,67 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 #[cfg(feature = "cairo-native")]
 use std::sync::Arc;
+#[cfg(feature = "cairo-native")]
+use starknet_api::block::Block;
+
+#[test]
+#[cfg(feature="cairo-native")]
+fn get_block_hash_test() {
+
+    let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/get_block_hash_basic.sierra")
+            .unwrap()
+            .as_str(),
+        )
+        .unwrap();
+
+        let native_entrypoints = sierra_contract_class.clone().entry_points_by_type;
+        let native_entrypoint_selector = &native_entrypoints.external.get(0).unwrap().selector;
+        
+        // Create state reader with class hash data
+        let mut contract_class_cache = HashMap::new();
+
+        let native_class_hash: ClassHash = [1; 32];
+
+        let caller_address = Address(123456789.into());
+
+        contract_class_cache.insert(
+            native_class_hash,
+            CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+        );
+
+        let mut state_reader = InMemoryStateReader::default();
+        let nonce = Felt252::zero();
+
+        state_reader
+        .address_to_nonce_mut()
+        .insert(caller_address.clone(), nonce);
+
+        // Create state from the state_reader and contract cache.
+        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+        /*
+            1 recipient
+        */
+
+        let calldata = [
+            10.into()
+        ]
+        .to_vec();
+
+        let native_result = execute(
+            &mut state,
+            &caller_address,
+            &caller_address,
+            native_entrypoint_selector,
+            &calldata,
+            EntryPointType::External,
+            &native_class_hash,
+        );
+    
+
+}
 
 #[test]
 #[cfg(feature = "cairo-native")]
@@ -804,6 +865,12 @@ fn execute(
     entrypoint_type: EntryPointType,
     class_hash: &ClassHash,
 ) -> CallInfo {
+    use std::default::Default;
+
+    use sha3::digest::block_buffer::Block;
+    use starknet_api::{block::{self, BlockHeader}, hash::{StarkFelt, StarkHash}};
+
+    
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
         calldata.to_vec(),
@@ -816,7 +883,20 @@ fn execute(
     );
 
     // Execute the entrypoint
-    let block_context = BlockContext::default();
+    // Todo: Insert block with custom adress and custom hash to check is obtained correctly 
+    
+    /*let mut block = Block {
+        header: BlockHeader {
+            block_hash: StarkHash::new(10.into()),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    
+    let mut block_context = BlockContext::default();
+    block_context.blocks_mut().insert(10, Block::default());
+    */
+
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
