@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 ureq = { version = "2.7.1", features = ["json"] }
-serde = { version = "=1.0.171", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = [
     "arbitrary_precision",
     "raw_value",
@@ -23,3 +23,7 @@ dotenv = "0.15.0"
 cairo-vm = "0.8.5"
 blockifier = "0.2.0-rc0"
 starknet_in_rust = { path = "../", version = "0.3.1" }
+
+[dev-dependencies]
+pretty_assertions_sorted = "1.2.3"
+test-case = "3.1.0"
