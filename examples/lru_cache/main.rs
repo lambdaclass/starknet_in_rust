@@ -17,7 +17,7 @@ use std::{
 };
 
 fn main() {
-    let shared_cache = Arc::new(LruContractCache::new());
+    let shared_cache = Arc::new(LruContractCache::new(NonZeroUsize::new(64).unwrap()));
 
     let ret_data = run_contract(
         "starknet_programs/factorial.json",
@@ -63,15 +63,24 @@ where
     call_info.retdata
 }
 
-struct LruContractCache {
+pub struct LruContractCache {
     storage: Mutex<LruCache<ClassHash, CompiledClass>>,
 }
 
 impl LruContractCache {
-    pub fn new() -> Self {
+    pub fn new(cap: NonZeroUsize) -> Self {
         Self {
-            storage: Mutex::new(LruCache::new(NonZeroUsize::new(64).unwrap())),
+            storage: Mutex::new(LruCache::new(cap)),
         }
+    }
+
+    pub fn extend<I>(&self, other: I)
+    where
+        I: IntoIterator<Item = (ClassHash, CompiledClass)>,
+    {
+        other.into_iter().for_each(|(k, v)| {
+            self.storage.lock().unwrap().put(k, v);
+        });
     }
 }
 
@@ -82,14 +91,5 @@ impl ContractClassCache for LruContractCache {
 
     fn set_contract_class(&self, class_hash: ClassHash, compiled_class: CompiledClass) {
         self.storage.lock().unwrap().put(class_hash, compiled_class);
-    }
-
-    fn extend<I>(&self, other: I)
-    where
-        I: IntoIterator<Item = (ClassHash, CompiledClass)>,
-    {
-        other.into_iter().for_each(|(k, v)| {
-            self.storage.lock().unwrap().put(k, v);
-        });
     }
 }
