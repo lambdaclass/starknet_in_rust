@@ -122,8 +122,8 @@ impl StarknetState {
             hash_value,
         )?;
 
-        let mut tx = Transaction::InvokeFunction(tx);
-        self.execute_tx(&mut tx, remaining_gas)
+        let tx = Transaction::InvokeFunction(tx);
+        self.execute_tx(&tx, remaining_gas)
     }
 
     /// Builds the transaction execution context and executes the entry point.
@@ -200,14 +200,14 @@ impl StarknetState {
         };
         let contract_address = deploy.contract_address.clone();
         let contract_hash = deploy.contract_hash;
-        let mut tx = Transaction::Deploy(deploy);
+        let tx = Transaction::Deploy(deploy);
 
         self.state.set_contract_class(
             &contract_hash,
             &CompiledClass::Deprecated(Arc::new(contract_class)),
         )?;
 
-        let tx_execution_info = self.execute_tx(&mut tx, remaining_gas)?;
+        let tx_execution_info = self.execute_tx(&tx, remaining_gas)?;
         Ok((contract_address, tx_execution_info))
     }
 

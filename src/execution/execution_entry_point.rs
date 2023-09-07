@@ -233,15 +233,15 @@ impl ExecutionEntryPoint {
         let mut default_entry_point = None;
         let entry_point = entry_points
             .iter()
-            .filter_map(|x| {
+            .filter(|x| {
                 if x.selector() == &*DEFAULT_ENTRY_POINT_SELECTOR {
-                    default_entry_point = Some(x);
+                    default_entry_point = Some(*x);
                 }
 
-                (x.selector() == &self.entry_point_selector).then_some(x)
+                x.selector() == &self.entry_point_selector
             })
-            .fold(Ok(None), |acc, x| match acc {
-                Ok(None) => Ok(Some(x)),
+            .try_fold(None, |acc, x| match acc {
+                None => Ok(Some(x)),
                 _ => Err(TransactionError::NonUniqueEntryPoint),
             })?;
 
@@ -265,15 +265,15 @@ impl ExecutionEntryPoint {
         let mut default_entry_point = None;
         let entry_point = entry_points
             .iter()
-            .filter_map(|x| {
+            .filter(|x| {
                 if x.selector == DEFAULT_ENTRY_POINT_SELECTOR.to_biguint() {
-                    default_entry_point = Some(x);
+                    default_entry_point = Some(*x);
                 }
 
-                (x.selector == self.entry_point_selector.to_biguint()).then_some(x)
+                x.selector == self.entry_point_selector.to_biguint()
             })
-            .fold(Ok(None), |acc, x| match acc {
-                Ok(None) => Ok(Some(x)),
+            .try_fold(None, |acc, x| match acc {
+                None => Ok(Some(x)),
                 _ => Err(TransactionError::NonUniqueEntryPoint),
             })?;
         entry_point
@@ -647,7 +647,7 @@ impl ExecutionEntryPoint {
         &self,
         state: &mut CachedState<S>,
         contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
-        tx_execution_context: &mut TransactionExecutionContext,
+        tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
         let entry_point = match self.entry_point_type {
@@ -678,7 +678,7 @@ impl ExecutionEntryPoint {
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
-        let mut syscall_handler = NativeSyscallHandler {
+        let syscall_handler = NativeSyscallHandler {
             starknet_storage_state: contract_storage_state,
             n_emitted_events: 0,
             events: Vec::new(),
@@ -693,7 +693,7 @@ impl ExecutionEntryPoint {
         };
 
         native_program
-            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler))
+            .insert_metadata(SyscallHandlerMeta::new(&syscall_handler))
             .unwrap();
 
         let syscall_addr = native_program
@@ -737,7 +737,7 @@ impl ExecutionEntryPoint {
         */
         let mut builtins_string = "".to_owned();
         for _ in 0..(number_of_params - 3) {
-            builtins_string.push_str(&"null,");
+            builtins_string.push_str("null,");
         }
 
         let params: Value = serde_json::from_str(&format!(
@@ -770,7 +770,7 @@ impl ExecutionEntryPoint {
         let result: String = String::from_utf8(writer).unwrap();
         let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
 
-        return Ok(CallInfo {
+        Ok(CallInfo {
             caller_address: self.caller_address.clone(),
             call_type: Some(self.call_type.clone()),
             contract_address: self.contract_address.clone(),
@@ -792,6 +792,6 @@ impl ExecutionEntryPoint {
 
             // TODO
             gas_consumed: 0,
-        });
+        })
     }
 }
