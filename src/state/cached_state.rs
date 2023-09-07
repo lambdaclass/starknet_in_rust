@@ -328,17 +328,17 @@ impl<T: StateReader> State for CachedState<T> {
     /// Returns zero as default value if missing
     /// Adds the value to the cache's inital_values if not present
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        match self.cache.get_class_hash(contract_address) {
+        match self.cache.get_class_hash(contract_address).cloned() {
             Some(class_hash) => {
                 self.add_hit();
-                Ok(*class_hash)
+                Ok(class_hash)
             },
             None => {
+                self.add_miss();
                 let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
                 self.cache
                     .class_hash_initial_values
                     .insert(contract_address.clone(), class_hash);
-                self.add_miss();
                 Ok(class_hash)
             }
         }
@@ -365,17 +365,17 @@ impl<T: StateReader> State for CachedState<T> {
     /// Returns zero as default value if missing
     /// Adds the value to the cache's inital_values if not present
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        match self.cache.get_storage(storage_entry) {
+        match self.cache.get_storage(storage_entry).cloned() {
             Some(value) => {
                 self.add_hit();
-                Ok(value.clone())
+                Ok(value)
             },
             None => {
+                self.add_miss();
                 let value = self.state_reader.get_storage_at(storage_entry)?;
                 self.cache
                     .storage_initial_values
                     .insert(storage_entry.clone(), value.clone());
-                self.add_miss();
                 Ok(value)
             }
         }
@@ -383,18 +383,20 @@ impl<T: StateReader> State for CachedState<T> {
 
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
-        let hash = self.cache.class_hash_to_compiled_class_hash.get(class_hash);
-        if let Some(hash) = hash {
-            self.add_hit();
-            Ok(*hash)
-        } else {
-            self.add_miss();
-            let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
-            let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
-            self.cache
-                .class_hash_initial_values
-                .insert(address, compiled_class_hash);
-            Ok(compiled_class_hash)
+        match self.cache.class_hash_to_compiled_class_hash.get(class_hash).cloned() {
+            Some(hash) => {
+                self.add_hit();
+                Ok(hash)
+            },
+            None => {
+                self.add_miss();
+                let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
+                let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
+                self.cache
+                    .class_hash_initial_values
+                    .insert(address, compiled_class_hash);
+                Ok(compiled_class_hash)
+            }
         }
     }
 
@@ -407,18 +409,18 @@ impl<T: StateReader> State for CachedState<T> {
 
         // I: FETCHING FROM CACHE
         // deprecated contract classes dont have compiled class hashes, so we only have one case
-        if let Some(compiled_class) = self.contract_classes.get(class_hash) {
+        if let Some(compiled_class) = self.contract_classes.get(class_hash).cloned() {
             self.add_hit();
-            return Ok(compiled_class.clone());
+            return Ok(compiled_class);
         }
 
         // I: CASM CONTRACT CLASS : CLASS_HASH
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = self.contract_classes.get(compiled_class_hash) {
+            if let Some(casm_class) = self.contract_classes.get(compiled_class_hash).cloned() {
                 self.add_hit();
-                return Ok(casm_class.clone());
+                return Ok(casm_class);
             }
         }
 
