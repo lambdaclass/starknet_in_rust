@@ -307,7 +307,8 @@ impl Declare {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            max_fee: if ignore_max_fee {
+            // Keep the max_fee value for V0 for validation
+            max_fee: if ignore_max_fee && !self.version.is_zero() {
                 u128::MAX
             } else {
                 self.max_fee
