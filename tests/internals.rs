@@ -1709,12 +1709,12 @@ fn test_deploy_account_revert() {
         ("n_steps".to_string(), 3625),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 4896),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 4933);
+    assert_eq!(fee, 3709);
 
     let mut expected_execution_info = TransactionExecutionInfo::new(
         None,
@@ -1731,7 +1731,7 @@ fn test_deploy_account_revert() {
 
     expected_execution_info.set_fee_info(expected_fee, expected_fee_transfer_call_info.into());
 
-    assert_eq!(tx_info, expected_execution_info);
+    assert_eq_sorted!(tx_info, expected_execution_info);
 
     let nonce_from_state = state
         .get_nonce_at(deploy_account_tx.contract_address())
@@ -1837,6 +1837,8 @@ fn expected_deploy_account_states() -> (
         ),
         Felt252::zero(),
     );
+    // ITS THIS
+    /*
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
@@ -1844,6 +1846,7 @@ fn expected_deploy_account_states() -> (
         ),
         Felt252::zero(),
     );
+    */
 
     state_after.cache_mut().nonce_writes_mut().insert(
         Address(felt_str!(

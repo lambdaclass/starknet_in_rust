@@ -281,3 +281,31 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         }
     }
 }
+
+#[test_case(
+    "0x00b6d59c19d5178886b4c939656167db0660fe325345138025a3cc4175b21897",
+    200303, // real block     200304
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x02b28b4846a756e0cec6385d6d13f811e745a88c7e75a3ebc5fead5b4af152a3",
+    200302, // real block     200304
+    RpcChain::MainNet
+    => ignore["broken on both"]
+)]
+fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+
+    assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
+
+    if receipt.actual_fee != tx_info.actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee) / receipt.actual_fee;
+
+        if diff >= 5 {
+            assert_eq!(
+                tx_info.actual_fee, receipt.actual_fee,
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            );
+        }
+    }
+}
