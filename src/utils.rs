@@ -1,5 +1,4 @@
 use crate::core::errors::hash_errors::HashError;
-use crate::definitions::constants::FEE_TRANSFER_N_STORAGE_CHANGES_TO_CHARGE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::state_api::State;
 use crate::{
@@ -188,7 +187,7 @@ pub fn calculate_tx_resources(
     let l1_gas_usage = calculate_tx_gas_usage(
         l2_to_l1_messages,
         n_modified_contracts,
-        n_storage_changes + FEE_TRANSFER_N_STORAGE_CHANGES_TO_CHARGE,
+        n_storage_changes,
         l1_handler_payload_size,
         n_deployments,
     );
