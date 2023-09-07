@@ -763,7 +763,6 @@ mod transaction_tests {
             16
         ));
 
-
         let network: StarknetChainId = rpc_state.chain.into();
         let starknet_os_config =
             StarknetOsConfig::new(network.to_felt(), fee_token_address, gas_price);
@@ -781,7 +780,6 @@ mod transaction_tests {
             Default::default(),
             true,
         );
-
 
         let tx = rpc_state.get_transaction(tx_hash);
 
@@ -904,22 +902,16 @@ mod transaction_tests {
     /// - Link to explorer: https://starkscan.co/tx/0x026a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c
     #[test]
     fn test_0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c() {
-        println!("{}", "work 0");
         let result = test_tx(
             "0x26a1a5b5f2b3390302ade67c766cc94804fd41c86c5ee37e20c6415dc39358c",
             RpcChain::MainNet,
             155054,
             33977120598,
         );
-        println!("{}", "work 1");
         dbg!(&result.actual_resources);
-        println!("{}", "work 2");
         dbg!(&result.actual_fee); // test=6361070805216, explorer=47292465953700, diff=5888146145679 (0.13%)
-        println!("{}", "work 3");
         dbg!(&result.call_info.clone().unwrap().execution_resources); // Ok with explorer
-        println!("{}", "work 4");
         dbg!(&result.call_info.unwrap().internal_calls.len()); // Ok with explorer
-        println!("{}", "work 5");
     }
 
     // Fails because there is a problem with get_compiled_class_hash

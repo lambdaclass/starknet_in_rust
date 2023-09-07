@@ -1,6 +1,6 @@
 use super::{
-    deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
-    other_syscalls, syscall_handler::HintProcessorPostRun,
+    deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, other_syscalls,
+    syscall_handler::HintProcessorPostRun,
 };
 use crate::{state::state_api::StateReader, syscalls::syscall_handler_errors::SyscallHandlerError};
 use cairo_vm::{
@@ -20,10 +20,10 @@ use cairo_vm::{
     types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use std::{any::Any, collections::HashMap};
 use phf_macros::phf_map;
+use std::{any::Any, collections::HashMap};
 
-pub enum SyscallHandler {
+pub enum Hint {
     Deploy,
     EmitEvent,
     GetBlockNumber,
@@ -47,27 +47,27 @@ pub enum SyscallHandler {
     AddrIs250,
 }
 
-static HINT_CODES: phf::Map<&'static str, SyscallHandler> = phf_map! {
-    "DEPLOY" => SyscallHandler::Deploy,
-    "EMIT_EVENT_CODE" => SyscallHandler::EmitEvent,
-    "GET_BLOCK_NUMBER" => SyscallHandler::GetBlockNumber,
-    "GET_BLOCK_TIMESTAMP" => SyscallHandler::GetBlockTimestamp,
-    "GET_CALLER_ADDRESS" => SyscallHandler::GetCallerAddress,
-    "GET_SEQUENCER_ADDRESS" => SyscallHandler::GetSequencerAddress,
-    "LIBRARY_CALL" => SyscallHandler::LibraryCall,
-    "LIBRARY_CALL_L1_HANDLER" => SyscallHandler::LibraryCallL1Handler,
-    "CALL_CONTRACT" => SyscallHandler::CallContract,
-    "STORAGE_READ" => SyscallHandler::StorageRead,
-    "STORAGE_WRITE" => SyscallHandler::StorageWrite,
-    "SEND_MESSAGE_TO_L1" => SyscallHandler::SendMessageToL1,
-    "GET_TX_SIGNATURE" => SyscallHandler::GetTxSignature,
-    "GET_TX_INFO" => SyscallHandler::GetTxInfo,
-    "GET_CONTRACT_ADDRESS" => SyscallHandler::GetContractAddress,
-    "DELEGATE_CALL" => SyscallHandler::DelegateCall,
-    "DELEGATE_L1_HANDLER" => SyscallHandler::DelegateCallL1Handler,
-    "REPLACE_CLASS" => SyscallHandler::ReplaceClass,
-    "ADDRBOUNDPRIME" => SyscallHandler::AddrBoundPrime,
-    "ADDRIS250" => SyscallHandler::AddrIs250,
+static HINT_CODES: phf::Map<&'static str, Hint> = phf_map! {
+    "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::Deploy,
+    "syscall_handler.emit_event(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::EmitEvent,
+    "syscall_handler.get_sequencer_address(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetSequencerAddress,
+    "syscall_handler.storage_write(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::StorageWrite,
+    "syscall_handler.storage_read(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::StorageRead,
+    "syscall_handler.get_block_number(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetBlockNumber,
+    "syscall_handler.library_call(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::LibraryCall,
+    "syscall_handler.library_call_l1_handler(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::LibraryCallL1Handler,
+    "syscall_handler.call_contract(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::CallContract,
+    "syscall_handler.get_caller_address(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetCallerAddress,
+    "syscall_handler.get_block_timestamp(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetBlockTimestamp,
+    "syscall_handler.send_message_to_l1(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::SendMessageToL1,
+    "syscall_handler.get_tx_signature(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetTxSignature,
+    "syscall_handler.get_tx_info(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetTxInfo,
+    "syscall_handler.get_contract_address(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetContractAddress,
+    "syscall_handler.delegate_call(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::DelegateCall,
+    "syscall_handler.delegate_l1_handler(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::DelegateCallL1Handler,
+    "syscall_handler.replace_class(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::ReplaceClass,
+    "# Verify the assumptions on the relationship between 2**250, ADDR_BOUND and PRIME.\nADDR_BOUND = ids.ADDR_BOUND % PRIME\nassert (2**250 < ADDR_BOUND <= 2**251) and (2 * 2**250 < PRIME) and (\n        ADDR_BOUND * 2 > PRIME), \\\n    'normalize_address() cannot be used with the current constants.'\nids.is_small = 1 if ids.addr < ADDR_BOUND else 0" => Hint::AddrBoundPrime,
+    "ids.is_250 = 1 if ids.addr < 2**250 else 0" => Hint::AddrIs250,
 };
 
 /// Definition of the deprecated syscall hint processor with associated structs
@@ -120,75 +120,77 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
         // Match against specific syscall hint codes and call the appropriate handler
 
         let hint_data = hint_data
-        .downcast_ref::<HintProcessorData>()
-        .ok_or(SyscallHandlerError::WrongHintData)?;
+            .downcast_ref::<HintProcessorData>()
+            .ok_or(SyscallHandlerError::WrongHintData)?;
 
         let hint_code = &hint_data.code;
         let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
         if let Some(syscall) = HINT_CODES.get(hint_code) {
-            match syscall { 
-            SyscallHandler::AddrBoundPrime => { 
-                other_syscalls::addr_bound_prime(vm, hint_data, constants)?;
-            }
-            SyscallHandler::AddrIs250 => {
-                other_syscalls::addr_is_250(vm, hint_data)?;
-            }
-            SyscallHandler::Deploy => {
-                self.syscall_handler.deploy(vm, syscall_ptr)?;
-            },
-            SyscallHandler::EmitEvent => {
-                self.syscall_handler.emit_event(vm, syscall_ptr)?;
-            },
-            SyscallHandler::GetBlockNumber => {
-                self.syscall_handler.get_block_number(vm, syscall_ptr)?;
-            },
-            SyscallHandler::GetBlockTimestamp => {
-            self.syscall_handler.get_block_timestamp(vm, syscall_ptr)?;
-            },
-            SyscallHandler::GetCallerAddress => {
-            self.syscall_handler.get_caller_address(vm, syscall_ptr)?;
-            },
-            SyscallHandler::GetSequencerAddress => {
-            self.syscall_handler.get_sequencer_address(vm, syscall_ptr)?;
-            },
-            SyscallHandler::LibraryCall => {
-            self.syscall_handler.library_call(vm, syscall_ptr)?;
-            },
-            SyscallHandler::LibraryCallL1Handler => {
-            self.syscall_handler.library_call_l1_handler(vm, syscall_ptr)?;
-            },
-            SyscallHandler::CallContract => {
-            self.syscall_handler.call_contract(vm, syscall_ptr)?;
-            },
-            SyscallHandler::StorageRead => {
-            self.syscall_handler.storage_read(vm, syscall_ptr)?;
-            },
-            SyscallHandler::StorageWrite => {
-            self.syscall_handler.storage_write(vm, syscall_ptr)?;
-            },
-            SyscallHandler::SendMessageToL1 => {
-            self.syscall_handler.send_message_to_l1(vm, syscall_ptr)?;
-            },
-            SyscallHandler::GetTxSignature => {
-            self.syscall_handler.get_tx_signature(vm, syscall_ptr)?;
-            },
-            SyscallHandler::GetTxInfo => {
-            self.syscall_handler.get_tx_info(vm, syscall_ptr)?;
-            },
-            SyscallHandler::GetContractAddress => {
-            self.syscall_handler.get_contract_address(vm, syscall_ptr)?;
-            },
-            SyscallHandler::DelegateCall => {
-                self.syscall_handler.delegate_call(vm, syscall_ptr)?;
-            },
-            SyscallHandler::DelegateCallL1Handler => {
-                self.syscall_handler.delegate_l1_handler(vm, syscall_ptr)?;
-            },
-            SyscallHandler::ReplaceClass => {
-                self.syscall_handler.replace_class(vm, syscall_ptr)?;
-            },
-        };
-        Ok(())
+            match syscall {
+                Hint::AddrBoundPrime => {
+                    other_syscalls::addr_bound_prime(vm, hint_data, constants)?;
+                }
+                Hint::AddrIs250 => {
+                    other_syscalls::addr_is_250(vm, hint_data)?;
+                }
+                Hint::Deploy => {
+                    self.syscall_handler.deploy(vm, syscall_ptr)?;
+                }
+                Hint::EmitEvent => {
+                    self.syscall_handler.emit_event(vm, syscall_ptr)?;
+                }
+                Hint::GetBlockNumber => {
+                    self.syscall_handler.get_block_number(vm, syscall_ptr)?;
+                }
+                Hint::GetBlockTimestamp => {
+                    self.syscall_handler.get_block_timestamp(vm, syscall_ptr)?;
+                }
+                Hint::GetCallerAddress => {
+                    self.syscall_handler.get_caller_address(vm, syscall_ptr)?;
+                }
+                Hint::GetSequencerAddress => {
+                    self.syscall_handler
+                        .get_sequencer_address(vm, syscall_ptr)?;
+                }
+                Hint::LibraryCall => {
+                    self.syscall_handler.library_call(vm, syscall_ptr)?;
+                }
+                Hint::LibraryCallL1Handler => {
+                    self.syscall_handler
+                        .library_call_l1_handler(vm, syscall_ptr)?;
+                }
+                Hint::CallContract => {
+                    self.syscall_handler.call_contract(vm, syscall_ptr)?;
+                }
+                Hint::StorageRead => {
+                    self.syscall_handler.storage_read(vm, syscall_ptr)?;
+                }
+                Hint::StorageWrite => {
+                    self.syscall_handler.storage_write(vm, syscall_ptr)?;
+                }
+                Hint::SendMessageToL1 => {
+                    self.syscall_handler.send_message_to_l1(vm, syscall_ptr)?;
+                }
+                Hint::GetTxSignature => {
+                    self.syscall_handler.get_tx_signature(vm, syscall_ptr)?;
+                }
+                Hint::GetTxInfo => {
+                    self.syscall_handler.get_tx_info(vm, syscall_ptr)?;
+                }
+                Hint::GetContractAddress => {
+                    self.syscall_handler.get_contract_address(vm, syscall_ptr)?;
+                }
+                Hint::DelegateCall => {
+                    self.syscall_handler.delegate_call(vm, syscall_ptr)?;
+                }
+                Hint::DelegateCallL1Handler => {
+                    self.syscall_handler.delegate_l1_handler(vm, syscall_ptr)?;
+                }
+                Hint::ReplaceClass => {
+                    self.syscall_handler.replace_class(vm, syscall_ptr)?;
+                }
+            };
+            Ok(())
         } else {
             // Make sure to return a Result type here
             Err(SyscallHandlerError::NotImplemented(hint_data.code.clone()))
@@ -212,9 +214,7 @@ impl<'a, S: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'
                     SyscallHandlerError::NotImplemented(hint_code) => {
                         HintError::UnknownHint(hint_code.into_boxed_str())
                     }
-                    e => {
-                        HintError::CustomHint(e.to_string().into_boxed_str())
-                    }
+                    e => HintError::CustomHint(e.to_string().into_boxed_str()),
                 })?;
         }
         Ok(())
@@ -377,7 +377,11 @@ mod tests {
 
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("GET_BLOCK_TIMESTAMP".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_block_timestamp(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -411,7 +415,11 @@ mod tests {
 
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("GET_SEQUENCER_ADDRESS".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_sequencer_address(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -465,7 +473,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("EMIT_EVENT_CODE".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.emit_event(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -524,7 +536,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("GET_TX_INFO".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_tx_info(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -632,7 +648,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("GET_TX_INFO".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_tx_info(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -673,7 +693,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("GET_CALLER_ADDRESS".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_caller_address(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -721,7 +745,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("SEND_MESSAGE_TO_L1".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.send_message_to_l1(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader>::default();
@@ -779,8 +807,11 @@ mod tests {
             RunResources::default(),
         );
 
-        let hint_data =
-            HintProcessorData::new_default("GET_BLOCK_NUMBER".to_string(), ids_data!["syscall_ptr"]);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_block_number(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data!["syscall_ptr"],
+        );
         assert_matches!(
             hint_processor.execute_hint(
                 &mut vm,
@@ -806,7 +837,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("GET_CONTRACT_ADDRESS".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_contract_address(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
@@ -848,7 +883,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("GET_TX_SIGNATURE".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_tx_signature(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
@@ -917,7 +956,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("STORAGE_READ".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.storage_read(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
@@ -982,7 +1025,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default("STORAGE_WRITE".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.storage_write(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
@@ -1055,7 +1102,10 @@ mod tests {
 
         // Hinta data
         let ids_data = ids_data!["syscall_ptr"];
-        let hint_data = HintProcessorData::new_default("DEPLOY".to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)".to_string(),
+            ids_data,
+        );
 
         // Create SyscallHintProcessor
         let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
