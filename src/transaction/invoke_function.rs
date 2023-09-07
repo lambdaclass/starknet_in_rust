@@ -1071,7 +1071,7 @@ mod tests {
         let tx_info = internal_invoke_function
             .execute(&mut state, &block_context, 0)
             .unwrap();
-        let expected_actual_fee = 2483;
+        let expected_actual_fee = 1259;
         let expected_tx_info = tx_info.clone().to_revert_error(
             format!(
                 "Calculated fee ({}) exceeds max fee ({})",

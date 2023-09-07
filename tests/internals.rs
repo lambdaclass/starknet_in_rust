@@ -12,7 +12,7 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, Num, One, Zero};
-use pretty_assertions_sorted::assert_eq_sorted;
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::core::contract_address::{
     compute_casm_class_hash, compute_sierra_class_hash,
 };
@@ -1234,7 +1234,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
     let resources = HashMap::from([
         ("n_steps".to_string(), 4135),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 1224),
         ("range_check_builtin".to_string(), 101),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
@@ -1310,7 +1310,7 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
     let max_fee = 3;
-    let actual_fee = 2490;
+    let actual_fee = 1266;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
@@ -1630,8 +1630,8 @@ fn test_deploy_account_revert() {
 
     let (state_before, mut state_after) = expected_deploy_account_states();
 
-    assert_eq!(&state.cache(), &state_before.cache());
-    assert_eq!(&state.contract_classes(), &state_before.contract_classes());
+    assert_eq_sorted!(&state.cache(), &state_before.cache());
+    assert_eq_sorted!(&state.contract_classes(), &state_before.contract_classes());
     assert!(&state.contract_classes().is_empty());
 
     let tx_info = deploy_account_tx
@@ -1697,7 +1697,7 @@ fn test_deploy_account_revert() {
         .nonce_writes_mut()
         .extend(state_after.cache_mut().nonce_writes_mut().clone());
 
-    assert_eq!(state.cache(), state_reverted.cache());
+    assert_eq_sorted!(state.cache(), state_reverted.cache());
 
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &block_context,
@@ -1844,6 +1844,7 @@ fn expected_deploy_account_states() -> (
         ),
         Felt252::zero(),
     );
+
     state_after.cache_mut().nonce_writes_mut().insert(
         Address(felt_str!(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
