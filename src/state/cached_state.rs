@@ -181,6 +181,8 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         class_hash: &ClassHash,
         contract_class: &CompiledClass,
     ) -> Result<(), StateError> {
+        // `RefCell::get_mut()` provides a mutable reference without the borrowing overhead when we
+        // have a mutable reference to the `RefCell` available.
         self.contract_class_cache_private
             .get_mut()
             .insert(*class_hash, contract_class.clone());
