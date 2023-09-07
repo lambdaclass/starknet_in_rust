@@ -3,6 +3,7 @@ pub mod utils;
 
 #[cfg(test)]
 mod tests {
+    use crate::rpc_state::*;
     use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
@@ -17,8 +18,6 @@ mod tests {
         definitions::block_context::StarknetChainId, transaction::InvokeFunction,
     };
     use std::collections::HashMap;
-
-    use crate::rpc_state::*;
 
     /// A utility macro to create a [`ContractAddress`] from a hex string / unsigned integer
     /// representation.
@@ -280,9 +279,13 @@ mod tests {
 }
 
 mod blockifier_transaction_tests {
+    use super::*;
+    use crate::rpc_state::{
+        RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace,
+    };
     use blockifier::{
         block_context::BlockContext,
-        execution::contract_class::ContractClass,
+        execution::contract_class::{ContractClass, ContractClassV0, ContractClassV0Inner},
         state::{
             cached_state::{CachedState, GlobalContractCache},
             state_api::{StateReader, StateResult},
@@ -293,14 +296,18 @@ mod blockifier_transaction_tests {
             transactions::{ExecutableTransaction, InvokeTransaction},
         },
     };
+    use cairo_vm::types::program::Program;
     use starknet_api::{
+        block::BlockNumber,
         contract_address,
-        core::{CompiledClassHash, Nonce, PatriciaKey},
+        core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey},
+        hash::{StarkFelt, StarkHash},
         patricia_key, stark_felt,
-        transaction::TransactionHash,
+        state::StorageKey,
+        transaction::{Transaction as SNTransaction, TransactionHash},
     };
-
-    use super::*;
+    use starknet_in_rust::CasmContractClass;
+    use std::{collections::HashMap, sync::Arc};
 
     pub struct RpcStateReader(RpcState);
 
@@ -330,7 +337,7 @@ mod blockifier_transaction_tests {
             class_hash: &ClassHash,
         ) -> StateResult<ContractClass> {
             Ok(match self.0.get_contract_class(class_hash) {
-                SNContractClass::Legacy(compressed_legacy_cc) => {
+                starknet::core::types::ContractClass::Legacy(compressed_legacy_cc) => {
                     let as_str = utils::decode_reader(compressed_legacy_cc.program).unwrap();
                     let program = Program::from_bytes(as_str.as_bytes(), None).unwrap();
                     let entry_points_by_type = utils::map_entry_points_by_type_legacy(
@@ -340,14 +347,14 @@ mod blockifier_transaction_tests {
                         program,
                         entry_points_by_type,
                     });
-                    BlockifierContractClass::V0(ContractClassV0(inner))
+                    blockifier::execution::contract_class::ContractClass::V0(ContractClassV0(inner))
                 }
-                SNContractClass::Sierra(flattened_sierra_cc) => {
+                starknet::core::types::ContractClass::Sierra(flattened_sierra_cc) => {
                     let middle_sierra: utils::MiddleSierraContractClass = {
                         let v = serde_json::to_value(flattened_sierra_cc).unwrap();
                         serde_json::from_value(v).unwrap()
                     };
-                    let sierra_cc = SierraContractClass {
+                    let sierra_cc = cairo_lang_starknet::contract_class::ContractClass {
                         sierra_program: middle_sierra.sierra_program,
                         contract_class_version: middle_sierra.contract_class_version,
                         entry_points_by_type: middle_sierra.entry_points_by_type,
@@ -355,7 +362,9 @@ mod blockifier_transaction_tests {
                         abi: None,
                     };
                     let casm_cc = CasmContractClass::from_contract_class(sierra_cc, false).unwrap();
-                    BlockifierContractClass::V1(casm_cc.try_into().unwrap())
+                    blockifier::execution::contract_class::ContractClass::V1(
+                        casm_cc.try_into().unwrap(),
+                    )
                 }
             })
         }
@@ -386,7 +395,7 @@ mod blockifier_transaction_tests {
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
         // Instantiate the RPC StateReader and the CachedState
-        let rpc_reader = RpcStateReader(RpcState::new(network, block_number.into()));
+        let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()));
         let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
         // Get values for block context before giving ownership of the reader
@@ -462,14 +471,14 @@ mod blockifier_transaction_tests {
 
     #[cfg(test)]
     mod test {
-        use blockifier::execution::entry_point::CallInfo;
-
         use super::*;
+        use crate::rpc_state::BlockValue;
+        use blockifier::execution::entry_point::CallInfo;
 
         #[test]
         fn test_get_gas_price() {
             let block = BlockValue::Number(BlockNumber(169928));
-            let rpc_state = RpcState::new(RpcChain::MainNet, block);
+            let rpc_state = RpcState::new_infura(RpcChain::MainNet, block);
 
             let price = rpc_state.get_gas_price(169928).unwrap();
             assert_eq!(price, 22804578690);
@@ -518,8 +527,18 @@ mod blockifier_transaction_tests {
 }
 
 mod starknet_in_rust_transaction_tests {
+    use crate::rpc_state::{
+        RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace,
+    };
     use cairo_vm::felt::{felt_str, Felt252};
-    use starknet_api::{core::PatriciaKey, stark_felt, transaction::TransactionHash};
+    use starknet_api::{
+        block::BlockNumber,
+        core::{ContractAddress, PatriciaKey},
+        hash::{StarkFelt, StarkHash},
+        stark_felt,
+        state::StorageKey,
+        transaction::{Transaction, TransactionHash},
+    };
     use starknet_in_rust::{
         core::errors::state_errors::StateError,
         definitions::{
@@ -539,17 +558,16 @@ mod starknet_in_rust_transaction_tests {
             state_cache::StorageEntry,
             BlockInfo,
         },
-        transaction::{InvokeFunction, Transaction},
+        transaction::InvokeFunction,
         utils::{Address, ClassHash},
     };
-
-    use super::*;
+    use std::sync::Arc;
 
     pub struct RpcStateReader(RpcState);
 
     impl StateReader for RpcStateReader {
         fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-            let hash = ClassHash(StarkHash::new(*class_hash).unwrap());
+            let hash = starknet_api::core::ClassHash(StarkHash::new(*class_hash).unwrap());
             Ok(CompiledClass::from(self.0.get_contract_class(&hash)))
         }
 
@@ -615,7 +633,7 @@ mod starknet_in_rust_transaction_tests {
         let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
         // Instantiate the RPC StateReader and the CachedState
-        let rpc_reader = RpcStateReader(RpcState::new(network, block_number.into()));
+        let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()));
         let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
         // Get values for block context before giving ownership of the reader
@@ -650,7 +668,7 @@ mod starknet_in_rust_transaction_tests {
         // Get transaction before giving ownership of the reader
         let tx_hash = TransactionHash(stark_felt!(tx_hash));
         let tx = match rpc_reader.0.get_transaction(&tx_hash) {
-            SNTransaction::Invoke(tx) => Transaction::InvokeFunction(
+            Transaction::Invoke(tx) => starknet_in_rust::transaction::Transaction::InvokeFunction(
                 InvokeFunction::from_invoke_transaction(tx, chain_id).unwrap(),
             ),
             _ => unimplemented!(),
@@ -683,14 +701,14 @@ mod starknet_in_rust_transaction_tests {
 
     #[cfg(test)]
     mod test {
-        use starknet_in_rust::execution::CallInfo;
-
         use super::*;
+        use crate::rpc_state::{BlockValue, RpcState};
+        use starknet_in_rust::execution::CallInfo;
 
         #[test]
         fn test_get_gas_price() {
             let block = BlockValue::Number(BlockNumber(169928));
-            let rpc_state = RpcState::new(RpcChain::MainNet, block);
+            let rpc_state = RpcState::new_infura(RpcChain::MainNet, block);
 
             let price = rpc_state.get_gas_price(169928).unwrap();
             assert_eq!(price, 22804578690);
