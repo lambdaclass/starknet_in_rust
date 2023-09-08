@@ -30,6 +30,7 @@ use num_traits::Zero;
 use super::fee::charge_fee;
 use super::{verify_version, Transaction};
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -267,7 +268,8 @@ impl Declare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    pub fn execute<S: StateReader>(
+    #[tracing::instrument(level = "debug", ret)]
+    pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

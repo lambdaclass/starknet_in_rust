@@ -34,6 +34,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
@@ -150,7 +151,8 @@ impl DeployAccount {
         }
     }
 
-    pub fn execute<S: StateReader>(
+    #[tracing::instrument(level = "debug", ret)]
+    pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

@@ -32,6 +32,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
 use super::Transaction;
+use std::fmt::Debug;
 
 /// Represents a Deploy Transaction in the starknet network
 #[derive(Debug, Clone)]
@@ -269,7 +270,8 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn execute<S: StateReader>(
+    #[tracing::instrument(level = "debug", ret)]
+    pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

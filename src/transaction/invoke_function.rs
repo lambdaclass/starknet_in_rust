@@ -23,6 +23,7 @@ use getset::Getters;
 use num_traits::Zero;
 
 use super::{fee::charge_fee, Transaction};
+use std::fmt::Debug;
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -284,7 +285,8 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    pub fn execute<S: StateReader>(
+    #[tracing::instrument(level = "debug", ret)]
+    pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

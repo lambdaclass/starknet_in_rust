@@ -67,6 +67,13 @@ pub struct RpcState {
     block: BlockValue,
 }
 
+// Manually implemented for privacy reasons.
+impl fmt::Debug for RpcState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RpcState").finish_non_exhaustive()
+    }
+}
+
 #[derive(Debug, Error)]
 enum RpcError {
     #[error("RPC call failed with error: {0}")]

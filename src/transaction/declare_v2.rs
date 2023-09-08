@@ -27,6 +27,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 /// Represents a declare transaction in the starknet network.
@@ -297,7 +298,8 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
-    pub fn execute<S: StateReader>(
+    #[tracing::instrument(level = "debug", ret)]
+    pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

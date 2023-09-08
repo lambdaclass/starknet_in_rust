@@ -23,6 +23,7 @@ use crate::{
     utils::Address,
 };
 use error::TransactionError;
+use std::fmt::Debug;
 
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
@@ -66,7 +67,7 @@ impl Transaction {
     ///- state: a structure that implements State and StateReader traits.
     ///- block_context: The block context of the transaction that is about to be executed.
     ///- remaining_gas: The gas supplied to execute the transaction.
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
@@ -81,6 +82,7 @@ impl Transaction {
             Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
+
     /// It creates a new transaction structure modificating the skip flags. It is meant to be used only to run a simulation
     ///## Parameters:
     ///- skip_validate: the transaction will not be verified.

@@ -26,6 +26,7 @@ use crate::{
 };
 
 use super::Transaction;
+use std::fmt::Debug;
 
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
@@ -93,7 +94,8 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    pub fn execute<S: StateReader>(
+    #[tracing::instrument(level = "debug", ret)]
+    pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

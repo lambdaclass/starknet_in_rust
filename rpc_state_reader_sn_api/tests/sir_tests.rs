@@ -36,6 +36,7 @@ use test_case::test_case;
 
 use rpc_state_reader_sn_api::rpc_state::*;
 
+#[derive(Debug)]
 pub struct RpcStateReader(RpcState);
 
 impl StateReader for RpcStateReader {

@@ -1,7 +1,7 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use crate::{
     execution::{
@@ -50,7 +50,7 @@ pub mod transaction;
 pub mod utils;
 
 #[allow(clippy::too_many_arguments)]
-pub fn simulate_transaction<S: StateReader>(
+pub fn simulate_transaction<S: Debug + StateReader>(
     transactions: &[&Transaction],
     state: S,
     block_context: &BlockContext,
@@ -86,7 +86,7 @@ pub fn estimate_fee<T>(
     block_context: &BlockContext,
 ) -> Result<Vec<(u128, usize)>, TransactionError>
 where
-    T: StateReader,
+    T: Debug + StateReader,
 {
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
@@ -171,7 +171,7 @@ pub fn estimate_message_fee<T>(
     block_context: &BlockContext,
 ) -> Result<(u128, usize), TransactionError>
 where
-    T: StateReader,
+    T: Debug + StateReader,
 {
     // This is used as a copy of the original state, we can update this cached state freely.
     let mut cached_state = CachedState::<T>::new(Arc::new(state), HashMap::new());
@@ -193,7 +193,7 @@ where
     }
 }
 
-pub fn execute_transaction<S: StateReader>(
+pub fn execute_transaction<S: Debug + StateReader>(
     tx: Transaction,
     state: &mut CachedState<S>,
     block_context: BlockContext,
