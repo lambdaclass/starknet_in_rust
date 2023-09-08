@@ -332,7 +332,7 @@ impl<T: StateReader> State for CachedState<T> {
             Some(class_hash) => {
                 self.add_hit();
                 Ok(class_hash)
-            },
+            }
             None => {
                 self.add_miss();
                 let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
@@ -369,7 +369,7 @@ impl<T: StateReader> State for CachedState<T> {
             Some(value) => {
                 self.add_hit();
                 Ok(value)
-            },
+            }
             None => {
                 self.add_miss();
                 let value = self.state_reader.get_storage_at(storage_entry)?;
@@ -383,11 +383,16 @@ impl<T: StateReader> State for CachedState<T> {
 
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
-        match self.cache.class_hash_to_compiled_class_hash.get(class_hash).cloned() {
+        match self
+            .cache
+            .class_hash_to_compiled_class_hash
+            .get(class_hash)
+            .cloned()
+        {
             Some(hash) => {
                 self.add_hit();
                 Ok(hash)
-            },
+            }
             None => {
                 self.add_miss();
                 let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
