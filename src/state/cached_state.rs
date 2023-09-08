@@ -348,7 +348,7 @@ impl<T: StateReader> State for CachedState<T> {
             Ok(*hash)
         } else {
             let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
-            let address = Address(Felt252::from_bytes_be(class_hash));
+            let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
             self.cache
                 .class_hash_initial_values
                 .insert(address, compiled_class_hash);
