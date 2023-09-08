@@ -39,7 +39,6 @@ use std::sync::Arc;
 pub struct Declare {
     pub class_hash: ClassHash,
     pub sender_address: Address,
-    pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
     pub version: Felt252,
     pub max_fee: u128,
@@ -83,7 +82,6 @@ impl Declare {
         let internal_declare = Declare {
             class_hash,
             sender_address,
-            tx_type: TransactionType::Declare,
             validate_entry_point_selector,
             version,
             max_fee,
@@ -124,7 +122,6 @@ impl Declare {
         let internal_declare = Declare {
             class_hash,
             sender_address,
-            tx_type: TransactionType::Declare,
             validate_entry_point_selector,
             version,
             max_fee,
@@ -187,7 +184,7 @@ impl Declare {
             None,
             None,
             actual_resources,
-            Some(self.tx_type),
+            Some(TransactionType::Declare),
         ))
     }
 
