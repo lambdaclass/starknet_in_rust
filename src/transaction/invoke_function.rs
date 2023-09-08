@@ -505,7 +505,78 @@ mod tests {
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
+    use starknet_api::{
+        core::{ContractAddress, Nonce, PatriciaKey},
+        hash::{StarkFelt, StarkHash},
+        transaction::{Fee, InvokeTransaction, InvokeTransactionV1, TransactionSignature},
+    };
     use std::sync::Arc;
+
+    #[test]
+    fn test_from_invoke_transaction() {
+        // https://starkscan.co/tx/0x05b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4
+        // result 0x05b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4
+        let tx = InvokeTransaction::V1(InvokeTransactionV1 {
+            sender_address: ContractAddress(
+                PatriciaKey::try_from(
+                    StarkHash::try_from(
+                        "0x00c4658311841a69ce121543af332622bc243cf5593fc4aaf822481c7b7f183d",
+                    )
+                    .unwrap(),
+                )
+                .unwrap(),
+            ),
+            max_fee: Fee(49000000000000),
+            signature: TransactionSignature(vec![
+                StarkFelt::try_from(
+                    "0x18315db8eb360a82ea11f302d6a6a35a11b9df1dc220ec1376c4d4604770dd4",
+                )
+                .unwrap(),
+                StarkFelt::try_from(
+                    "0x5e8642259ac8e99c84cdf88c17385698150eb11dccfb3036ecc2b97c0903d27",
+                )
+                .unwrap(),
+            ]),
+            nonce: Nonce(StarkFelt::from(22u32)),
+            calldata: starknet_api::transaction::Calldata(Arc::new(vec![
+                StarkFelt::try_from("0x1").unwrap(),
+                StarkFelt::try_from(
+                    "0x0454f0bd015e730e5adbb4f080b075fdbf55654ff41ee336203aa2e1ac4d4309",
+                )
+                .unwrap(),
+                StarkFelt::try_from(
+                    "0x032a99297e1d12a9b91d4f90d5dd4b160d93c84a9e3b4daa916fec14ec852e05",
+                )
+                .unwrap(),
+                StarkFelt::try_from(
+                    "0x0000000000000000000000000000000000000000000000000000000000000000",
+                )
+                .unwrap(),
+                StarkFelt::try_from(
+                    "0x0000000000000000000000000000000000000000000000000000000000000002",
+                )
+                .unwrap(),
+                StarkFelt::try_from(
+                    "0x0000000000000000000000000000000000000000000000000000000000000002",
+                )
+                .unwrap(),
+                StarkFelt::try_from(
+                    "0x0383538353434346334616431626237363933663435643237376236313461663",
+                )
+                .unwrap(),
+                StarkFelt::try_from(
+                    "0x0393762666334373463313762393535303530383563613961323435643965666",
+                )
+                .unwrap(),
+            ])),
+        });
+
+        let tx_sir = InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet).unwrap();
+        assert_eq!(
+            tx_sir.hash_value.to_str_radix(16),
+            "5b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4"
+        );
+    }
 
     #[test]
     fn test_invoke_apply_without_fees() {

@@ -6,7 +6,7 @@ use super::error::TransactionError;
 
 pub fn verify_version(
     version: &Felt252,
-    _max_fee: u128,
+    max_fee: u128,
     nonce: &Felt252,
     signature: &Vec<Felt252>,
 ) -> Result<(), TransactionError> {
@@ -15,9 +15,9 @@ pub fn verify_version(
     }
 
     if *version == 0.into() || *version == *QUERY_VERSION_BASE {
-        // if max_fee != 0 {
-        //     return Err(TransactionError::InvalidMaxFee);
-        // }
+        if max_fee != 0 {
+            return Err(TransactionError::InvalidMaxFee);
+        }
         if nonce != &0.into() {
             return Err(TransactionError::InvalidNonce);
         }

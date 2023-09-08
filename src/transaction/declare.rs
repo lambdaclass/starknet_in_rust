@@ -309,7 +309,8 @@ impl Declare {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            max_fee: if ignore_max_fee {
+            // Keep the max_fee value for V0 for validation
+            max_fee: if ignore_max_fee && !self.version.is_zero() {
                 u128::MAX
             } else {
                 self.max_fee
@@ -437,7 +438,7 @@ mod tests {
 
         let actual_resources = HashMap::from([
             ("n_steps".to_string(), 2715),
-            ("l1_gas_usage".to_string(), 2448),
+            ("l1_gas_usage".to_string(), 1224),
             ("range_check_builtin".to_string(), 63),
             ("pedersen_builtin".to_string(), 15),
         ]);

@@ -6,12 +6,12 @@ use crate::{
     utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_vm::felt::Felt252;
-use starknet::core::types::FromByteArrayError;
 
 pub trait StateReader {
     /// Returns the contract class of the given class hash or compiled class hash.
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError>;
     /// Returns the class hash of the contract class at the given address.
+    /// Returns zero by default if the value is not present
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError>;
     /// Returns the nonce of the given contract instance.
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError>;
@@ -59,8 +59,10 @@ pub trait State {
     fn count_actual_storage_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<(usize, usize), FromByteArrayError>;
+    ) -> Result<(usize, usize), StateError>;
 
+    /// Returns the class hash of the contract class at the given address.
+    /// Returns zero by default if the value is not present
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError>;
 
     /// Default: 0 for an uninitialized contract address.
