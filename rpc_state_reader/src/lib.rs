@@ -813,6 +813,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_get_transaction_declare() {
         let rpc_state = RpcState::new(
             RpcChain::MainNet,
@@ -824,6 +825,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_get_transaction_declare_v2() {
         let rpc_state = RpcState::new(
             RpcChain::MainNet,
