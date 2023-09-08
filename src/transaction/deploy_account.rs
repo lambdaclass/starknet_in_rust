@@ -151,7 +151,7 @@ impl DeployAccount {
         }
     }
 
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug", ret, err)]
     pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,

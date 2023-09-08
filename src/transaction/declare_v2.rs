@@ -298,7 +298,7 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug", ret, err)]
     pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,

@@ -94,7 +94,7 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug", ret, err)]
     pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,

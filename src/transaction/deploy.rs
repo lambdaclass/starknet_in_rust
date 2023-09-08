@@ -270,7 +270,7 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    #[tracing::instrument(level = "debug", ret)]
+    #[tracing::instrument(level = "debug", ret, err)]
     pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,

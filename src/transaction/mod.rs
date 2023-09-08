@@ -81,10 +81,6 @@ impl Transaction {
             Transaction::InvokeFunction(tx) => tx.execute(state, block_context, remaining_gas),
             Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
-        .map_err(|e| {
-            tracing::error!("A transaction has failed: {e}");
-            panic!();
-        })
     }
 
     /// It creates a new transaction structure modificating the skip flags. It is meant to be used only to run a simulation
