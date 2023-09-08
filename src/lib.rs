@@ -82,15 +82,12 @@ pub fn simulate_transaction<S: StateReader>(
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<T>(
     transactions: &[Transaction],
-    state: T,
+    mut cached_state: CachedState<T>,
     block_context: &BlockContext,
 ) -> Result<Vec<(u128, usize)>, TransactionError>
 where
     T: StateReader,
 {
-    // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(Arc::new(state), HashMap::new());
-
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         // Check if the contract is deployed.
@@ -298,7 +295,7 @@ mod test {
         let transaction = Transaction::InvokeFunction(invoke_function);
 
         let estimated_fee = estimate_fee(&[transaction], state, &block_context).unwrap();
-        assert_eq!(estimated_fee[0], (3707, 3672));
+        assert_eq!(estimated_fee[0], (2483, 2448));
     }
 
     #[test]
@@ -392,7 +389,7 @@ mod test {
         block_context.starknet_os_config.gas_price = 1;
 
         let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
-        assert_eq!(estimated_fee, (19709, 19695));
+        assert_eq!(estimated_fee, (18485, 18471));
     }
 
     #[test]
@@ -1035,7 +1032,7 @@ mod test {
 
         assert_eq!(
             estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
-            [(0, 3672), (0, 3672)]
+            [(0, 2448), (0, 2448)]
         );
     }
 
