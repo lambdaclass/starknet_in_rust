@@ -21,8 +21,8 @@ use cairo_lang_starknet::{
 };
 use cairo_vm::types::program::Program;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use rpc_state_reader_sn_api::rpc_state::*;
-use rpc_state_reader_sn_api::utils;
+use rpc_state_reader::rpc_state::*;
+use rpc_state_reader::utils;
 use starknet::core::types::ContractClass as SNContractClass;
 use starknet_api::{
     block::BlockNumber,
