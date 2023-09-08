@@ -16,8 +16,16 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address},
 };
 use std::path::Path;
+use tracing_subscriber::EnvFilter;
 
 fn main() {
+    tracing::subscriber::set_global_default(
+        tracing_subscriber::FmtSubscriber::builder()
+            .with_env_filter(EnvFilter::from_default_env())
+            .finish(),
+    )
+    .unwrap();
+
     // replace this with the path to your compiled contract
     let contract_path = "starknet_programs/factorial.json";
 
@@ -25,7 +33,7 @@ fn main() {
     let entry_point: &str = "factorial";
 
     // replace this with the arguments for the entrypoint
-    let calldata: Vec<Felt252> = [1.into(), 1.into(), 10.into()].to_vec();
+    let calldata: Vec<Felt252> = [10.into()].to_vec();
 
     let retdata = test_contract(contract_path, entry_point, calldata);
 
