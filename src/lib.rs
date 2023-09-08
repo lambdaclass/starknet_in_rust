@@ -172,17 +172,13 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
 /// Estimate the fee associated with L1Handler
 pub fn estimate_message_fee<T, C>(
     l1_handler: &L1Handler,
-    state: T,
-    contract_class_cache: Arc<C>,
+    mut cached_state: CachedState<T, C>,
     block_context: &BlockContext,
 ) -> Result<(u128, usize), TransactionError>
 where
     T: StateReader,
     C: ContractClassCache,
 {
-    // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T, C>::new(Arc::new(state), contract_class_cache);
-
     // Check if the contract is deployed.
     cached_state.get_class_hash_at(l1_handler.contract_address())?;
 
@@ -400,13 +396,7 @@ mod test {
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
 
-        let estimated_fee = estimate_message_fee(
-            &l1_handler,
-            state.clone(),
-            state.contract_class_cache().clone(),
-            &block_context,
-        )
-        .unwrap();
+        let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
         assert_eq!(estimated_fee, (19709, 19695));
     }
 
