@@ -11,7 +11,7 @@ use starknet_api::{
     core::EntryPointSelector,
     deprecated_contract_class::{EntryPoint, EntryPointOffset, EntryPointType},
     hash::{StarkFelt, StarkHash},
-    transaction::{InvokeTransaction, Transaction, DeclareTransaction},
+    transaction::{DeclareTransaction, InvokeTransaction, Transaction},
 };
 
 #[derive(Debug, Deserialize)]
