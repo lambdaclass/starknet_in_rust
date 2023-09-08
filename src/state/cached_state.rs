@@ -396,6 +396,8 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
 
         // I: FETCHING FROM CACHE
         // deprecated contract classes dont have compiled class hashes, so we only have one case
+        // `RefCell::get_mut()` provides a mutable reference without the borrowing overhead when we
+        // have a mutable reference to the `RefCell` available.
         if let Some(compiled_class) = self.contract_class_cache_private.get_mut().get(class_hash) {
             return Ok(compiled_class.clone());
         } else if let Some(compiled_class) =
@@ -411,6 +413,8 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
+            // `RefCell::get_mut()` provides a mutable reference without the borrowing overhead when
+            // we have a mutable reference to the `RefCell` available.
             if let Some(casm_class) = self
                 .contract_class_cache_private
                 .get_mut()
