@@ -328,7 +328,7 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     RpcChain::MainNet
     => ignore["broken on both"]
 )]
-fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
+fn blockifier_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
     assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
