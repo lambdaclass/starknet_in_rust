@@ -285,7 +285,14 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    #[tracing::instrument(level = "debug", ret, err)]
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::InvokeFunction,
+        self.version = ?self.version,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.entry_point_selector = ?self.entry_point_selector,
+        self.entry_point_type = ?self.entry_point_type,
+    ))]
     pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,

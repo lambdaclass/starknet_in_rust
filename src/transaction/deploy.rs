@@ -270,7 +270,14 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    #[tracing::instrument(level = "debug", ret, err)]
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::Deploy,
+        self.version = ?self.version,
+        self.contract_hash = ?self.contract_hash,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.contract_address_salt = ?self.contract_address_salt,
+    ))]
     pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,

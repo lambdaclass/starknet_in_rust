@@ -94,7 +94,13 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    #[tracing::instrument(level = "debug", ret, err)]
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::L1Handler,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.entry_point_selector = ?self.entry_point_selector,
+        self.nonce = ?self.nonce,
+    ))]
     pub fn execute<S: Debug + StateReader>(
         &self,
         state: &mut CachedState<S>,
