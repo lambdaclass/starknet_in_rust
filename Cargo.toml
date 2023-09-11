@@ -62,10 +62,11 @@ phf_macros = "0.11"
 [dev-dependencies]
 assert_matches = "1.5.0"
 coverage-helper = "0.1.0"
+criterion = "0.4"
 
 [[bench]]
-path = "bench/internals.rs"
-name = "internals"
+path = "bench/hashing_running_time.rs"
+name = "hashing_running_time"
 harness = false
 
 [build-dependencies]
