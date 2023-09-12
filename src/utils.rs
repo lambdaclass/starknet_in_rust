@@ -279,12 +279,12 @@ pub fn to_cache_state_storage_mapping(
 
 // get a vector of keys from two hashmaps
 
-pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
+pub fn get_keys<'a, K, V>(map_a: &'a HashMap<K, V>, map_b: &'a HashMap<K, V>) -> Vec<&'a K>
 where
     K: Hash + Eq,
 {
-    let mut keys1: HashSet<K> = map_a.into_keys().collect();
-    let keys2: HashSet<K> = map_b.into_keys().collect();
+    let mut keys1: HashSet<&K> = map_a.keys().collect();
+    let keys2: HashSet<&K> = map_b.keys().collect();
 
     keys1.extend(keys2);
 
