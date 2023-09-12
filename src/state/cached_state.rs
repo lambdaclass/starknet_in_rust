@@ -8,8 +8,8 @@ use crate::{
     services::api::contract_classes::compiled_class::CompiledClass,
     state::StateDiff,
     utils::{
-        get_erc20_balance_var_addresses, subtract_mappings, to_cache_state_storage_mapping,
-        Address, ClassHash,
+        get_erc20_balance_var_addresses, subtract_mappings, subtract_mappings_keys,
+        to_cache_state_storage_mapping, Address, ClassHash,
     },
 };
 use cairo_vm::felt::Felt252;
@@ -306,32 +306,24 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         self.update_initial_values_of_write_only_accesses()?;
 
         let mut storage_updates = subtract_mappings(
-            self.cache.storage_writes.clone(),
-            self.cache.storage_initial_values.clone(),
+            &self.cache.storage_writes,
+            &self.cache.storage_initial_values,
         );
 
         let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
 
-        let class_hash_updates: Vec<_> = subtract_mappings(
-            self.cache.class_hash_writes.clone(),
-            self.cache.class_hash_initial_values.clone(),
-        )
-        .keys()
-        .cloned()
-        .collect();
+        let class_hash_updates = subtract_mappings_keys(
+            &self.cache.class_hash_writes,
+            &self.cache.class_hash_initial_values,
+        );
 
-        let nonce_updates: Vec<_> = subtract_mappings(
-            self.cache.nonce_writes.clone(),
-            self.cache.nonce_initial_values.clone(),
-        )
-        .keys()
-        .cloned()
-        .collect();
+        let nonce_updates =
+            subtract_mappings_keys(&self.cache.nonce_writes, &self.cache.nonce_initial_values);
 
         let mut modified_contracts: HashSet<Address> = HashSet::new();
         modified_contracts.extend(storage_unique_updates);
-        modified_contracts.extend(class_hash_updates);
-        modified_contracts.extend(nonce_updates);
+        modified_contracts.extend(class_hash_updates.cloned());
+        modified_contracts.extend(nonce_updates.cloned());
 
         // Add fee transfer storage update before actually charging it, as it needs to be included in the
         // calculation of the final fee.
