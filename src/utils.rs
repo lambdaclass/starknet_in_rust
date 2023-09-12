@@ -230,7 +230,7 @@ where
     V: PartialEq + Clone,
 {
     let val = map.get(key);
-    !(map.contains_key(key) && (Some(value) == val))
+    Some(value) != val
 }
 
 pub fn subtract_mappings<'a, K, V>(
