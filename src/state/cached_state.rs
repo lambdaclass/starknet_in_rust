@@ -901,12 +901,15 @@ mod tests {
     #[test]
     fn test_cache_hit_miss_counter() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(
+            state_reader,
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let address = Address(1.into());
 
         // Simulate a cache miss by querying an address not in the cache.
-        let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &address);
+        let _ = <CachedState<_, _> as State>::get_class_hash_at(&mut cached_state, &address);
         assert_eq!(cached_state.cache_misses, 1);
         assert_eq!(cached_state.cache_hits, 0);
 
@@ -915,18 +918,18 @@ mod tests {
             .cache
             .class_hash_writes
             .insert(address.clone(), [0; 32]);
-        let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &address);
+        let _ = <CachedState<_, _> as State>::get_class_hash_at(&mut cached_state, &address);
         assert_eq!(cached_state.cache_misses, 1);
         assert_eq!(cached_state.cache_hits, 1);
 
         // Simulate another cache hit.
-        let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &address);
+        let _ = <CachedState<_, _> as State>::get_class_hash_at(&mut cached_state, &address);
         assert_eq!(cached_state.cache_misses, 1);
         assert_eq!(cached_state.cache_hits, 2);
 
         // Simulate another cache miss.
         let other_address = Address(2.into());
-        let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &other_address);
+        let _ = <CachedState<_, _> as State>::get_class_hash_at(&mut cached_state, &other_address);
         assert_eq!(cached_state.cache_misses, 2);
         assert_eq!(cached_state.cache_hits, 2);
     }
