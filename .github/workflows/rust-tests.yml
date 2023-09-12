@@ -47,16 +47,16 @@ jobs:
         key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         restore-keys: ${{ matrix.program-target }}-cache-
 
-    - name: Install deps
-      if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
-      run: make deps
-
     - name: Python3 Build
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
         cache: 'pip'
+
+    - name: Install deps
+      if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
+      run: make deps
 
     # This is not pretty, but we need `make` to see the compiled programs are
     # actually newer than the sources, otherwise it will try to rebuild them
@@ -84,7 +84,7 @@ jobs:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-cairo-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
-    
+
     - name: Fetch from cache (compile-starknet)
       uses: actions/cache/restore@v3
       with:
@@ -126,7 +126,7 @@ jobs:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
-    
+
     - name: Merge caches
       uses: actions/cache/save@v3
       with:
@@ -213,7 +213,7 @@ jobs:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
-    
+
     - name: Install testing tools
       # TODO: remove `if` when nextest adds doctests support
       if: ${{ matrix.target != 'test-doctests' }}

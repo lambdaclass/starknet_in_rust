@@ -1,26 +1,3 @@
-use std::sync::Arc;
-
-use crate::services::api::contract_classes::deprecated_contract_class::{
-    ContractEntryPoint, EntryPointType,
-};
-use crate::state::cached_state::CachedState;
-use crate::state::StateDiff;
-
-#[cfg(feature = "cairo-native")]
-use crate::syscalls::native_syscall_handler::NativeSyscallHandler;
-#[cfg(feature = "cairo-native")]
-use cairo_native::context::NativeContext;
-#[cfg(feature = "cairo-native")]
-use cairo_native::execution_result::NativeExecutionResult;
-#[cfg(feature = "cairo-native")]
-use cairo_native::executor::NativeExecutor;
-#[cfg(feature = "cairo-native")]
-use cairo_native::metadata::syscall_handler::SyscallHandlerMeta;
-#[cfg(feature = "cairo-native")]
-use cairo_native::utils::felt252_bigint;
-#[cfg(feature = "cairo-native")]
-use serde_json::Value;
-
 use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
 };
@@ -28,11 +5,15 @@ use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
     services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        compiled_class::CompiledClass,
+        deprecated_contract_class::{ContractClass, ContractEntryPoint, EntryPointType},
     },
-    state::state_api::State,
-    state::ExecutionResourcesManager,
-    state::{contract_storage_state::ContractStorageState, state_api::StateReader},
+    state::{
+        cached_state::CachedState,
+        contract_storage_state::ContractStorageState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager, StateDiff,
+    },
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
         deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
@@ -56,6 +37,17 @@ use cairo_vm::{
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources, RunResources},
         vm_core::VirtualMachine,
     },
+};
+use std::sync::Arc;
+
+#[cfg(feature = "cairo-native")]
+use {
+    crate::syscalls::native_syscall_handler::NativeSyscallHandler,
+    cairo_native::{
+        context::NativeContext, execution_result::NativeExecutionResult, executor::NativeExecutor,
+        metadata::syscall_handler::SyscallHandlerMeta, utils::felt252_bigint,
+    },
+    serde_json::Value,
 };
 
 #[derive(Debug, Default)]
@@ -630,6 +622,7 @@ impl ExecutionEntryPoint {
     }
 
     #[cfg(not(feature = "cairo-native"))]
+    #[inline(always)]
     fn native_execute<S: StateReader>(
         &self,
         _state: &mut CachedState<S>,
@@ -643,6 +636,7 @@ impl ExecutionEntryPoint {
     }
 
     #[cfg(feature = "cairo-native")]
+    #[inline(always)]
     fn native_execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -765,7 +759,7 @@ impl ExecutionEntryPoint {
 
         native_executor
             .execute(fn_id, params, returns, required_init_gas)
-            .unwrap();
+            .map_err(|e| TransactionError::CustomError(e.to_string()))?;
 
         let result: String = String::from_utf8(writer).unwrap();
         let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();

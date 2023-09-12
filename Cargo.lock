@@ -1288,7 +1288,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native#eb00476f36b3bbe9d8ee260a569e0ce2cbddaf93"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=eb00476#eb00476f36b3bbe9d8ee260a569e0ce2cbddaf93"
 dependencies = [
  "bumpalo",
  "cairo-felt",
@@ -1322,7 +1322,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native#eb00476f36b3bbe9d8ee260a569e0ce2cbddaf93"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=eb00476#eb00476f36b3bbe9d8ee260a569e0ce2cbddaf93"
 dependencies = [
  "cairo-felt",
  "cairo-lang-runner",

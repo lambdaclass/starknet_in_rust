@@ -172,9 +172,9 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         value: cairo_vm::felt::Felt252,
     ) -> SyscallResult<()> {
         println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
-        Ok(self
-            .starknet_storage_state
-            .write(&address.to_be_bytes(), value))
+        self.starknet_storage_state
+            .write(&address.to_be_bytes(), value);
+        Ok(())
     }
 
     fn emit_event(
