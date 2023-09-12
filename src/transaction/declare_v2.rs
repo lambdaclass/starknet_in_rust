@@ -5,6 +5,7 @@ use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
+use crate::definitions::block_context::StarknetChainId;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
 use crate::{
@@ -452,6 +453,29 @@ impl DeclareV2 {
 
         Transaction::DeclareV2(Box::new(tx))
     }
+}
+
+fn convert_declare_v2<S: StateReader>(
+    state_reader: S,
+    value: starknet_api::transaction::DeclareTransactionV2,
+    chain_id: StarknetChainId,
+) -> Result<DeclareV2, TransactionError> {
+    DeclareV2::new(
+        sierra_contract_class,
+        casm_contract_class,
+        Felt252::from_bytes_be(value.compiled_class_hash.0.bytes()),
+        chain_id.to_felt(),
+        Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes())),
+        value.max_fee.0,
+        Felt252::new(2),
+        value
+            .signature
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect(),
+        Felt252::from_bytes_be(value.nonce.0.bytes()),
+    )
 }
 
 #[cfg(test)]

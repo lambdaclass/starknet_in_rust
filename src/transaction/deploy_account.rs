@@ -1,33 +1,33 @@
-use super::fee::charge_fee;
-use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::definitions::constants::QUERY_VERSION_BASE;
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::cached_state::CachedState;
+use super::{fee::charge_fee, invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::{
     core::{
         errors::state_errors::StateError,
         transaction_hash::calculate_deploy_account_transaction_hash,
     },
     definitions::{
-        block_context::BlockContext,
+        block_context::{BlockContext, StarknetChainId},
         constants::{
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST, QUERY_VERSION_BASE,
             VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         },
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
     hash_utils::calculate_contract_address,
     services::api::{
-        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+        contract_class_errors::ContractClassError,
+        contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+        },
     },
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
-    syscalls::syscall_handler_errors::SyscallHandlerError,
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
@@ -74,7 +74,7 @@ impl DeployAccount {
         signature: Vec<Felt252>,
         contract_address_salt: Felt252,
         chain_id: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash),
@@ -119,7 +119,7 @@ impl DeployAccount {
         signature: Vec<Felt252>,
         contract_address_salt: Felt252,
         hash_value: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash),
@@ -141,6 +141,14 @@ impl DeployAccount {
             skip_validate: false,
             skip_fee_transfer: false,
         })
+    }
+
+    /// Creates a `DeployAccount` from a starknet api `DeployAccountTransaction`.
+    pub fn from_deploy_account_transaction(
+        tx: starknet_api::transaction::DeployAccountTransaction,
+        chain_id: StarknetChainId,
+    ) -> Result<Self, TransactionError> {
+        convert_deploy_account(tx, chain_id)
     }
 
     pub fn get_state_selector(&self, _block_context: BlockContext) -> StateSelector {
@@ -386,55 +394,35 @@ impl DeployAccount {
     }
 }
 
-// ----------------------------------
-//      Try from starknet api
-// ----------------------------------
-
-impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
-    type Error = SyscallHandlerError;
-
-    fn try_from(
-        value: starknet_api::transaction::DeployAccountTransaction,
-    ) -> Result<Self, SyscallHandlerError> {
-        let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
-        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
-
-        let signature = value
-            .signature
-            .0
-            .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
-            .collect();
-        let constructor_calldata = value
+fn convert_deploy_account(
+    value: starknet_api::transaction::DeployAccountTransaction,
+    chain_id: StarknetChainId,
+) -> Result<DeployAccount, TransactionError> {
+    DeployAccount::new(
+        value.class_hash.0.bytes().try_into().unwrap(),
+        value.max_fee.0,
+        Felt252::from_bytes_be(value.version.0.bytes()),
+        Felt252::from_bytes_be(value.nonce.0.bytes()),
+        value
             .constructor_calldata
             .0
             .as_ref()
             .iter()
             .map(|f| Felt252::from_bytes_be(f.bytes()))
-            .collect();
-
-        let chain_id = Felt252::zero();
-
-        DeployAccount::new(
-            class_hash,
-            max_fee,
-            version,
-            nonce,
-            constructor_calldata,
-            signature,
-            contract_address_salt,
-            chain_id,
-        )
-    }
+            .collect(),
+        value
+            .signature
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect(),
+        Felt252::from_bytes_be(value.contract_address_salt.0.bytes()),
+        chain_id.to_felt(),
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
     use super::*;
     use crate::{
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
@@ -444,6 +432,7 @@ mod tests {
         state::in_memory_state_reader::InMemoryStateReader,
         utils::felt_to_hash,
     };
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     #[test]
     fn get_state_selector() {

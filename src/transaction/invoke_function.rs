@@ -1,3 +1,4 @@
+use super::{fee::charge_fee, Transaction};
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -11,18 +12,18 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    state::state_api::{State, StateReader},
-    state::{cached_state::CachedState, ExecutionResourcesManager},
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
-
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-
-use super::{fee::charge_fee, Transaction};
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]

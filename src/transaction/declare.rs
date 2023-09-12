@@ -1,23 +1,27 @@
-use crate::definitions::constants::QUERY_VERSION_BASE;
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::cached_state::CachedState;
+use super::{fee::charge_fee, verify_version, Transaction};
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
         transaction_hash::calculate_declare_transaction_hash,
     },
     definitions::{
-        block_context::BlockContext, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
+        block_context::{BlockContext, StarknetChainId},
+        constants::{QUERY_VERSION_BASE, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass,
+        deprecated_contract_class::{ContractClass, EntryPointType},
+    },
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
     transaction::error::TransactionError,
     utils::{
         calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
@@ -26,10 +30,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-
-use super::fee::charge_fee;
-use super::{verify_version, Transaction};
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use std::sync::Arc;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -315,6 +315,27 @@ impl Declare {
 
         Transaction::Declare(tx)
     }
+}
+
+fn convert_declare_v0v1(
+    value: starknet_api::transaction::DeclareTransactionV0V1,
+    chain_id: StarknetChainId,
+) -> Result<Declare, TransactionError> {
+    // FIXME: Assuming a version of 1, but it may be zero too.
+    Declare::new(
+        contract_class,
+        chain_id.to_felt(),
+        Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes())),
+        value.max_fee.0,
+        Felt252::new(1),
+        value
+            .signature
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect(),
+        Felt252::from_bytes_be(value.nonce.0.bytes()),
+    )
 }
 
 // ---------------

@@ -1,37 +1,37 @@
-use std::sync::Arc;
-
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::{
-    ContractClass, EntryPointType,
-};
-use crate::state::cached_state::CachedState;
-use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
+use super::Transaction;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
         errors::state_errors::StateError, transaction_hash::calculate_deploy_transaction_hash,
     },
     definitions::{
-        block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+        block_context::{BlockContext, StarknetChainId},
+        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
     hash_utils::calculate_contract_address,
     services::api::{
-        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+        contract_class_errors::ContractClassError,
+        contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
     },
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{
+        cached_state::CachedState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-
-use super::Transaction;
+use std::sync::Arc;
 
 /// Represents a Deploy Transaction in the starknet network
 #[derive(Debug, Clone)]
@@ -55,9 +55,9 @@ impl Deploy {
         constructor_calldata: Vec<Felt252>,
         chain_id: Felt252,
         version: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let class_hash = compute_deprecated_class_hash(&contract_class).map_err(|e| {
-            SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
+            TransactionError::HashError(HashError::FailedToComputeHash(e.to_string()))
         })?;
 
         let contract_hash: ClassHash = felt_to_hash(&class_hash);
@@ -95,9 +95,9 @@ impl Deploy {
         constructor_calldata: Vec<Felt252>,
         version: Felt252,
         hash_value: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let class_hash = compute_deprecated_class_hash(&contract_class).map_err(|e| {
-            SyscallHandlerError::HashError(HashError::FailedToComputeHash(e.to_string()))
+            TransactionError::HashError(HashError::FailedToComputeHash(e.to_string()))
         })?;
         let contract_hash: ClassHash = felt_to_hash(&class_hash);
         let contract_address = Address(calculate_contract_address(
@@ -298,6 +298,25 @@ impl Deploy {
 
         Transaction::Deploy(tx)
     }
+}
+
+fn convert_deploy(
+    value: starknet_api::transaction::DeployTransaction,
+    chain_id: StarknetChainId,
+) -> Result<Deploy, TransactionError> {
+    Deploy::new(
+        Felt252::from_bytes_be(value.contract_address_salt.0.bytes()),
+        contract_class,
+        value
+            .constructor_calldata
+            .0
+            .as_ref()
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect(),
+        chain_id.to_felt(),
+        Felt252::from_bytes_be(value.version.0.bytes()),
+    )
 }
 
 #[cfg(test)]
