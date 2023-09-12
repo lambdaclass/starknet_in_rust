@@ -23,7 +23,7 @@ pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub address_to_storage: HashMap<StorageEntry, Felt252>,
     #[getset(get_mut = "pub")]
-    pub class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
     #[getset(get_mut = "pub")]
     pub class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
