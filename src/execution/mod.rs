@@ -104,48 +104,72 @@ impl CallInfo {
         )
     }
 
-    /// Yields the contract calls in DFS (preorder).
+    /// Returns the contract calls in DFS (preorder).
     pub fn gen_call_topology(&self) -> Vec<CallInfo> {
         let mut calls = Vec::new();
+        calls.push(self.clone());
         if self.internal_calls.is_empty() {
-            calls.push(self.clone())
+            return calls;
         } else {
-            calls.push(self.clone());
             for call_info in self.internal_calls.clone() {
                 calls.extend(call_info.gen_call_topology());
             }
         }
+
         calls
     }
 
     /// Returns a list of Starknet Event objects collected during the execution, sorted by the order
     /// in which they were emitted.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
+        // get the full call topology (current call + all the internal calls)
         let calls = self.gen_call_topology();
+        // the total amount of events
         let n_events = calls.iter().fold(0, |acc, c| acc + c.events.len());
 
-        let mut starknet_events: Vec<Option<Event>> = (0..n_events).map(|_| None).collect();
+        // if there is no events to collect we just return
+        if n_events == 0 {
+            return Ok(vec![]);
+        }
+
+        let mut collected_events: Vec<Option<Event>> = (0..n_events).map(|_| None).collect();
 
         for call in calls {
             for ordered_event in call.events {
                 let event = Event::new(ordered_event.clone(), call.contract_address.clone());
-                starknet_events.remove((ordered_event.order as isize - 1).max(0) as usize);
-                starknet_events.insert(
-                    (ordered_event.order as isize - 1).max(0) as usize,
-                    Some(event),
-                );
+                // we subtract 1 to the order of the events since they start at 1
+                let event_index = (ordered_event.order as isize - 1).max(0) as usize;
+                // check if the there is no stored event at the event index
+                if collected_events[event_index].is_none() {
+                    // if there is none we just store it.
+                    // Replacing the None value.
+                    collected_events.remove(event_index);
+                    collected_events.insert(
+                        (ordered_event.order as isize - 1).max(0) as usize,
+                        Some(event),
+                    );
+                } else {
+                    // it can be the case that some inner call already emitted
+                    // an event with the same order, so there is already an
+                    // event stored at position=event_index, so we just store
+                    // it in the next position (event_index + 1).
+                    collected_events.remove(event_index + 1);
+                    collected_events.insert(event_index + 1, Some(event));
+                }
             }
         }
 
-        let are_all_some = starknet_events.iter().all(|e| e.is_some());
+        // check that all the positions are covered (they are not None).
+        // if that's not the case, return an error.
+        let are_all_some = collected_events.iter().all(|e| e.is_some());
 
         if !are_all_some {
             return Err(TransactionError::UnexpectedHolesInEventOrder);
         }
-        Ok(starknet_events.into_iter().flatten().collect())
+        Ok(collected_events.into_iter().flatten().collect())
     }
 
-    /// Returns a list of Starknet L2ToL1MessageInfo objects collected during the execution, sorted
+    /// Returns a list of L2ToL1MessageInfo objects collected during the execution, sorted
     /// by the order in which they were sent.
     pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, TransactionError> {
         let calls = self.gen_call_topology();
@@ -586,6 +610,8 @@ impl TransactionExecutionInfo {
         })
     }
 
+    /// Returns an ordered vector with all the event emitted during the transaction.
+    /// Including the ones emitted by internal calls.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
         let calls = self.non_optional_calls();
         let mut sorted_events: Vec<Event> = Vec::new();
