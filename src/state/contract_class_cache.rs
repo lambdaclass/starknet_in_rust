@@ -6,11 +6,6 @@
 //! The trait `ContractClassCache` provides methods for retrieving and inserting elements into the
 //! cache. It also contains a method to extend the shared cache from an iterator so that it can be
 //! used with the private caches.
-//!
-//! TODO: Right now, it's impossible to implement the issue's `merge_caches` because
-//!   `ContractClassCache::extend` will be called already with the write lock in place. To solve
-//!   this, the lock may be pushed into the cache, but the methods will not be able to have
-//!   `&mut self` as the object.
 
 use crate::{services::api::contract_classes::compiled_class::CompiledClass, utils::ClassHash};
 use std::{collections::HashMap, sync::RwLock};
