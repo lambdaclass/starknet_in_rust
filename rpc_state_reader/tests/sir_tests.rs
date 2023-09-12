@@ -262,6 +262,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         ..
     } = call_info.unwrap();
 
+    // check Cairo VM execution resources
     assert_eq_sorted!(
         execution_resources,
         trace
@@ -271,6 +272,8 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
             .execution_resources,
         "execution resources mismatch"
     );
+
+    // check amount of internal calls
     assert_eq!(
         internal_calls.len(),
         trace
@@ -282,6 +285,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         "internal calls length mismatch"
     );
 
+    // check actual fee calculation
     if receipt.actual_fee != actual_fee {
         let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
 
@@ -292,4 +296,17 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
             );
         }
     }
+}
+
+#[test]
+fn test_sorted_events() {
+    let (tx_info, _trace, _receipt) = execute_tx(
+        "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+        RpcChain::MainNet,
+        BlockNumber(197000),
+    );
+
+    let events_len = tx_info.get_sorted_events().unwrap().len();
+
+    assert_eq!(3, events_len);
 }
