@@ -3570,23 +3570,6 @@ dependencies = [
 name = "rpc_state_reader"
 version = "0.3.1"
 dependencies = [
- "cairo-lang-starknet",
- "cairo-vm",
- "dotenv",
- "serde",
- "serde_json",
- "serde_with 3.3.0",
- "starknet",
- "starknet_api",
- "starknet_in_rust",
- "thiserror",
- "ureq",
-]
-
-[[package]]
-name = "rpc_state_reader_sn_api"
-version = "0.3.1"
-dependencies = [
  "blockifier",
  "cairo-lang-starknet",
  "cairo-lang-utils",

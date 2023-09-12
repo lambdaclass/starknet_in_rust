@@ -83,15 +83,12 @@ pub fn simulate_transaction<S: StateReader>(
 /// Estimate the fee associated with transaction
 pub fn estimate_fee<T>(
     transactions: &[Transaction],
-    state: T,
+    mut cached_state: CachedState<T>,
     block_context: &BlockContext,
 ) -> Result<Vec<(u128, usize)>, TransactionError>
 where
     T: StateReader,
 {
-    // This is used as a copy of the original state, we can update this cached state freely.
-    let mut cached_state = CachedState::<T>::new(Arc::new(state), HashMap::new());
-
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         // Check if the contract is deployed.
@@ -220,7 +217,6 @@ mod test {
             EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             VALIDATE_ENTRY_POINT_SELECTOR,
         },
-        transaction_type::TransactionType,
     };
     use crate::estimate_fee;
     use crate::estimate_message_fee;
@@ -875,7 +871,6 @@ mod test {
 
         DeclareV2 {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-            tx_type: TransactionType::Declare,
             validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
             version: 1.into(),
             max_fee: INITIAL_GAS_COST,

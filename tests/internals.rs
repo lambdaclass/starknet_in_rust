@@ -739,7 +739,6 @@ fn declare_tx() -> Declare {
         contract_class: ContractClass::from_path(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
         version: 1.into(),
         max_fee: 100000,
@@ -765,7 +764,6 @@ fn declarev2_tx() -> DeclareV2 {
 
     DeclareV2 {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
         version: 1.into(),
         max_fee: 50000000,
@@ -808,7 +806,6 @@ fn deploy_fib_syscall() -> Deploy {
         contract_hash,
         contract_class,
         constructor_calldata: Vec::new(),
-        tx_type: TransactionType::Deploy,
         skip_execute: false,
         skip_fee_transfer: false,
         skip_validate: false,
