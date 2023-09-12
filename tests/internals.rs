@@ -1438,7 +1438,7 @@ fn test_invoke_with_declarev2_tx() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_compiled_class
+        .class_hash_to_compiled_class_hash
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
