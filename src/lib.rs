@@ -212,7 +212,6 @@ mod test {
                 EXECUTE_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST,
                 VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR,
             },
-            transaction_type::TransactionType,
         },
         estimate_fee, estimate_message_fee,
         hash_utils::calculate_contract_address,
