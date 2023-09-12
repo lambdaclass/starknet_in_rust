@@ -24,7 +24,6 @@ use sha3::{Digest, Keccak256};
 use starknet::core::types::FromByteArrayError;
 use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
 use starknet_crypto::{pedersen_hash, FieldElement};
-use std::ops::Deref;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -244,7 +243,7 @@ where
 {
     map_a
         .iter()
-        .filter(|(k, v)| contained_and_not_updated(k.deref(), v.deref(), map_b))
+        .filter(|(k, v)| contained_and_not_updated(&**k, &**v, map_b))
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect()
 }
@@ -259,7 +258,7 @@ where
 {
     map_a
         .iter()
-        .filter(|(k, v)| contained_and_not_updated(k.deref(), v.deref(), map_b))
+        .filter(|(k, v)| contained_and_not_updated(&**k, &**v, map_b))
         .map(|x| x.0)
 }
 
