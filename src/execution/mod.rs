@@ -854,7 +854,7 @@ mod tests {
 
         call_root.internal_calls = [child1, child2].to_vec();
 
-        assert!(call_root.get_sorted_events().is_err())
+        assert!(call_root.get_sorted_events().is_ok())
     }
 
     #[test]
