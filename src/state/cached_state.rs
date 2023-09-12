@@ -109,7 +109,7 @@ impl<T: StateReader> CachedState<T> {
             cache: StateCache::default(),
             contract_classes: ContractClassCache::default(),
             cache_hits: 0,
-            cache_misses: 0
+            cache_misses: 0,
         }
     }
 }
