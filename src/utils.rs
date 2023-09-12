@@ -243,7 +243,7 @@ where
 {
     map_a
         .iter()
-        .filter(|(k, v)| contained_and_not_updated(&**k, &**v, map_b))
+        .filter(|(k, v)| contained_and_not_updated(*k, *v, map_b))
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect()
 }
@@ -258,7 +258,7 @@ where
 {
     map_a
         .iter()
-        .filter(|(k, v)| contained_and_not_updated(&**k, &**v, map_b))
+        .filter(|(k, v)| contained_and_not_updated(*k, *v, map_b))
         .map(|x| x.0)
 }
 
