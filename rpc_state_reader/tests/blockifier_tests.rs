@@ -238,6 +238,22 @@ fn blockifier_test_recent_tx() {
 }
 
 #[test_case(
+    "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+    90006,
+    RpcChain::MainNet
+    => ignore["old transaction, gas mismatch"]
+)]
+#[test_case(
+    "0x025844447697eb7d5df4d8268b23aef6c11de4087936048278c2559fc35549eb",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
     "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
     169928, // real block 169929
     RpcChain::MainNet
@@ -266,7 +282,6 @@ fn blockifier_test_recent_tx() {
     => ignore["resource mismatch"]
 )]
 #[test_case(
-    // fails in blockifier too
     "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
     186551, // real block     186552
     RpcChain::MainNet
