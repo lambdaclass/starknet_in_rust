@@ -44,7 +44,6 @@ pub struct Deploy {
     pub contract_hash: ClassHash,
     pub contract_class: CompiledClass,
     pub constructor_calldata: Vec<Felt252>,
-    pub tx_type: TransactionType,
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
@@ -85,7 +84,6 @@ impl Deploy {
             contract_hash,
             contract_class: CompiledClass::Deprecated(Arc::new(contract_class)),
             constructor_calldata,
-            tx_type: TransactionType::Deploy,
             skip_validate: false,
             skip_execute: false,
             skip_fee_transfer: false,
@@ -118,7 +116,6 @@ impl Deploy {
             contract_hash,
             constructor_calldata,
             contract_class: CompiledClass::Deprecated(Arc::new(contract_class)),
-            tx_type: TransactionType::Deploy,
             skip_validate: false,
             skip_execute: false,
             skip_fee_transfer: false,
@@ -187,7 +184,7 @@ impl Deploy {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
-            self.tx_type,
+            TransactionType::Deploy,
             changes,
             None,
             0,
@@ -198,7 +195,7 @@ impl Deploy {
             Some(call_info),
             None,
             actual_resources,
-            Some(self.tx_type),
+            Some(TransactionType::Deploy),
         ))
     }
 
@@ -250,7 +247,7 @@ impl Deploy {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
-            self.tx_type,
+            TransactionType::Deploy,
             changes,
             None,
             n_reverted_steps,
@@ -261,7 +258,7 @@ impl Deploy {
             call_info,
             revert_error,
             actual_resources,
-            Some(self.tx_type),
+            Some(TransactionType::Deploy),
         ))
     }
 
