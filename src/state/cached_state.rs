@@ -179,25 +179,22 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = self
-                .contract_class_cache_private
-                .borrow()
-                .get(compiled_class_hash)
-            {
+            if let Some(casm_class) = private_cache.get(compiled_class_hash) {
                 return Ok(casm_class.clone());
             } else if let Some(casm_class) = self
                 .contract_class_cache()
                 .get_contract_class(*compiled_class_hash)
             {
-                self.contract_class_cache_private
-                    .borrow_mut()
-                    .insert(*class_hash, casm_class.clone());
+                private_cache.insert(*class_hash, casm_class.clone());
                 return Ok(casm_class);
             }
         }
 
         // II: FETCHING FROM STATE_READER
-        self.state_reader.get_contract_class(class_hash)
+        let contract_class = self.state_reader.get_contract_class(class_hash)?;
+        private_cache.insert(*class_hash, contract_class.clone());
+
+        Ok(contract_class)
     }
 }
 
