@@ -1,6 +1,6 @@
 use cairo_vm::felt::felt_str;
 use rpc_state_reader::rpc_state::{BlockValue, RpcChain, RpcState};
-use starknet_api::block::BlockNumber;
+use starknet_api::{block::BlockNumber, hash::StarkFelt, stark_felt, transaction::TransactionHash};
 use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -16,12 +16,12 @@ use starknet_in_rust::{
 use std::{collections::HashMap, sync::Arc};
 
 fn main() {
-    let tx_hash = "0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955";
+    let tx_hash = TransactionHash(stark_felt!(
+        "0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
+    ));
     let network = RpcChain::MainNet;
     let block_number = 90_002;
     let gas_price = 13572248835;
-
-    let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     // Instantiate the RPC StateReader and the CachedState
     let block = BlockValue::Number(BlockNumber(block_number));
@@ -50,7 +50,7 @@ fn main() {
         true,
     );
 
-    let tx = rpc_state.get_transaction(tx_hash);
+    let tx = rpc_state.get_transaction(&tx_hash);
 
     tx.execute(&mut state, &block_context, 0).unwrap();
 }
