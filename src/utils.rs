@@ -24,6 +24,7 @@ use sha3::{Digest, Keccak256};
 use starknet::core::types::FromByteArrayError;
 use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
 use starknet_crypto::{pedersen_hash, FieldElement};
+use std::ops::Deref;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -233,15 +234,33 @@ where
     !(map.contains_key(key) && (Some(value) == val))
 }
 
-pub fn subtract_mappings<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> HashMap<K, V>
+pub fn subtract_mappings<'a, K, V>(
+    map_a: &'a HashMap<K, V>,
+    map_b: &'a HashMap<K, V>,
+) -> HashMap<K, V>
 where
     K: Hash + Eq + Clone,
     V: PartialEq + Clone,
 {
     map_a
-        .into_iter()
-        .filter(|(k, v)| contained_and_not_updated(k, v, &map_b))
+        .iter()
+        .filter(|(k, v)| contained_and_not_updated(k.deref(), v.deref(), map_b))
+        .map(|(k, v)| (k.clone(), v.clone()))
         .collect()
+}
+
+pub fn subtract_mappings_keys<'a, K, V>(
+    map_a: &'a HashMap<K, V>,
+    map_b: &'a HashMap<K, V>,
+) -> impl Iterator<Item = &'a K>
+where
+    K: Hash + Eq + Clone,
+    V: PartialEq + Clone,
+{
+    map_a
+        .iter()
+        .filter(|(k, v)| contained_and_not_updated(k.deref(), v.deref(), map_b))
+        .map(|x| x.0)
 }
 
 /// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
@@ -647,7 +666,7 @@ mod test {
             .into_iter()
             .collect::<HashMap<&str, i32>>();
 
-        assert_eq!(subtract_mappings(a, b), res);
+        assert_eq!(subtract_mappings(&a, &b), res);
 
         let mut c = HashMap::new();
         let mut d = HashMap::new();
@@ -664,7 +683,7 @@ mod test {
             .into_iter()
             .collect::<HashMap<i32, i32>>();
 
-        assert_eq!(subtract_mappings(c, d), res);
+        assert_eq!(subtract_mappings(&c, &d), res);
 
         let mut e = HashMap::new();
         let mut f = HashMap::new();
@@ -676,7 +695,7 @@ mod test {
         f.insert(3, 4);
         f.insert(6, 7);
 
-        assert_eq!(subtract_mappings(e, f), HashMap::new())
+        assert_eq!(subtract_mappings(&e, &f), HashMap::new())
     }
 
     #[test]
