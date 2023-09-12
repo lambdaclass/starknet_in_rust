@@ -32,7 +32,7 @@ use starknet_in_rust::{
 
 use test_case::test_case;
 
-use rpc_state_reader_sn_api::rpc_state::*;
+use rpc_state_reader::rpc_state::*;
 
 pub struct RpcStateReader(RpcState);
 

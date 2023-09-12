@@ -33,6 +33,34 @@ pub struct CachedState<T: StateReader, C: ContractClassCache> {
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) contract_class_cache: Arc<C>,
     pub(crate) contract_class_cache_private: RefCell<HashMap<ClassHash, CompiledClass>>,
+    cache_hits: usize,
+    cache_misses: usize,
+}
+
+#[cfg(feature = "metrics")]
+impl<T: StateReader> CachedState<T> {
+    #[inline(always)]
+    pub fn add_hit(&mut self) {
+        self.cache_hits += 1;
+    }
+
+    #[inline(always)]
+    pub fn add_miss(&mut self) {
+        self.cache_misses += 1;
+    }
+}
+
+#[cfg(not(feature = "metrics"))]
+impl<T: StateReader> CachedState<T> {
+    #[inline(always)]
+    pub fn add_hit(&mut self) {
+        // does nothing
+    }
+
+    #[inline(always)]
+    pub fn add_miss(&mut self) {
+        // does nothing
+    }
 }
 
 impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
@@ -43,6 +71,8 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
             state_reader,
             contract_class_cache: contract_classes,
             contract_class_cache_private: RefCell::new(HashMap::new()),
+            cache_hits: 0,
+            cache_misses: 0,
         }
     }
 
@@ -57,6 +87,8 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
             state_reader,
             contract_class_cache: contract_classes,
             contract_class_cache_private: RefCell::new(HashMap::new()),
+            cache_hits: 0,
+            cache_misses: 0,
         }
     }
 
@@ -313,9 +345,13 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
     /// Returns zero as default value if missing
     /// Adds the value to the cache's inital_values if not present
     fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        match self.cache.get_class_hash(contract_address) {
-            Some(class_hash) => Ok(*class_hash),
+        match self.cache.get_class_hash(contract_address).cloned() {
+            Some(class_hash) => {
+                self.add_hit();
+                Ok(class_hash)
+            }
             None => {
+                self.add_miss();
                 let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
                 self.cache
                     .class_hash_initial_values
@@ -327,10 +363,13 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
 
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
+            self.add_miss();
             let nonce = self.state_reader.get_nonce_at(contract_address)?;
             self.cache
                 .nonce_initial_values
                 .insert(contract_address.clone(), nonce);
+        } else {
+            self.add_hit();
         }
         Ok(self
             .cache
@@ -343,9 +382,13 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
     /// Returns zero as default value if missing
     /// Adds the value to the cache's inital_values if not present
     fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        match self.cache.get_storage(storage_entry) {
-            Some(value) => Ok(value.clone()),
+        match self.cache.get_storage(storage_entry).cloned() {
+            Some(value) => {
+                self.add_hit();
+                Ok(value)
+            }
             None => {
+                self.add_miss();
                 let value = self.state_reader.get_storage_at(storage_entry)?;
                 self.cache
                     .storage_initial_values
@@ -357,16 +400,25 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
 
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
-        let hash = self.cache.class_hash_to_compiled_class_hash.get(class_hash);
-        if let Some(hash) = hash {
-            Ok(*hash)
-        } else {
-            let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
-            let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
-            self.cache
-                .class_hash_initial_values
-                .insert(address, compiled_class_hash);
-            Ok(compiled_class_hash)
+        match self
+            .cache
+            .class_hash_to_compiled_class_hash
+            .get(class_hash)
+            .cloned()
+        {
+            Some(hash) => {
+                self.add_hit();
+                Ok(hash)
+            }
+            None => {
+                self.add_miss();
+                let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
+                let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
+                self.cache
+                    .class_hash_initial_values
+                    .insert(address, compiled_class_hash);
+                Ok(compiled_class_hash)
+            }
         }
     }
 
@@ -382,10 +434,12 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         // `RefCell::get_mut()` provides a mutable reference without the borrowing overhead when we
         // have a mutable reference to the `RefCell` available.
         if let Some(compiled_class) = self.contract_class_cache_private.get_mut().get(class_hash) {
+            self.add_hit();
             return Ok(compiled_class.clone());
         } else if let Some(compiled_class) =
             self.contract_class_cache().get_contract_class(*class_hash)
         {
+            self.add_hit();
             self.contract_class_cache_private
                 .get_mut()
                 .insert(*class_hash, compiled_class.clone());
@@ -403,11 +457,13 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
                 .get_mut()
                 .get(compiled_class_hash)
             {
+                self.add_hit();
                 return Ok(casm_class.clone());
             } else if let Some(casm_class) = self
                 .contract_class_cache()
                 .get_contract_class(*compiled_class_hash)
             {
+                self.add_hit();
                 self.contract_class_cache_private
                     .get_mut()
                     .insert(*class_hash, casm_class.clone());
@@ -824,5 +880,39 @@ mod tests {
                 ((address_two, storage_key_two), Felt252::from(0)),
             ])
         )
+    }
+
+    #[cfg(feature = "metrics")]
+    #[test]
+    fn test_cache_hit_miss_counter() {
+        let state_reader = Arc::new(InMemoryStateReader::default());
+        let mut cached_state = CachedState::new(state_reader, None, None);
+
+        let address = Address(1.into());
+
+        // Simulate a cache miss by querying an address not in the cache.
+        let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &address);
+        assert_eq!(cached_state.cache_misses, 1);
+        assert_eq!(cached_state.cache_hits, 0);
+
+        // Simulate a cache hit by adding the address to the cache and querying it again.
+        cached_state
+            .cache
+            .class_hash_writes
+            .insert(address.clone(), [0; 32]);
+        let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &address);
+        assert_eq!(cached_state.cache_misses, 1);
+        assert_eq!(cached_state.cache_hits, 1);
+
+        // Simulate another cache hit.
+        let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &address);
+        assert_eq!(cached_state.cache_misses, 1);
+        assert_eq!(cached_state.cache_hits, 2);
+
+        // Simulate another cache miss.
+        let other_address = Address(2.into());
+        let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &other_address);
+        assert_eq!(cached_state.cache_misses, 2);
+        assert_eq!(cached_state.cache_hits, 2);
     }
 }

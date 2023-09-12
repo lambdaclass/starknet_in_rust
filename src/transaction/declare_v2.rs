@@ -36,7 +36,6 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct DeclareV2 {
     pub sender_address: Address,
-    pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
     pub version: Felt252,
     pub max_fee: u128,
@@ -136,7 +135,6 @@ impl DeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sierra_class_hash,
             sender_address,
-            tx_type: TransactionType::Declare,
             validate_entry_point_selector,
             version,
             max_fee,
@@ -328,7 +326,7 @@ impl DeclareV2 {
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[execution_result.call_info.clone()],
-            self.tx_type,
+            TransactionType::Declare,
             storage_changes,
             None,
             execution_result.n_reverted_steps,
@@ -351,7 +349,7 @@ impl DeclareV2 {
             None,
             None,
             actual_resources,
-            Some(self.tx_type),
+            Some(TransactionType::Declare),
         );
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
