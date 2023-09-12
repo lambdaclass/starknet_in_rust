@@ -1,5 +1,6 @@
 use cairo_vm::felt::felt_str;
-use rpc_state_reader::{BlockValue, RpcChain, RpcState};
+use rpc_state_reader::rpc_state::{BlockValue, RpcChain, RpcState};
+use starknet_api::block::BlockNumber;
 use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -12,7 +13,7 @@ use starknet_in_rust::{
     state::cached_state::CachedState,
     utils::Address,
 };
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 fn main() {
     let tx_hash = "0x06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955";
@@ -23,9 +24,9 @@ fn main() {
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     // Instantiate the RPC StateReader and the CachedState
-    let block = BlockValue::Number(serde_json::to_value(block_number).unwrap());
-    let rpc_state = Arc::new(RpcState::new(network, block));
-    let mut state = CachedState::new(rpc_state.clone(), None, None);
+    let block = BlockValue::Number(BlockNumber(block_number));
+    let rpc_state = Arc::new(RpcState::new_infura(network, block));
+    let mut state = CachedState::new(rpc_state.clone(), HashMap::default());
 
     let fee_token_address = Address(felt_str!(
         "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
