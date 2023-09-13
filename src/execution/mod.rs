@@ -107,12 +107,13 @@ impl CallInfo {
     /// Returns the contract calls in DFS (preorder).
     pub fn gen_call_topology(&self) -> Vec<CallInfo> {
         let mut calls = Vec::new();
+        // add the current call
         calls.push(self.clone());
-        if self.internal_calls.is_empty() {
-            return calls;
-        } else {
-            for call_info in self.internal_calls.clone() {
-                calls.extend(call_info.gen_call_topology());
+
+        // if it has internal calls we need to add them too.
+        if !self.internal_calls.is_empty() {
+            for inner_call in self.internal_calls.clone() {
+                calls.extend(inner_call.gen_call_topology());
             }
         }
 
@@ -135,7 +136,7 @@ impl CallInfo {
         collected_events.sort_by_key(|(oe, _)| oe.order);
         
         // check that there is no holes.
-        // Since it is already sorted, we only need to check for continuity
+        // since it is already sorted, we only need to check for continuity
         let mut i = 0;
         for (oe, _) in collected_events.iter() {
             if i == oe.order {
@@ -147,7 +148,7 @@ impl CallInfo {
             }
         }
 
-        // Now it is ordered and without holes, we can discard the order and 
+        // now that it is ordered and without holes, we can discard the order and 
         // convert each [`OrderedEvent`] to the underlying [`Event`]. 
         let collected_events = collected_events.into_iter()
             .map(|(oe, ca)| Event::new(oe, ca))
