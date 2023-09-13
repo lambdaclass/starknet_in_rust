@@ -7,7 +7,7 @@ use starknet_api::{
     hash::{StarkFelt, StarkHash},
     stark_felt,
     state::StorageKey,
-    transaction::{Transaction as SNTransaction, TransactionHash},
+    transaction::{DeclareTransaction, Transaction as SNTransaction, TransactionHash},
 };
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
@@ -27,8 +27,8 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::{DeployAccount, InvokeFunction, Transaction},
-    utils::{Address, ClassHash},
+    transaction::{Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, Transaction},
+    utils::{felt_to_hash, Address, ClassHash},
 };
 use std::sync::Arc;
 use test_case::test_case;
@@ -134,7 +134,69 @@ fn execute_tx(
 
     // Get transaction before giving ownership of the reader
     let tx_hash = TransactionHash(stark_felt!(tx_hash));
-    let tx = match dbg!(rpc_reader.0.get_transaction(&tx_hash)) {
+    let tx = match rpc_reader.0.get_transaction(&tx_hash) {
+        SNTransaction::Declare(tx) => match tx {
+            DeclareTransaction::V0(tx) | DeclareTransaction::V1(tx) => {
+                let contract_class = rpc_reader
+                    .get_contract_class(&felt_to_hash(&Felt252::from_bytes_be(
+                        tx.class_hash.0.bytes(),
+                    )))
+                    .unwrap();
+
+                Transaction::Declare(
+                    Declare::from_declare_transaction(
+                        tx,
+                        match contract_class {
+                            CompiledClass::Deprecated(x) => x.as_ref().clone(),
+                            CompiledClass::Casm(_) => panic!(),
+                        },
+                        chain_id,
+                    )
+                    .unwrap(),
+                )
+            }
+            DeclareTransaction::V2(tx) => {
+                let contract_class = rpc_reader
+                    .get_contract_class(&felt_to_hash(&Felt252::from_bytes_be(
+                        tx.class_hash.0.bytes(),
+                    )))
+                    .unwrap();
+
+                let sierra_class = match contract_class {
+                    CompiledClass::Deprecated(_) => panic!(),
+                    CompiledClass::Casm(x) => x.as_ref().clone(),
+                };
+
+                Transaction::DeclareV2(Box::new(
+                    DeclareV2::from_declare_transaction(
+                        tx,
+                        sierra_class,
+                        todo!(),
+                        Felt252::from_bytes_be(tx_hash.0.bytes()),
+                    )
+                    .unwrap(),
+                ))
+            }
+        },
+        SNTransaction::Deploy(tx) => {
+            let contract_class = rpc_reader
+                .get_contract_class(&felt_to_hash(&Felt252::from_bytes_be(
+                    tx.class_hash.0.bytes(),
+                )))
+                .unwrap();
+
+            Transaction::Deploy(
+                Deploy::from_deploy_transaction(
+                    tx,
+                    match contract_class {
+                        CompiledClass::Deprecated(x) => x.as_ref().clone(),
+                        CompiledClass::Casm(_) => panic!(),
+                    },
+                    chain_id,
+                )
+                .unwrap(),
+            )
+        }
         SNTransaction::DeployAccount(tx) => Transaction::DeployAccount(
             DeployAccount::from_deploy_account_transaction(tx, chain_id).unwrap(),
         ),

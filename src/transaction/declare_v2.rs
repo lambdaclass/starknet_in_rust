@@ -309,7 +309,7 @@ impl DeclareV2 {
     }
 
     /// Creates a `DeclareV2` from a starknet api `DeclareTransactionV2`.
-    pub fn from_deploy_account_transaction(
+    pub fn from_declare_transaction(
         tx: starknet_api::transaction::DeclareTransactionV2,
         contract_class: impl Into<MaybeSierraContractClass>,
         sierra_class_hash: Felt252,

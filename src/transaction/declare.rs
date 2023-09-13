@@ -145,7 +145,7 @@ impl Declare {
     }
 
     /// Creates a `Declare` from a starknet api `DeclareTransactionV0V1`.
-    pub fn from_deploy_account_transaction(
+    pub fn from_declare_transaction(
         tx: starknet_api::transaction::DeclareTransactionV0V1,
         contract_class: ContractClass,
         chain_id: StarknetChainId,

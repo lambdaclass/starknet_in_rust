@@ -122,7 +122,7 @@ impl Deploy {
     }
 
     /// Creates a `Deploy` from a starknet api `DeployTransaction`.
-    pub fn from_deploy_account_transaction(
+    pub fn from_deploy_transaction(
         tx: starknet_api::transaction::DeployTransaction,
         contract_class: ContractClass,
         chain_id: StarknetChainId,
