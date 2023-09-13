@@ -449,49 +449,6 @@ impl<T: StateReader> State for CachedState<T> {
 /// without commiting changes to the parent.
 pub type TransactionalCachedState<'a, T> = CachedState<TransactionalCachedStateReader<'a, T>>;
 
-impl<'a, T: StateReader> TransactionalCachedState<'a, T> {
-    pub fn count_actual_storage_changes(
-        &mut self,
-        fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> (usize, usize) {
-        let mut storage_updates = subtract_mappings(
-            &self.cache.storage_writes,
-            &self.cache.storage_initial_values,
-        );
-
-        let n_modified_contracts = {
-            let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
-
-            let class_hash_updates = subtract_mappings_keys(
-                &self.cache.class_hash_writes,
-                &self.cache.class_hash_initial_values,
-            );
-
-            let nonce_updates =
-                subtract_mappings_keys(&self.cache.nonce_writes, &self.cache.nonce_initial_values);
-
-            let mut modified_contracts: HashSet<Address> = HashSet::new();
-            modified_contracts.extend(storage_unique_updates);
-            modified_contracts.extend(class_hash_updates.cloned());
-            modified_contracts.extend(nonce_updates.cloned());
-
-            modified_contracts.len()
-        };
-
-        // Add fee transfer storage update before actually charging it, as it needs to be included in the
-        // calculation of the final fee.
-        if let Some((fee_token_address, sender_address)) = fee_token_and_sender_address {
-            let (sender_low_key, _) = get_erc20_balance_var_addresses(sender_address).unwrap();
-            storage_updates.insert(
-                (fee_token_address.clone(), sender_low_key),
-                Felt252::default(),
-            );
-        }
-
-        (n_modified_contracts, storage_updates.len())
-    }
-}
-
 /// State reader used for transactional states which allows to check the parent state's cache and
 /// state reader if a transactional cache miss happens.
 ///
