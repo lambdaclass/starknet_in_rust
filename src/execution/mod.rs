@@ -123,18 +123,22 @@ impl CallInfo {
     /// Returns a list of [`Event`] objects collected during the execution, sorted by the order
     /// in which they were emitted.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
-        // collect a vector of the full call topology (all the internal 
+        // collect a vector of the full call topology (all the internal
         // calls performed during the current call)
         let calls = self.gen_call_topology();
         let mut collected_events = Vec::new();
-        
+
         // for each call, collect its ordered events
         for c in calls {
-            collected_events.extend(c.events.iter().map(|oe| (oe.clone(), c.contract_address.clone())));
+            collected_events.extend(
+                c.events
+                    .iter()
+                    .map(|oe| (oe.clone(), c.contract_address.clone())),
+            );
         }
         // sort the collected events using the ordering given by the order
         collected_events.sort_by_key(|(oe, _)| oe.order);
-        
+
         // check that there is no holes.
         // since it is already sorted, we only need to check for continuity
         let mut i = 0;
@@ -148,9 +152,10 @@ impl CallInfo {
             }
         }
 
-        // now that it is ordered and without holes, we can discard the order and 
-        // convert each [`OrderedEvent`] to the underlying [`Event`]. 
-        let collected_events = collected_events.into_iter()
+        // now that it is ordered and without holes, we can discard the order and
+        // convert each [`OrderedEvent`] to the underlying [`Event`].
+        let collected_events = collected_events
+            .into_iter()
             .map(|(oe, ca)| Event::new(oe, ca))
             .collect();
         Ok(collected_events)
