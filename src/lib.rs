@@ -249,6 +249,7 @@ mod test {
 
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use lazy_static::lazy_static;
+    use pretty_assertions_sorted::assert_eq;
 
     lazy_static! {
         // include_str! doesn't seem to work in CI
