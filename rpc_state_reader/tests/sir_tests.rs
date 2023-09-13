@@ -310,3 +310,16 @@ fn test_sorted_events() {
 
     assert_eq!(3, events_len);
 }
+
+#[test]
+fn test_sorted_events_with_huge_transaction() {
+    let (tx_info, _trace, _receipt) = execute_tx(
+        "0x03ec45f8369513b0f48db25f2cf18c70c50e7d3119505ab15e39ae4ca2eb06cf",
+        RpcChain::MainNet,
+        BlockNumber(219764),
+    );
+
+    let events_len = tx_info.get_sorted_events().unwrap().len();
+
+    assert_eq!(7, events_len);
+}

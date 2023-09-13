@@ -119,54 +119,40 @@ impl CallInfo {
         calls
     }
 
-    /// Returns a list of Starknet Event objects collected during the execution, sorted by the order
+    /// Returns a list of [`Event`] objects collected during the execution, sorted by the order
     /// in which they were emitted.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
-        // get the full call topology (current call + all the internal calls)
+        // collect a vector of the full call topology (all the internal 
+        // calls performed during the current call)
         let calls = self.gen_call_topology();
-        // the total amount of events
-        let n_events = calls.iter().fold(0, |acc, c| acc + c.events.len());
-
-        // if there is no events to collect we just return
-        if n_events == 0 {
-            return Ok(vec![]);
+        let mut collected_events = Vec::new();
+        
+        // for each call, collect its ordered events
+        for c in calls {
+            collected_events.extend(c.events.iter().map(|oe| (oe.clone(), c.contract_address.clone())));
         }
-
-        let mut collected_events: Vec<Option<Event>> = (0..n_events).map(|_| None).collect();
-
-        for call in calls {
-            for ordered_event in call.events {
-                let event = Event::new(ordered_event.clone(), call.contract_address.clone());
-                // we subtract 1 to the order of the events since they start at 1
-                let event_index = (ordered_event.order as isize - 1).max(0) as usize;
-                // check if the there is no stored event at the event index
-                if collected_events[event_index].is_none() {
-                    // if there is none we just store it.
-                    // Replacing the None value.
-                    collected_events.remove(event_index);
-                    collected_events.insert(
-                        (ordered_event.order as isize - 1).max(0) as usize,
-                        Some(event),
-                    );
-                } else {
-                    // it can be the case that some inner call already emitted
-                    // an event with the same order, so there is already an
-                    // event stored at position=event_index, so we just store
-                    // it in the next position (event_index + 1).
-                    collected_events.remove(event_index + 1);
-                    collected_events.insert(event_index + 1, Some(event));
-                }
+        // sort the collected events using the ordering given by the order
+        collected_events.sort_by_key(|(oe, _)| oe.order);
+        
+        // check that there is no holes.
+        // Since it is already sorted, we only need to check for continuity
+        let mut i = 0;
+        for (oe, _) in collected_events.iter() {
+            if i == oe.order {
+                continue;
+            }
+            i += 1;
+            if i != oe.order {
+                return Err(TransactionError::UnexpectedHolesInEventOrder);
             }
         }
 
-        // check that all the positions are covered (they are not None).
-        // if that's not the case, return an error.
-        let are_all_some = collected_events.iter().all(|e| e.is_some());
-
-        if !are_all_some {
-            return Err(TransactionError::UnexpectedHolesInEventOrder);
-        }
-        Ok(collected_events.into_iter().flatten().collect())
+        // Now it is ordered and without holes, we can discard the order and 
+        // convert each [`OrderedEvent`] to the underlying [`Event`]. 
+        let collected_events = collected_events.into_iter()
+            .map(|(oe, ca)| Event::new(oe, ca))
+            .collect();
+        Ok(collected_events)
     }
 
     /// Returns a list of L2ToL1MessageInfo objects collected during the execution, sorted
