@@ -273,7 +273,7 @@ impl Declare {
         self.sender_address = ?self.sender_address,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: Debug + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

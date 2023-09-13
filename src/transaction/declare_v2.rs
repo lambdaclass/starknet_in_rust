@@ -296,8 +296,16 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
-    #[tracing::instrument(level = "debug", ret, err)]
-    pub fn execute<S: Debug + StateReader>(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::Declare,
+        self.version = ?self.version,
+        self.sierra_class_hash = ?self.sierra_class_hash,
+        self.compiled_class_hash = ?self.compiled_class_hash,
+        self.hash_value = ?self.hash_value,
+        self.sender_address = ?self.sender_address,
+        self.nonce = ?self.nonce,
+    ))]
+    pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

@@ -1,12 +1,4 @@
-use crate::{
-    execution::execution_entry_point::ExecutionResult,
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
-    state::cached_state::CachedState,
-};
-use cairo_vm::felt::Felt252;
-use getset::Getters;
-use num_traits::Zero;
-
+use super::Transaction;
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -14,19 +6,21 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        TransactionExecutionContext, TransactionExecutionInfo,
     },
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
+        cached_state::CachedState,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
     transaction::{error::TransactionError, fee::calculate_tx_fee},
     utils::{calculate_tx_resources, Address},
 };
-
-use super::Transaction;
-use std::fmt::Debug;
+use cairo_vm::felt::Felt252;
+use getset::Getters;
+use num_traits::Zero;
 
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
@@ -101,7 +95,7 @@ impl L1Handler {
         self.entry_point_selector = ?self.entry_point_selector,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: Debug + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

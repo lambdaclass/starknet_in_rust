@@ -23,7 +23,6 @@ use crate::{
     utils::Address,
 };
 use error::TransactionError;
-use std::fmt::Debug;
 
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
@@ -67,7 +66,7 @@ impl Transaction {
     ///- state: a structure that implements State and StateReader traits.
     ///- block_context: The block context of the transaction that is about to be executed.
     ///- remaining_gas: The gas supplied to execute the transaction.
-    pub fn execute<S: Debug + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

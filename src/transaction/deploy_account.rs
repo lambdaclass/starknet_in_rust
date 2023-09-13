@@ -160,7 +160,7 @@ impl DeployAccount {
         self.contract_address_salt = ?self.contract_address_salt,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: Debug + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

@@ -275,7 +275,7 @@ impl Deploy {
         self.contract_address = ?self.contract_address,
         self.contract_address_salt = ?self.contract_address_salt,
     ))]
-    pub fn execute<S: Debug + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,

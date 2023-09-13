@@ -293,7 +293,7 @@ impl InvokeFunction {
         self.entry_point_selector = ?self.entry_point_selector,
         self.entry_point_type = ?self.entry_point_type,
     ))]
-    pub fn execute<S: Debug + StateReader>(
+    pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
