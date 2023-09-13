@@ -176,23 +176,22 @@ impl StateDiff {
 
         let mut storage_updates = HashMap::new();
 
-        let addresses: Vec<Address> =
-            get_keys(self.storage_updates.clone(), other.storage_updates.clone());
+        let addresses: Vec<&Address> = get_keys(&self.storage_updates, &other.storage_updates);
 
         for address in addresses {
             let default: HashMap<Felt252, Felt252> = HashMap::new();
             let mut map_a = self
                 .storage_updates
-                .get(&address)
+                .get(address)
                 .unwrap_or(&default)
                 .to_owned();
             let map_b = other
                 .storage_updates
-                .get(&address)
+                .get(address)
                 .unwrap_or(&default)
                 .to_owned();
             map_a.extend(map_b);
-            storage_updates.insert(address, map_a.clone());
+            storage_updates.insert(address.clone(), map_a.clone());
         }
 
         StateDiff {
