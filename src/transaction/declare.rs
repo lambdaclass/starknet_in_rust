@@ -56,7 +56,7 @@ pub struct Declare {
 // ------------------------------------------------------------
 impl Declare {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
+    pub fn new_with_contract_class(
         contract_class: ContractClass,
         chain_id: Felt252,
         sender_address: Address,
@@ -142,6 +142,15 @@ impl Declare {
         )?;
 
         Ok(internal_declare)
+    }
+
+    /// Creates a `Declare` from a starknet api `DeclareTransactionV0V1`.
+    pub fn from_deploy_account_transaction(
+        tx: starknet_api::transaction::DeclareTransactionV0V1,
+        contract_class: ContractClass,
+        chain_id: StarknetChainId,
+    ) -> Result<Self, TransactionError> {
+        convert_declare_v0v1(tx, contract_class, chain_id)
     }
 
     pub fn get_calldata(&self) -> Vec<Felt252> {
@@ -319,10 +328,11 @@ impl Declare {
 
 fn convert_declare_v0v1(
     value: starknet_api::transaction::DeclareTransactionV0V1,
+    contract_class: ContractClass,
     chain_id: StarknetChainId,
 ) -> Result<Declare, TransactionError> {
     // FIXME: Assuming a version of 1, but it may be zero too.
-    Declare::new(
+    Declare::new_with_contract_class(
         contract_class,
         chain_id.to_felt(),
         Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes())),
@@ -413,7 +423,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = Declare::new(
+        let internal_declare = Declare::new_with_contract_class(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -509,7 +519,7 @@ mod tests {
         let version = 0.into();
 
         // Declare tx should fail because max_fee > 0 and version == 0
-        let internal_declare = Declare::new(
+        let internal_declare = Declare::new_with_contract_class(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -575,7 +585,7 @@ mod tests {
         let version = 0.into();
 
         // Declare tx should fail because nonce > 0 and version == 0
-        let internal_declare = Declare::new(
+        let internal_declare = Declare::new_with_contract_class(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -640,7 +650,7 @@ mod tests {
         let signature = vec![1.into(), 2.into()];
 
         // Declare tx should fail because signature is not empty
-        let internal_declare = Declare::new(
+        let internal_declare = Declare::new_with_contract_class(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -704,7 +714,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Declare same class twice
-        let internal_declare = Declare::new(
+        let internal_declare = Declare::new_with_contract_class(
             fib_contract_class.clone(),
             chain_id.clone(),
             Address(Felt252::one()),
@@ -715,7 +725,7 @@ mod tests {
         )
         .unwrap();
 
-        let second_internal_declare = Declare::new(
+        let second_internal_declare = Declare::new_with_contract_class(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -783,7 +793,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Declare same class twice
-        let internal_declare = Declare::new(
+        let internal_declare = Declare::new_with_contract_class(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -826,7 +836,7 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
-        let internal_declare = Declare::new(
+        let internal_declare = Declare::new_with_contract_class(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),
@@ -890,7 +900,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Use non-zero value so that the actual fee calculation is done
-        let internal_declare = Declare::new(
+        let internal_declare = Declare::new_with_contract_class(
             fib_contract_class,
             chain_id,
             Address(Felt252::one()),

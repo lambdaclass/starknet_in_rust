@@ -121,6 +121,15 @@ impl Deploy {
         })
     }
 
+    /// Creates a `Deploy` from a starknet api `DeployTransaction`.
+    pub fn from_deploy_account_transaction(
+        tx: starknet_api::transaction::DeployTransaction,
+        contract_class: ContractClass,
+        chain_id: StarknetChainId,
+    ) -> Result<Self, TransactionError> {
+        convert_deploy(tx, contract_class, chain_id)
+    }
+
     /// Returns the class hash of the deployed contract
     pub const fn class_hash(&self) -> ClassHash {
         self.contract_hash
@@ -302,6 +311,7 @@ impl Deploy {
 
 fn convert_deploy(
     value: starknet_api::transaction::DeployTransaction,
+    contract_class: ContractClass,
     chain_id: StarknetChainId,
 ) -> Result<Deploy, TransactionError> {
     Deploy::new(
@@ -469,7 +479,7 @@ mod tests {
         );
         assert_matches!(
             internal_deploy_error.unwrap_err(),
-            SyscallHandlerError::HashError(HashError::FailedToComputeHash(_))
+            TransactionError::HashError(HashError::FailedToComputeHash(_))
         )
     }
 }

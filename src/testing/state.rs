@@ -83,7 +83,7 @@ impl StarknetState {
         &mut self,
         contract_class: ContractClass,
     ) -> Result<(ClassHash, TransactionExecutionInfo), TransactionError> {
-        let tx = Declare::new(
+        let tx = Declare::new_with_contract_class(
             contract_class,
             self.chain_id(),
             Address(Felt252::one()),

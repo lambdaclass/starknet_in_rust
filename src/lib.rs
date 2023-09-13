@@ -727,7 +727,7 @@ mod test {
         let address = CONTRACT_ADDRESS.clone();
         // new consumes more execution time than raw struct instantiation
         let declare_tx = Transaction::Declare(
-            Declare::new(
+            Declare::new_with_contract_class(
                 class,
                 StarknetChainId::TestNet.to_felt(),
                 address,
@@ -876,9 +876,8 @@ mod test {
             nonce: 0.into(),
             hash_value: 0.into(),
             compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
-            sierra_contract_class,
+            contract_class: sierra_contract_class.into(),
             sierra_class_hash,
-            casm_class: Default::default(),
             skip_execute: false,
             skip_fee_transfer: false,
             skip_validate: false,

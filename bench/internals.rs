@@ -112,7 +112,7 @@ fn declare() {
         let address = CONTRACT_ADDRESS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let declare_tx = Declare::new(
+            let declare_tx = Declare::new_with_contract_class(
                 class,
                 StarknetChainId::TestNet.to_felt(),
                 address,

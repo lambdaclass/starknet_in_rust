@@ -1,7 +1,6 @@
-use std::sync::Arc;
-
 use cairo_vm::felt::{felt_str, Felt252};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
+use rpc_state_reader::rpc_state::*;
 use starknet_api::{
     block::BlockNumber,
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
@@ -28,13 +27,11 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::{InvokeFunction, Transaction},
+    transaction::{DeployAccount, InvokeFunction, Transaction},
     utils::{Address, ClassHash},
 };
-
+use std::sync::Arc;
 use test_case::test_case;
-
-use rpc_state_reader::rpc_state::*;
 
 pub struct RpcStateReader(RpcState);
 
@@ -87,8 +84,7 @@ impl StateReader for RpcStateReader {
     }
 }
 
-#[allow(unused)]
-pub fn execute_tx(
+fn execute_tx(
     tx_hash: &str,
     network: RpcChain,
     block_number: BlockNumber,
@@ -138,7 +134,10 @@ pub fn execute_tx(
 
     // Get transaction before giving ownership of the reader
     let tx_hash = TransactionHash(stark_felt!(tx_hash));
-    let tx = match rpc_reader.0.get_transaction(&tx_hash) {
+    let tx = match dbg!(rpc_reader.0.get_transaction(&tx_hash)) {
+        SNTransaction::DeployAccount(tx) => Transaction::DeployAccount(
+            DeployAccount::from_deploy_account_transaction(tx, chain_id).unwrap(),
+        ),
         SNTransaction::Invoke(tx) => Transaction::InvokeFunction(
             InvokeFunction::from_invoke_transaction(tx, chain_id).unwrap(),
         ),
@@ -280,4 +279,49 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
             );
         }
     }
+}
+
+#[test]
+fn get_transaction_declare() {
+    execute_tx(
+        "0x01d32e49af3e0686c08e4c510461312dd479ac8a2e847e84e1613b2cdc5bfd50",
+        RpcChain::MainNet,
+        BlockNumber(186665),
+    );
+}
+
+#[test]
+fn get_transaction_declare_v2() {
+    execute_tx(
+        "0x042af5bd4c5a37e2bb3dd08e4f38a21624b173466417bab9626ecc22098c936b",
+        RpcChain::MainNet,
+        BlockNumber(217733),
+    );
+}
+
+#[test]
+fn get_transaction_deploy() {
+    execute_tx(
+        "0x01d08158d139345d562276f0a085d9764e618eba788bed99a238903595b17022",
+        RpcChain::MainNet,
+        BlockNumber(16575),
+    );
+}
+
+#[test]
+fn get_transaction_deploy_account() {
+    execute_tx(
+        "0x06372abe2116c75097b632543f91498a714c48dbd4b168f615b6b17c2733e9fd",
+        RpcChain::MainNet,
+        BlockNumber(217830),
+    );
+}
+
+#[test]
+fn get_transaction_invoke() {
+    execute_tx(
+        "0x033d6717664cf7d13fe1f6ce36082155b8c2cf390a9884227e12fe04e674cc39",
+        RpcChain::MainNet,
+        BlockNumber(217834),
+    );
 }
