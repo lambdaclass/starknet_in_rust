@@ -44,7 +44,7 @@ pub struct DeclareV2 {
     pub nonce: Felt252,
     pub compiled_class_hash: Felt252,
     pub contract_class: MaybeSierraContractClass,
-    pub sierra_class_hash: Felt252,
+    pub sierra_class_hash: Option<Felt252>,
     pub hash_value: Felt252,
     pub skip_validate: bool,
     pub skip_execute: bool,
@@ -166,7 +166,7 @@ impl DeclareV2 {
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_sierra_class_hash_and_tx_hash(
         sierra_contract_class: impl Into<Option<SierraContractClass>>,
-        sierra_class_hash: Felt252,
+        sierra_class_hash: impl Into<Option<Felt252>>,
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
@@ -176,13 +176,13 @@ impl DeclareV2 {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
-        let sierra_contract_class: Option<SierraContractClass> = sierra_contract_class.into();
+        let sierra_contract_class: Option<_> = sierra_contract_class.into();
 
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
         let internal_declare = DeclareV2 {
             contract_class: match (sierra_contract_class, casm_contract_class) {
-                (None, None) => panic!("No contract class is available"),
+                (None, None) => panic!(),
                 (None, Some(casm_contract_class)) => {
                     MaybeSierraContractClass::Casm(casm_contract_class)
                 }
@@ -196,7 +196,7 @@ impl DeclareV2 {
                     )
                 }
             },
-            sierra_class_hash,
+            sierra_class_hash: sierra_class_hash.into(),
             sender_address,
             validate_entry_point_selector,
             version,
@@ -233,7 +233,7 @@ impl DeclareV2 {
     /// - hash_value: The transaction hash.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_tx_hash(
-        sierra_contract_class: SierraContractClass,
+        sierra_contract_class: impl Into<Option<SierraContractClass>>,
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
@@ -243,7 +243,12 @@ impl DeclareV2 {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
-        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class)?;
+        let sierra_contract_class: Option<SierraContractClass> = sierra_contract_class.into();
+
+        let sierra_class_hash = sierra_contract_class
+            .as_ref()
+            .map(compute_sierra_class_hash)
+            .transpose()?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
             sierra_contract_class,
@@ -312,10 +317,9 @@ impl DeclareV2 {
     pub fn from_declare_transaction(
         tx: starknet_api::transaction::DeclareTransactionV2,
         contract_class: impl Into<MaybeSierraContractClass>,
-        sierra_class_hash: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
-        convert_declare_v2(tx, contract_class, sierra_class_hash, hash_value)
+        convert_declare_v2(tx, contract_class, hash_value)
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -448,7 +452,14 @@ impl DeclareV2 {
                 self.compiled_class_hash.to_string(),
             ));
         }
-        state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
+        state.set_compiled_class_hash(
+            self.sierra_class_hash
+                .as_ref()
+                .ok_or(TransactionError::CustomError(
+                    "Sierra class hash is None".to_string(),
+                ))?,
+            &self.compiled_class_hash,
+        )?;
         state.set_contract_class(
             &self.compiled_class_hash.to_be_bytes(),
             &CompiledClass::Casm(Arc::new(casm_class)),
@@ -531,7 +542,6 @@ impl DeclareV2 {
 fn convert_declare_v2(
     value: starknet_api::transaction::DeclareTransactionV2,
     contract_class: impl Into<MaybeSierraContractClass>,
-    sierra_class_hash: Felt252,
     hash_value: Felt252,
 ) -> Result<DeclareV2, TransactionError> {
     let (sierra_contract_class, casm_contract_class) = match contract_class.into() {
@@ -544,9 +554,8 @@ fn convert_declare_v2(
         }
     };
 
-    DeclareV2::new_with_sierra_class_hash_and_tx_hash(
+    DeclareV2::new_with_tx_hash(
         sierra_contract_class,
-        sierra_class_hash,
         casm_contract_class,
         Felt252::from_bytes_be(value.compiled_class_hash.0.bytes()),
         Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes())),

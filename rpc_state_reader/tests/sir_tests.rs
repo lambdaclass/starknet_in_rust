@@ -171,7 +171,6 @@ fn execute_tx(
                     DeclareV2::from_declare_transaction(
                         tx,
                         sierra_class,
-                        todo!(),
                         Felt252::from_bytes_be(tx_hash.0.bytes()),
                     )
                     .unwrap(),

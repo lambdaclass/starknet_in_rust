@@ -772,7 +772,7 @@ fn declarev2_tx() -> DeclareV2 {
         hash_value: 0.into(),
         compiled_class_hash: casm_class_hash,
         contract_class: (sierra_contract_class, casm_class).into(),
-        sierra_class_hash,
+        sierra_class_hash: Some(sierra_class_hash),
         skip_execute: false,
         skip_fee_transfer: false,
         skip_validate: false,

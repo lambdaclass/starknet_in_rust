@@ -877,7 +877,7 @@ mod test {
             hash_value: 0.into(),
             compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
             contract_class: sierra_contract_class.into(),
-            sierra_class_hash,
+            sierra_class_hash: Some(sierra_class_hash),
             skip_execute: false,
             skip_fee_transfer: false,
             skip_validate: false,
