@@ -467,10 +467,8 @@ impl<'a, T: StateReader> TransactionalCachedState<'a, T> {
                 &self.cache.class_hash_initial_values,
             );
 
-            let nonce_updates = subtract_mappings_keys(
-                &self.cache.nonce_writes,
-                &self.cache.nonce_initial_values,
-            );
+            let nonce_updates =
+                subtract_mappings_keys(&self.cache.nonce_writes, &self.cache.nonce_initial_values);
 
             let mut modified_contracts: HashSet<Address> = HashSet::new();
             modified_contracts.extend(storage_unique_updates);
