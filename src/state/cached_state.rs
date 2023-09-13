@@ -106,8 +106,8 @@ impl<T: StateReader> CachedState<T> {
         let state_reader = Arc::new(TransactionalCachedStateReader::new(self));
         CachedState {
             state_reader,
-            cache: StateCache::default(),
-            contract_classes: ContractClassCache::default(),
+            cache: self.cache.clone(),
+            contract_classes: self.contract_classes.clone(),
             cache_hits: 0,
             cache_misses: 0,
         }
@@ -479,27 +479,16 @@ impl<'a, T: StateReader> TransactionalCachedStateReader<'a, T> {
 }
 
 impl<'a, T: StateReader> StateReader for TransactionalCachedStateReader<'a, T> {
+    /// Returns the class hash for a given contract address.
+    /// Returns zero as default value if missing
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
-        if self.cache.get_class_hash(contract_address).is_none() {
-            match self.state_reader.get_class_hash_at(contract_address) {
-                Ok(class_hash) => {
-                    return Ok(class_hash);
-                }
-                Err(StateError::NoneContractState(_)) => {
-                    return Ok([0; 32]);
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
-
         self.cache
             .get_class_hash(contract_address)
-            .ok_or_else(|| StateError::NoneClassHash(contract_address.clone()))
-            .cloned()
+            .map(|a| Ok(*a))
+            .unwrap_or_else(|| self.state_reader.get_class_hash_at(contract_address))
     }
 
+    /// Returns the nonce for a given contract address.
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
             return self.state_reader.get_nonce_at(contract_address);
@@ -510,47 +499,41 @@ impl<'a, T: StateReader> StateReader for TransactionalCachedStateReader<'a, T> {
             .cloned()
     }
 
+    /// Returns storage data for a given storage entry.
+    /// Returns zero as default value if missing
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
-        if self.cache.get_storage(storage_entry).is_none() {
-            match self.state_reader.get_storage_at(storage_entry) {
-                Ok(storage) => {
-                    return Ok(storage);
-                }
-                Err(
-                    StateError::EmptyKeyInStorage
-                    | StateError::NoneStoragLeaf(_)
-                    | StateError::NoneStorage(_)
-                    | StateError::NoneContractState(_),
-                ) => return Ok(Felt252::zero()),
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
-
         self.cache
             .get_storage(storage_entry)
-            .ok_or_else(|| StateError::NoneStorage(storage_entry.clone()))
-            .cloned()
+            .map(|v| Ok(v.clone()))
+            .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
+    /// Returned the compiled class hash for a given class hash.
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
-        if let Some(compiled_class_hash) =
-            self.cache.class_hash_to_compiled_class_hash.get(class_hash)
+        if self
+            .cache
+            .class_hash_to_compiled_class_hash
+            .get(class_hash)
+            .is_none()
         {
-            Ok(*compiled_class_hash)
-        } else {
-            self.state_reader.get_compiled_class_hash(class_hash)
+            return self.state_reader.get_compiled_class_hash(class_hash);
         }
+        self.cache
+            .class_hash_to_compiled_class_hash
+            .get(class_hash)
+            .ok_or_else(|| StateError::NoneCompiledClass(*class_hash))
+            .cloned()
     }
 
+    /// Returns the contract class for a given class hash.
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // This method can receive both compiled_class_hash & class_hash and return both casm and deprecated contract classes
         //, which can be on the cache or on the state_reader, different cases will be described below:
         if class_hash == UNINITIALIZED_CLASS_HASH {
             return Err(StateError::UninitiaizedClassHash);
         }
+
         // I: FETCHING FROM CACHE
         if let Some(compiled_class) = self.contract_classes.get(class_hash) {
             return Ok(compiled_class.clone());
@@ -566,8 +549,7 @@ impl<'a, T: StateReader> StateReader for TransactionalCachedStateReader<'a, T> {
         }
 
         // II: FETCHING FROM STATE_READER
-        let contract = self.state_reader.get_contract_class(class_hash)?;
-        Ok(contract)
+        self.state_reader.get_contract_class(class_hash)
     }
 }
 
