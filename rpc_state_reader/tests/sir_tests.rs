@@ -298,41 +298,59 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     }
 }
 
-#[test]
-fn test_sorted_events() {
-    let (tx_info, _trace, _receipt) = execute_tx(
-        "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
-        RpcChain::MainNet,
-        BlockNumber(197000),
-    );
+#[test_case(
+    "0x01e91fa12be4424264c8cad29f481a67d5d8e23f7abf94add734d64b91c90021",
+    RpcChain::MainNet,
+    219797,
+    7
+)]
+#[test_case(
+    "0x03ec45f8369513b0f48db25f2cf18c70c50e7d3119505ab15e39ae4ca2eb06cf",
+    RpcChain::MainNet,
+    219764,
+    7
+)]
+#[test_case(
+    "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+    RpcChain::MainNet,
+    197000,
+    3
+)]
+fn test_sorted_events(
+    tx_hash: &str,
+    chain: RpcChain,
+    block_number: u64,
+    expected_amount_of_events: usize,
+) {
+    let (tx_info, _trace, _receipt) = execute_tx(tx_hash, chain, BlockNumber(block_number));
 
     let events_len = tx_info.get_sorted_events().unwrap().len();
 
-    assert_eq!(3, events_len);
+    assert_eq!(expected_amount_of_events, events_len);
 }
 
-#[test]
-fn test_sorted_events_with_huge_transaction() {
-    let (tx_info, _trace, _receipt) = execute_tx(
-        "0x03ec45f8369513b0f48db25f2cf18c70c50e7d3119505ab15e39ae4ca2eb06cf",
-        RpcChain::MainNet,
-        BlockNumber(219764),
-    );
+#[test_case(
+    "0x00b6d59c19d5178886b4c939656167db0660fe325345138025a3cc4175b21897",
+    200303, // real block     200304
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x02b28b4846a756e0cec6385d6d13f811e745a88c7e75a3ebc5fead5b4af152a3",
+    200302, // real block     200304
+    RpcChain::MainNet
+    => ignore["broken on both due to a cairo-vm error"]
+)]
+fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
-    let events_len = tx_info.get_sorted_events().unwrap().len();
+    assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
 
-    assert_eq!(7, events_len);
-}
+    let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee) / receipt.actual_fee;
 
-#[test]
-fn test_sorted_events_with_huge_transaction2() {
-    let (tx_info, _trace, _receipt) = execute_tx(
-        "0x01f891b13f9c15ca409f4ce2baa3e4c441298d7b8763a127a518bde7ecbc30ff",
-        RpcChain::MainNet,
-        BlockNumber(219798),
-    );
-
-    let events_len = tx_info.get_sorted_events().unwrap().len();
-
-    assert_eq!(7, events_len);
+    if diff >= 5 {
+        assert_eq!(
+            tx_info.actual_fee, receipt.actual_fee,
+            "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+        );
+    }
 }
