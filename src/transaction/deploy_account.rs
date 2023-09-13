@@ -236,7 +236,7 @@ impl DeployAccount {
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[Some(constructor_call_info.clone()), validate_info.clone()],
+            &[Some(&constructor_call_info), validate_info.as_ref()],
             TransactionType::DeployAccount,
             state.count_actual_storage_changes(Some((
                 &block_context.starknet_os_config.fee_token_address,

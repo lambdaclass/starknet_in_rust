@@ -271,7 +271,7 @@ impl InvokeFunction {
         )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &vec![call_info.clone(), validate_info.clone()],
+            &[call_info.as_ref(), validate_info.as_ref()],
             self.tx_type,
             changes,
             None,
@@ -405,14 +405,14 @@ impl InvokeFunction {
 pub fn verify_no_calls_to_other_contracts(
     call_info: &Option<CallInfo>,
 ) -> Result<CallInfo, TransactionError> {
-    let call_info = call_info.clone().ok_or(TransactionError::CallInfoIsNone)?;
-    let invoked_contract_address = call_info.contract_address.clone();
+    let call_info = call_info.as_ref().ok_or(TransactionError::CallInfoIsNone)?;
+    let invoked_contract_address = &call_info.contract_address;
     for internal_call in call_info.gen_call_topology() {
-        if internal_call.contract_address != invoked_contract_address {
+        if internal_call.contract_address != *invoked_contract_address {
             return Err(TransactionError::UnauthorizedActionOnValidate);
         }
     }
-    Ok(call_info)
+    Ok(call_info.clone())
 }
 
 // Performs validation on fields related to function invocation transaction.

@@ -167,7 +167,7 @@ pub fn get_call_n_deployments(call_info: &CallInfo) -> usize {
 
 pub fn calculate_tx_resources(
     resources_manager: ExecutionResourcesManager,
-    call_info: &[Option<CallInfo>],
+    call_info: &[Option<&CallInfo>],
     tx_type: TransactionType,
     storage_changes: (usize, usize),
     l1_handler_payload_size: Option<usize>,
@@ -175,8 +175,8 @@ pub fn calculate_tx_resources(
 ) -> Result<HashMap<String, usize>, TransactionError> {
     let (n_modified_contracts, n_storage_changes) = storage_changes;
 
-    let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
-    let n_deployments = non_optional_calls.iter().map(get_call_n_deployments).sum();
+    let non_optional_calls = call_info.iter().flatten().copied(); // copied converts the double ref to one.
+    let n_deployments = non_optional_calls.clone().map(get_call_n_deployments).sum();
 
     let mut l2_to_l1_messages = Vec::new();
 
@@ -192,7 +192,7 @@ pub fn calculate_tx_resources(
         n_deployments,
     );
 
-    let cairo_usage = resources_manager.cairo_usage.clone();
+    let cairo_usage = resources_manager.cairo_usage;
     let tx_syscall_counter = resources_manager.syscall_counter;
 
     // Add additional Cairo resources needed for the OS to run the transaction.
@@ -207,15 +207,19 @@ pub fn calculate_tx_resources(
             .remove(SEGMENT_ARENA_BUILTIN_NAME)
             .unwrap_or(0);
 
-    let mut resources: HashMap<String, usize> = HashMap::new();
+    let mut resources: HashMap<String, usize> =
+        HashMap::with_capacity(2 + filtered_builtins.builtin_instance_counter.len());
     resources.insert("l1_gas_usage".to_string(), l1_gas_usage);
     resources.insert(
         "n_steps".to_string(),
         n_steps + filtered_builtins.n_memory_holes,
     );
-    for (builtin, value) in filtered_builtins.builtin_instance_counter {
-        resources.insert(builtin, value);
-    }
+    resources.extend(
+        filtered_builtins
+            .builtin_instance_counter
+            .iter()
+            .map(|(builtin, value)| (builtin.clone(), *value)),
+    );
 
     Ok(resources)
 }

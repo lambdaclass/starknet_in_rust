@@ -182,7 +182,7 @@ impl Deploy {
         let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[Some(call_info.clone())],
+            &[Some(&call_info)],
             TransactionType::Deploy,
             changes,
             None,
@@ -245,7 +245,7 @@ impl Deploy {
         let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[call_info.clone()],
+            &[call_info.as_ref()],
             TransactionType::Deploy,
             changes,
             None,

@@ -171,7 +171,7 @@ impl Declare {
         )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &vec![validate_info.clone()],
+            &[validate_info.as_ref()],
             TransactionType::Declare,
             changes,
             None,

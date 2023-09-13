@@ -324,7 +324,7 @@ impl DeclareV2 {
         )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &[execution_result.call_info.clone()],
+            &[execution_result.call_info.as_ref()],
             TransactionType::Declare,
             storage_changes,
             None,
@@ -423,7 +423,7 @@ impl DeclareV2 {
 
         if execution_result.call_info.is_some() {
             verify_no_calls_to_other_contracts(&execution_result.call_info)?;
-            remaining_gas -= execution_result.call_info.clone().unwrap().gas_consumed;
+            remaining_gas -= execution_result.call_info.as_ref().unwrap().gas_consumed;
         }
 
         Ok((execution_result, remaining_gas))
