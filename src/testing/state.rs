@@ -331,6 +331,7 @@ mod tests {
 
     use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use num_traits::Num;
+    use pretty_assertions_sorted::assert_eq_sorted;
 
     use super::*;
     use crate::{
@@ -624,7 +625,7 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(tx_info, expected_info);
+        assert_eq_sorted!(tx_info, expected_info);
     }
 
     #[test]

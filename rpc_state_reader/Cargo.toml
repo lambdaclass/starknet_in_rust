@@ -1,6 +1,6 @@
 [package]
 name = "rpc_state_reader"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -22,7 +22,7 @@ serde_with = "3.0.0"
 dotenv = "0.15.0"
 cairo-vm = "0.8.5"
 blockifier = "0.2.0-rc0"
-starknet_in_rust = { path = "../", version = "0.3.1" }
+starknet_in_rust = { path = "../", version = "0.4.0" }
 
 [dev-dependencies]
 pretty_assertions_sorted = "1.2.3"

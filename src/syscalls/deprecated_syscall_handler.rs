@@ -248,7 +248,7 @@ mod tests {
         },
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
-            in_memory_state_reader::InMemoryStateReader, state_api::State,
+            in_memory_state_reader::InMemoryStateReader, state_api::State, StateDiff,
         },
         syscalls::deprecated_syscall_request::{
             DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
@@ -1214,9 +1214,14 @@ mod tests {
         )
         .unwrap();
 
+        let mut transactional = state.create_transactional();
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut state, &BlockContext::default(), 0)
+            .apply(&mut transactional, &BlockContext::default(), 0)
+            .unwrap();
+
+        state
+            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

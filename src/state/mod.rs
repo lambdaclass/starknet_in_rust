@@ -6,8 +6,7 @@ use crate::{
     services::api::contract_classes::compiled_class::CompiledClass,
     transaction::error::TransactionError,
     utils::{
-        get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-        Address, ClassHash,
+        get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, Address, ClassHash,
     },
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
@@ -133,25 +132,12 @@ impl StateDiff {
     {
         let state_cache = cached_state.cache().to_owned();
 
-        let substracted_maps = subtract_mappings(
-            &state_cache.storage_writes,
-            &state_cache.storage_initial_values,
-        );
-
+        let substracted_maps = state_cache.storage_writes;
         let storage_updates = to_state_diff_storage_mapping(substracted_maps);
 
-        let address_to_nonce =
-            subtract_mappings(&state_cache.nonce_writes, &state_cache.nonce_initial_values);
-
-        let class_hash_to_compiled_class = subtract_mappings(
-            &state_cache.compiled_class_hash_writes,
-            &state_cache.compiled_class_hash_initial_values,
-        );
-
-        let address_to_class_hash = subtract_mappings(
-            &state_cache.class_hash_writes,
-            &state_cache.class_hash_initial_values,
-        );
+        let address_to_nonce = state_cache.nonce_writes;
+        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes;
+        let address_to_class_hash = state_cache.class_hash_writes;
 
         Ok(StateDiff {
             address_to_class_hash,

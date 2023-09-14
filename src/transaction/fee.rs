@@ -18,7 +18,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{ToPrimitive, Zero};
-use std::cmp::min;
 use std::collections::HashMap;
 
 // second element is the actual fee that the transaction uses
@@ -155,19 +154,18 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
         block_context,
     )?;
 
-    if actual_fee > max_fee {
-        // TODO: Charge max_fee
-        return Err(TransactionError::ActualFeeExceedsMaxFee(
-            actual_fee, max_fee,
-        ));
-    }
+    let actual_fee = {
+        let version_0 = tx_execution_context.version == 0.into()
+            || tx_execution_context.version == *QUERY_VERSION_BASE;
+        let fee_exceeded_max = actual_fee > max_fee;
 
-    let actual_fee = if tx_execution_context.version != 0.into()
-        && tx_execution_context.version != *QUERY_VERSION_BASE
-    {
-        min(actual_fee, max_fee) * FEE_FACTOR
-    } else {
-        actual_fee
+        if version_0 && fee_exceeded_max {
+            0
+        } else if version_0 && !fee_exceeded_max {
+            actual_fee
+        } else {
+            actual_fee.min(max_fee) * FEE_FACTOR
+        }
     };
 
     let fee_transfer_info = if skip_fee_transfer {
@@ -193,12 +191,12 @@ mod tests {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
         },
-        transaction::{error::TransactionError, fee::charge_fee},
+        transaction::fee::charge_fee,
     };
     use std::{collections::HashMap, sync::Arc};
 
     #[test]
-    fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_error() {
+    fn charge_fee_v0_max_fee_exceeded_should_charge_nothing() {
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
             Arc::new(PermanentContractClassCache::default()),
@@ -221,13 +219,13 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        assert_eq!(result.1, 0);
     }
 
     #[test]
-    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
+    fn charge_fee_v1_max_fee_exceeded_should_charge_max_fee() {
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
             Arc::new(PermanentContractClassCache::default()),
@@ -253,8 +251,8 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        assert_eq!(result.1, max_fee);
     }
 }

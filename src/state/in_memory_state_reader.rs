@@ -25,7 +25,7 @@ pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
     #[getset(get_mut = "pub")]
-    pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
+    pub class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
 
 impl InMemoryStateReader {
@@ -106,6 +106,7 @@ impl StateReader for InMemoryStateReader {
         &self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError> {
+        println!("{}", std::backtrace::Backtrace::force_capture());
         self.class_hash_to_compiled_class_hash
             .get(class_hash)
             .ok_or(StateError::NoneCompiledHash(*class_hash))

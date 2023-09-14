@@ -29,7 +29,7 @@ use starknet_in_rust::{
     state::{cached_state::CachedState, state_api::State},
     state::{
         contract_class_cache::PermanentContractClassCache,
-        in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager,
+        in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager, StateDiff,
     },
     transaction::{error::TransactionError, InvokeFunction},
     utils::{felt_to_hash, string_to_hash, Address},
@@ -202,7 +202,9 @@ fn invoke_parser(
         Some(Felt252::zero()),
         transaction_hash.unwrap(),
     )?;
-    let _tx_info = internal_invoke.apply(cached_state, &BlockContext::default(), 0)?;
+    let mut transactional_state = cached_state.create_transactional();
+    let _tx_info = internal_invoke.apply(&mut transactional_state, &BlockContext::default(), 0)?;
+    cached_state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
