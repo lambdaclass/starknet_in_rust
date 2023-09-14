@@ -81,7 +81,7 @@ impl StateReader for RpcStateReader {
     }
 
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
-        Ok(class_hash.clone())
+        Ok(*class_hash)
     }
 }
 
