@@ -107,7 +107,7 @@ impl<T: StateReader> CachedState<T> {
         CachedState {
             state_reader,
             cache: self.cache.clone(),
-            contract_classes: self.contract_classes.clone(),
+            contract_classes: HashMap::default(),
             cache_hits: 0,
             cache_misses: 0,
         }
@@ -411,7 +411,8 @@ impl<T: StateReader> State for CachedState<T> {
 
         // I: FETCHING FROM CACHE
         // deprecated contract classes dont have compiled class hashes, so we only have one case
-        if let Some(compiled_class) = self.contract_classes.get(class_hash).cloned() {
+        if let Some(compiled_class) = self.contract_classes.get(class_hash) {
+            let compiled_class = compiled_class.clone();
             self.add_hit();
             return Ok(compiled_class);
         }
@@ -420,7 +421,8 @@ impl<T: StateReader> State for CachedState<T> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = self.contract_classes.get(compiled_class_hash).cloned() {
+            if let Some(casm_class) = self.contract_classes.get(compiled_class_hash) {
+                let casm_class = casm_class.clone();
                 self.add_hit();
                 return Ok(casm_class);
             }
