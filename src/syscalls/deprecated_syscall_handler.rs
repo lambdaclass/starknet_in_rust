@@ -71,7 +71,7 @@ static HINT_CODES: phf::Map<&'static str, Hint> = phf_map! {
 };
 
 /// Definition of the deprecated syscall hint processor with associated structs
-pub(crate) struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
+pub struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
     run_resources: RunResources,
