@@ -1,6 +1,6 @@
 [package]
 name = "starknet_in_rust"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 description = "A Rust implementation of Starknet execution logic"
 license = "Apache-2.0"
@@ -9,9 +9,10 @@ license = "Apache-2.0"
 default = ["with_mimalloc"]
 with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
+metrics = []
 
 [workspace]
-members = ["cli", "fuzzer", "rpc_state_reader", "rpc_state_reader_sn_api"]
+members = ["cli", "fuzzer", "rpc_state_reader"]
 
 [workspace.dependencies]
 cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
@@ -62,16 +63,17 @@ phf_macros = "0.11"
 [dev-dependencies]
 assert_matches = "1.5.0"
 coverage-helper = "0.1.0"
+pretty_assertions_sorted = "1.2.3"
 criterion = "0.3"
-
-[[bench]]
-path = "bench/hashing_running_time.rs"
-name = "hashing_running_time"
-harness = false
 
 [[bench]]
 path = "bench/internals.rs"
 name = "internals"
+harness = false
+
+[[bench]]
+path = "bench/hashing_running_time.rs"
+name = "hashing_running_time"
 harness = false
 
 [build-dependencies]

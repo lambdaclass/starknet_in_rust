@@ -21,8 +21,8 @@ use cairo_lang_starknet::{
 };
 use cairo_vm::types::program::Program;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use rpc_state_reader_sn_api::rpc_state::*;
-use rpc_state_reader_sn_api::utils;
+use rpc_state_reader::rpc_state::*;
+use rpc_state_reader::utils;
 use starknet::core::types::ContractClass as SNContractClass;
 use starknet_api::{
     block::BlockNumber,
@@ -238,6 +238,22 @@ fn blockifier_test_recent_tx() {
 }
 
 #[test_case(
+    "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+    90006,
+    RpcChain::MainNet
+    => ignore["old transaction, gas mismatch"]
+)]
+#[test_case(
+    "0x025844447697eb7d5df4d8268b23aef6c11de4087936048278c2559fc35549eb",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
     "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
     169928, // real block 169929
     RpcChain::MainNet
@@ -266,7 +282,6 @@ fn blockifier_test_recent_tx() {
     => ignore["resource mismatch"]
 )]
 #[test_case(
-    // fails in blockifier too
     "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
     186551, // real block     186552
     RpcChain::MainNet
@@ -315,4 +330,30 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
             .internal_calls
             .len()
     );
+}
+
+#[test_case(
+    "0x00b6d59c19d5178886b4c939656167db0660fe325345138025a3cc4175b21897",
+    200303, // real block     200304
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x02b28b4846a756e0cec6385d6d13f811e745a88c7e75a3ebc5fead5b4af152a3",
+    200302, // real block     200304
+    RpcChain::MainNet
+    => ignore["broken on both due to a cairo-vm error"]
+)]
+fn blockifier_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+
+    assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
+
+    let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee.0) / receipt.actual_fee;
+
+    if diff >= 5 {
+        assert_eq!(
+            tx_info.actual_fee.0, receipt.actual_fee,
+            "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+        );
+    }
 }
