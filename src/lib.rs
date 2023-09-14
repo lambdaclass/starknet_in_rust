@@ -240,6 +240,7 @@ mod test {
     use cairo_vm::felt::{felt_str, Felt252};
     use lazy_static::lazy_static;
     use num_traits::{Num, One, Zero};
+    use pretty_assertions_sorted::assert_eq;
     use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     lazy_static! {
