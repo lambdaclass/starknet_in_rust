@@ -3730,7 +3730,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "serde_json_pythonic 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json_pythonic",
  "serde_with 2.3.3",
  "sha3",
  "starknet-crypto 0.6.0",
