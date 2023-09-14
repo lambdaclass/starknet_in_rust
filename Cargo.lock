@@ -1899,7 +1899,7 @@ dependencies = [
 
 [[package]]
 name = "fuzzer"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "cairo-vm",
  "honggfuzz",
@@ -3159,7 +3159,7 @@ dependencies = [
 
 [[package]]
 name = "rpc_state_reader"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "blockifier",
  "cairo-lang-starknet",
@@ -3423,16 +3423,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_json_pythonic"
-version = "0.1.2"
-source = "git+https://github.com/xJonathanLEI/serde_json_pythonic?tag=v0.1.2#4e4b08bab95309be8672b4efd346bea900040e15"
-dependencies = [
- "itoa",
- "ryu",
- "serde",
-]
-
-[[package]]
 name = "serde_spanned"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3673,7 +3663,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "serde_json_pythonic 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json_pythonic",
  "serde_with 2.3.3",
  "sha3",
  "starknet-crypto 0.6.0",
@@ -3796,7 +3786,7 @@ dependencies = [
 
 [[package]]
 name = "starknet-rs-cli"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "actix-web",
  "assert_matches",
@@ -3846,7 +3836,7 @@ dependencies = [
 
 [[package]]
 name = "starknet_in_rust"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -3868,9 +3858,10 @@ dependencies = [
  "num-integer",
  "num-traits 0.2.16",
  "once_cell",
+ "pretty_assertions_sorted",
  "serde",
  "serde_json",
- "serde_json_pythonic 0.1.2 (git+https://github.com/xJonathanLEI/serde_json_pythonic?tag=v0.1.2)",
+ "serde_json_pythonic",
  "sha3",
  "starknet",
  "starknet-crypto 0.5.1",

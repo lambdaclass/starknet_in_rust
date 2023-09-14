@@ -133,6 +133,12 @@ fn internal_deploy_account_cairo1() {
             &CompiledClass::Casm(Arc::new(contract_class)),
         )
         .unwrap();
+    state
+        .set_compiled_class_hash(
+            &TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH,
+            &TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH,
+        )
+        .unwrap();
 
     let contract_address_salt =
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
