@@ -115,7 +115,9 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
             state_reader,
             cache: self.cache.clone(),
             contract_class_cache: self.contract_class_cache.clone(),
-            contract_class_cache_private: RefCell::new(HashMap::default()),
+            contract_class_cache_private: RefCell::new(
+                self.contract_class_cache_private.borrow().clone(),
+            ),
             #[cfg(feature = "metrics")]
             cache_hits: 0,
             #[cfg(feature = "metrics")]
