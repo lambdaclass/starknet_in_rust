@@ -7,8 +7,8 @@ use crate::{
     services::api::contract_classes::compiled_class::CompiledClass,
     state::StateDiff,
     utils::{
-        get_erc20_balance_var_addresses, subtract_mappings, to_cache_state_storage_mapping,
-        Address, ClassHash,
+        get_erc20_balance_var_addresses, subtract_mappings, subtract_mappings_keys,
+        to_cache_state_storage_mapping, Address, ClassHash,
     },
 };
 use cairo_vm::felt::Felt252;
@@ -99,6 +99,19 @@ impl<T: StateReader> CachedState<T> {
         self.contract_classes = contract_classes;
         Ok(())
     }
+
+    /// Creates a copy of this state with an empty cache for saving changes and applying them
+    /// later.
+    pub fn create_transactional(&self) -> TransactionalCachedState<T> {
+        let state_reader = Arc::new(TransactionalCachedStateReader::new(self));
+        CachedState {
+            state_reader,
+            cache: self.cache.clone(),
+            contract_classes: self.contract_classes.clone(),
+            cache_hits: 0,
+            cache_misses: 0,
+        }
+    }
 }
 
 impl<T: StateReader> StateReader for CachedState<T> {
@@ -134,19 +147,13 @@ impl<T: StateReader> StateReader for CachedState<T> {
     // TODO: check if that the proper way to store it (converting hash to address)
     /// Returned the compiled class hash for a given class hash.
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
-        if self
-            .cache
-            .class_hash_to_compiled_class_hash
-            .get(class_hash)
-            .is_none()
+        if let Some(compiled_class_hash) =
+            self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            return self.state_reader.get_compiled_class_hash(class_hash);
+            Ok(*compiled_class_hash)
+        } else {
+            self.state_reader.get_compiled_class_hash(class_hash)
         }
-        self.cache
-            .class_hash_to_compiled_class_hash
-            .get(class_hash)
-            .ok_or_else(|| StateError::NoneCompiledClass(*class_hash))
-            .cloned()
     }
 
     /// Returns the contract class for a given class hash.
@@ -281,32 +288,24 @@ impl<T: StateReader> State for CachedState<T> {
         self.update_initial_values_of_write_only_accesses()?;
 
         let mut storage_updates = subtract_mappings(
-            self.cache.storage_writes.clone(),
-            self.cache.storage_initial_values.clone(),
+            &self.cache.storage_writes,
+            &self.cache.storage_initial_values,
         );
 
         let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
 
-        let class_hash_updates: Vec<_> = subtract_mappings(
-            self.cache.class_hash_writes.clone(),
-            self.cache.class_hash_initial_values.clone(),
-        )
-        .keys()
-        .cloned()
-        .collect();
+        let class_hash_updates = subtract_mappings_keys(
+            &self.cache.class_hash_writes,
+            &self.cache.class_hash_initial_values,
+        );
 
-        let nonce_updates: Vec<_> = subtract_mappings(
-            self.cache.nonce_writes.clone(),
-            self.cache.nonce_initial_values.clone(),
-        )
-        .keys()
-        .cloned()
-        .collect();
+        let nonce_updates =
+            subtract_mappings_keys(&self.cache.nonce_writes, &self.cache.nonce_initial_values);
 
         let mut modified_contracts: HashSet<Address> = HashSet::new();
         modified_contracts.extend(storage_unique_updates);
-        modified_contracts.extend(class_hash_updates);
-        modified_contracts.extend(nonce_updates);
+        modified_contracts.extend(class_hash_updates.cloned());
+        modified_contracts.extend(nonce_updates.cloned());
 
         // Add fee transfer storage update before actually charging it, as it needs to be included in the
         // calculation of the final fee.
@@ -443,6 +442,114 @@ impl<T: StateReader> State for CachedState<T> {
             }
         }
         Ok(contract)
+    }
+}
+
+/// A CachedState which has access to another, "parent" state, used for executing transactions
+/// without commiting changes to the parent.
+pub type TransactionalCachedState<'a, T> = CachedState<TransactionalCachedStateReader<'a, T>>;
+
+/// State reader used for transactional states which allows to check the parent state's cache and
+/// state reader if a transactional cache miss happens.
+///
+/// In practice this will act as a way to access the parent state's cache and other fields,
+/// without referencing the whole parent state, so there's no need to adapt state-modifying
+/// functions in the case that a transactional state is needed.
+#[derive(Debug, MutGetters, Getters, PartialEq, Clone)]
+pub struct TransactionalCachedStateReader<'a, T: StateReader> {
+    /// The parent state's state_reader
+    #[get(get = "pub")]
+    pub(crate) state_reader: Arc<T>,
+    /// The parent state's cache
+    #[get(get = "pub")]
+    pub(crate) cache: &'a StateCache,
+    /// The parent state's contract_classes
+    #[get(get = "pub")]
+    pub(crate) contract_classes: ContractClassCache,
+}
+
+impl<'a, T: StateReader> TransactionalCachedStateReader<'a, T> {
+    fn new(state: &'a CachedState<T>) -> Self {
+        Self {
+            state_reader: state.state_reader.clone(),
+            cache: &state.cache,
+            contract_classes: state.contract_classes.clone(),
+        }
+    }
+}
+
+impl<'a, T: StateReader> StateReader for TransactionalCachedStateReader<'a, T> {
+    /// Returns the class hash for a given contract address.
+    /// Returns zero as default value if missing
+    fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
+        self.cache
+            .get_class_hash(contract_address)
+            .map(|a| Ok(*a))
+            .unwrap_or_else(|| self.state_reader.get_class_hash_at(contract_address))
+    }
+
+    /// Returns the nonce for a given contract address.
+    fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
+        if self.cache.get_nonce(contract_address).is_none() {
+            return self.state_reader.get_nonce_at(contract_address);
+        }
+        self.cache
+            .get_nonce(contract_address)
+            .ok_or_else(|| StateError::NoneNonce(contract_address.clone()))
+            .cloned()
+    }
+
+    /// Returns storage data for a given storage entry.
+    /// Returns zero as default value if missing
+    fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
+        self.cache
+            .get_storage(storage_entry)
+            .map(|v| Ok(v.clone()))
+            .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
+    }
+
+    // TODO: check if that the proper way to store it (converting hash to address)
+    /// Returned the compiled class hash for a given class hash.
+    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
+        if self
+            .cache
+            .class_hash_to_compiled_class_hash
+            .get(class_hash)
+            .is_none()
+        {
+            return self.state_reader.get_compiled_class_hash(class_hash);
+        }
+        self.cache
+            .class_hash_to_compiled_class_hash
+            .get(class_hash)
+            .ok_or_else(|| StateError::NoneCompiledClass(*class_hash))
+            .cloned()
+    }
+
+    /// Returns the contract class for a given class hash.
+    fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
+        // This method can receive both compiled_class_hash & class_hash and return both casm and deprecated contract classes
+        //, which can be on the cache or on the state_reader, different cases will be described below:
+        if class_hash == UNINITIALIZED_CLASS_HASH {
+            return Err(StateError::UninitiaizedClassHash);
+        }
+
+        // I: FETCHING FROM CACHE
+        if let Some(compiled_class) = self.contract_classes.get(class_hash) {
+            return Ok(compiled_class.clone());
+        }
+
+        // I: CASM CONTRACT CLASS : CLASS_HASH
+        if let Some(compiled_class_hash) =
+            self.cache.class_hash_to_compiled_class_hash.get(class_hash)
+        {
+            if let Some(casm_class) = self.contract_classes.get(compiled_class_hash) {
+                return Ok(casm_class.clone());
+            }
+        }
+
+        // II: FETCHING FROM STATE_READER
+        self.state_reader.get_contract_class(class_hash)
     }
 }
 

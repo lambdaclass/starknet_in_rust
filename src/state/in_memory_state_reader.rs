@@ -25,7 +25,7 @@ pub struct InMemoryStateReader {
     #[getset(get_mut = "pub")]
     pub class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
     #[getset(get_mut = "pub")]
-    pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
+    pub class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }
 
 impl InMemoryStateReader {
