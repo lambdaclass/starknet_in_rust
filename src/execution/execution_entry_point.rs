@@ -12,7 +12,7 @@ use crate::{
         cached_state::CachedState,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
-        ExecutionResourcesManager, StateDiff,
+        ExecutionResourcesManager,
     },
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
