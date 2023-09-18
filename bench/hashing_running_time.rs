@@ -13,7 +13,7 @@ use starknet_in_rust::{
 };
 use std::collections::HashMap;
 use std::{any::Any, hint::black_box};
-
+#[allow(dead_code)]
 fn criterion_benchmark(c: &mut Criterion) {
     let exec_scopes = &mut ExecutionScopes::new();
     let ids_names = vec!["syscall_ptr"];
@@ -25,9 +25,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         for i in 0..ids_names.len() as i32 {
             references.insert(
                 i as usize,
-                cairo_vm::hint_processor::hint_processor_definition::HintReference::new_simple(
-                    i,
-                ),
+                cairo_vm::hint_processor::hint_processor_definition::HintReference::new_simple(i),
             );
         }
         references

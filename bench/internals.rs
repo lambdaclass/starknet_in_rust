@@ -1,5 +1,7 @@
 #![deny(warnings)]
 
+mod hashing_running_time;
+
 use cairo_vm::felt;
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
