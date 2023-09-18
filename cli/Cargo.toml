@@ -19,4 +19,4 @@ mimalloc = { version = "0.1.29", default-features = false, optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-coverage-helper = "0.1.0"
+coverage-helper = "0.2.0"
