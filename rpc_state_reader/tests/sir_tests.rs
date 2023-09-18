@@ -447,7 +447,7 @@ fn get_transaction_deploy_account() {
     execute_tx(
         "0x06372abe2116c75097b632543f91498a714c48dbd4b168f615b6b17c2733e9fd",
         RpcChain::MainNet,
-        BlockNumber(217830),
+        BlockNumber(217829),
     );
 }
 
@@ -456,6 +456,6 @@ fn get_transaction_invoke() {
     execute_tx(
         "0x033d6717664cf7d13fe1f6ce36082155b8c2cf390a9884227e12fe04e674cc39",
         RpcChain::MainNet,
-        BlockNumber(217834),
+        BlockNumber(217833),
     );
 }
