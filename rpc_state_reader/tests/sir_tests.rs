@@ -198,16 +198,30 @@ fn test_get_gas_price() {
 }
 
 #[test_case(
+    "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+    90006,
+    RpcChain::MainNet
+    => ignore["old transaction, gas mismatch"]
+)]
+#[test_case(
+    "0x025844447697eb7d5df4d8268b23aef6c11de4087936048278c2559fc35549eb",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
         "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
         169928, // real block 169929
         RpcChain::MainNet
-        => ignore["gas mismatch"]
     )]
 #[test_case(
         "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
         169928, // real block 169929
         RpcChain::MainNet
-        => ignore["gas mismatch"]
     )]
 #[test_case(
         "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
@@ -219,7 +233,6 @@ fn test_get_gas_price() {
         "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
         169928, // real block 169929
         RpcChain::MainNet
-        => ignore["gas mismatch"]
     )]
 #[test_case(
         // review later
@@ -229,11 +242,10 @@ fn test_get_gas_price() {
         => ignore["resource mismatch"]
     )]
 #[test_case(
-        // fails in blockifier too
+        // fails in blockifier
         "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
         186551, // real block     186552
         RpcChain::MainNet
-        => ignore["gas mismatch"]
     )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
@@ -250,6 +262,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         ..
     } = call_info.unwrap();
 
+    // check Cairo VM execution resources
     assert_eq_sorted!(
         execution_resources.as_ref(),
         Some(
@@ -261,6 +274,8 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         ),
         "execution resources mismatch"
     );
+
+    // check amount of internal calls
     assert_eq!(
         internal_calls.len(),
         trace
@@ -272,6 +287,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         "internal calls length mismatch"
     );
 
+    // check actual fee calculation
     if receipt.actual_fee != actual_fee {
         let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
 
@@ -281,5 +297,62 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
                 "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }
+    }
+}
+
+#[test_case(
+    "0x01e91fa12be4424264c8cad29f481a67d5d8e23f7abf94add734d64b91c90021",
+    RpcChain::MainNet,
+    219797,
+    7
+)]
+#[test_case(
+    "0x03ec45f8369513b0f48db25f2cf18c70c50e7d3119505ab15e39ae4ca2eb06cf",
+    RpcChain::MainNet,
+    219764,
+    7
+)]
+#[test_case(
+    "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+    RpcChain::MainNet,
+    197000,
+    3
+)]
+fn test_sorted_events(
+    tx_hash: &str,
+    chain: RpcChain,
+    block_number: u64,
+    expected_amount_of_events: usize,
+) {
+    let (tx_info, _trace, _receipt) = execute_tx(tx_hash, chain, BlockNumber(block_number));
+
+    let events_len = tx_info.get_sorted_events().unwrap().len();
+
+    assert_eq!(expected_amount_of_events, events_len);
+}
+
+#[test_case(
+    "0x00b6d59c19d5178886b4c939656167db0660fe325345138025a3cc4175b21897",
+    200303, // real block     200304
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x02b28b4846a756e0cec6385d6d13f811e745a88c7e75a3ebc5fead5b4af152a3",
+    200302, // real block     200304
+    RpcChain::MainNet
+    => ignore["broken on both due to a cairo-vm error"]
+)]
+fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+
+    assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
+
+    let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee) / receipt.actual_fee;
+
+    if diff >= 5 {
+        assert_eq!(
+            tx_info.actual_fee, receipt.actual_fee,
+            "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+        );
     }
 }

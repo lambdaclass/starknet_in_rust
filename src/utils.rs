@@ -230,18 +230,36 @@ where
     V: PartialEq + Clone,
 {
     let val = map.get(key);
-    !(map.contains_key(key) && (Some(value) == val))
+    Some(value) != val
 }
 
-pub fn subtract_mappings<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> HashMap<K, V>
+pub fn subtract_mappings<'a, K, V>(
+    map_a: &'a HashMap<K, V>,
+    map_b: &'a HashMap<K, V>,
+) -> HashMap<K, V>
 where
     K: Hash + Eq + Clone,
     V: PartialEq + Clone,
 {
     map_a
-        .into_iter()
-        .filter(|(k, v)| contained_and_not_updated(k, v, &map_b))
+        .iter()
+        .filter(|(k, v)| contained_and_not_updated(*k, *v, map_b))
+        .map(|(k, v)| (k.clone(), v.clone()))
         .collect()
+}
+
+pub fn subtract_mappings_keys<'a, K, V>(
+    map_a: &'a HashMap<K, V>,
+    map_b: &'a HashMap<K, V>,
+) -> impl Iterator<Item = &'a K>
+where
+    K: Hash + Eq + Clone,
+    V: PartialEq + Clone,
+{
+    map_a
+        .iter()
+        .filter(|(k, v)| contained_and_not_updated(*k, *v, map_b))
+        .map(|x| x.0)
 }
 
 /// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
@@ -260,12 +278,12 @@ pub fn to_cache_state_storage_mapping(
 
 // get a vector of keys from two hashmaps
 
-pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
+pub fn get_keys<'a, K, V>(map_a: &'a HashMap<K, V>, map_b: &'a HashMap<K, V>) -> Vec<&'a K>
 where
     K: Hash + Eq,
 {
-    let mut keys1: HashSet<K> = map_a.into_keys().collect();
-    let keys2: HashSet<K> = map_b.into_keys().collect();
+    let mut keys1: HashSet<&K> = map_a.keys().collect();
+    let keys2: HashSet<&K> = map_b.keys().collect();
 
     keys1.extend(keys2);
 
@@ -647,7 +665,7 @@ mod test {
             .into_iter()
             .collect::<HashMap<&str, i32>>();
 
-        assert_eq!(subtract_mappings(a, b), res);
+        assert_eq!(subtract_mappings(&a, &b), res);
 
         let mut c = HashMap::new();
         let mut d = HashMap::new();
@@ -664,7 +682,7 @@ mod test {
             .into_iter()
             .collect::<HashMap<i32, i32>>();
 
-        assert_eq!(subtract_mappings(c, d), res);
+        assert_eq!(subtract_mappings(&c, &d), res);
 
         let mut e = HashMap::new();
         let mut f = HashMap::new();
@@ -676,7 +694,7 @@ mod test {
         f.insert(3, 4);
         f.insert(6, 7);
 
-        assert_eq!(subtract_mappings(e, f), HashMap::new())
+        assert_eq!(subtract_mappings(&e, &f), HashMap::new())
     }
 
     #[test]

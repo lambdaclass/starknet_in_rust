@@ -135,12 +135,8 @@ impl ExecutionEntryPoint {
                 })
             }
             CompiledClass::Casm(contract_class) => {
-                let mut tmp_state =
-                    CachedState::new(state.state_reader.clone(), state.contract_classes.clone());
-                tmp_state.cache = state.cache.clone();
-
                 match self._execute(
-                    &mut tmp_state,
+                    state,
                     resources_manager,
                     block_context,
                     tx_execution_context,
@@ -148,15 +144,11 @@ impl ExecutionEntryPoint {
                     class_hash,
                     support_reverted,
                 ) {
-                    Ok(call_info) => {
-                        let state_diff = StateDiff::from_cached_state(tmp_state)?;
-                        state.apply_state_update(&state_diff)?;
-                        Ok(ExecutionResult {
-                            call_info: Some(call_info),
-                            revert_error: None,
-                            n_reverted_steps: 0,
-                        })
-                    }
+                    Ok(call_info) => Ok(ExecutionResult {
+                        call_info: Some(call_info),
+                        revert_error: None,
+                        n_reverted_steps: 0,
+                    }),
                     Err(e) => {
                         if !support_reverted {
                             return Err(e);
@@ -183,15 +175,11 @@ impl ExecutionEntryPoint {
                     tx_execution_context,
                     block_context,
                 ) {
-                    Ok(call_info) => {
-                        let state_diff = StateDiff::from_cached_state(tmp_state)?;
-                        state.apply_state_update(&state_diff)?;
-                        Ok(ExecutionResult {
-                            call_info: Some(call_info),
-                            revert_error: None,
-                            n_reverted_steps: 0,
-                        })
-                    }
+                    Ok(call_info) => Ok(ExecutionResult {
+                        call_info: Some(call_info),
+                        revert_error: None,
+                        n_reverted_steps: 0,
+                    }),
                     Err(e) => {
                         if !support_reverted {
                             return Err(e);

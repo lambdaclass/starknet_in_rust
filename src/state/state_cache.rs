@@ -21,7 +21,7 @@ pub struct StateCache {
     pub(crate) compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) nonce_initial_values: HashMap<Address, Felt252>,
-    #[get_mut = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     pub(crate) storage_initial_values: HashMap<StorageEntry, Felt252>,
 
     // Writer's cached information.
