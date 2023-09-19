@@ -170,7 +170,7 @@ fn execute_tx(
                 Transaction::DeclareV2(Box::new(
                     DeclareV2::from_declare_transaction(
                         tx,
-                        sierra_class,
+                        Arc::new(sierra_class),
                         Felt252::from_bytes_be(tx_hash.0.bytes()),
                     )
                     .unwrap(),

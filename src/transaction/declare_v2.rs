@@ -53,47 +53,47 @@ pub struct DeclareV2 {
 
 #[derive(Debug, Clone)]
 pub enum MaybeSierraContractClass {
-    Sierra(SierraContractClass),
-    SierraAndCasm(SierraContractClass, CasmContractClass),
-    Casm(CasmContractClass),
+    Sierra(Arc<SierraContractClass>),
+    SierraAndCasm(Arc<SierraContractClass>, Arc<CasmContractClass>),
+    Casm(Arc<CasmContractClass>),
 }
 
 impl MaybeSierraContractClass {
-    pub fn sierra_contract_class(&self) -> Option<&SierraContractClass> {
+    pub fn sierra_contract_class(&self) -> Option<Arc<SierraContractClass>> {
         match self {
             MaybeSierraContractClass::Sierra(sierra_contract_class)
             | MaybeSierraContractClass::SierraAndCasm(sierra_contract_class, _) => {
-                Some(sierra_contract_class)
+                Some(sierra_contract_class.clone())
             }
             MaybeSierraContractClass::Casm(_) => None,
         }
     }
 
-    pub fn casm_contract_class(&self) -> Option<&CasmContractClass> {
+    pub fn casm_contract_class(&self) -> Option<Arc<CasmContractClass>> {
         match self {
             MaybeSierraContractClass::Sierra(_) => None,
             MaybeSierraContractClass::Casm(casm_contract_class)
             | MaybeSierraContractClass::SierraAndCasm(_, casm_contract_class) => {
-                Some(casm_contract_class)
+                Some(casm_contract_class.clone())
             }
         }
     }
 }
 
-impl From<SierraContractClass> for MaybeSierraContractClass {
-    fn from(value: SierraContractClass) -> Self {
+impl From<Arc<SierraContractClass>> for MaybeSierraContractClass {
+    fn from(value: Arc<SierraContractClass>) -> Self {
         Self::Sierra(value)
     }
 }
 
-impl From<CasmContractClass> for MaybeSierraContractClass {
-    fn from(value: CasmContractClass) -> Self {
+impl From<Arc<CasmContractClass>> for MaybeSierraContractClass {
+    fn from(value: Arc<CasmContractClass>) -> Self {
         Self::Casm(value)
     }
 }
 
-impl From<(SierraContractClass, CasmContractClass)> for MaybeSierraContractClass {
-    fn from(value: (SierraContractClass, CasmContractClass)) -> Self {
+impl From<(Arc<SierraContractClass>, Arc<CasmContractClass>)> for MaybeSierraContractClass {
+    fn from(value: (Arc<SierraContractClass>, Arc<CasmContractClass>)) -> Self {
         Self::SierraAndCasm(value.0, value.1)
     }
 }
@@ -113,8 +113,8 @@ impl DeclareV2 {
     /// - nonce: The nonce of the contract.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        sierra_contract_class: SierraContractClass,
-        casm_contract_class: Option<CasmContractClass>,
+        sierra_contract_class: Arc<SierraContractClass>,
+        casm_contract_class: Option<Arc<CasmContractClass>>,
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
@@ -165,9 +165,9 @@ impl DeclareV2 {
     /// may not hold.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_sierra_class_hash_and_tx_hash(
-        sierra_contract_class: impl Into<Option<SierraContractClass>>,
+        sierra_contract_class: impl Into<Option<Arc<SierraContractClass>>>,
         sierra_class_hash: impl Into<Option<Felt252>>,
-        casm_contract_class: Option<CasmContractClass>,
+        casm_contract_class: Option<Arc<CasmContractClass>>,
         compiled_class_hash: Felt252,
         sender_address: Address,
         max_fee: u128,
@@ -233,8 +233,8 @@ impl DeclareV2 {
     /// - hash_value: The transaction hash.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_tx_hash(
-        sierra_contract_class: impl Into<Option<SierraContractClass>>,
-        casm_contract_class: Option<CasmContractClass>,
+        sierra_contract_class: impl Into<Option<Arc<SierraContractClass>>>,
+        casm_contract_class: Option<Arc<CasmContractClass>>,
         compiled_class_hash: Felt252,
         sender_address: Address,
         max_fee: u128,
@@ -243,10 +243,11 @@ impl DeclareV2 {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
-        let sierra_contract_class: Option<SierraContractClass> = sierra_contract_class.into();
+        let sierra_contract_class: Option<Arc<SierraContractClass>> = sierra_contract_class.into();
 
         let sierra_class_hash = sierra_contract_class
             .as_ref()
+            .map(AsRef::as_ref)
             .map(compute_sierra_class_hash)
             .transpose()?;
 
@@ -278,9 +279,9 @@ impl DeclareV2 {
     /// - nonce: The nonce of the contract.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_sierra_class_hash(
-        sierra_contract_class: SierraContractClass,
+        sierra_contract_class: Arc<SierraContractClass>,
         sierra_class_hash: Felt252,
-        casm_contract_class: Option<CasmContractClass>,
+        casm_contract_class: Option<Arc<CasmContractClass>>,
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
@@ -437,10 +438,13 @@ impl DeclareV2 {
         state: &mut S,
     ) -> Result<(), TransactionError> {
         let casm_class = match &self.contract_class {
-            MaybeSierraContractClass::Sierra(sierra_contract_class) => {
-                CasmContractClass::from_contract_class(sierra_contract_class.clone(), true)
-                    .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
-            }
+            MaybeSierraContractClass::Sierra(sierra_contract_class) => Arc::new(
+                CasmContractClass::from_contract_class(
+                    sierra_contract_class.as_ref().clone(),
+                    true,
+                )
+                .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?,
+            ),
             MaybeSierraContractClass::SierraAndCasm(_, casm_contract_class)
             | MaybeSierraContractClass::Casm(casm_contract_class) => casm_contract_class.clone(),
         };
@@ -464,7 +468,7 @@ impl DeclareV2 {
         )?;
         state.set_contract_class(
             &self.compiled_class_hash.to_be_bytes(),
-            &CompiledClass::Casm(Arc::new(casm_class)),
+            &CompiledClass::Casm(casm_class),
         )?;
 
         Ok(())
@@ -589,6 +593,7 @@ mod tests {
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+    use cairo_lang_starknet::contract_class::ContractClass;
     use cairo_vm::felt::Felt252;
     use num_traits::{One, Zero};
 
@@ -611,8 +616,7 @@ mod tests {
 
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
-        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
-            serde_json::from_reader(reader).unwrap();
+        let sierra_contract_class: ContractClass = serde_json::from_reader(reader).unwrap();
         let sender_address = Address(1.into());
         let casm_class =
             CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
@@ -621,7 +625,7 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
-            sierra_contract_class,
+            Arc::new(sierra_contract_class),
             None,
             casm_class_hash,
             sender_address,
@@ -649,6 +653,7 @@ mod tests {
                 .contract_class
                 .sierra_contract_class()
                 .unwrap()
+                .as_ref()
                 .clone(),
             true,
         )
@@ -694,8 +699,8 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
-            sierra_contract_class,
-            Some(casm_class),
+            Arc::new(sierra_contract_class),
+            Some(Arc::new(casm_class)),
             casm_class_hash,
             sender_address,
             0,
@@ -722,6 +727,7 @@ mod tests {
                 .contract_class
                 .sierra_contract_class()
                 .unwrap()
+                .as_ref()
                 .clone(),
             true,
         )
@@ -768,9 +774,9 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
-            sierra_contract_class,
+            Arc::new(sierra_contract_class),
             sierra_class_hash,
-            Some(casm_class),
+            Some(Arc::new(casm_class)),
             casm_class_hash,
             sender_address,
             0,
@@ -797,6 +803,7 @@ mod tests {
                 .contract_class
                 .sierra_contract_class()
                 .unwrap()
+                .as_ref()
                 .clone(),
             true,
         )
@@ -842,7 +849,7 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
-            sierra_contract_class,
+            Arc::new(sierra_contract_class),
             None,
             casm_class_hash,
             sender_address,
@@ -870,6 +877,7 @@ mod tests {
                 .contract_class
                 .sierra_contract_class()
                 .unwrap()
+                .as_ref()
                 .clone(),
             true,
         )
@@ -916,7 +924,7 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
-            sierra_contract_class,
+            Arc::new(sierra_contract_class),
             None,
             sended_class_hash.clone(),
             sender_address,
