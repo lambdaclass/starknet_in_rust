@@ -15,7 +15,7 @@ use crate::{
     state::{
         cached_state::CachedState,
         contract_class_cache::ContractClassCache,
-        state_api::{State, StateReader},
+        state_api::State,
     },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{
