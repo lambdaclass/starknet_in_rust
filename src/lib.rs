@@ -92,7 +92,7 @@ where
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         // Check if the contract is deployed.
-        cached_state.get_class_hash_at(&transaction.contract_address())?;
+        <cached_state as State>::get_class_hash_at(&mut cached_state, &transaction.contract_address())?;
         // execute the transaction with the fake state.
 
         // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
