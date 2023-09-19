@@ -106,6 +106,7 @@ impl StateReader for InMemoryStateReader {
         &self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError> {
+        println!("{}", std::backtrace::Backtrace::force_capture());
         self.class_hash_to_compiled_class_hash
             .get(class_hash)
             .ok_or(StateError::NoneCompiledHash(*class_hash))

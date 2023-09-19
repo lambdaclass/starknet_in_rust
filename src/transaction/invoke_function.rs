@@ -1,3 +1,7 @@
+use super::{
+    fee::{calculate_tx_fee, charge_fee},
+    Transaction,
+};
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -11,27 +15,19 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
-        cached_state::{CachedState, TransactionalCachedState},
-        ExecutionResourcesManager,
-    },
-    state::{
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
         state_api::{State, StateReader},
-        StateDiff,
+        ExecutionResourcesManager, StateDiff,
     },
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
-
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-
-use super::{
-    fee::{calculate_tx_fee, charge_fee},
-    Transaction,
-};
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -164,9 +160,9 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - resources_manager: the resources that are in use by the contract
     /// - block_context: The block's execution context
-    pub(crate) fn run_validate_entrypoint<S: StateReader>(
+    pub(crate) fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
@@ -208,9 +204,9 @@ impl InvokeFunction {
 
     /// Builds the transaction execution context and executes the entry point.
     /// Returns the CallInfo.
-    fn run_execute_entrypoint<S: StateReader>(
+    fn run_execute_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
@@ -241,9 +237,9 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    pub fn apply<S: StateReader>(
+    pub fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut TransactionalCachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
@@ -293,9 +289,9 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
@@ -529,7 +525,10 @@ mod tests {
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
         state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         utils::calculate_sn_keccak,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
@@ -540,7 +539,7 @@ mod tests {
         hash::{StarkFelt, StarkHash},
         transaction::{Fee, InvokeTransaction, InvokeTransactionV1, TransactionSignature},
     };
-    use std::{collections::HashMap, sync::Arc};
+    use std::sync::Arc;
 
     #[test]
     fn test_from_invoke_transaction() {
@@ -637,7 +636,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -648,10 +647,10 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -714,7 +713,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -725,10 +724,10 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -782,7 +781,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -793,10 +792,10 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -845,7 +844,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -856,10 +855,10 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -918,7 +917,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -929,10 +928,10 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -961,7 +960,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let nonce = Felt252::zero();
 
         state_reader
@@ -993,10 +992,10 @@ mod tests {
             skip_nonce_check: false,
         };
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -1042,7 +1041,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -1053,10 +1052,10 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -1112,7 +1111,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -1123,10 +1122,10 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -1178,7 +1177,7 @@ mod tests {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -1189,10 +1188,10 @@ mod tests {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -1335,11 +1334,13 @@ mod tests {
             .insert(class_hash, class_hash);
         // last is necessary so the transactional state can cache the class
 
-        let mut casm_contract_class_cache = HashMap::new();
+        let casm_contract_class_cache = PermanentContractClassCache::default();
 
-        casm_contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        casm_contract_class_cache
+            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
 
-        let mut state = CachedState::new(Arc::new(state_reader), casm_contract_class_cache);
+        let mut state =
+            CachedState::new(Arc::new(state_reader), Arc::new(casm_contract_class_cache));
 
         let state_before_execution = state.clone();
 

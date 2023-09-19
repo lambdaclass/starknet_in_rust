@@ -1,11 +1,4 @@
-use std::sync::Arc;
-
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::{
-    ContractClass, EntryPointType,
-};
-use crate::state::cached_state::CachedState;
-use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
+use super::Transaction;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
@@ -16,22 +9,30 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
     hash_utils::calculate_contract_address,
     services::api::{
-        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+        contract_class_errors::ContractClassError,
+        contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
     },
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-
-use super::Transaction;
+use std::sync::Arc;
 
 /// Represents a Deploy Transaction in the starknet network
 #[derive(Debug, Clone)]
@@ -143,9 +144,9 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn apply<S: StateReader>(
+    pub fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.set_contract_class(&self.contract_hash, &self.contract_class)?;
@@ -202,9 +203,9 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn invoke_constructor<S: StateReader>(
+    pub fn invoke_constructor<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
@@ -266,9 +267,9 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(state, block_context)?;
@@ -302,19 +303,24 @@ impl Deploy {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::Arc};
-
     use super::*;
     use crate::{
-        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         utils::calculate_sn_keccak,
     };
+    use std::{collections::HashMap, sync::Arc};
 
     #[test]
     fn invoke_constructor_test() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         // Set contract_class
         let contract_class =
@@ -362,7 +368,10 @@ mod tests {
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let contract_class =
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
@@ -391,7 +400,10 @@ mod tests {
     fn deploy_contract_without_constructor_should_fail() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, HashMap::new());
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let contract_path = "starknet_programs/amm.json";
         let contract_class = ContractClass::from_path(contract_path).unwrap();

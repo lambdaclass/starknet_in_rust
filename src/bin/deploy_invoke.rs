@@ -1,11 +1,12 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_in_rust::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::state::StarknetState, utils::Address,
+    state::contract_class_cache::PermanentContractClassCache, testing::state::StarknetState,
+    utils::Address,
 };
 
 use lazy_static::lazy_static;
@@ -36,7 +37,8 @@ lazy_static! {
 
 fn main() {
     const RUNS: usize = 10000;
-    let mut starknet_state = StarknetState::new(None);
+    let mut starknet_state =
+        StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
     let contract_address_salt = 1.into();
 
     let (contract_address, _exec_info) = starknet_state

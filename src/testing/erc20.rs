@@ -1,44 +1,31 @@
-#![allow(unused_imports)]
-use std::{collections::HashMap, io::Bytes, path::Path, sync::Arc};
+// Since it has nothing exported, restrict compilation on test mode only. Fixes unused import
+// warnings without disabling them.
+#![cfg(test)]
 
 use crate::{
     call_contract,
-    definitions::{
-        block_context::{BlockContext, StarknetChainId},
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    },
+    definitions::block_context::{BlockContext, StarknetChainId},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::{
         cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
         in_memory_state_reader::InMemoryStateReader,
-        state_api::{State, StateReader},
+        state_api::State,
         ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, DeployAccount, InvokeFunction},
-    utils::calculate_sn_keccak,
-    EntryPointType, Felt252,
+    transaction::DeployAccount,
+    utils::{calculate_sn_keccak, Address, ClassHash},
+    EntryPointType,
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::felt_str;
-use lazy_static::lazy_static;
+use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
-pub const ERC20_CONTRACT_PATH: &str = "starknet_programs/cairo2/ERC20.casm";
-use crate::{
-    state::state_cache::StorageEntry,
-    utils::{felt_to_hash, Address, ClassHash},
-};
+use std::sync::Arc;
 
-use super::{
-    new_starknet_block_context_for_testing, ACCOUNT_CONTRACT_PATH, ACTUAL_FEE,
-    TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_CLASS_HASH, TEST_CLASS_HASH,
-    TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH, TEST_ERC20_ACCOUNT_BALANCE_KEY,
-    TEST_ERC20_CONTRACT_CLASS_HASH,
-};
+pub const ERC20_CONTRACT_PATH: &str = "starknet_programs/cairo2/ERC20.casm";
 
 #[test]
 fn test_erc20_cairo2() {
@@ -54,14 +41,15 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.insert(
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
         erc20_class_hash,
         CompiledClass::Casm(Arc::new(test_contract_class)),
     );
@@ -75,7 +63,7 @@ fn test_erc20_cairo2() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let name_ = Felt252::from_bytes_be(b"some-token");
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");
