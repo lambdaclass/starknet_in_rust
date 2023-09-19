@@ -115,9 +115,9 @@ You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 #### Contract class cache behavior
 
 `starknet_in_rust` supports caching contracts in memory. Caching the contracts is useful for
-avoiding excessive RPC API usage. The project provides two builtin cache policies: null andç
-permanent. The null cache behaves as if there was no cache at all. The permanent cache caches
-everything in memory forever.
+avoiding excessive RPC API usage and keeping the contract class deserialization overhead to the
+minimum. The project provides two builtin cache policies: null and permanent. The null cache behaves
+as if there was no cache at all. The permanent cache caches everything in memory forever.
 
 In addition to those two, an example is provided that implements and uses an LRU cache policy.
 Long-running applications should ideally implement a cache algorithm suited to their needs or
