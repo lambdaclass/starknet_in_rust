@@ -125,7 +125,9 @@ alternatively use our example's implementation to avoid spamming the API when us
 or blowing the memory usage when running with the permanent cache.
 
 Customized cache policies may be used by implementing the `ContractClassCache` trait. Check out our
-[LRU cache example](examples/lru_cache/main.rs) for more details.
+[LRU cache example](examples/lru_cache/main.rs) for more details. Updating the cache requires
+manually merging the local state cache into the shared cache manually. This can be done by calling
+the `drain_private_contract_class_cache` on the `CachedState` instance.
 
 ```rs
 // To use the null cache (aka. no cache at all), create the state as follows:
@@ -133,10 +135,22 @@ let cache = Arc::new(NullContractClassCache::default());
 let state1 = StarknetState::new(None, cache.clone());
 let state2 = StarknetState::new(None, cache.clone()); // Cache is reused.
 
+// Insert state usage here.
+
+// The null cache doesn't have any method to extend it since it has no data.
+```
+
+```rs
 // If the permanent cache is preferred, then use `PermanentContractClassCache` instead:
 let cache = Arc::new(PermanentContractClassCache::default());
 let state1 = StarknetState::new(None, cache.clone());
 let state2 = StarknetState::new(None, cache.clone()); // Cache is reused.
+
+// Insert state usage here.
+
+// Extend the shared cache with the states' contracts after using them.
+cache.extend(state1.state.drain_private_contract_class_cache());
+cache.extend(state2.state.drain_private_contract_class_cache());
 ```
 
 ### Testing
