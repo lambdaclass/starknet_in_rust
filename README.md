@@ -114,20 +114,30 @@ You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
 #### Contract class cache behavior
 
-`starknet_in_rust` supports caching contracts in memory. The project provides two builtin cache
-policies: null and permanent. The null cache behaves as if there was no cache at all. The permanent
-cache caches everything in memory forever.
+`starknet_in_rust` supports caching contracts in memory. Caching the contracts is useful for
+avoiding excessive RPC API usage. The project provides two builtin cache policies: null andç
+permanent. The null cache behaves as if there was no cache at all. The permanent cache caches
+everything in memory forever.
+
+In addition to those two, an example is provided that implements and uses an LRU cache policy.
+Long-running applications should ideally implement a cache algorithm suited to their needs or
+alternatively use our example's implementation to avoid spamming the API when using the null cache
+or blowing the memory usage when running with the permanent cache.
+
+Customized cache policies may be used by implementing the `ContractClassCache` trait. Check out our
+[LRU cache example](examples/lru_cache/main.rs) for more details.
 
 ```rs
 // To use the null cache (aka. no cache at all), create the state as follows:
-let state = StarknetState::new(None, Arc::new(NullContractClassCache::default()));
+let cache = Arc::new(NullContractClassCache::default());
+let state1 = StarknetState::new(None, cache.clone());
+let state2 = StarknetState::new(None, cache.clone()); // Cache is reused.
 
 // If the permanent cache is preferred, then use `PermanentContractClassCache` instead:
-let state = StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
+let cache = Arc::new(PermanentContractClassCache::default());
+let state1 = StarknetState::new(None, cache.clone());
+let state2 = StarknetState::new(None, cache.clone()); // Cache is reused.
 ```
-
-Custom cache policies are also supported by implementing a single trait. An example may be found
-[here](examples/lru_cache/main.rs).
 
 ### Testing
 
