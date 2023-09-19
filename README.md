@@ -132,8 +132,8 @@ the `drain_private_contract_class_cache` on the `CachedState` instance.
 ```rs
 // To use the null cache (aka. no cache at all), create the state as follows:
 let cache = Arc::new(NullContractClassCache::default());
-let state1 = StarknetState::new(None, cache.clone());
-let state2 = StarknetState::new(None, cache.clone()); // Cache is reused.
+let state1 = CachedState::new(state_reader.clone(), cache.clone());
+let state2 = CachedState::new(state_reader.clone(), cache.clone()); // Cache is reused.
 
 // Insert state usage here.
 
@@ -143,8 +143,8 @@ let state2 = StarknetState::new(None, cache.clone()); // Cache is reused.
 ```rs
 // If the permanent cache is preferred, then use `PermanentContractClassCache` instead:
 let cache = Arc::new(PermanentContractClassCache::default());
-let state1 = StarknetState::new(None, cache.clone());
-let state2 = StarknetState::new(None, cache.clone()); // Cache is reused.
+let state1 = CachedState::new(state_reader.clone(), cache.clone());
+let state2 = CachedState::new(state_reader.clone(), cache.clone()); // Cache is reused.
 
 // Insert state usage here.
 
