@@ -22,7 +22,10 @@ use starknet_in_rust::{
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::{hint::black_box, sync::{Arc, RwLock}};
+use std::{
+    hint::black_box,
+    sync::{Arc, RwLock},
+};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
