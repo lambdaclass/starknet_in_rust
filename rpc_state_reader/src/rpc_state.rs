@@ -284,7 +284,8 @@ impl RpcState {
             "params": params,
             "id": 1
         });
-        Self::deserialize_call(self.rpc_call_no_deserialize(&payload)?.into_json().unwrap())
+        let response = self.rpc_call_no_deserialize(&payload)?.into_json().unwrap();
+        Self::deserialize_call(response)
     }
 
     fn rpc_call_no_deserialize(
