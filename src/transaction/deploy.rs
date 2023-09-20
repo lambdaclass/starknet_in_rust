@@ -311,12 +311,15 @@ mod tests {
         },
         utils::calculate_sn_keccak,
     };
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{Arc, RwLock},
+    };
 
     #[test]
     fn invoke_constructor_test() {
         // Instantiate CachedState
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(
             state_reader,
             Arc::new(PermanentContractClassCache::default()),
@@ -343,23 +346,23 @@ mod tests {
         let _result = internal_deploy.apply(&mut state, &block_context).unwrap();
 
         assert_eq!(
-            state.get_contract_class(&class_hash_bytes).unwrap(),
+            StateReader::get_contract_class(&mut state, &class_hash_bytes).unwrap(),
             CompiledClass::Deprecated(Arc::new(contract_class))
         );
 
         assert_eq!(
-            state
-                .get_class_hash_at(&internal_deploy.contract_address)
-                .unwrap(),
+            StateReader::get_class_hash_at(&mut state, &internal_deploy.contract_address).unwrap(),
             class_hash_bytes
         );
 
         let storage_key = calculate_sn_keccak(b"owner");
 
         assert_eq!(
-            state
-                .get_storage_at(&(internal_deploy.contract_address, storage_key))
-                .unwrap(),
+            StateReader::get_storage_at(
+                &mut state,
+                &(internal_deploy.contract_address, storage_key)
+            )
+            .unwrap(),
             Felt252::from(10)
         );
     }
@@ -367,7 +370,7 @@ mod tests {
     #[test]
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(
             state_reader,
             Arc::new(PermanentContractClassCache::default()),
@@ -399,7 +402,7 @@ mod tests {
     #[test]
     fn deploy_contract_without_constructor_should_fail() {
         // Instantiate CachedState
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(
             state_reader,
             Arc::new(PermanentContractClassCache::default()),

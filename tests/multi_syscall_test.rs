@@ -17,7 +17,10 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address, ClassHash},
     EntryPointType,
 };
-use std::{sync::Arc, vec};
+use std::{
+    sync::{Arc, RwLock},
+    vec,
+};
 
 #[test]
 fn test_multiple_syscall() {
@@ -43,7 +46,10 @@ fn test_multiple_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [].to_vec();

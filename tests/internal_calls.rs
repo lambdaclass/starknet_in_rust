@@ -20,7 +20,7 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address, ClassHash},
     EntryPointType,
 };
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[test]
 fn test_internal_calls() {
@@ -52,7 +52,7 @@ fn test_internal_calls() {
         .insert(storage_entry, storage);
 
     let mut state = CachedState::new(
-        Arc::new(state_reader),
+        Arc::new(RwLock::new(state_reader)),
         Arc::new({
             let cache = PermanentContractClassCache::default();
             cache.set_contract_class(

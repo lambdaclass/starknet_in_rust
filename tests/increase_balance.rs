@@ -20,7 +20,11 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address},
     EntryPointType,
 };
-use std::{collections::HashSet, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashSet,
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 #[test]
 fn hello_starknet_increase_balance() {
@@ -74,7 +78,10 @@ fn hello_starknet_increase_balance() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     //* ------------------------------------
     //*    Create execution entry point

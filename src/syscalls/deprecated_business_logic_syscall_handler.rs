@@ -946,7 +946,12 @@ mod tests {
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
     use num_traits::{One, Zero};
-    use std::{any::Any, borrow::Cow, collections::HashMap, sync::Arc};
+    use std::{
+        any::Any,
+        borrow::Cow,
+        collections::HashMap,
+        sync::{Arc, RwLock},
+    };
 
     type DeprecatedBLSyscallHandler<'a> =
         super::DeprecatedBLSyscallHandler<'a, InMemoryStateReader, PermanentContractClassCache>;
@@ -1068,7 +1073,7 @@ mod tests {
         );
         // Create empty-cached state
         let mut state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);

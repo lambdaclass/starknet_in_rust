@@ -23,7 +23,7 @@ use crate::{
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 pub const ERC20_CONTRACT_PATH: &str = "starknet_programs/cairo2/ERC20.casm";
 
@@ -63,7 +63,10 @@ fn test_erc20_cairo2() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     let name_ = Felt252::from_bytes_be(b"some-token");
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");

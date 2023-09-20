@@ -55,7 +55,7 @@ use starknet_in_rust::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
@@ -199,7 +199,7 @@ fn create_account_tx_test_state() -> Result<
                     CompiledClass::Deprecated(Arc::new(contract_class)),
                 );
             }
-            Arc::new(state_reader)
+            Arc::new(RwLock::new(state_reader))
         },
         Arc::new(PermanentContractClassCache::default()),
     );
@@ -211,7 +211,7 @@ fn expected_state_before_tx() -> CachedState<InMemoryStateReader, PermanentContr
     let in_memory_state_reader = initial_in_memory_state_reader();
 
     CachedState::new(
-        Arc::new(in_memory_state_reader),
+        Arc::new(RwLock::new(in_memory_state_reader)),
         Arc::new(PermanentContractClassCache::default()),
     )
 }
@@ -242,7 +242,7 @@ fn expected_state_after_tx(
     );
 
     CachedState::new_for_testing(
-        Arc::new(in_memory_state_reader),
+        Arc::new(RwLock::new(in_memory_state_reader)),
         state_cache_after_invoke_tx(fee),
         Arc::new(contract_classes_cache),
     )
@@ -496,35 +496,39 @@ fn validate_final_balances<S>(
 ) where
     S: State + StateReader,
 {
-    let account_balance = state
-        .get_storage_at(&(
+    let account_balance = StateReader::get_storage_at(
+        state,
+        &(
             block_context
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
             *erc20_account_balance_storage_key,
-        ))
-        .unwrap();
+        ),
+    )
+    .unwrap();
     assert_eq!(
         account_balance,
         INITIAL_BALANCE.clone() - Felt252::from(fee)
     );
 
-    let sequencer_balance = state
-        .get_storage_at(&(
+    let sequencer_balance = StateReader::get_storage_at(
+        state,
+        &(
             block_context
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
             felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
-        ))
-        .unwrap();
+        ),
+    )
+    .unwrap();
     assert_eq!(sequencer_balance, fee.into());
 }
 
 #[test]
 fn test_create_account_tx_test_state() {
-    let (block_context, state) = create_account_tx_test_state().unwrap();
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
@@ -537,19 +541,33 @@ fn test_create_account_tx_test_state() {
             .collect::<Vec<_>>()
     );
     assert_eq!(
-        &state.state_reader.address_to_class_hash,
-        &expected_initial_state.state_reader.address_to_class_hash
+        &state.state_reader.read().unwrap().address_to_class_hash,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_class_hash
     );
     assert_eq!(
-        &state.state_reader.address_to_nonce,
-        &expected_initial_state.state_reader.address_to_nonce
+        &state.state_reader.read().unwrap().address_to_nonce,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_nonce
     );
     assert_eq!(
-        &state.state_reader.address_to_storage,
-        &expected_initial_state.state_reader.address_to_storage
+        &state.state_reader.read().unwrap().address_to_storage,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_storage
     );
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -557,6 +575,8 @@ fn test_create_account_tx_test_state() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -564,31 +584,35 @@ fn test_create_account_tx_test_state() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
         ]));
 
-    let value = state
-        .get_storage_at(&(
+    let value = StateReader::get_storage_at(
+        &mut state,
+        &(
             block_context
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
             felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
-        ))
-        .unwrap();
+        ),
+    )
+    .unwrap();
     assert_eq!(value, *INITIAL_BALANCE);
 
-    let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
+    let class_hash = StateReader::get_class_hash_at(&mut state, &TEST_CONTRACT_ADDRESS).unwrap();
     assert_eq!(class_hash, felt_to_hash(&TEST_CLASS_HASH));
 
-    let _contract_class: ContractClass = state
-        .get_contract_class(&felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
-        .unwrap()
-        .try_into()
-        .unwrap();
+    let _contract_class: ContractClass =
+        StateReader::get_contract_class(&mut state, &felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
+            .unwrap()
+            .try_into()
+            .unwrap();
     // We cant compare this until a new implementation of Eq for programs, due to a change in the hints_ranges.
     // assert_eq!(
     //     _contract_class,
@@ -897,19 +921,33 @@ fn test_declare_tx() {
             .collect::<Vec<_>>()
     );
     assert_eq!(
-        &state.state_reader.address_to_class_hash,
-        &expected_initial_state.state_reader.address_to_class_hash
+        &state.state_reader.read().unwrap().address_to_class_hash,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_class_hash
     );
     assert_eq!(
-        &state.state_reader.address_to_nonce,
-        &expected_initial_state.state_reader.address_to_nonce
+        &state.state_reader.read().unwrap().address_to_nonce,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_nonce
     );
     assert_eq!(
-        &state.state_reader.address_to_storage,
-        &expected_initial_state.state_reader.address_to_storage
+        &state.state_reader.read().unwrap().address_to_storage,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_storage
     );
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -917,6 +955,8 @@ fn test_declare_tx() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -924,6 +964,8 @@ fn test_declare_tx() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -932,11 +974,11 @@ fn test_declare_tx() {
 
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
-    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
+    assert!(StateReader::get_contract_class(&mut state, &declare_tx.class_hash).is_err());
     // Execute declare_tx
     let result = declare_tx.execute(&mut state, &block_context).unwrap();
     // Check ContractClass is set after the declare_tx
-    assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
+    assert!(StateReader::get_contract_class(&mut state, &declare_tx.class_hash).is_ok());
 
     let resources = HashMap::from([
         ("n_steps".to_string(), 2715),
@@ -985,19 +1027,33 @@ fn test_declarev2_tx() {
             .collect::<Vec<_>>()
     );
     assert_eq!(
-        &state.state_reader.address_to_class_hash,
-        &expected_initial_state.state_reader.address_to_class_hash
+        &state.state_reader.read().unwrap().address_to_class_hash,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_class_hash
     );
     assert_eq!(
-        &state.state_reader.address_to_nonce,
-        &expected_initial_state.state_reader.address_to_nonce
+        &state.state_reader.read().unwrap().address_to_nonce,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_nonce
     );
     assert_eq!(
-        &state.state_reader.address_to_storage,
-        &expected_initial_state.state_reader.address_to_storage
+        &state.state_reader.read().unwrap().address_to_storage,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_storage
     );
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1005,6 +1061,8 @@ fn test_declarev2_tx() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1012,6 +1070,8 @@ fn test_declarev2_tx() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1020,15 +1080,19 @@ fn test_declarev2_tx() {
 
     let declare_tx = declarev2_tx();
     // Check ContractClass is not set before the declare_tx
-    assert!(state
-        .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
-        .is_err());
+    assert!(StateReader::get_contract_class(
+        &mut state,
+        &felt_to_hash(&declare_tx.compiled_class_hash)
+    )
+    .is_err());
     // Execute declare_tx
     let result = declare_tx.execute(&mut state, &block_context).unwrap();
     // Check ContractClass is set after the declare_tx
-    assert!(state
-        .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
-        .is_ok());
+    assert!(StateReader::get_contract_class(
+        &mut state,
+        &declare_tx.compiled_class_hash.to_be_bytes()
+    )
+    .is_ok());
 
     let resources = HashMap::from([
         ("n_steps".to_string(), 2715),
@@ -1352,12 +1416,14 @@ fn test_invoke_tx_exceeded_max_fee() {
         .clone();
     let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
 
-    let balance = state
-        .get_storage_at(&(
+    let balance = StateReader::get_storage_at(
+        state,
+        &(
             test_erc20_address,
             felt_to_hash(&test_erc20_account_balance_key),
-        ))
-        .unwrap();
+        ),
+    )
+    .unwrap();
     let expected_balance = INITIAL_BALANCE.clone() - Felt252::from(max_fee);
 
     assert_eq!(balance, expected_balance);
@@ -1377,19 +1443,33 @@ fn test_invoke_tx_state() {
             .collect::<Vec<_>>()
     );
     assert_eq!(
-        &state.state_reader.address_to_class_hash,
-        &expected_initial_state.state_reader.address_to_class_hash
+        &state.state_reader.read().unwrap().address_to_class_hash,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_class_hash
     );
     assert_eq!(
-        &state.state_reader.address_to_nonce,
-        &expected_initial_state.state_reader.address_to_nonce
+        &state.state_reader.read().unwrap().address_to_nonce,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_nonce
     );
     assert_eq!(
-        &state.state_reader.address_to_storage,
-        &expected_initial_state.state_reader.address_to_storage
+        &state.state_reader.read().unwrap().address_to_storage,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_storage
     );
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1397,6 +1477,8 @@ fn test_invoke_tx_state() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1404,6 +1486,8 @@ fn test_invoke_tx_state() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1427,16 +1511,28 @@ fn test_invoke_tx_state() {
 
     assert_eq!(&state.cache(), &expected_final_state.cache());
     assert_eq!(
-        &state.state_reader.address_to_class_hash,
-        &expected_final_state.state_reader.address_to_class_hash
+        &state.state_reader.read().unwrap().address_to_class_hash,
+        &expected_final_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_class_hash
     );
     assert_eq!(
-        &state.state_reader.address_to_nonce,
-        &expected_final_state.state_reader.address_to_nonce
+        &state.state_reader.read().unwrap().address_to_nonce,
+        &expected_final_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_nonce
     );
     assert_eq!(
-        &state.state_reader.address_to_storage,
-        &expected_final_state.state_reader.address_to_storage
+        &state.state_reader.read().unwrap().address_to_storage,
+        &expected_final_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_storage
     );
 }
 
@@ -1454,19 +1550,33 @@ fn test_invoke_with_declarev2_tx() {
             .collect::<Vec<_>>()
     );
     assert_eq!(
-        &state.state_reader.address_to_class_hash,
-        &expected_initial_state.state_reader.address_to_class_hash
+        &state.state_reader.read().unwrap().address_to_class_hash,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_class_hash
     );
     assert_eq!(
-        &state.state_reader.address_to_nonce,
-        &expected_initial_state.state_reader.address_to_nonce
+        &state.state_reader.read().unwrap().address_to_nonce,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_nonce
     );
     assert_eq!(
-        &state.state_reader.address_to_storage,
-        &expected_initial_state.state_reader.address_to_storage
+        &state.state_reader.read().unwrap().address_to_storage,
+        &expected_initial_state
+            .state_reader
+            .read()
+            .unwrap()
+            .address_to_storage
     );
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1474,6 +1584,8 @@ fn test_invoke_with_declarev2_tx() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1481,6 +1593,8 @@ fn test_invoke_with_declarev2_tx() {
         ]));
     assert!(&state
         .state_reader
+        .read()
+        .unwrap()
         .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1617,18 +1731,16 @@ fn test_deploy_account() {
     );
     assert_eq!(tx_info, expected_execution_info);
 
-    let nonce_from_state = state
-        .get_nonce_at(deploy_account_tx.contract_address())
-        .unwrap();
+    let nonce_from_state =
+        StateReader::get_nonce_at(&mut state, deploy_account_tx.contract_address()).unwrap();
     assert_eq!(nonce_from_state, Felt252::one());
 
     let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
     validate_final_balances(&mut state, &block_context, &hash, expected_fee);
 
-    let class_hash_from_state = state
-        .get_class_hash_at(deploy_account_tx.contract_address())
-        .unwrap();
+    let class_hash_from_state =
+        StateReader::get_class_hash_at(&mut state, deploy_account_tx.contract_address()).unwrap();
     assert_eq!(class_hash_from_state, *deploy_account_tx.class_hash());
 }
 
@@ -1773,18 +1885,16 @@ fn test_deploy_account_revert() {
 
     assert_eq_sorted!(tx_info, expected_execution_info);
 
-    let nonce_from_state = state
-        .get_nonce_at(deploy_account_tx.contract_address())
-        .unwrap();
+    let nonce_from_state =
+        StateReader::get_nonce_at(&mut state, deploy_account_tx.contract_address()).unwrap();
     assert_eq!(nonce_from_state, Felt252::one());
 
     let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
     validate_final_balances(&mut state, &block_context, &hash, expected_fee);
 
-    let class_hash_from_state = state
-        .get_class_hash_at(deploy_account_tx.contract_address())
-        .unwrap();
+    let class_hash_from_state =
+        StateReader::get_class_hash_at(&mut state, deploy_account_tx.contract_address()).unwrap();
     assert_eq!(class_hash_from_state, [0; 32]);
 }
 
@@ -1794,7 +1904,7 @@ fn expected_deploy_account_states() -> (
 ) {
     let fee = Felt252::from(3709);
     let mut state_before = CachedState::new(
-        Arc::new(InMemoryStateReader::new(
+        Arc::new(RwLock::new(InMemoryStateReader::new(
             HashMap::from([
                 (Address(0x100.into()), felt_to_hash(&0x110.into())),
                 (Address(0x1001.into()), felt_to_hash(&0x1010.into())),
@@ -1832,7 +1942,7 @@ fn expected_deploy_account_states() -> (
                 ),
             ]),
             HashMap::new(),
-        )),
+        ))),
         Arc::new(PermanentContractClassCache::default()),
     );
     state_before.set_storage_at(
@@ -1951,23 +2061,25 @@ fn test_state_for_declare_tx() {
 
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
-    assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
-    assert!(state
-        .get_nonce_at(&declare_tx.sender_address)
-        .unwrap()
-        .is_zero());
+    assert!(StateReader::get_contract_class(&mut state, &declare_tx.class_hash).is_err());
+    assert!(
+        StateReader::get_nonce_at(&mut state, &declare_tx.sender_address)
+            .unwrap()
+            .is_zero()
+    );
     // Execute declare_tx
     assert!(declare_tx.execute(&mut state, &block_context).is_ok());
-    assert!(state
-        .get_nonce_at(&declare_tx.sender_address)
-        .unwrap()
-        .is_one());
+    assert!(
+        StateReader::get_nonce_at(&mut state, &declare_tx.sender_address)
+            .unwrap()
+            .is_one()
+    );
 
     // Check state.state_reader
     let state_reader = state.state_reader.clone();
 
     assert_eq!(
-        state_reader.address_to_class_hash,
+        state_reader.read().unwrap().address_to_class_hash,
         HashMap::from([
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
@@ -1985,7 +2097,7 @@ fn test_state_for_declare_tx() {
     );
 
     assert_eq!(
-        state_reader.address_to_nonce,
+        state_reader.read().unwrap().address_to_nonce,
         HashMap::from([
             (TEST_ERC20_CONTRACT_ADDRESS.clone(), Felt252::zero()),
             (TEST_CONTRACT_ADDRESS.clone(), Felt252::zero()),
@@ -1994,7 +2106,7 @@ fn test_state_for_declare_tx() {
     );
 
     assert_eq!(
-        state_reader.address_to_storage,
+        state_reader.read().unwrap().address_to_storage,
         HashMap::from([(
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
@@ -2205,7 +2317,7 @@ fn test_deploy_undeclared_account() {
     .unwrap();
 
     // Check not_deployed_class_hash
-    assert!(state.get_contract_class(&not_deployed_class_hash).is_err());
+    assert!(StateReader::get_contract_class(&mut state, &not_deployed_class_hash).is_err());
 
     // Execute transaction
     let result = deploy_account_tx.execute(&mut state, &block_context);

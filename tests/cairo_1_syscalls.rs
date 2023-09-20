@@ -26,7 +26,7 @@ use starknet_in_rust::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 
 fn create_execute_extrypoint(
@@ -80,7 +80,10 @@ fn storage_write_read() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -244,7 +247,10 @@ fn library_call() {
         .insert(lib_address, lib_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash)].to_vec();
@@ -414,7 +420,10 @@ fn call_contract_storage_write_read() {
         .insert(simple_wallet_address.clone(), simple_wallet_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -571,7 +580,10 @@ fn emit_event() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [].to_vec();
@@ -689,7 +701,10 @@ fn deploy_cairo1_from_cairo1() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -790,7 +805,10 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -890,7 +908,10 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt, address.0.clone(), Felt252::zero()].to_vec();
@@ -991,8 +1012,10 @@ fn deploy_cairo0_and_invoke() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state: CachedState<_, _> =
-        CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state: CachedState<_, _> = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -1113,7 +1136,10 @@ fn test_send_message_to_l1_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // RUN SEND_MSG
     // Create an execution entry point
@@ -1207,7 +1233,10 @@ fn test_get_execution_info() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -1319,7 +1348,10 @@ fn replace_class_internal() {
     );
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Run upgrade entrypoint and check that the storage was updated with the new contract class
     // Create an execution entry point
@@ -1450,7 +1482,10 @@ fn replace_class_contract_call() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -1625,7 +1660,10 @@ fn replace_class_contract_call_same_transaction() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -1748,7 +1786,10 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -1869,7 +1910,10 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -1986,7 +2030,10 @@ fn call_contract_replace_class_cairo_0() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -2063,7 +2110,10 @@ fn test_out_of_gas_failure() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [].to_vec();
@@ -2141,7 +2191,10 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [Felt252::zero()].to_vec();
@@ -2230,7 +2283,10 @@ fn deploy_syscall_failure_in_constructor() {
     );
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [f_c_class_hash].to_vec();
@@ -2309,7 +2365,10 @@ fn storage_read_no_value() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -2381,7 +2440,10 @@ fn storage_read_unavailable_address_domain() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -2456,7 +2518,10 @@ fn storage_write_unavailable_address_domain() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -2552,7 +2617,10 @@ fn library_call_failure() {
         .insert(lib_address, lib_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash)].to_vec();
@@ -2665,7 +2733,10 @@ fn send_messages_to_l1_different_contract_calls() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
@@ -2786,7 +2857,10 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
@@ -2907,7 +2981,8 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let state_reader = Arc::new(RwLock::new(state_reader));
+    let mut state = CachedState::new(state_reader, Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
@@ -2979,6 +3054,8 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
 #[test]
 #[cfg(not(feature = "cairo_1_tests"))]
 fn keccak_syscall() {
+    use std::sync::RwLock;
+
     let program_data = include_bytes!("../starknet_programs/keccak/test_cairo_keccak.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
@@ -3002,7 +3079,8 @@ fn keccak_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let state_reader = Arc::new(RwLock::new(state_reader));
+    let mut state = CachedState::new(state_reader, Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(

@@ -20,8 +20,11 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address},
     EntryPointType,
 };
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::RwLock,
+};
 
 fn init_pool(
     calldata: &[Felt252],
@@ -60,7 +63,7 @@ fn swap(calldata: &[Felt252], call_config: &mut CallConfig) -> Result<CallInfo, 
 fn amm_init_pool_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
@@ -130,7 +133,7 @@ fn amm_init_pool_test() {
 fn amm_add_demo_tokens_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
@@ -213,7 +216,7 @@ fn amm_add_demo_tokens_test() {
 fn amm_get_pool_token_balance() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
@@ -288,7 +291,7 @@ fn amm_get_pool_token_balance() {
 fn amm_swap_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
@@ -393,7 +396,7 @@ fn amm_swap_test() {
 fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
@@ -432,7 +435,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
 fn amm_swap_should_fail_with_unexistent_token() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
@@ -471,7 +474,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
 fn amm_swap_should_fail_with_amount_out_of_bounds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
@@ -510,7 +513,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
 fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
@@ -552,7 +555,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
 fn amm_get_account_token_balance_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
-        Arc::new(InMemoryStateReader::default()),
+        Arc::new(RwLock::new(InMemoryStateReader::default())),
         Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract

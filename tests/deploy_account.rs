@@ -23,7 +23,10 @@ use starknet_in_rust::{
     utils::Address,
     CasmContractClass, EntryPointType,
 };
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::{Arc, RwLock},
+};
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -31,7 +34,7 @@ lazy_static! {
 
 #[test]
 fn internal_deploy_account() {
-    let state_reader = Arc::new(InMemoryStateReader::default());
+    let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
     let mut state = CachedState::new(
         state_reader,
         Arc::new(PermanentContractClassCache::default()),
@@ -115,7 +118,7 @@ fn internal_deploy_account() {
 
 #[test]
 fn internal_deploy_account_cairo1() {
-    let state_reader = Arc::new(InMemoryStateReader::default());
+    let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
     let mut state = CachedState::new(
         state_reader,
         Arc::new(PermanentContractClassCache::default()),

@@ -227,7 +227,7 @@ mod test {
     use num_traits::{Num, Zero};
     use std::{
         collections::{HashMap, HashSet},
-        sync::Arc,
+        sync::{Arc, RwLock},
     };
 
     #[test]
@@ -267,7 +267,7 @@ mod test {
             .insert(contract_address, nonce);
 
         let mut state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 

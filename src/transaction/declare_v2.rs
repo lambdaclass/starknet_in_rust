@@ -472,7 +472,12 @@ mod tests {
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::felt::Felt252;
     use num_traits::{One, Zero};
-    use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
+    use std::{
+        fs::File,
+        io::BufReader,
+        path::PathBuf,
+        sync::{Arc, RwLock},
+    };
 
     #[test]
     fn create_declare_v2_without_casm_contract_class_test() {
@@ -517,7 +522,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
@@ -586,7 +591,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
@@ -657,7 +662,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
@@ -726,7 +731,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
@@ -796,7 +801,7 @@ mod tests {
 
         // crate state to store casm contract class
         let casm_contract_class_cache = PermanentContractClassCache::default();
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         let expected_err = format!(

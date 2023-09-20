@@ -472,7 +472,10 @@ mod tests {
         state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::felt_to_hash,
     };
-    use std::{path::PathBuf, sync::Arc};
+    use std::{
+        path::PathBuf,
+        sync::{Arc, RwLock},
+    };
 
     #[test]
     fn get_state_selector() {
@@ -484,7 +487,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut _state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -519,7 +522,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -572,7 +575,7 @@ mod tests {
 
         let block_context = BlockContext::default();
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
 

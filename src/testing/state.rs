@@ -462,7 +462,10 @@ mod tests {
             CompiledClass::Deprecated(Arc::new(contract_class.clone())),
         );
 
-        let state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+        let state = CachedState::new(
+            Arc::new(RwLock::new(state_reader)),
+            Arc::new(contract_class_cache),
+        );
 
         //* --------------------------------------------
         //*    Create starknet state with previous data

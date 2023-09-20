@@ -263,7 +263,7 @@ mod tests {
     };
     use cairo_vm::relocatable;
     use num_traits::Num;
-    use std::sync::Arc;
+    use std::sync::{Arc, RwLock};
 
     type DeprecatedBLSyscallHandler<'a> =
         crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
@@ -744,7 +744,7 @@ mod tests {
         );
 
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
         let mut hint_processor = SyscallHintProcessor::new(
@@ -783,7 +783,7 @@ mod tests {
 
         // invoke syscall
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
         let mut hint_processor = SyscallHintProcessor::new(
@@ -828,7 +828,7 @@ mod tests {
 
         // invoke syscall
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
@@ -899,7 +899,7 @@ mod tests {
         let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
 
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
@@ -967,7 +967,7 @@ mod tests {
         let hint_data = HintProcessorData::new_default(STORAGE_WRITE.to_string(), ids_data);
 
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
@@ -1044,7 +1044,7 @@ mod tests {
 
         // Create SyscallHintProcessor
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
@@ -1087,12 +1087,12 @@ mod tests {
         );
 
         // Check State diff
+        let syscall_handler_state = syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .state;
         assert_eq!(
-            syscall_handler_hint_processor
-                .syscall_handler
-                .starknet_storage_state
-                .state
-                .get_class_hash_at(&Address(deployed_address))
+            StateReader::get_class_hash_at(syscall_handler_state, &Address(deployed_address))
                 .unwrap(),
             class_hash
         );
@@ -1141,7 +1141,7 @@ mod tests {
 
         // Create SyscallHintProcessor
         let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
@@ -1185,13 +1185,16 @@ mod tests {
         );
 
         // Check State diff
+        let syscall_handler_state = syscall_handler_hint_processor
+            .syscall_handler
+            .starknet_storage_state
+            .state;
         assert_eq!(
-            syscall_handler_hint_processor
-                .syscall_handler
-                .starknet_storage_state
-                .state
-                .get_class_hash_at(&Address(deployed_address.clone()))
-                .unwrap(),
+            StateReader::get_class_hash_at(
+                syscall_handler_state,
+                &Address(deployed_address.clone())
+            )
+            .unwrap(),
             class_hash
         );
 

@@ -21,7 +21,10 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
     EntryPointType,
 };
-use std::{path::Path, sync::Arc};
+use std::{
+    path::Path,
+    sync::{Arc, RwLock},
+};
 
 #[allow(clippy::too_many_arguments)]
 fn test_contract<'a>(
@@ -103,7 +106,10 @@ fn test_contract<'a>(
 
         contract_class_cache
     };
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(
+        Arc::new(RwLock::new(state_reader)),
+        Arc::new(contract_class_cache),
+    );
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
