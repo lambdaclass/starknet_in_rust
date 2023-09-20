@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use cairo_vm::felt::{felt_str, Felt252};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
@@ -37,12 +37,12 @@ use rpc_state_reader::rpc_state::*;
 pub struct RpcStateReader(RpcState);
 
 impl StateReader for RpcStateReader {
-    fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         let hash = SNClassHash(StarkHash::new(*class_hash).unwrap());
         Ok(CompiledClass::from(self.0.get_contract_class(&hash)))
     }
 
-    fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         let address = ContractAddress(
             PatriciaKey::try_from(
                 StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
@@ -54,7 +54,7 @@ impl StateReader for RpcStateReader {
         Ok(bytes)
     }
 
-    fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
         let address = ContractAddress(
             PatriciaKey::try_from(
                 StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
@@ -65,7 +65,7 @@ impl StateReader for RpcStateReader {
         Ok(Felt252::from_bytes_be(nonce.bytes()))
     }
 
-    fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         let (contract_address, key) = storage_entry;
         let address = ContractAddress(
             PatriciaKey::try_from(
@@ -78,7 +78,7 @@ impl StateReader for RpcStateReader {
         Ok(Felt252::from_bytes_be(value.bytes()))
     }
 
-    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
+    fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
         Ok(*class_hash)
     }
 }
@@ -145,7 +145,7 @@ pub fn execute_tx(
     let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
 
     let class_cache = Arc::new(PermanentContractClassCache::default());
-    let mut state = CachedState::new(Arc::new(rpc_reader), class_cache);
+    let mut state = CachedState::new(Arc::new(RwLock::new(rpc_reader)), class_cache);
 
     let block_context = BlockContext::new(
         starknet_os_config,
