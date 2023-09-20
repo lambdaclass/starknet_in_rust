@@ -1,3 +1,4 @@
+use crate::utils;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
 use core::fmt;
 use dotenv::dotenv;
@@ -13,8 +14,6 @@ use starknet_api::{
 };
 use std::{collections::HashMap, env, fmt::Display};
 use thiserror::Error;
-
-use crate::utils;
 
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
@@ -147,9 +146,9 @@ pub struct RpcResponse<T> {
 
 #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
 pub struct TransactionTrace {
-    pub validate_invocation: RpcCallInfo,
+    pub validate_invocation: Option<RpcCallInfo>,
     pub function_invocation: Option<RpcCallInfo>,
-    pub fee_transfer_invocation: RpcCallInfo,
+    pub fee_transfer_invocation: Option<RpcCallInfo>,
     pub signature: Vec<StarkFelt>,
     pub revert_error: Option<String>,
 }

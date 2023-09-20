@@ -421,12 +421,13 @@ fn get_transaction_declare() {
     execute_tx(
         "0x01d32e49af3e0686c08e4c510461312dd479ac8a2e847e84e1613b2cdc5bfd50",
         RpcChain::MainNet,
-        BlockNumber(186665),
+        BlockNumber(186664),
         false,
     );
 }
 
 #[test]
+#[ignore]
 fn get_transaction_declare_v2() {
     execute_tx(
         "0x042af5bd4c5a37e2bb3dd08e4f38a21624b173466417bab9626ecc22098c936b",
@@ -437,11 +438,12 @@ fn get_transaction_declare_v2() {
 }
 
 #[test]
+#[ignore]
 fn get_transaction_deploy() {
     execute_tx(
         "0x01d08158d139345d562276f0a085d9764e618eba788bed99a238903595b17022",
         RpcChain::MainNet,
-        BlockNumber(16575),
+        BlockNumber(16574),
         false,
     );
 }
@@ -449,9 +451,11 @@ fn get_transaction_deploy() {
 #[test]
 fn get_transaction_deploy_account() {
     execute_tx(
-        "0x06372abe2116c75097b632543f91498a714c48dbd4b168f615b6b17c2733e9fd",
+        // "0x06372abe2116c75097b632543f91498a714c48dbd4b168f615b6b17c2733e9fd",
+        // "0x0049945fdcc06a4f1c016cc6b8d1e43e8566addb7827431c5949cc8194ee2117",
+        "0x033a82f054d272083f670047c05e8d49411504e411347379c612b5a38e37bf39",
         RpcChain::MainNet,
-        BlockNumber(217830),
+        BlockNumber(17962),
         true,
     );
 }

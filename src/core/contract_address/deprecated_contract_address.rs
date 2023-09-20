@@ -29,16 +29,17 @@ fn get_contract_entry_points(
     let entry_points = contract_class
         .entry_points_by_type()
         .get(entry_point_type)
-        .ok_or(ContractAddressError::NonexistentEntryPointType)?;
+        .map(Cow::Borrowed)
+        .unwrap_or_else(|| Cow::Owned(Vec::default()));
 
     let program_len = contract_class.program().iter_data().count();
 
-    for entry_point in entry_points {
+    for entry_point in entry_points.as_ref() {
         if entry_point.offset() > program_len {
             return Err(ContractAddressError::InvalidOffset(entry_point.offset()));
         }
     }
-    Ok(entry_points.to_owned())
+    Ok(entry_points.into_owned())
 }
 
 /// Recursively add extra spaces to Cairo named tuple representations in a JSON structure.

@@ -138,7 +138,7 @@ mod tests {
         );
 
         assert_eq!(
-            tx_trace.validate_invocation.calldata,
+            tx_trace.validate_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("1"),
                 stark_felt!("690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232"),
@@ -157,9 +157,9 @@ mod tests {
                 stark_felt!("38bd34c31a0a5c"),
             ])
         );
-        assert_eq!(tx_trace.validate_invocation.retdata, Some(vec![]));
+        assert_eq!(tx_trace.validate_invocation.as_ref().unwrap().retdata, Some(vec![]));
         assert_eq_sorted!(
-            tx_trace.validate_invocation.execution_resources,
+            tx_trace.validate_invocation.as_ref().unwrap().execution_resources,
             ExecutionResources {
                 n_steps: 790,
                 n_memory_holes: 51,
@@ -170,7 +170,10 @@ mod tests {
                 ]),
             }
         );
-        assert_eq!(tx_trace.validate_invocation.internal_calls.len(), 1);
+        assert_eq!(
+            tx_trace.validate_invocation.as_ref().unwrap().internal_calls.len(),
+            1
+        );
 
         assert_eq!(
             tx_trace.function_invocation.as_ref().unwrap().calldata,
@@ -243,7 +246,7 @@ mod tests {
         );
 
         assert_eq!(
-            tx_trace.fee_transfer_invocation.calldata,
+            tx_trace.fee_transfer_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8"),
                 stark_felt!("2b0322a23ba4"),
@@ -251,11 +254,11 @@ mod tests {
             ])
         );
         assert_eq!(
-            tx_trace.fee_transfer_invocation.retdata,
+            tx_trace.fee_transfer_invocation.as_ref().unwrap().retdata,
             Some(vec![1u128.into()])
         );
         assert_eq_sorted!(
-            tx_trace.fee_transfer_invocation.execution_resources,
+            tx_trace.fee_transfer_invocation.as_ref().unwrap().execution_resources,
             ExecutionResources {
                 n_steps: 586,
                 n_memory_holes: 42,
@@ -265,7 +268,7 @@ mod tests {
                 ]),
             }
         );
-        assert_eq!(tx_trace.fee_transfer_invocation.internal_calls.len(), 1);
+        assert_eq!(tx_trace.fee_transfer_invocation.as_ref().unwrap().internal_calls.len(), 1);
     }
 
     #[test]
