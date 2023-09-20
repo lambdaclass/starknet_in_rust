@@ -17,7 +17,7 @@ use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::{Arc, RwLock},
 };
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
@@ -25,7 +25,7 @@ pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
 /// Represents a cached state of contract classes with optional caches.
 #[derive(Default, Clone, Debug, Getters, MutGetters)]
 pub struct CachedState<T: StateReader, C: ContractClassCache> {
-    pub state_reader: Arc<T>,
+    pub state_reader: Arc<RwLock<T>>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) cache: StateCache,
 
@@ -67,7 +67,7 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
 
 impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
     /// Constructor, creates a new cached state.
-    pub fn new(state_reader: Arc<T>, contract_classes: Arc<C>) -> Self {
+    pub fn new(state_reader: Arc<RwLock<T>>, contract_classes: Arc<C>) -> Self {
         Self {
             cache: StateCache::default(),
             state_reader,
@@ -83,7 +83,7 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
 
     /// Creates a CachedState for testing purposes.
     pub fn new_for_testing(
-        state_reader: Arc<T>,
+        state_reader: Arc<RwLock<T>>,
         cache: StateCache,
         contract_classes: Arc<C>,
     ) -> Self {
@@ -109,13 +109,12 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
     /// Creates a copy of this state with an empty cache for saving changes and applying them
     /// later.
     pub fn create_transactional(&self) -> TransactionalCachedState<T, C> {
-        let state_reader = Arc::new(TransactionalCachedStateReader::new(self));
+        let state_reader = Arc::new(RwLock::new(TransactionalCachedStateReader::new(self)));
         CachedState {
             state_reader,
             cache: self.cache.clone(),
             contract_class_cache: self.contract_class_cache.clone(),
-            contract_class_cache_private:
-                self.contract_class_cache_private.clone(),
+            contract_class_cache_private: self.contract_class_cache_private.clone(),
             #[cfg(feature = "metrics")]
             cache_hits: 0,
             #[cfg(feature = "metrics")]
@@ -127,17 +126,26 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
 impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
     /// Returns the class hash for a given contract address.
     /// Returns zero as default value if missing
-    fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
+    fn get_class_hash_at(&mut self, contract_address: &Address) -> Result<ClassHash, StateError> {
         self.cache
             .get_class_hash(contract_address)
             .map(|a| Ok(*a))
-            .unwrap_or_else(|| self.state_reader.get_class_hash_at(contract_address))
+            .unwrap_or_else(|| {
+                self.state_reader
+                    .write()
+                    .unwrap()
+                    .get_class_hash_at(contract_address)
+            })
     }
 
     /// Returns the nonce for a given contract address.
-    fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
+    fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
-            return self.state_reader.get_nonce_at(contract_address);
+            return self
+                .state_reader
+                .write()
+                .unwrap()
+                .get_nonce_at(contract_address);
         }
         self.cache
             .get_nonce(contract_address)
@@ -147,27 +155,35 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
 
     /// Returns storage data for a given storage entry.
     /// Returns zero as default value if missing
-    fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
+    fn get_storage_at(&mut self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         self.cache
             .get_storage(storage_entry)
             .map(|v| Ok(v.clone()))
-            .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
+            .unwrap_or_else(|| {
+                self.state_reader
+                    .write()
+                    .unwrap()
+                    .get_storage_at(storage_entry)
+            })
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
     /// Returned the compiled class hash for a given class hash.
-    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
+    fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
             Ok(*compiled_class_hash)
         } else {
-            self.state_reader.get_compiled_class_hash(class_hash)
+            self.state_reader
+                .write()
+                .unwrap()
+                .get_compiled_class_hash(class_hash)
         }
     }
 
     /// Returns the contract class for a given class hash.
-    fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
+    fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         // This method can receive both compiled_class_hash & class_hash and return both casm and deprecated contract classes
         //, which can be on the cache or on the state_reader, different cases will be described below:
         if class_hash == UNINITIALIZED_CLASS_HASH {
@@ -175,13 +191,13 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
         }
 
         // I: FETCHING FROM CACHE
-        let mut private_cache = self.contract_class_cache_private;
-        if let Some(compiled_class) = private_cache.get(class_hash) {
+        if let Some(compiled_class) = self.contract_class_cache_private.get(class_hash) {
             return Ok(compiled_class.clone());
         } else if let Some(compiled_class) =
             self.contract_class_cache().get_contract_class(*class_hash)
         {
-            private_cache.insert(*class_hash, compiled_class.clone());
+            self.contract_class_cache_private
+                .insert(*class_hash, compiled_class.clone());
             return Ok(compiled_class);
         }
 
@@ -189,20 +205,26 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = private_cache.get(compiled_class_hash) {
+            if let Some(casm_class) = self.contract_class_cache_private.get(compiled_class_hash) {
                 return Ok(casm_class.clone());
             } else if let Some(casm_class) = self
                 .contract_class_cache()
                 .get_contract_class(*compiled_class_hash)
             {
-                private_cache.insert(*class_hash, casm_class.clone());
+                self.contract_class_cache_private
+                    .insert(*class_hash, casm_class.clone());
                 return Ok(casm_class);
             }
         }
 
         // II: FETCHING FROM STATE_READER
-        let contract_class = self.state_reader.get_contract_class(class_hash)?;
-        private_cache.insert(*class_hash, contract_class.clone());
+        let contract_class = self
+            .state_reader
+            .write()
+            .unwrap()
+            .get_contract_class(class_hash)?;
+        self.contract_class_cache_private
+            .insert(*class_hash, contract_class.clone());
 
         Ok(contract_class)
     }
@@ -235,7 +257,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             ));
         }
 
-        match self.get_class_hash_at(&deploy_contract_address) {
+        match State::get_class_hash_at(self, &deploy_contract_address) {
             Ok(x) if x == [0; 32] => {}
             Ok(_) => {
                 return Err(StateError::ContractAddressUnavailable(
@@ -252,7 +274,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
     }
 
     fn increment_nonce(&mut self, contract_address: &Address) -> Result<(), StateError> {
-        let new_nonce = self.get_nonce_at(contract_address)? + Felt252::from(1);
+        let new_nonce = State::get_nonce_at(self, contract_address)? + Felt252::from(1);
         self.cache
             .nonce_writes
             .insert(contract_address.clone(), new_nonce);
@@ -359,7 +381,11 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             }
             None => {
                 self.add_miss();
-                let class_hash = self.state_reader.get_class_hash_at(contract_address)?;
+                let class_hash = self
+                    .state_reader
+                    .write()
+                    .unwrap()
+                    .get_class_hash_at(contract_address)?;
                 self.cache
                     .class_hash_initial_values
                     .insert(contract_address.clone(), class_hash);
@@ -371,7 +397,11 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
             self.add_miss();
-            let nonce = self.state_reader.get_nonce_at(contract_address)?;
+            let nonce = self
+                .state_reader
+                .write()
+                .unwrap()
+                .get_nonce_at(contract_address)?;
             self.cache
                 .nonce_initial_values
                 .insert(contract_address.clone(), nonce);
@@ -396,7 +426,11 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             }
             None => {
                 self.add_miss();
-                let value = self.state_reader.get_storage_at(storage_entry)?;
+                let value = self
+                    .state_reader
+                    .write()
+                    .unwrap()
+                    .get_storage_at(storage_entry)?;
                 self.cache
                     .storage_initial_values
                     .insert(storage_entry.clone(), value.clone());
@@ -419,7 +453,11 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             }
             None => {
                 self.add_miss();
-                let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
+                let compiled_class_hash = self
+                    .state_reader
+                    .write()
+                    .unwrap()
+                    .get_compiled_class_hash(class_hash)?;
                 let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
                 self.cache
                     .class_hash_initial_values
@@ -440,11 +478,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         // deprecated contract classes dont have compiled class hashes, so we only have one case
         // `RefCell::get_mut()` provides a mutable reference without the borrowing overhead when we
         // have a mutable reference to the `RefCell` available.
-        if let Some(compiled_class) = self
-            .contract_class_cache_private
-            .get(class_hash)
-            .cloned()
-        {
+        if let Some(compiled_class) = self.contract_class_cache_private.get(class_hash).cloned() {
             self.add_hit();
             return Ok(compiled_class);
         } else if let Some(compiled_class) =
@@ -481,11 +515,16 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         }
 
         // II: FETCHING FROM STATE_READER
-        let contract = self.state_reader.get_contract_class(class_hash)?;
+        let contract = self
+            .state_reader
+            .write()
+            .unwrap()
+            .get_contract_class(class_hash)?;
         match contract {
             CompiledClass::Casm(ref casm_class) => {
                 // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
-                let compiled_class_hash = <Self as State>::get_compiled_class_hash(self, class_hash)?;
+                let compiled_class_hash =
+                    <Self as State>::get_compiled_class_hash(self, class_hash)?;
                 self.set_contract_class(
                     &compiled_class_hash,
                     &CompiledClass::Casm(casm_class.clone()),
@@ -510,11 +549,11 @@ pub type TransactionalCachedState<'a, T, C> =
 /// In practice this will act as a way to access the parent state's cache and other fields,
 /// without referencing the whole parent state, so there's no need to adapt state-modifying
 /// functions in the case that a transactional state is needed.
-#[derive(Debug, MutGetters, Getters, PartialEq, Clone)]
+#[derive(Debug, MutGetters, Getters)]
 pub struct TransactionalCachedStateReader<'a, T: StateReader, C: ContractClassCache> {
     /// The parent state's state_reader
     #[get(get = "pub")]
-    pub(crate) state_reader: Arc<T>,
+    pub(crate) state_reader: Arc<RwLock<T>>,
     /// The parent state's cache
     #[get(get = "pub")]
     pub(crate) cache: &'a StateCache,
@@ -522,7 +561,7 @@ pub struct TransactionalCachedStateReader<'a, T: StateReader, C: ContractClassCa
     /// The parent state's contract_classes
     #[get(get = "pub")]
     pub(crate) contract_class_cache: Arc<C>,
-    pub(crate) contract_class_cache_private: &'a HashMap<ClassHash, CompiledClass>,
+    pub(crate) contract_class_cache_private: HashMap<ClassHash, CompiledClass>,
 }
 
 impl<'a, T: StateReader, C: ContractClassCache> TransactionalCachedStateReader<'a, T, C> {
@@ -531,7 +570,7 @@ impl<'a, T: StateReader, C: ContractClassCache> TransactionalCachedStateReader<'
             state_reader: state.state_reader.clone(),
             cache: &state.cache,
             contract_class_cache: state.contract_class_cache.clone(),
-            contract_class_cache_private: &state.contract_class_cache_private,
+            contract_class_cache_private: state.contract_class_cache_private.clone(),
         }
     }
 }
@@ -545,13 +584,22 @@ impl<'a, T: StateReader, C: ContractClassCache> StateReader
         self.cache
             .get_class_hash(contract_address)
             .map(|a| Ok(*a))
-            .unwrap_or_else(|| self.state_reader.get_class_hash_at(contract_address))
+            .unwrap_or_else(|| {
+                self.state_reader
+                    .write()
+                    .unwrap()
+                    .get_class_hash_at(contract_address)
+            })
     }
 
     /// Returns the nonce for a given contract address.
     fn get_nonce_at(&mut self, contract_address: &Address) -> Result<Felt252, StateError> {
         if self.cache.get_nonce(contract_address).is_none() {
-            return self.state_reader.get_nonce_at(contract_address);
+            return self
+                .state_reader
+                .write()
+                .unwrap()
+                .get_nonce_at(contract_address);
         }
         self.cache
             .get_nonce(contract_address)
@@ -565,7 +613,12 @@ impl<'a, T: StateReader, C: ContractClassCache> StateReader
         self.cache
             .get_storage(storage_entry)
             .map(|v| Ok(v.clone()))
-            .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
+            .unwrap_or_else(|| {
+                self.state_reader
+                    .write()
+                    .unwrap()
+                    .get_storage_at(storage_entry)
+            })
     }
 
     // TODO: check if that the proper way to store it (converting hash to address)
@@ -577,7 +630,11 @@ impl<'a, T: StateReader, C: ContractClassCache> StateReader
             .get(class_hash)
             .is_none()
         {
-            return self.state_reader.get_compiled_class_hash(class_hash);
+            return self
+                .state_reader
+                .write()
+                .unwrap()
+                .get_compiled_class_hash(class_hash);
         }
         self.cache
             .class_hash_to_compiled_class_hash
@@ -595,13 +652,13 @@ impl<'a, T: StateReader, C: ContractClassCache> StateReader
         }
 
         // I: FETCHING FROM CACHE
-        let private_cache = self.contract_class_cache_private;
-        if let Some(compiled_class) = private_cache.get(class_hash) {
+        if let Some(compiled_class) = self.contract_class_cache_private.get(class_hash) {
             return Ok(compiled_class.clone());
         } else if let Some(compiled_class) =
             self.contract_class_cache().get_contract_class(*class_hash)
         {
-            self.contract_class_cache_private.insert(*class_hash, compiled_class.clone());
+            self.contract_class_cache_private
+                .insert(*class_hash, compiled_class.clone());
             return Ok(compiled_class);
         }
 
@@ -609,20 +666,26 @@ impl<'a, T: StateReader, C: ContractClassCache> StateReader
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            if let Some(casm_class) = private_cache.get(compiled_class_hash) {
+            if let Some(casm_class) = self.contract_class_cache_private.get(compiled_class_hash) {
                 return Ok(casm_class.clone());
             } else if let Some(casm_class) = self
                 .contract_class_cache()
                 .get_contract_class(*compiled_class_hash)
             {
-                private_cache.insert(*class_hash, casm_class.clone());
+                self.contract_class_cache_private
+                    .insert(*class_hash, casm_class.clone());
                 return Ok(casm_class);
             }
         }
 
         // II: FETCHING FROM STATE_READER
-        let contract_class = self.state_reader.get_contract_class(class_hash)?;
-        private_cache.insert(*class_hash, contract_class.clone());
+        let contract_class = self
+            .state_reader
+            .write()
+            .unwrap()
+            .get_contract_class(class_hash)?;
+        self.contract_class_cache_private
+            .insert(*class_hash, contract_class.clone());
 
         Ok(contract_class)
     }
@@ -642,10 +705,14 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
                 .contains_key(storage_entry)
             {
                 // This key was first accessed via write, so we need to cache its initial value
-                self.cache.storage_initial_values.insert(
-                    storage_entry.clone(),
-                    self.state_reader.get_storage_at(storage_entry)?,
-                );
+                let storage_value = self
+                    .state_reader
+                    .write()
+                    .unwrap()
+                    .get_storage_at(storage_entry)?;
+                self.cache
+                    .storage_initial_values
+                    .insert(storage_entry.clone(), storage_value);
             }
         }
         for address in self.cache.class_hash_writes.keys() {
@@ -653,7 +720,10 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
                 // This key was first accessed via write, so we need to cache its initial value
                 self.cache.class_hash_initial_values.insert(
                     address.clone(),
-                    self.state_reader.get_class_hash_at(address)?,
+                    self.state_reader
+                        .write()
+                        .unwrap()
+                        .get_class_hash_at(address)?,
                 );
             }
         }
@@ -666,7 +736,10 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
                 // This key was first accessed via write, so we need to cache its initial value
                 self.cache.nonce_initial_values.insert(
                     contract_address.clone(),
-                    self.state_reader.get_nonce_at(contract_address)?,
+                    self.state_reader
+                        .write()
+                        .unwrap()
+                        .get_nonce_at(contract_address)?,
                 );
             }
         }
@@ -716,7 +789,7 @@ mod tests {
             .insert(storage_entry, storage_value);
 
         let mut cached_state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -724,7 +797,10 @@ mod tests {
             StateReader::get_class_hash_at(&mut cached_state, &contract_address).unwrap(),
             class_hash
         );
-        assert_eq!(StateReader::get_nonce_at(&mut cached_state, &contract_address).unwrap(), nonce);
+        assert_eq!(
+            StateReader::get_nonce_at(&mut cached_state, &contract_address).unwrap(),
+            nonce
+        );
         cached_state.increment_nonce(&contract_address).unwrap();
         assert_eq!(
             StateReader::get_nonce_at(&mut cached_state, &contract_address).unwrap(),
@@ -750,15 +826,17 @@ mod tests {
             .class_hash_to_compiled_class
             .insert([1; 32], CompiledClass::Deprecated(Arc::new(contract_class)));
 
-        let cached_state = CachedState::new(
-            Arc::new(state_reader),
+        let mut cached_state = CachedState::new(
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
         assert_eq!(
-            cached_state.get_contract_class(&[1; 32]).unwrap(),
+            StateReader::get_contract_class(&mut cached_state, &[1; 32]).unwrap(),
             cached_state
                 .state_reader
+                .write()
+                .unwrap()
                 .get_contract_class(&[1; 32])
                 .unwrap()
         );
@@ -768,7 +846,7 @@ mod tests {
     #[test]
     fn cached_state_storage_test() {
         let mut cached_state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
+            Arc::new(RwLock::new(InMemoryStateReader::default())),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -776,19 +854,23 @@ mod tests {
         let value = Felt252::new(10);
         cached_state.set_storage_at(&storage_entry, value.clone());
 
-        assert_eq!(cached_state.get_storage_at(&storage_entry).unwrap(), value);
+        assert_eq!(
+            StateReader::get_storage_at(&mut cached_state, &storage_entry).unwrap(),
+            value
+        );
 
         let storage_entry_2: StorageEntry = (Address(150.into()), [1; 32]);
-        assert!(cached_state
-            .get_storage_at(&storage_entry_2)
-            .unwrap()
-            .is_zero());
+        assert!(
+            StateReader::get_storage_at(&mut cached_state, &storage_entry_2)
+                .unwrap()
+                .is_zero()
+        );
     }
 
     /// This test checks if deploying a contract works as expected.
     #[test]
     fn cached_state_deploy_contract_test() {
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
 
         let contract_address = Address(32123.into());
 
@@ -805,7 +887,7 @@ mod tests {
     /// This test verifies the set and get storage values in the cached state.
     #[test]
     fn get_and_set_storage() {
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
 
         let contract_address = Address(31.into());
         let storage_key = [18; 32];
@@ -818,7 +900,10 @@ mod tests {
 
         // set storage_key
         cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
-        let result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
+        let result = StateReader::get_storage_at(
+            &mut cached_state,
+            &(contract_address.clone(), storage_key),
+        );
 
         assert_eq!(result.unwrap(), value);
 
@@ -827,7 +912,8 @@ mod tests {
 
         cached_state.set_storage_at(&(contract_address.clone(), storage_key), new_value.clone());
 
-        let new_result = cached_state.get_storage_at(&(contract_address, storage_key));
+        let new_result =
+            StateReader::get_storage_at(&mut cached_state, &(contract_address, storage_key));
 
         assert_eq!(new_result.unwrap(), new_value);
     }
@@ -846,7 +932,7 @@ mod tests {
         let contract_address = Address(0.into());
 
         let mut cached_state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -874,7 +960,7 @@ mod tests {
         let contract_address = Address(42.into());
 
         let mut cached_state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -905,7 +991,7 @@ mod tests {
         let contract_address = Address(32123.into());
 
         let mut cached_state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -918,7 +1004,7 @@ mod tests {
             .is_ok());
 
         assert_matches!(
-            cached_state.get_class_hash_at(&contract_address),
+            StateReader::get_class_hash_at(&mut cached_state, &contract_address),
             Ok(class_hash) if class_hash == [12u8; 32]
         );
     }
@@ -937,7 +1023,7 @@ mod tests {
         let address_one = Address(Felt252::one());
 
         let mut cached_state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -975,7 +1061,7 @@ mod tests {
     fn count_actual_storage_changes_test() {
         let state_reader = InMemoryStateReader::default();
         let mut cached_state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 

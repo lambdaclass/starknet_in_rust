@@ -202,10 +202,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
     ) -> Result<(), StateError> {
-        let contract_class = self
-            .starknet_storage_state
-            .state
-            .get_contract_class(&class_hash_bytes)?;
+        let contract_class =
+            State::get_contract_class(self.starknet_storage_state.state, &class_hash_bytes)?;
 
         if self.constructor_entry_points_empty(contract_class)? {
             if !constructor_calldata.is_empty() {

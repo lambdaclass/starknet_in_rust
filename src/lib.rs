@@ -18,7 +18,7 @@ use crate::{
     utils::Address,
 };
 use cairo_vm::felt::Felt252;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[cfg(test)]
 #[macro_use]
@@ -61,7 +61,7 @@ pub fn simulate_transaction<S: StateReader, C: ContractClassCache>(
     ignore_max_fee: bool,
     skip_nonce_check: bool,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
-    let mut cache_state = CachedState::new(Arc::new(state), contract_class_cache);
+    let mut cache_state = CachedState::new(Arc::new(RwLock::new(state)), contract_class_cache);
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         let tx_for_simulation = transaction.create_for_simulation(
@@ -92,7 +92,7 @@ where
     let mut result = Vec::with_capacity(transactions.len());
     for transaction in transactions {
         // Check if the contract is deployed.
-        <cached_state as State>::get_class_hash_at(&mut cached_state, &transaction.contract_address())?;
+        State::get_class_hash_at(&mut cached_state, &transaction.contract_address())?;
         // execute the transaction with the fake state.
 
         // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
@@ -121,8 +121,8 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
     caller_address: Address,
 ) -> Result<Vec<Felt252>, TransactionError> {
     let contract_address = Address(contract_address);
-    let class_hash = state.get_class_hash_at(&contract_address)?;
-    let nonce = state.get_nonce_at(&contract_address)?;
+    let class_hash = State::get_class_hash_at(state, &contract_address)?;
+    let nonce = State::get_nonce_at(state, &contract_address)?;
 
     // TODO: Revisit these parameters
     let transaction_hash = 0.into();
@@ -176,7 +176,7 @@ where
     C: ContractClassCache,
 {
     // Check if the contract is deployed.
-    cached_state.get_class_hash_at(l1_handler.contract_address())?;
+    State::get_class_hash_at(&mut cached_state, l1_handler.contract_address())?;
 
     // execute the transaction with the fake state.
     let transaction_result = l1_handler.execute(&mut cached_state, block_context, 1_000_000)?;
@@ -244,7 +244,10 @@ mod test {
     use lazy_static::lazy_static;
     use num_traits::{Num, One, Zero};
     use pretty_assertions_sorted::assert_eq;
-    use std::{path::PathBuf, sync::Arc};
+    use std::{
+        path::PathBuf,
+        sync::{Arc, RwLock},
+    };
 
     lazy_static! {
         // include_str! doesn't seem to work in CI
@@ -320,7 +323,10 @@ mod test {
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+        let mut state = CachedState::new(
+            Arc::new(RwLock::new(state_reader)),
+            Arc::new(contract_class_cache),
+        );
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
         let retdata = call_contract(
@@ -373,7 +379,7 @@ mod test {
             .insert(contract_address, nonce);
 
         let state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -417,7 +423,10 @@ mod test {
             .address_to_nonce_mut()
             .insert(address.clone(), nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+        let mut state = CachedState::new(
+            Arc::new(RwLock::new(state_reader)),
+            Arc::new(contract_class_cache),
+        );
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
 
         let invoke = InvokeFunction::new(
@@ -678,7 +687,7 @@ mod test {
 
     #[test]
     fn test_simulate_deploy() {
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(
             state_reader,
             Arc::new(PermanentContractClassCache::default()),
@@ -724,7 +733,7 @@ mod test {
 
     #[test]
     fn test_simulate_declare() {
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let state = CachedState::new(
             state_reader,
             Arc::new(PermanentContractClassCache::default()),
@@ -765,7 +774,7 @@ mod test {
 
     #[test]
     fn test_simulate_invoke() {
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(
             state_reader,
             Arc::new(PermanentContractClassCache::default()),
@@ -833,7 +842,7 @@ mod test {
 
     #[test]
     fn test_simulate_deploy_account() {
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let mut state = CachedState::new(
             state_reader,
             Arc::new(PermanentContractClassCache::default()),
@@ -963,7 +972,7 @@ mod test {
             .insert(contract_address, nonce);
 
         let mut state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -994,7 +1003,7 @@ mod test {
 
     #[test]
     fn test_deploy_and_invoke_simulation() {
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
         let state = CachedState::new(
             state_reader,
             Arc::new(PermanentContractClassCache::default()),

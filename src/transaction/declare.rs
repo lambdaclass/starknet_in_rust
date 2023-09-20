@@ -251,7 +251,7 @@ impl Declare {
         }
 
         let contract_address = &self.sender_address;
-        let current_nonce = state.get_nonce_at(contract_address)?;
+        let current_nonce = State::get_nonce_at(state, contract_address)?;
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
@@ -711,13 +711,13 @@ mod tests {
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        assert!(state.get_contract_class(&class_hash).is_ok());
+        assert!(StateReader::get_contract_class(&mut state, &class_hash).is_ok());
 
         second_internal_declare
             .execute(&mut state, &BlockContext::default())
             .unwrap();
 
-        assert!(state.get_contract_class(&class_hash).is_ok());
+        assert!(State::get_contract_class(&mut state, &class_hash).is_ok());
     }
 
     #[test]

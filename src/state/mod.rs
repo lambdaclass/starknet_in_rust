@@ -11,7 +11,10 @@ use crate::{
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use getset::Getters;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 pub mod cached_state;
 pub mod contract_class_cache;
@@ -149,7 +152,7 @@ impl StateDiff {
 
     pub fn to_cached_state<T, C>(
         &self,
-        state_reader: Arc<T>,
+        state_reader: Arc<RwLock<T>>,
         contract_class_cache: Arc<C>,
     ) -> Result<CachedState<T, C>, StateError>
     where
@@ -235,7 +238,10 @@ mod test {
         utils::Address,
     };
     use cairo_vm::felt::Felt252;
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{Arc, RwLock},
+    };
 
     #[test]
     fn test_from_cached_state_without_updates() {
@@ -253,7 +259,7 @@ mod test {
             .insert(contract_address, nonce);
 
         let cached_state = CachedState::new(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             Arc::new(PermanentContractClassCache::default()),
         );
 
@@ -325,16 +331,16 @@ mod test {
             .address_to_nonce
             .insert(contract_address.clone(), nonce);
 
-        let cached_state_original = CachedState::new(
-            Arc::new(state_reader.clone()),
+        let mut cached_state_original = CachedState::new(
+            Arc::new(RwLock::new(state_reader.clone())),
             Arc::new(PermanentContractClassCache::default()),
         );
 
         let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
 
-        let cached_state = diff
+        let mut cached_state = diff
             .to_cached_state::<_, PermanentContractClassCache>(
-                Arc::new(state_reader),
+                Arc::new(RwLock::new(state_reader)),
                 Arc::new(PermanentContractClassCache::default()),
             )
             .unwrap();
@@ -385,7 +391,7 @@ mod test {
             HashMap::new(),
         );
         let cached_state = CachedState::new_for_testing(
-            Arc::new(state_reader),
+            Arc::new(RwLock::new(state_reader)),
             cache,
             Arc::new(PermanentContractClassCache::default()),
         );

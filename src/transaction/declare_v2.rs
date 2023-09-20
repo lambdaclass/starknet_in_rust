@@ -279,7 +279,7 @@ impl DeclareV2 {
         }
 
         let contract_address = &self.sender_address;
-        let current_nonce = state.get_nonce_at(contract_address)?;
+        let current_nonce = State::get_nonce_at(state, contract_address)?;
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),

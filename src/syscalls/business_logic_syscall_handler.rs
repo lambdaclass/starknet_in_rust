@@ -322,10 +322,8 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         constructor_calldata: Vec<Felt252>,
         remainig_gas: u128,
     ) -> Result<CallResult, StateError> {
-        let compiled_class = if let Ok(compiled_class) = self
-            .starknet_storage_state
-            .state
-            .get_contract_class(&class_hash_bytes)
+        let compiled_class = if let Ok(compiled_class) =
+            State::get_contract_class(self.starknet_storage_state.state, &class_hash_bytes)
         {
             compiled_class
         } else {
@@ -501,10 +499,13 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
             Felt252::zero()
         } else {
-            self.starknet_storage_state.state.get_storage_at(&(
-                BLOCK_HASH_CONTRACT_ADDRESS.clone(),
-                Felt252::new(block_number).to_be_bytes(),
-            ))?
+            State::get_storage_at(
+                self.starknet_storage_state.state,
+                &(
+                    BLOCK_HASH_CONTRACT_ADDRESS.clone(),
+                    Felt252::new(block_number).to_be_bytes(),
+                ),
+            )?
         };
 
         Ok(SyscallResponse {

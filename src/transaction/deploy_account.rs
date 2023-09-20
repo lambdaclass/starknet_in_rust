@@ -225,7 +225,7 @@ impl DeployAccount {
         state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let contract_class = state.get_contract_class(&self.class_hash)?;
+        let contract_class = State::get_contract_class(state, &self.class_hash)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
@@ -289,7 +289,7 @@ impl DeployAccount {
         }
 
         // In blockifier, get_nonce_at returns zero if no entry is found.
-        let current_nonce = state.get_nonce_at(&self.contract_address)?;
+        let current_nonce = State::get_nonce_at(state, &self.contract_address)?;
         if current_nonce != self.nonce {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),

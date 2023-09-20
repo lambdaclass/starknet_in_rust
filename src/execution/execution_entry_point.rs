@@ -107,8 +107,7 @@ impl ExecutionEntryPoint {
     {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
-        let contract_class = state
-            .get_contract_class(&class_hash)
+        let contract_class = State::get_contract_class(state, &class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
         match contract_class {
             CompiledClass::Deprecated(contract_class) => {

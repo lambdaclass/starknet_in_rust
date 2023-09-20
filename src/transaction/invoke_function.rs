@@ -348,7 +348,7 @@ impl InvokeFunction {
 
         let contract_address = self.contract_address();
 
-        let current_nonce = state.get_nonce_at(contract_address)?;
+        let current_nonce = State::get_nonce_at(state, contract_address)?;
         match &self.nonce {
             None => {
                 // TODO: Remove this once we have a better way to handle the nonce.

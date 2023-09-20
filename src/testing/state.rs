@@ -13,9 +13,7 @@ use crate::{
         messages::StarknetMessageToL1,
     },
     state::{
-        cached_state::CachedState,
-        contract_class_cache::ContractClassCache,
-        state_api::State,
+        cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::State,
     },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{
@@ -25,7 +23,10 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 // ---------------------------------------------------------------------
 /// StarkNet testing object. Represents a state of a StarkNet network.
@@ -46,7 +47,7 @@ where
 {
     pub fn new(context: Option<BlockContext>, contract_cache: Arc<C>) -> Self {
         let block_context = context.unwrap_or_default();
-        let state_reader = Arc::new(InMemoryStateReader::default());
+        let state_reader = Arc::new(RwLock::new(InMemoryStateReader::default()));
 
         let state = CachedState::new(state_reader, contract_cache);
 

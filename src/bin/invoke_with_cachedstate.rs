@@ -16,7 +16,11 @@ use starknet_in_rust::{
     transaction::InvokeFunction,
     utils::Address,
 };
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
@@ -108,7 +112,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader, PermanentContractC
             state_reader
                 .address_to_storage_mut()
                 .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
-            Arc::new(state_reader)
+            Arc::new(RwLock::new(state_reader))
         },
         Arc::new(PermanentContractClassCache::default()),
     );
