@@ -1706,11 +1706,6 @@ fn test_deploy_account_revert() {
         .storage_initial_values_mut()
         .extend(state_after.cache_mut().storage_initial_values_mut().clone());
 
-    // // Set contract class cache
-    // state_reverted
-    //     .set_contract_classes(state_after.contract_class_cache().clone())
-    //     .unwrap();
-
     // Set storage writes related to the fee transfer
     state_reverted
         .cache_mut()
