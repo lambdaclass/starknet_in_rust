@@ -29,16 +29,13 @@ fn main() {
     println!("{ret_data:?}");
 }
 
-fn run_contract<C>(
+fn run_contract(
     contract_path: impl AsRef<Path>,
     entry_point: impl AsRef<str>,
     calldata: impl Into<Vec<Felt252>>,
-    contract_cache: Arc<C>,
-) -> Vec<Felt252>
-where
-    C: ContractClassCache,
-{
-    let mut state = StarknetState::new(None, contract_cache);
+    contract_cache: Arc<LruContractCache>,
+) -> Vec<Felt252> {
+    let mut state = StarknetState::new(None, contract_cache.clone());
 
     let contract_class = ContractClass::from_path(contract_path.as_ref()).unwrap();
     state.declare(contract_class.clone()).unwrap();
@@ -59,6 +56,10 @@ where
             caller_address,
         )
         .unwrap();
+
+    // Store the local cache changes into the shared cache. This updates the shared cache with all
+    // the contracts used on this state.
+    contract_cache.extend(state.state.drain_private_contract_class_cache());
 
     call_info.retdata
 }
