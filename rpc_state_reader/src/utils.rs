@@ -5,6 +5,7 @@ use std::{
 
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_lang_utils::bigint::BigUintAsHex;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use serde::Deserialize;
 use starknet::core::types::{LegacyContractEntryPoint, LegacyEntryPointsByType};
 use starknet_api::{
@@ -13,6 +14,9 @@ use starknet_api::{
     hash::{StarkFelt, StarkHash},
     transaction::{DeclareTransaction, InvokeTransaction, Transaction},
 };
+use starknet_in_rust::execution::CallInfo;
+
+use crate::rpc_state::RpcCallInfo;
 
 #[derive(Debug, Deserialize)]
 pub struct MiddleSierraContractClass {
@@ -103,5 +107,43 @@ pub fn deserialize_transaction_json(
         x => Err(serde::de::Error::custom(format!(
             "unimplemented transaction type deserialization: {x}"
         ))),
+    }
+}
+
+/// Converts a StarkFelt to a Felt252
+pub fn starkfelt_to_felt252(data: &StarkFelt) -> Felt252 {
+    Felt252::from_bytes_be(data.bytes())
+}
+
+pub fn rpc_call_info_to_call_info(rpc_call_info: &RpcCallInfo) -> CallInfo {
+    CallInfo {
+        calldata: rpc_call_info
+            .calldata
+            .as_ref()
+            .unwrap_or(&vec![])
+            .iter()
+            .map(starkfelt_to_felt252)
+            .collect(),
+        execution_resources: ExecutionResources {
+            n_steps: rpc_call_info.execution_resources.n_steps,
+            n_memory_holes: rpc_call_info.execution_resources.n_memory_holes,
+            builtin_instance_counter: rpc_call_info
+                .execution_resources
+                .builtin_instance_counter
+                .clone(),
+        },
+        retdata: rpc_call_info
+            .retdata
+            .as_ref()
+            .unwrap_or(&vec![])
+            .iter()
+            .map(starkfelt_to_felt252)
+            .collect(),
+        internal_calls: rpc_call_info
+            .internal_calls
+            .iter()
+            .map(rpc_call_info_to_call_info)
+            .collect(),
+        ..Default::default()
     }
 }

@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
+use rpc_state_reader::utils::rpc_call_info_to_call_info;
 use starknet_api::{
     block::BlockNumber,
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
@@ -34,7 +36,7 @@ use starknet_in_rust::{
 
 use test_case::test_case;
 
-use rpc_state_reader::rpc_state::*;
+use rpc_state_reader::{rpc_state::*, utils::starkfelt_to_felt252};
 
 #[derive(Debug)]
 pub struct RpcStateReader(RpcState);
@@ -296,6 +298,21 @@ fn test_get_gas_price() {
     assert_eq!(price, 22804578690);
 }
 
+/// Removes data from the call info that the RpcCallInfo struct doesn't have, so we can compare them properly
+fn strip_call_info_to_compare(call_info: &CallInfo) -> CallInfo {
+    CallInfo {
+        calldata: call_info.calldata.clone(),
+        execution_resources: call_info.execution_resources.clone(),
+        retdata: call_info.retdata.clone(),
+        internal_calls: call_info
+            .internal_calls
+            .iter()
+            .map(strip_call_info_to_compare)
+            .collect(),
+        ..Default::default()
+    }
+}
+
 #[test_case(
     "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
     90006,
@@ -434,6 +451,18 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
             .len(),
         "internal calls length mismatch"
     );
+
+    let rpc_internal_calls = &trace.function_invocation.as_ref().unwrap().internal_calls;
+    let rpc_internal_calls: Vec<CallInfo> = rpc_internal_calls
+        .iter()
+        .map(rpc_call_info_to_call_info)
+        .collect();
+
+    let stripped_internal_calls: Vec<CallInfo> = internal_calls
+        .iter()
+        .map(strip_call_info_to_compare)
+        .collect();
+    assert_eq_sorted!(stripped_internal_calls, rpc_internal_calls);
 
     // check actual fee calculation
     if receipt.actual_fee != actual_fee {
