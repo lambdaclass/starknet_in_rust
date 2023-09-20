@@ -115,6 +115,7 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::InvokeFunction(tx) => tx.create_for_simulation(
                 skip_validate,

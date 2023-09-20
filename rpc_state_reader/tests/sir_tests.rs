@@ -88,6 +88,7 @@ fn execute_tx(
     tx_hash: &str,
     network: RpcChain,
     block_number: BlockNumber,
+    skip_nonce_check: bool,
 ) -> (
     TransactionExecutionInfo,
     TransactionTrace,
@@ -197,7 +198,7 @@ fn execute_tx(
             )
         }
         SNTransaction::DeployAccount(tx) => Transaction::DeployAccount(
-            DeployAccount::from_deploy_account_transaction(tx, chain_id).unwrap(),
+            DeployAccount::from_deploy_account_transaction(tx, chain_id, skip_nonce_check).unwrap(),
         ),
         SNTransaction::Invoke(tx) => Transaction::InvokeFunction(
             InvokeFunction::from_invoke_transaction(tx, chain_id).unwrap(),
@@ -308,7 +309,7 @@ fn test_get_gas_price() {
         RpcChain::MainNet
     )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
-    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number), false);
 
     let TransactionExecutionInfo {
         call_info,
@@ -382,7 +383,7 @@ fn test_sorted_events(
     block_number: u64,
     expected_amount_of_events: usize,
 ) {
-    let (tx_info, _trace, _receipt) = execute_tx(tx_hash, chain, BlockNumber(block_number));
+    let (tx_info, _trace, _receipt) = execute_tx(tx_hash, chain, BlockNumber(block_number), false);
 
     let events_len = tx_info.get_sorted_events().unwrap().len();
 
@@ -401,7 +402,7 @@ fn test_sorted_events(
     => ignore["broken on both due to a cairo-vm error"]
 )]
 fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
-    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number), false);
 
     assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
 
@@ -421,6 +422,7 @@ fn get_transaction_declare() {
         "0x01d32e49af3e0686c08e4c510461312dd479ac8a2e847e84e1613b2cdc5bfd50",
         RpcChain::MainNet,
         BlockNumber(186665),
+        false,
     );
 }
 
@@ -430,6 +432,7 @@ fn get_transaction_declare_v2() {
         "0x042af5bd4c5a37e2bb3dd08e4f38a21624b173466417bab9626ecc22098c936b",
         RpcChain::MainNet,
         BlockNumber(217733),
+        false,
     );
 }
 
@@ -439,6 +442,7 @@ fn get_transaction_deploy() {
         "0x01d08158d139345d562276f0a085d9764e618eba788bed99a238903595b17022",
         RpcChain::MainNet,
         BlockNumber(16575),
+        false,
     );
 }
 
@@ -447,7 +451,8 @@ fn get_transaction_deploy_account() {
     execute_tx(
         "0x06372abe2116c75097b632543f91498a714c48dbd4b168f615b6b17c2733e9fd",
         RpcChain::MainNet,
-        BlockNumber(217829),
+        BlockNumber(217830),
+        true,
     );
 }
 
@@ -457,5 +462,6 @@ fn get_transaction_invoke() {
         "0x033d6717664cf7d13fe1f6ce36082155b8c2cf390a9884227e12fe04e674cc39",
         RpcChain::MainNet,
         BlockNumber(217833),
+        false,
     );
 }

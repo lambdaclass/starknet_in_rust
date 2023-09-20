@@ -65,6 +65,7 @@ pub struct DeployAccount {
     skip_validate: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
+    skip_nonce_check: bool,
 }
 
 impl DeployAccount {
@@ -110,6 +111,7 @@ impl DeployAccount {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 
@@ -144,6 +146,7 @@ impl DeployAccount {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 
@@ -151,8 +154,12 @@ impl DeployAccount {
     pub fn from_deploy_account_transaction(
         tx: starknet_api::transaction::DeployAccountTransaction,
         chain_id: StarknetChainId,
+        skip_nonce_check: bool,
     ) -> Result<Self, TransactionError> {
-        convert_deploy_account(tx, chain_id)
+        let mut tx = convert_deploy_account(tx, chain_id)?;
+        tx.skip_nonce_check = skip_nonce_check;
+
+        Ok(tx)
     }
 
     pub fn get_state_selector(&self, _block_context: BlockContext) -> StateSelector {
@@ -167,7 +174,9 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.handle_nonce(state)?;
+        if !self.skip_nonce_check {
+            self.handle_nonce(state)?;
+        }
 
         let mut transactional_state = state.create_transactional();
         let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
@@ -405,11 +414,13 @@ impl DeployAccount {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = DeployAccount {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
+            skip_nonce_check,
             max_fee: if ignore_max_fee {
                 u128::MAX
             } else {
