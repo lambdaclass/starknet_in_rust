@@ -385,9 +385,7 @@ impl DeclareV2 {
             ));
         }
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
-        // theorically class_hash == compiled_class_hash in v2, so this is like setting class_hash -> compiled_class_hash
-        // which is needed for get_compiled_class_hash later to work.
-        state.set_compiled_class_hash(&self.compiled_class_hash, &self.compiled_class_hash)?;
+
         state.set_contract_class(
             &self.compiled_class_hash.to_be_bytes(),
             &CompiledClass::Casm(Arc::new(casm_class)),

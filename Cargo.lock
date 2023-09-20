@@ -1426,9 +1426,9 @@ checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
 name = "coverage-helper"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9db510e477cf3c14a6c56aa2ed28e499f1e27e01c17723b41ece793d11cf3fe"
+checksum = "3036399e8abfc9d696c1ee94f7677f9704e903d96299b0026e339eed6055dcaf"
 
 [[package]]
 name = "cpufeatures"
