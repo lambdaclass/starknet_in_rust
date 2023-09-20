@@ -103,7 +103,7 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
     pub fn drain_private_contract_class_cache(
         &mut self,
     ) -> impl Iterator<Item = (ClassHash, CompiledClass)> {
-        std::mem::take(&mut self.contract_class_cache_private).into_iter()
+        core::mem::take(&mut self.contract_class_cache_private).into_iter()
     }
 
     /// Creates a copy of this state with an empty cache for saving changes and applying them
