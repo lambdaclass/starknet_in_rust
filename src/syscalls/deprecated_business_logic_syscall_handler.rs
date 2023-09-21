@@ -247,7 +247,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             .map_err(|_| StateError::ExecutionEntryPoint)?;
 
         if let Some(call_info) = call_info.call_info {
-            self.events.extend(call_info.events);
+            self.internal_calls.push(call_info);
         }
 
         Ok(())
