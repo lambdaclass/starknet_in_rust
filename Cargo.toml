@@ -62,7 +62,7 @@ phf_macros = "0.11"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-coverage-helper = "0.1.0"
+coverage-helper = "0.2.0"
 pretty_assertions_sorted = "1.2.3"
 criterion = { version = "0.5.1", features = ["html_reports"] }
 
