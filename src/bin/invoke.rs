@@ -4,12 +4,13 @@ use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 
 use starknet_in_rust::{
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::cached_state::CachedState,
     state::in_memory_state_reader::InMemoryStateReader,
-    testing::state::StarknetState,
+    transaction::{InvokeFunction, Transaction},
     utils::Address,
 };
 
@@ -41,52 +42,10 @@ lazy_static! {
 
 fn main() {
     const RUNS: usize = 10000;
-    let cached_state = create_initial_state();
 
-    let mut starknet_state = StarknetState::new_with_states(Default::default(), cached_state);
+    let block_context = BlockContext::default();
 
-    starknet_state
-        .state
-        .cache_mut()
-        .nonce_initial_values_mut()
-        .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
-
-    for i in 0..RUNS {
-        starknet_state
-            .invoke_raw(
-                CONTRACT_ADDRESS.clone(),
-                INCREASE_BALANCE_SELECTOR.clone(),
-                vec![1000.into()],
-                0,
-                Some(Vec::new()),
-                Some(Felt252::from(i * 2)),
-                None,
-                0,
-            )
-            .unwrap();
-
-        let tx_exec_info = starknet_state
-            .invoke_raw(
-                CONTRACT_ADDRESS.clone(),
-                GET_BALANCE_SELECTOR.clone(),
-                vec![],
-                0,
-                Some(Vec::new()),
-                Some(Felt252::from((i * 2) + 1)),
-                None,
-                0,
-            )
-            .unwrap();
-
-        assert_eq!(
-            tx_exec_info.call_info.unwrap().retdata,
-            vec![((1000 * i) + 1000).into()]
-        );
-    }
-}
-
-fn create_initial_state() -> CachedState<InMemoryStateReader> {
-    let cached_state = CachedState::new(
+    let mut state = CachedState::new(
         {
             let mut state_reader = InMemoryStateReader::default();
             state_reader
@@ -108,6 +67,48 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
         },
         HashMap::new(),
     );
+    let chain_id = block_context.starknet_os_config().chain_id().clone();
+    let signature = Vec::new();
 
-    cached_state
+    state
+        .cache_mut()
+        .nonce_initial_values_mut()
+        .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+
+    for i in 0..RUNS {
+        let invoke_first = InvokeFunction::new(
+            CONTRACT_ADDRESS.clone(),
+            INCREASE_BALANCE_SELECTOR.clone(),
+            0,
+            TRANSACTION_VERSION.clone(),
+            vec![1000.into()],
+            signature.clone(),
+            chain_id.clone(),
+            Some(Felt252::from(i * 2)),
+        )
+        .unwrap();
+
+        let tx = Transaction::InvokeFunction(invoke_first);
+        tx.execute(&mut state, &block_context, 0).unwrap();
+
+        let invoke_second = InvokeFunction::new(
+            CONTRACT_ADDRESS.clone(),
+            GET_BALANCE_SELECTOR.clone(),
+            0,
+            TRANSACTION_VERSION.clone(),
+            vec![],
+            signature.clone(),
+            chain_id.clone(),
+            Some(Felt252::from((i * 2) + 1)),
+        )
+        .unwrap();
+
+        let tx = Transaction::InvokeFunction(invoke_second);
+        let tx_exec_info = tx.execute(&mut state, &block_context, 0).unwrap();
+
+        assert_eq!(
+            tx_exec_info.call_info.unwrap().retdata,
+            vec![((1000 * i) + 1000).into()]
+        );
+    }
 }
