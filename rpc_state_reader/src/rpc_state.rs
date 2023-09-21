@@ -141,7 +141,35 @@ pub struct RpcBlockInfo {
 /// A RPC response.
 #[derive(Debug, Deserialize, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct RpcResponse<T> {
-    result: T,
+    result: Option<T>,
+    error: Option<RpcResponseError>,
+}
+
+impl<T> RpcResponse<T> {
+    fn into_result(self) -> Result<T, RpcError> {
+        match (self.result, self.error) {
+            (None, None) => panic!("API returned neither a result nor an error"),
+            (None, Some(error)) => Err(RpcError::RpcCall(match error.data {
+                Some(data) => format!(
+                    "The API returned an error {} '{}' with data '{}'",
+                    error.code, error.message, data
+                ),
+                None => format!(
+                    "The API returned an error {} '{}'",
+                    error.code, error.message
+                ),
+            })),
+            (Some(result), None) => Ok(result),
+            (Some(_), Some(_)) => panic!("API returned both a result and an error"),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
+pub struct RpcResponseError {
+    code: i32,
+    message: String,
+    data: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
@@ -269,7 +297,8 @@ impl RpcState {
         method: &str,
         params: &serde_json::Value,
     ) -> Result<T, RpcError> {
-        Ok(self.rpc_call::<RpcResponse<T>>(method, params)?.result)
+        self.rpc_call::<RpcResponse<T>>(method, params)?
+            .into_result()
     }
 
     fn rpc_call<T: for<'a> Deserialize<'a>>(
@@ -301,7 +330,8 @@ impl RpcState {
     fn deserialize_call<T: for<'a> Deserialize<'a>>(
         response: serde_json::Value,
     ) -> Result<T, RpcError> {
-        serde_json::from_value(response).map_err(|err| RpcError::RpcCall(err.to_string()))
+        serde_json::from_value(response.clone())
+            .map_err(|err| RpcError::RpcCall(format!("'{}' while deserializing {}", err, response)))
     }
 
     /// Gets the url of the feeder endpoint
