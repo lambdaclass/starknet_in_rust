@@ -4,7 +4,10 @@ use cairo_lang_starknet::{
     contract_class::{ContractClass as SierraContractClass, ContractEntryPoint},
 };
 use cairo_vm::felt::Felt252;
+use serde::Serialize;
+use serde_json::ser::Formatter;
 use starknet_crypto::{poseidon_hash_many, FieldElement, PoseidonHasher};
+use std::io::{self, Cursor};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
 
@@ -60,14 +63,20 @@ pub fn compute_sierra_class_hash(
     hasher.update(constructors);
 
     // Hash abi
-    let abi = serde_json_pythonic::to_string_pythonic(
-        &contract_class
+    let abi = {
+        let mut buf = Cursor::new(Vec::new());
+        let mut fmt = serde_json::Serializer::with_formatter(&mut buf, PythonJsonFormatter);
+
+        contract_class
             .abi
             .as_ref()
             .ok_or(ContractAddressError::MissingAbi)?
-            .items,
-    )
-    .map_err(|_| ContractAddressError::MissingAbi)?;
+            .items
+            .serialize(&mut fmt)
+            .map_err(|_| ContractAddressError::MissingAbi)?;
+
+        String::from_utf8(buf.into_inner()).unwrap()
+    };
 
     let abi_hash = FieldElement::from_byte_slice_be(&starknet_keccak(abi.as_bytes()).to_bytes_be())
         .map_err(|_err| {
@@ -140,5 +149,38 @@ mod tests {
             compute_sierra_class_hash(&sierra_contract_class).unwrap(),
             expected_result
         )
+    }
+}
+
+struct PythonJsonFormatter;
+
+impl Formatter for PythonJsonFormatter {
+    fn begin_array_value<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
+    where
+        W: ?Sized + io::Write,
+    {
+        if first {
+            Ok(())
+        } else {
+            writer.write_all(b", ")
+        }
+    }
+
+    fn begin_object_key<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
+    where
+        W: ?Sized + io::Write,
+    {
+        if first {
+            Ok(())
+        } else {
+            writer.write_all(b", ")
+        }
+    }
+
+    fn begin_object_value<W>(&mut self, writer: &mut W) -> io::Result<()>
+    where
+        W: ?Sized + io::Write,
+    {
+        writer.write_all(b": ")
     }
 }
