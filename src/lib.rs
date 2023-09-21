@@ -2,26 +2,22 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
-use std::{collections::HashMap, sync::Arc};
-
 use crate::{
+    definitions::block_context::BlockContext,
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallType, TransactionExecutionContext, TransactionExecutionInfo,
     },
     state::{
+        cached_state::CachedState,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, Transaction},
+    transaction::{error::TransactionError, fee::calculate_tx_fee, L1Handler, Transaction},
+    utils::Address,
 };
 use cairo_vm::felt::Felt252;
-use definitions::block_context::BlockContext;
-use execution::execution_entry_point::ExecutionResult;
-use state::cached_state::CachedState;
 use std::{collections::HashMap, sync::Arc};
-use transaction::{fee::calculate_tx_fee, L1Handler};
-use utils::Address;
 
 #[cfg(test)]
 #[macro_use]
