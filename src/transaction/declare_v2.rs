@@ -456,8 +456,6 @@ impl DeclareV2 {
                 self.compiled_class_hash.to_string(),
             ));
         }
-        // theorically class_hash == compiled_class_hash in v2, so this is like setting class_hash -> compiled_class_hash
-        // which is needed for get_compiled_class_hash later to work.
         state.set_compiled_class_hash(
             self.sierra_class_hash
                 .as_ref()

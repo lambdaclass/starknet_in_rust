@@ -63,6 +63,7 @@ impl StateReader for RpcStateReader {
         let nonce = self.0.get_nonce_at(&address);
         Ok(Felt252::from_bytes_be(nonce.bytes()))
     }
+
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         let (contract_address, key) = storage_entry;
         let address = ContractAddress(
@@ -75,12 +76,9 @@ impl StateReader for RpcStateReader {
         let value = self.0.get_storage_at(&address, &key);
         Ok(Felt252::from_bytes_be(value.bytes()))
     }
+
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
-        let address =
-            ContractAddress(PatriciaKey::try_from(StarkHash::new(*class_hash).unwrap()).unwrap());
-        let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(self.0.get_class_hash_at(&address).0.bytes());
-        Ok(bytes)
+        Ok(*class_hash)
     }
 }
 
@@ -359,6 +357,12 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     }
 }
 
+#[test_case(
+    "0x05b4665a81d89d00e529d2e298fce6606750c4f67faf43aafc893c0fc0f9d425",
+    RpcChain::MainNet,
+    222090,
+    4
+)]
 #[test_case(
     "0x01e91fa12be4424264c8cad29f481a67d5d8e23f7abf94add734d64b91c90021",
     RpcChain::MainNet,
