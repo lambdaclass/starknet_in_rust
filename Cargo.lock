@@ -1409,6 +1409,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd7cc57abe963c6d3b9d8be5b06ba7c8957a930305ca90304f24ef040aa6f961"
 
 [[package]]
+name = "codegen"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff61280aed771c3070e7dcc9e050c66f1eb1e3b96431ba66f9f74641d02fc41d"
+dependencies = [
+ "indexmap 1.9.3",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1462,6 +1471,12 @@ name = "core-foundation-sys"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
+
+[[package]]
+name = "coverage-helper"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fd441a9eb45a44e9dfa9ed405d4ab521f1b447ed62ef5d67ddc5a334a21b5ca"
 
 [[package]]
 name = "coverage-helper"
@@ -3996,9 +4011,28 @@ dependencies = [
  "awc",
  "cairo-vm",
  "clap",
- "coverage-helper",
+ "coverage-helper 0.2.0",
  "mimalloc",
  "num-traits 0.2.16",
+ "serde",
+ "starknet_in_rust",
+]
+
+[[package]]
+name = "starknet-rs-hint-codegen"
+version = "0.4.0"
+dependencies = [
+ "actix-web",
+ "assert_matches",
+ "awc",
+ "cairo-vm",
+ "clap",
+ "codegen",
+ "coverage-helper 0.1.1",
+ "mimalloc",
+ "num-traits 0.2.16",
+ "phf",
+ "phf_codegen",
  "serde",
  "starknet_in_rust",
 ]
@@ -4050,7 +4084,7 @@ dependencies = [
  "cairo-lang-starknet",
  "cairo-lang-utils",
  "cairo-vm",
- "coverage-helper",
+ "coverage-helper 0.2.0",
  "criterion",
  "flate2",
  "getset",

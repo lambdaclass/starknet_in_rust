@@ -12,7 +12,7 @@ cairo_1_tests = []
 metrics = []
 
 [workspace]
-members = ["cli", "fuzzer", "rpc_state_reader"]
+members = ["cli", "fuzzer", "rpc_state_reader", "starknet-rs-hint-codegen"]
 
 [workspace.dependencies]
 cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }

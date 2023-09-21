@@ -9,7 +9,7 @@ fn main() {
 
     write!(
         &mut file,
-        "static KEYWORDS: phf::Map<&'static str, Keyword> = {}",
+        "use super::deprecated_syscall_handler::Hint;\n\nstatic KEYWORDS: phf::Map<&'static str, Hint> = {}",
         phf_codegen::Map::new()
             .entry("syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)", "Hint::Deploy")
             .entry("syscall_handler.emit_event(segments=segments, syscall_ptr=ids.syscall_ptr)", "Hint::EmitEvent")

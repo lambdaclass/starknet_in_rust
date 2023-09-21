@@ -20,10 +20,10 @@ use cairo_vm::{
     types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use phf_macros::phf_map;
 use std::{any::Any, collections::HashMap};
 
-pub enum Hint {
+#[derive(Clone)]
+pub(crate) enum Hint {
     Deploy,
     EmitEvent,
     GetBlockNumber,
@@ -47,28 +47,13 @@ pub enum Hint {
     AddrIs250,
 }
 
-static HINT_CODES: phf::Map<&'static str, Hint> = phf_map! {
-    "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::Deploy,
-    "syscall_handler.emit_event(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::EmitEvent,
-    "syscall_handler.get_sequencer_address(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetSequencerAddress,
-    "syscall_handler.storage_write(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::StorageWrite,
-    "syscall_handler.storage_read(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::StorageRead,
-    "syscall_handler.get_block_number(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetBlockNumber,
-    "syscall_handler.library_call(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::LibraryCall,
-    "syscall_handler.library_call_l1_handler(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::LibraryCallL1Handler,
-    "syscall_handler.call_contract(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::CallContract,
-    "syscall_handler.get_caller_address(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetCallerAddress,
-    "syscall_handler.get_block_timestamp(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetBlockTimestamp,
-    "syscall_handler.send_message_to_l1(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::SendMessageToL1,
-    "syscall_handler.get_tx_signature(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetTxSignature,
-    "syscall_handler.get_tx_info(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetTxInfo,
-    "syscall_handler.get_contract_address(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::GetContractAddress,
-    "syscall_handler.delegate_call(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::DelegateCall,
-    "syscall_handler.delegate_l1_handler(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::DelegateCallL1Handler,
-    "syscall_handler.replace_class(segments=segments, syscall_ptr=ids.syscall_ptr)" => Hint::ReplaceClass,
-    "# Verify the assumptions on the relationship between 2**250, ADDR_BOUND and PRIME.\nADDR_BOUND = ids.ADDR_BOUND % PRIME\nassert (2**250 < ADDR_BOUND <= 2**251) and (2 * 2**250 < PRIME) and (\n        ADDR_BOUND * 2 > PRIME), \\\n    'normalize_address() cannot be used with the current constants.'\nids.is_small = 1 if ids.addr < ADDR_BOUND else 0" => Hint::AddrBoundPrime,
-    "ids.is_250 = 1 if ids.addr < 2**250 else 0" => Hint::AddrIs250,
-};
+include!("hint_code.rs");
+
+pub fn parse_keyword(keyword: &str) -> Option<Hint> {
+    KEYWORDS.get(keyword).cloned()
+}
+
+
 
 /// Definition of the deprecated syscall hint processor with associated structs
 pub struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
