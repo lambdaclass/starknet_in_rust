@@ -4,7 +4,6 @@ use cairo_vm::{
     types::exec_scope::ExecutionScopes,
     vm::{runners::cairo_runner::RunResources, vm_core::VirtualMachine},
 };
-#[deny(unused_imports)]
 use criterion::{criterion_group, criterion_main, Criterion};
 use starknet_in_rust::syscalls::deprecated_syscall_handler::DeprecatedSyscallHintProcessor;
 use starknet_in_rust::{
@@ -13,7 +12,8 @@ use starknet_in_rust::{
 };
 use std::collections::HashMap;
 use std::{any::Any, hint::black_box};
-#[allow(dead_code)]
+
+ #[allow(dead_code)]
 fn criterion_benchmark(c: &mut Criterion) {
     let exec_scopes = &mut ExecutionScopes::new();
     let ids_names = vec!["syscall_ptr"];
