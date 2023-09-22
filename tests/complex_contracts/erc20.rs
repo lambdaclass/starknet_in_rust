@@ -1,8 +1,8 @@
-// Since it has nothing exported, restrict compilation on test mode only. Fixes unused import
-// warnings without disabling them.
-#![cfg(test)]
+use std::{collections::HashMap, sync::Arc};
 
-use crate::{
+use cairo_vm::felt::{felt_str, Felt252};
+use num_traits::Zero;
+use starknet_in_rust::{
     call_contract,
     definitions::block_context::{BlockContext, StarknetChainId},
     execution::{
@@ -10,22 +10,13 @@ use crate::{
     },
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::CachedState,
-        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
-        in_memory_state_reader::InMemoryStateReader,
-        state_api::State,
+        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
         ExecutionResourcesManager,
     },
     transaction::DeployAccount,
     utils::{calculate_sn_keccak, Address, ClassHash},
-    EntryPointType,
+    CasmContractClass, EntryPointType,
 };
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::{felt_str, Felt252};
-use num_traits::Zero;
-use std::sync::Arc;
-
-pub const ERC20_CONTRACT_PATH: &str = "starknet_programs/cairo2/ERC20.casm";
 
 #[test]
 fn test_erc20_cairo2() {
@@ -41,15 +32,14 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let contract_class_cache = PermanentContractClassCache::default();
+    let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.set_contract_class(
+    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.insert(
         erc20_class_hash,
         CompiledClass::Casm(Arc::new(test_contract_class)),
     );
@@ -63,7 +53,7 @@ fn test_erc20_cairo2() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let name_ = Felt252::from_bytes_be(b"some-token");
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");
@@ -118,7 +108,7 @@ fn test_erc20_cairo2() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();

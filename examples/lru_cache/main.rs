@@ -1,13 +1,18 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
 use lru::LruCache;
 use starknet_in_rust::{
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::contract_class_cache::ContractClassCache,
-    testing::state::StarknetState,
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+    },
+    transaction::{Declare, Deploy, InvokeFunction},
     utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use std::{
@@ -35,33 +40,65 @@ fn run_contract(
     calldata: impl Into<Vec<Felt252>>,
     contract_cache: Arc<LruContractCache>,
 ) -> Vec<Felt252> {
-    let mut state = StarknetState::new(None, contract_cache.clone());
+    let block_context = BlockContext::default();
+    let chain_id = block_context.starknet_os_config().chain_id().clone();
+    let sender_address = Address(1.into());
+    let signature = vec![];
+
+    let state_reader = Arc::new(InMemoryStateReader::default());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     let contract_class = ContractClass::from_path(contract_path.as_ref()).unwrap();
-    state.declare(contract_class.clone()).unwrap();
 
-    let (contract_address, _) = state
-        .deploy(contract_class, vec![], Felt252::default(), None, 0)
-        .unwrap();
+    let declare_tx = Declare::new(
+        contract_class.clone(),
+        chain_id.clone(),
+        sender_address,
+        0,
+        0.into(),
+        signature.clone(),
+        0.into(),
+    )
+    .unwrap();
+
+    declare_tx.execute(&mut state, &block_context).unwrap();
+
+    let deploy_tx = Deploy::new(
+        Default::default(),
+        contract_class,
+        Vec::new(),
+        block_context.starknet_os_config().chain_id().clone(),
+        TRANSACTION_VERSION.clone(),
+    )
+    .unwrap();
+
+    deploy_tx.execute(&mut state, &block_context).unwrap();
 
     let entry_point_selector =
         Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_ref().as_bytes()));
-    let caller_address = Address::default();
 
-    let call_info = state
-        .execute_entry_point_raw(
-            contract_address,
-            entry_point_selector,
-            calldata.into(),
-            caller_address,
-        )
-        .unwrap();
+    let invoke_tx = InvokeFunction::new(
+        deploy_tx.contract_address.clone(),
+        entry_point_selector,
+        0,
+        TRANSACTION_VERSION.clone(),
+        calldata.into(),
+        signature,
+        chain_id,
+        Some(0.into()),
+    )
+    .unwrap();
+
+    let invoke_tx_execution_info = invoke_tx.execute(&mut state, &block_context, 0).unwrap();
 
     // Store the local cache changes into the shared cache. This updates the shared cache with all
     // the contracts used on this state.
-    contract_cache.extend(state.state.drain_private_contract_class_cache());
+    contract_cache.extend(state.drain_private_contract_class_cache());
 
-    call_info.retdata
+    invoke_tx_execution_info.call_info.unwrap().retdata
 }
 
 pub struct LruContractCache {

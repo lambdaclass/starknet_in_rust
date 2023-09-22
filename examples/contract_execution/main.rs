@@ -11,19 +11,25 @@
 
 use cairo_vm::felt::Felt252;
 use starknet_in_rust::{
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::contract_class_cache::PermanentContractClassCache,
-    testing::state::StarknetState,
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State,
+    },
+    transaction::{Declare, Deploy, InvokeFunction, Transaction},
     utils::{calculate_sn_keccak, Address},
 };
 use std::{path::Path, sync::Arc};
 
 fn main() {
     // replace this with the path to your compiled contract
-    let contract_path = "starknet_programs/factorial.json";
+    let contract_path = "starknet_programs/fibonacci.json";
 
     // replace this with the name of your entrypoint
-    let entry_point: &str = "factorial";
+    let entry_point: &str = "fib";
 
     // replace this with the arguments for the entrypoint
     let calldata: Vec<Felt252> = [10.into()].to_vec();
@@ -43,12 +49,24 @@ fn main() {
 fn test_contract(
     contract_path: impl AsRef<Path>,
     entry_point: &str,
-    calldata: Vec<Felt252>,
+    call_data: Vec<Felt252>,
 ) -> Vec<Felt252> {
+    //* --------------------------------------------
+    //*             Initialize needed variables
+    //* --------------------------------------------
+    let block_context = BlockContext::default();
+    let chain_id = block_context.starknet_os_config().chain_id().clone();
+    let sender_address = Address(1.into());
+    let signature = vec![];
+
     //* --------------------------------------------
     //*             Initialize state
     //* --------------------------------------------
-    let mut state = StarknetState::new(None, Arc::new(PermanentContractClassCache::default()));
+    let state_reader = Arc::new(InMemoryStateReader::default());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     //* --------------------------------------------
     //*          Read contract from file
@@ -59,37 +77,74 @@ fn test_contract(
     //* --------------------------------------------
     //*        Declare new contract class
     //* --------------------------------------------
-    state
-        .declare(contract_class.clone())
-        .expect("Could not declare the contract class");
+    let declare_tx = Declare::new(
+        contract_class.clone(),
+        chain_id.clone(),
+        sender_address,
+        0, // max fee
+        0.into(),
+        signature.clone(),
+        0.into(), // nonce
+    )
+    .expect("couldn't create declare transaction");
+
+    declare_tx
+        .execute(&mut state, &block_context)
+        .expect("could not declare the contract class");
 
     //* --------------------------------------------
     //*     Deploy new contract class instance
     //* --------------------------------------------
-    let (contract_address, _) = state
-        .deploy(contract_class, vec![], Default::default(), None, 0)
-        .expect("Could not deploy contract");
+
+    let deploy = Deploy::new(
+        Default::default(), // salt
+        contract_class.clone(),
+        vec![], // call data
+        block_context.starknet_os_config().chain_id().clone(),
+        TRANSACTION_VERSION.clone(),
+    )
+    .unwrap();
+
+    state
+        .set_contract_class(
+            &deploy.contract_hash,
+            &CompiledClass::Deprecated(Arc::new(contract_class)),
+        )
+        .unwrap();
+    let contract_address = deploy.contract_address.clone();
+
+    let tx = Transaction::Deploy(deploy);
+
+    tx.execute(&mut state, &block_context, 0)
+        .expect("could not deploy contract");
 
     //* --------------------------------------------
     //*        Execute contract entrypoint
     //* --------------------------------------------
     let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
 
-    let caller_address = Address::default();
+    let invoke_tx = InvokeFunction::new(
+        contract_address,
+        entry_point_selector,
+        0,
+        TRANSACTION_VERSION.clone(),
+        call_data,
+        signature,
+        chain_id,
+        Some(0.into()),
+    )
+    .unwrap();
 
-    let callinfo = state
-        .execute_entry_point_raw(
-            contract_address,
-            entry_point_selector,
-            calldata,
-            caller_address,
-        )
-        .expect("Could not execute entry point");
+    let tx = Transaction::InvokeFunction(invoke_tx);
+    let tx_exec_info = tx.execute(&mut state, &block_context, 0).unwrap();
 
     //* --------------------------------------------
     //*          Extract return values
     //* --------------------------------------------
-    callinfo.retdata
+    tx_exec_info
+        .call_info
+        .expect("call info should exist")
+        .retdata
 }
 
 #[test]
