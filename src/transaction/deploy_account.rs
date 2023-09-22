@@ -67,7 +67,7 @@ pub struct DeployAccount {
 
 impl DeployAccount {
     #[allow(clippy::too_many_arguments)]
-    /// Constructor creatte a new DeployAccount.
+    /// Constructor create a new DeployAccount.
     pub fn new(
         class_hash: ClassHash,
         max_fee: u128,
