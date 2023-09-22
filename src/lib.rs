@@ -42,7 +42,6 @@ pub mod serde_structs;
 pub mod services;
 pub mod state;
 pub mod syscalls;
-pub mod testing;
 pub mod transaction;
 pub mod utils;
 
@@ -222,14 +221,14 @@ mod test {
             cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
             state_api::State, ExecutionResourcesManager,
         },
-        testing::{
-            create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
-            TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
-        },
         transaction::{
             Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
         },
-        utils::{felt_to_hash, Address, ClassHash},
+        utils::{
+            felt_to_hash,
+            test_utils::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH, TEST_ACCOUNT_CONTRACT_ADDRESS},
+            Address, ClassHash,
+        },
     };
     use cairo_lang_starknet::{
         casm_contract_class::CasmContractClass,
