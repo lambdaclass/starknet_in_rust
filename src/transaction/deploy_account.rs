@@ -155,7 +155,7 @@ impl DeployAccount {
         }
     }
 
-    /// Execute a deployment transaction.
+    /// Execute a deploy account transaction.
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
