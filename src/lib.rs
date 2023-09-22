@@ -46,7 +46,6 @@ pub mod serde_structs;
 pub mod services;
 pub mod state;
 pub mod syscalls;
-pub mod testing;
 pub mod transaction;
 pub mod utils;
 
@@ -224,14 +223,14 @@ mod test {
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::state::state_api::State;
-    use crate::testing::{
-        create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
-        TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
-    };
     use crate::transaction::{
         Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
     };
     use crate::utils::felt_to_hash;
+    use crate::utils::test_utils::{
+        create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
+        TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
+    };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
     use cairo_vm::felt::{felt_str, Felt252};
