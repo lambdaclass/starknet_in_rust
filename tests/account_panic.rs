@@ -35,7 +35,7 @@ fn account_panic() {
 
     contract_class_cache.insert(
         account_class_hash,
-        CompiledClass::Casm(Arc::new(account_contract_class.clone())),
+        CompiledClass::Casm(Arc::new(account_contract_class)),
     );
     contract_class_cache.insert(
         contract_class_hash,
