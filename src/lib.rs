@@ -728,7 +728,7 @@ mod test {
         let address = CONTRACT_ADDRESS.clone();
         // new consumes more execution time than raw struct instantiation
         let declare_tx = Transaction::Declare(
-            Declare::new_with_contract_class(
+            Declare::new(
                 class,
                 StarknetChainId::TestNet.to_felt(),
                 address,

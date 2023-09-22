@@ -157,9 +157,16 @@ mod tests {
                 stark_felt!("38bd34c31a0a5c"),
             ])
         );
-        assert_eq!(tx_trace.validate_invocation.as_ref().unwrap().retdata, Some(vec![]));
+        assert_eq!(
+            tx_trace.validate_invocation.as_ref().unwrap().retdata,
+            Some(vec![])
+        );
         assert_eq_sorted!(
-            tx_trace.validate_invocation.as_ref().unwrap().execution_resources,
+            tx_trace
+                .validate_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources,
             ExecutionResources {
                 n_steps: 790,
                 n_memory_holes: 51,
@@ -171,7 +178,12 @@ mod tests {
             }
         );
         assert_eq!(
-            tx_trace.validate_invocation.as_ref().unwrap().internal_calls.len(),
+            tx_trace
+                .validate_invocation
+                .as_ref()
+                .unwrap()
+                .internal_calls
+                .len(),
             1
         );
 
@@ -258,7 +270,11 @@ mod tests {
             Some(vec![1u128.into()])
         );
         assert_eq_sorted!(
-            tx_trace.fee_transfer_invocation.as_ref().unwrap().execution_resources,
+            tx_trace
+                .fee_transfer_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources,
             ExecutionResources {
                 n_steps: 586,
                 n_memory_holes: 42,
@@ -268,7 +284,15 @@ mod tests {
                 ]),
             }
         );
-        assert_eq!(tx_trace.fee_transfer_invocation.as_ref().unwrap().internal_calls.len(), 1);
+        assert_eq!(
+            tx_trace
+                .fee_transfer_invocation
+                .as_ref()
+                .unwrap()
+                .internal_calls
+                .len(),
+            1
+        );
     }
 
     #[test]
