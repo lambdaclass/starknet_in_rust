@@ -1,15 +1,14 @@
-use std::env;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
 
 fn main() {
     let path = Path::new("src").join("syscalls").join("hint_code.rs");
-    let mut file = BufWriter::new(File::create(&path).unwrap());
+    let mut file = BufWriter::new(File::create(path).unwrap());
 
     write!(
         &mut file,
-        "use super::deprecated_syscall_handler::Hint;\n\nstatic KEYWORDS: phf::Map<&'static str, Hint> = {}",
+        "use super::deprecated_syscall_handler::Hint;\n\nstatic HINTCODE: phf::Map<&'static str, Hint> = {}",
         phf_codegen::Map::new()
             .entry("syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)", "Hint::Deploy")
             .entry("syscall_handler.emit_event(segments=segments, syscall_ptr=ids.syscall_ptr)", "Hint::EmitEvent")
@@ -34,5 +33,5 @@ fn main() {
             .build()
     )
     .unwrap();
-    write!(&mut file, ";\n").unwrap();
+    writeln!(&mut file, ";").unwrap();
 }

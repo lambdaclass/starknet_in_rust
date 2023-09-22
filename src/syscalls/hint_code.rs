@@ -1,6 +1,6 @@
 use super::deprecated_syscall_handler::Hint;
 
-static KEYWORDS: phf::Map<&'static str, Hint> = ::phf::Map {
+pub(crate) static HINTCODE: phf::Map<&'static str, Hint> = ::phf::Map {
     key: 12913932095322966823,
     disps: &[
         (1, 0),

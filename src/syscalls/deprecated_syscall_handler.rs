@@ -23,7 +23,7 @@ use cairo_vm::{
 use std::{any::Any, collections::HashMap};
 
 #[derive(Clone)]
-pub(crate) enum Hint {
+pub enum Hint {
     Deploy,
     EmitEvent,
     GetBlockNumber,
@@ -46,14 +46,6 @@ pub(crate) enum Hint {
     AddrBoundPrime,
     AddrIs250,
 }
-
-include!("hint_code.rs");
-
-pub fn parse_keyword(keyword: &str) -> Option<Hint> {
-    KEYWORDS.get(keyword).cloned()
-}
-
-
 
 /// Definition of the deprecated syscall hint processor with associated structs
 pub struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
@@ -110,7 +102,7 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
 
         let hint_code = &hint_data.code;
         let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-        if let Some(syscall) = HINT_CODES.get(hint_code) {
+        if let Some(syscall) = super::hint_code::HINTCODE.get(hint_code) {
             match syscall {
                 Hint::AddrBoundPrime => {
                     other_syscalls::addr_bound_prime(vm, hint_data, constants)?;
