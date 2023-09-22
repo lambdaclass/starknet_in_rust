@@ -1,43 +1,21 @@
-#![allow(unused_imports)]
-use std::{collections::HashMap, io::Bytes, path::Path, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-use crate::{
+use cairo_vm::felt::{felt_str, Felt252};
+use num_traits::Zero;
+use starknet_in_rust::{
     call_contract,
-    definitions::{
-        block_context::{BlockContext, StarknetChainId},
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    },
+    definitions::block_context::{BlockContext, StarknetChainId},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::CachedState,
-        in_memory_state_reader::InMemoryStateReader,
-        state_api::{State, StateReader},
+        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
         ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, DeployAccount, InvokeFunction},
-    utils::calculate_sn_keccak,
-    EntryPointType, Felt252,
-};
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::felt_str;
-use lazy_static::lazy_static;
-use num_traits::Zero;
-pub const ERC20_CONTRACT_PATH: &str = "starknet_programs/cairo2/ERC20.casm";
-use crate::{
-    state::state_cache::StorageEntry,
-    utils::{felt_to_hash, Address, ClassHash},
-};
-
-use super::{
-    new_starknet_block_context_for_testing, ACCOUNT_CONTRACT_PATH, ACTUAL_FEE,
-    TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_CLASS_HASH, TEST_CLASS_HASH,
-    TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH, TEST_ERC20_ACCOUNT_BALANCE_KEY,
-    TEST_ERC20_CONTRACT_CLASS_HASH,
+    transaction::DeployAccount,
+    utils::{calculate_sn_keccak, Address, ClassHash},
+    CasmContractClass, EntryPointType,
 };
 
 #[test]
@@ -130,7 +108,7 @@ fn test_erc20_cairo2() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
