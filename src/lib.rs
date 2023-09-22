@@ -229,7 +229,14 @@ mod test {
         transaction::{
             Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
         },
-        utils::{felt_to_hash, Address, ClassHash, test_utils::{TEST_CONTRACT_PATH, create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH}},
+        utils::{
+            felt_to_hash,
+            test_utils::{
+                create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
+                TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
+            },
+            Address, ClassHash,
+        },
     };
     use cairo_lang_starknet::{
         casm_contract_class::CasmContractClass,
