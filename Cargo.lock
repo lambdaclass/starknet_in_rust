@@ -3871,7 +3871,6 @@ dependencies = [
  "pretty_assertions_sorted",
  "serde",
  "serde_json",
- "serde_json_pythonic",
  "sha3",
  "starknet",
  "starknet-crypto 0.5.1",
