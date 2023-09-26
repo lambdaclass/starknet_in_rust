@@ -23,8 +23,16 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address},
 };
 use std::{path::Path, sync::Arc};
+use tracing_subscriber::EnvFilter;
 
 fn main() {
+    tracing::subscriber::set_global_default(
+        tracing_subscriber::FmtSubscriber::builder()
+            .with_env_filter(EnvFilter::from_default_env())
+            .finish(),
+    )
+    .unwrap();
+
     // replace this with the path to your compiled contract
     let contract_path = "starknet_programs/fibonacci.json";
 

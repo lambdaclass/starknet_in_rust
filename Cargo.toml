@@ -15,53 +15,56 @@ metrics = []
 members = ["cli", "fuzzer", "rpc_state_reader"]
 
 [workspace.dependencies]
-cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
-starknet_api = "0.4.1"
-num-traits = "0.2.15"
-starknet = "0.5.0"
-thiserror = "1.0.32"
-cairo-lang-starknet = "2.1.0-rc4"
 cairo-lang-casm = "2.1.0-rc4"
 cairo-lang-runner = "2.1.0-rc4"
 cairo-lang-sierra = "2.1.0-rc4"
+cairo-lang-starknet = "2.1.0-rc4"
 cairo-lang-utils = "2.1.0-rc4"
+cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
+num-traits = "0.2.15"
+starknet = "0.5.0"
+starknet_api = "0.4.1"
+thiserror = "1.0.32"
 
 [dependencies]
-cairo-lang-starknet = { workspace = true }
+anyhow = "1.0.66"
+base64 = { version = "0.21.0", default-features = false, features = ["alloc"] }
 cairo-lang-casm = { workspace = true }
 cairo-lang-runner = { workspace = true }
 cairo-lang-sierra = { workspace = true }
+cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
+flate2 = "1.0.25"
 getset = "0.1.2"
+hex = "0.4.3"
+# TODO: Replace with sha3. We should look how to integrate it correctly to calculate sn_keccak
+keccak = "0.1.3"
 lazy_static = "1.4.0"
+mimalloc = { version = "0.1.29", default-features = false, optional = true }
 num-bigint = { version = "0.4", features = ["serde"] }
 num-integer = "0.1.45"
 num-traits = { workspace = true }
+once_cell = "1.17.1"
+sha3 = "0.10.1"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0", features = [
     "arbitrary_precision",
     "raw_value",
 ] }
-sha3 = "0.10.1"
-# TODO: Replace with sha3. We should look how to integrate it correctly to calculate sn_keccak
-keccak = "0.1.3"
+serde_json_pythonic = "0.1.2"
+starknet = { workspace = true }
 starknet_api = { workspace = true }
 starknet-crypto = "0.5.1"
 thiserror = { workspace = true }
-mimalloc = { version = "0.1.29", default-features = false, optional = true }
-hex = "0.4.3"
-anyhow = "1.0.66"
-once_cell = "1.17.1"
-starknet = { workspace = true }
-base64 = { version = "0.21.0", default-features = false, features = ["alloc"] }
-flate2 = "1.0.25"
+tracing = "0.1.37"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 coverage-helper = "0.2.0"
 lru = "0.11.0"
 pretty_assertions_sorted = "1.2.3"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [[bench]]
 path = "bench/internals.rs"
