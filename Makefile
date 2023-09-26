@@ -183,10 +183,10 @@ test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	$(MAKE) test-cairo-2
 
 test-cairo-1:
-	cargo nextest run --workspace --all-targets --features=cairo_1_tests
+	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics
 
 test-cairo-2:
-	cargo nextest run --workspace --all-targets
+	cargo nextest run --workspace --all-targets --features=metrics
 
 test-doctests:
 	cargo test --workspace --doc
