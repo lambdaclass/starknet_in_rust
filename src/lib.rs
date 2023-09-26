@@ -226,7 +226,10 @@ mod test {
         },
         utils::{
             felt_to_hash,
-            test_utils::{create_account_tx_test_state, TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH, TEST_ACCOUNT_CONTRACT_ADDRESS},
+            test_utils::{
+                create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
+                TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
+            },
             Address, ClassHash,
         },
     };
