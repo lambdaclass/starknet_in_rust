@@ -138,10 +138,10 @@ cairo-%.tar:
 # Normal rules.
 # =================
 
-build: compile-cairo compile-starknet
+build: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo build --release --workspace
 
-check: compile-cairo compile-starknet
+check: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo check --workspace --all-targets
 
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
@@ -183,10 +183,10 @@ test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	$(MAKE) test-cairo-2
 
 test-cairo-1:
-	cargo nextest run --workspace --all-targets --features=cairo_1_tests
+	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics
 
 test-cairo-2:
-	cargo nextest run --workspace --all-targets
+	cargo nextest run --workspace --all-targets --features=metrics
 
 test-doctests:
 	cargo test --workspace --doc
