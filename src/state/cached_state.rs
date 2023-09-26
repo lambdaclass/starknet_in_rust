@@ -921,7 +921,7 @@ mod tests {
     #[test]
     fn test_cache_hit_miss_counter() {
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut cached_state = CachedState::new(state_reader, None, None);
+        let mut cached_state = CachedState::new(state_reader, HashMap::default());
 
         let address = Address(1.into());
 
