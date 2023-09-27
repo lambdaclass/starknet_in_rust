@@ -201,6 +201,7 @@ impl ExecutionEntryPoint {
             EntryPointType::External => &contract_class.entry_points_by_type.external,
             EntryPointType::Constructor => &contract_class.entry_points_by_type.constructor,
             EntryPointType::L1Handler => &contract_class.entry_points_by_type.l1_handler,
+            _ => return Err(TransactionError::EntryPointNotFound),
         };
 
         let mut default_entry_point = None;

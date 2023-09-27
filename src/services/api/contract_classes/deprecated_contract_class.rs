@@ -2,15 +2,19 @@ use crate::core::contract_address::compute_hinted_class_hash;
 use crate::services::api::contract_class_errors::ContractClassError;
 use cairo_vm::felt::{Felt252, PRIME_STR};
 use cairo_vm::serde::deserialize_program::{
-    deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
-    ReferenceManager,
+    deserialize_array_of_bigint_hex, deserialize_felt_hex, Attribute, BuiltinName, HintParams,
+    Identifier, ReferenceManager,
 };
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
 use core::str::FromStr;
 use getset::{CopyGetters, Getters};
+use serde;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use starknet_api::deprecated_contract_class::{ContractClassAbiEntry, EntryPoint};
+use starknet_api::deprecated_contract_class::{
+    number_or_string, ContractClassAbiEntry, EntryPoint,
+};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -20,17 +24,32 @@ pub type AbiType = Vec<ContractClassAbiEntry>;
 //       Entry Point types
 // -------------------------------
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub enum EntryPointType {
+    #[serde(
+        rename = "function",
+        alias = "FUNCTION",
+        alias = "external",
+        alias = "EXTERNAL"
+    )]
     External,
+    #[serde(rename = "l1_handler", alias = "L1_HANDLER")]
     L1Handler,
+    #[serde(rename = "constructor", alias = "CONSTRUCTOR")]
     Constructor,
+    #[serde(rename = "event", alias = "EVENT")]
+    Event,
+    #[serde(rename = "struct", alias = "STRUCT")]
+    Struct,
 }
 
-#[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq)]
+#[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq, Deserialize)]
 pub struct ContractEntryPoint {
+    #[serde(deserialize_with = "deserialize_felt_hex")]
     #[getset(get = "pub")]
     selector: Felt252,
+    #[serde(deserialize_with = "number_or_string")]
     #[getset(get_copy = "pub")]
     offset: usize,
 }
@@ -71,16 +90,24 @@ impl From<starknet_api::deprecated_contract_class::EntryPointType> for EntryPoin
 //         Contract Class
 // -------------------------------
 
-#[derive(Clone, Debug, Eq, Getters, PartialEq)]
+#[derive(Clone, Debug, Eq, Getters, PartialEq, Deserialize)]
 pub struct ContractClass {
     #[getset(get = "pub")]
+    #[serde(deserialize_with = "deserialize_program")]
     pub(crate) program: Program,
     #[getset(get = "pub")]
+    #[serde(skip)]
     pub(crate) hinted_class_hash: Felt252,
     #[getset(get = "pub")]
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     #[getset(get = "pub")]
     pub(crate) abi: Option<AbiType>,
+}
+
+fn deserialize_program<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Program, D::Error> {
+    use cairo_vm::serde::deserialize_program::{parse_program_json, ProgramJson};
+    let json = ProgramJson::deserialize(d)?;
+    Ok(parse_program_json(json, None).unwrap())
 }
 
 impl ContractClass {
@@ -144,18 +171,10 @@ impl ContractClass {
     pub fn from_program_json_and_class_hash(
         program_json: &str,
         hinted_class_hash: Felt252,
-    ) -> Result<Self, ContractClassError> {
-        let contract_class: starknet_api::deprecated_contract_class::ContractClass =
-            serde_json::from_str(program_json).map_err(|_| ContractClassError::ParseError)?;
-        let program = to_cairo_runner_program(contract_class.program)
-            .map_err(|e| ContractClassError::ProgramError(e.to_string()))?;
-        let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
-        Ok(ContractClass {
-            hinted_class_hash,
-            program,
-            entry_points_by_type,
-            abi: contract_class.abi,
-        })
+    ) -> Result<Self, ProgramError> {
+        let mut contract_class: ContractClass = serde_json::from_str(program_json)?;
+        contract_class.hinted_class_hash = hinted_class_hash;
+        Ok(contract_class)
     }
 
     /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON
