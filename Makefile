@@ -210,5 +210,5 @@ benchmark: compile-cairo compile-starknet
 	./scripts/bench-fibonacci.sh
 	./scripts/bench-deploy.sh
 
-regenerate-hints:: 
+regenerate map-hints:
 	cargo run --bin starknet-rs-hint-codegen --manifest-path starknet-rs-hint-codegen/Cargo.toml
