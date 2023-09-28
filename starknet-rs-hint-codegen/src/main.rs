@@ -1,9 +1,8 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
-use starknet_in_rust::syscalls::hint_code;
-use starknet_in_rust::syscalls::hint_code::*;
 
+use starknet_in_rust::syscalls::hint_code;
 
 fn main() {
     let path = Path::new("src").join("syscalls").join("hint_code_map.rs");
