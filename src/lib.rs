@@ -2,26 +2,22 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
-use std::{collections::HashMap, sync::Arc};
-
 use crate::{
+    definitions::block_context::BlockContext,
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallType, TransactionExecutionContext, TransactionExecutionInfo,
     },
     state::{
+        cached_state::CachedState,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, Transaction},
+    transaction::{error::TransactionError, fee::calculate_tx_fee, L1Handler, Transaction},
+    utils::Address,
 };
-
 use cairo_vm::felt::Felt252;
-use definitions::block_context::BlockContext;
-use execution::execution_entry_point::ExecutionResult;
-use state::cached_state::CachedState;
-use transaction::{fee::calculate_tx_fee, L1Handler};
-use utils::Address;
+use std::{collections::HashMap, sync::Arc};
 
 #[cfg(test)]
 #[macro_use]
@@ -205,52 +201,48 @@ pub fn execute_transaction<S: StateReader>(
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-    use std::path::PathBuf;
-    use std::sync::Arc;
-
-    use crate::core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash};
-    use crate::definitions::constants::INITIAL_GAS_COST;
-    use crate::definitions::{
-        block_context::StarknetChainId,
-        constants::{
-            EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            VALIDATE_ENTRY_POINT_SELECTOR,
-        },
-    };
-    use crate::estimate_fee;
-    use crate::estimate_message_fee;
-    use crate::hash_utils::calculate_contract_address;
-    use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
-    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-    use crate::state::state_api::State;
-    use crate::transaction::{
-        Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
-    };
-    use crate::utils::felt_to_hash;
-    use crate::utils::test_utils::{
-        create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
-        TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
-    };
-    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-    use cairo_vm::felt::{felt_str, Felt252};
-    use num_traits::{Num, One, Zero};
-
     use crate::{
         call_contract,
-        definitions::block_context::BlockContext,
+        core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash},
+        definitions::{
+            block_context::{BlockContext, StarknetChainId},
+            constants::{
+                EXECUTE_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST,
+                VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR,
+            },
+        },
+        estimate_fee, estimate_message_fee,
+        hash_utils::calculate_contract_address,
+        services::api::contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
         simulate_transaction,
         state::{
             cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-            ExecutionResourcesManager,
+            state_api::State, ExecutionResourcesManager,
         },
-        utils::{Address, ClassHash},
+        transaction::{
+            Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
+        },
+        utils::{
+            felt_to_hash,
+            test_utils::{
+                create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
+                TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
+            },
+            Address, ClassHash,
+        },
     };
-
-    use crate::services::api::contract_classes::compiled_class::CompiledClass;
+    use cairo_lang_starknet::{
+        casm_contract_class::CasmContractClass,
+        contract_class::ContractClass as SierraContractClass,
+    };
+    use cairo_vm::felt::{felt_str, Felt252};
     use lazy_static::lazy_static;
+    use num_traits::{Num, One, Zero};
     use pretty_assertions_sorted::assert_eq;
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     lazy_static! {
         // include_str! doesn't seem to work in CI
