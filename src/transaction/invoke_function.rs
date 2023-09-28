@@ -1,3 +1,7 @@
+use super::{
+    fee::{calculate_tx_fee, charge_fee},
+    Transaction,
+};
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -11,27 +15,19 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
         cached_state::{CachedState, TransactionalCachedState},
-        ExecutionResourcesManager,
-    },
-    state::{
         state_api::{State, StateReader},
-        StateDiff,
+        ExecutionResourcesManager, StateDiff,
     },
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
-
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-
-use super::{
-    fee::{calculate_tx_fee, charge_fee},
-    Transaction,
-};
+use std::fmt::Debug;
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -293,6 +289,14 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::InvokeFunction,
+        self.version = ?self.version,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.entry_point_selector = ?self.entry_point_selector,
+        self.entry_point_type = ?self.entry_point_type,
+    ))]
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,

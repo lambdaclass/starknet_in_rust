@@ -10,6 +10,7 @@ use cairo_vm::{
     },
 };
 use num_traits::{Num, One, Zero};
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId},
@@ -170,9 +171,9 @@ fn test_contract<'a>(
         accessed_storage_keys.collect()
     );
     assert_eq!(result.calldata, calldata);
-    assert_eq!(result.retdata, return_data.into());
-    assert_eq!(result.internal_calls, internal_calls.into());
-    assert_eq!(result.execution_resources, Some(execution_resources));
+    assert_eq_sorted!(result.retdata, return_data.into());
+    assert_eq_sorted!(result.internal_calls, internal_calls.into());
+    assert_eq!(result.execution_resources, execution_resources);
 
     assert_eq!(result.gas_consumed, 0);
     assert!(!result.failure_flag);
@@ -906,13 +907,20 @@ fn deploy_with_constructor_syscall() {
         10,
     )
     .unwrap();
+    let entry_point_selector = Felt252::from_str_radix(
+        "1159040026212278395030414237414753050475174923702621880048416706425641521556",
+        10,
+    )
+    .unwrap();
 
     let deploy_class_hash = [2u8; 32];
+    let caller_address = Address(11111.into());
+
     test_contract(
         "starknet_programs/syscalls.json",
         "test_deploy_with_constructor",
         [1; 32],
-        Address(11111.into()),
+        caller_address.clone(),
         Address(0.into()),
         BlockContext::default(),
         None,
@@ -931,7 +939,26 @@ fn deploy_with_constructor_syscall() {
             0.into(),
             550.into(),
         ],
-        [],
+        [CallInfo {
+            caller_address,
+            call_type: Some(CallType::Call),
+            contract_address: Address(deploy_address.clone()),
+            class_hash: Some(deploy_class_hash),
+            entry_point_selector: Some(entry_point_selector),
+            entry_point_type: Some(EntryPointType::Constructor),
+            calldata: [550.into()].to_vec(),
+            execution_resources: ExecutionResources {
+                n_steps: 40,
+                n_memory_holes: 0,
+                ..Default::default()
+            },
+            accessed_storage_keys: HashSet::<[u8; 32]>::from([[
+                2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27,
+                162, 147, 169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
+            ]]),
+            storage_read_values: [0.into()].to_vec(),
+            ..Default::default()
+        }],
         [deploy_address],
         ExecutionResources {
             n_steps: 84,
@@ -982,86 +1009,113 @@ fn test_deploy_and_call_contract_syscall() {
             new_constant.clone(),
         ],
         [
-        // Invoke storage_var_and_constructor.cairo mult_constant function
-        CallInfo {
-            caller_address: Address(11111.into()),
-            call_type: Some(CallType::Call),
-            contract_address: deploy_address.clone(),
-            code_address: None,
-            class_hash: Some(deploy_class_hash),
-            entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "1576037374104670872807053137865113122553607263175471701007015754752102201893",
-                    10,
-                )
-                .unwrap(),
-            ),
-            entry_point_type: Some(EntryPointType::External),
-            calldata: vec![4.into()],
-            retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
-            storage_read_values: vec![constructor_constant.clone()],
-            accessed_storage_keys: HashSet::from([constant_storage_key]),
-            execution_resources: Some(ExecutionResources {
-                n_steps: 52,
+            // constructor
+            CallInfo {
+                caller_address: Address(11111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: deploy_address.clone(),
+                code_address: None,
+                class_hash: Some(deploy_class_hash),
+                entry_point_selector: Some(
+                    Felt252::from_str_radix(
+                        "1159040026212278395030414237414753050475174923702621880048416706425641521556",
+                        10,
+                    )
+                    .unwrap(),
+                ),
+                entry_point_type: Some(EntryPointType::Constructor),
+                calldata: vec![550.into()],
+                retdata: vec![],
+                storage_read_values: vec![0.into()],
+                accessed_storage_keys: HashSet::from([constant_storage_key]),
+                execution_resources: ExecutionResources {
+                    n_steps: 40,
+                    ..Default::default()
+                },
                 ..Default::default()
-            }),
-            ..Default::default()
-        },
-        // Invoke storage_var_and_constructor.cairo set_constant function
-        CallInfo {
-            caller_address: Address(11111.into()),
-            call_type: Some(CallType::Call),
-            contract_address: deploy_address.clone(),
-            code_address: None,
-            class_hash: Some(deploy_class_hash),
-            entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "1201037417712951658445715615949920673423990292207294106968654696818998525373",
-                    10,
-                )
-                .unwrap(),
-            ),
-            entry_point_type: Some(EntryPointType::External),
-            calldata: vec![new_constant.clone()],
-            retdata: vec![],
-            storage_read_values: vec![constructor_constant],
-            accessed_storage_keys: HashSet::from([constant_storage_key]),
-            execution_resources: Some(ExecutionResources {
-                n_steps: 40,
+            },
+            // Invoke storage_var_and_constructor.cairo mult_constant function
+            CallInfo {
+                caller_address: Address(11111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: deploy_address.clone(),
+                code_address: None,
+                class_hash: Some(deploy_class_hash),
+                entry_point_selector: Some(
+                    Felt252::from_str_radix(
+                        "1576037374104670872807053137865113122553607263175471701007015754752102201893",
+                        10,
+                    )
+                    .unwrap(),
+                ),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![4.into()],
+                retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
+                storage_read_values: vec![constructor_constant.clone()],
+                accessed_storage_keys: HashSet::from([constant_storage_key]),
+                execution_resources: ExecutionResources {
+                    n_steps: 52,
+                    ..Default::default()
+                },
                 ..Default::default()
-            }),
-            ..Default::default()
-        },
-        // Invoke storage_var_and_constructor.cairo get_constant function
-        CallInfo {
-            caller_address: Address(11111.into()),
-            call_type: Some(CallType::Call),
-            contract_address: deploy_address,
-            code_address: None,
-            class_hash: Some(deploy_class_hash),
-            entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "915547745133109687566886827729966789818200062539892992518817034473866315209",
-                    10,
-                )
-                .unwrap(),
-            ),
-            entry_point_type: Some(EntryPointType::External),
-            calldata: vec![],
-            retdata: vec![new_constant.clone()],
-            storage_read_values: vec![new_constant.clone()],
-            accessed_storage_keys: HashSet::from([constant_storage_key]),
-            execution_resources: Some(ExecutionResources {
-                n_steps: 46,
+            },
+            // Invoke storage_var_and_constructor.cairo set_constant function
+            CallInfo {
+                caller_address: Address(11111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: deploy_address.clone(),
+                code_address: None,
+                class_hash: Some(deploy_class_hash),
+                entry_point_selector: Some(
+                    Felt252::from_str_radix(
+                        "1201037417712951658445715615949920673423990292207294106968654696818998525373",
+                        10,
+                    )
+                    .unwrap(),
+                ),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![new_constant.clone()],
+                retdata: vec![],
+                storage_read_values: vec![constructor_constant],
+                accessed_storage_keys: HashSet::from([constant_storage_key]),
+                execution_resources: ExecutionResources {
+                    n_steps: 40,
+                    ..Default::default()
+                },
                 ..Default::default()
-            }),
-            ..Default::default()
-        }        ],
+            },
+            // Invoke storage_var_and_constructor.cairo get_constant function
+            CallInfo {
+                caller_address: Address(11111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: deploy_address,
+                code_address: None,
+                class_hash: Some(deploy_class_hash),
+                entry_point_selector: Some(
+                    Felt252::from_str_radix(
+                        "915547745133109687566886827729966789818200062539892992518817034473866315209",
+                        10,
+                    )
+                    .unwrap(),
+                ),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![],
+                retdata: vec![new_constant.clone()],
+                storage_read_values: vec![new_constant.clone()],
+                accessed_storage_keys: HashSet::from([constant_storage_key]),
+                execution_resources: ExecutionResources {
+                    n_steps: 46,
+                    ..Default::default()
+                },
+                ..Default::default()
+            }
+        ],
         [new_constant],
         ExecutionResources {
             n_steps: 325,
             n_memory_holes: 2,
-            builtin_instance_counter: HashMap::default()},
+            builtin_instance_counter: HashMap::default()
+        },
     );
 }
 

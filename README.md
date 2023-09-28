@@ -52,7 +52,7 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 ### Dependencies
 - Rust 1.70
 - A working installation of cairo-lang 0.12 (for compiling the cairo files)
-- [Optional, for testing purposes] Heaptrack 
+- [Optional, for testing purposes] Heaptrack
 
 ### Installation
 
@@ -124,6 +124,13 @@ You can find a tutorial on running contracts [here](/examples/contract_execution
 ### Using the CLI
 You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
+### Customization
+
+#### Logging configuration
+
+This project uses the [`tracing`](https://crates.io/crates/tracing) crate as a library. Check out
+its documentation for more information.
+
 ### Testing
 
 [Add an Infura API key.](#rpc-state-reader)
@@ -153,7 +160,7 @@ $ make benchmark
 
 ## 🛠 Contributing
 
-The open source community is a fantastic place for learning, inspiration, and creation, and this is all thanks to contributions from people like you. Your contributions are **greatly appreciated**. 
+The open source community is a fantastic place for learning, inspiration, and creation, and this is all thanks to contributions from people like you. Your contributions are **greatly appreciated**.
 
 If you have any suggestions for how to improve the project, please feel free to fork the repo and create a pull request, or [open an issue](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+) with the tag 'enhancement'.
 
