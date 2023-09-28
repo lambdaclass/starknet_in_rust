@@ -102,7 +102,7 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
 
         let hint_code = &hint_data.code;
         let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-        if let Some(syscall) = super::hint_code::HINTCODE.get(hint_code) {
+        if let Some(syscall) = super::hint_code_map::HINTCODE.get(hint_code) {
             match syscall {
                 Hint::AddrBoundPrime => {
                     other_syscalls::addr_bound_prime(vm, hint_data, constants)?;
