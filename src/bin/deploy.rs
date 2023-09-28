@@ -1,7 +1,15 @@
+use std::{collections::HashMap, sync::Arc};
+
 use lazy_static::lazy_static;
 use starknet_in_rust::{
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    testing::state::StarknetState,
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
+    },
+    transaction::{Deploy, Transaction},
 };
 
 #[cfg(feature = "with_mimalloc")]
@@ -20,19 +28,33 @@ lazy_static! {
 
 fn main() {
     const RUNS: usize = 100;
-    let mut starknet_state = StarknetState::new(None);
+
+    let block_context = BlockContext::default();
+    let state_reader = Arc::new(InMemoryStateReader::default());
+
+    let mut state = CachedState::new(state_reader, HashMap::new());
+    let call_data = vec![];
 
     for n in 0..RUNS {
         let contract_address_salt = n.into();
 
-        starknet_state
-            .deploy(
-                CONTRACT_CLASS.clone(),
-                vec![],
-                contract_address_salt,
-                None,
-                0,
+        let deploy = Deploy::new(
+            contract_address_salt,
+            CONTRACT_CLASS.clone(),
+            call_data.clone(),
+            block_context.starknet_os_config().chain_id().clone(),
+            TRANSACTION_VERSION.clone(),
+        )
+        .unwrap();
+
+        state
+            .set_contract_class(
+                &deploy.contract_hash,
+                &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
             )
             .unwrap();
+        let tx = Transaction::Deploy(deploy);
+
+        tx.execute(&mut state, &block_context, 0).unwrap();
     }
 }

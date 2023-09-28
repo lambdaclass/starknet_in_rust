@@ -218,6 +218,8 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             );
             self.internal_calls.push(call_info);
 
+            // Empty call info doesn't have events, so there is no need to push them here to `self.events`
+
             return Ok(());
         }
 
@@ -232,7 +234,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             INITIAL_GAS_COST,
         );
 
-        let _call_info = call
+        let call_info = call
             .execute(
                 self.starknet_storage_state.state,
                 &self.block_context,
@@ -242,6 +244,11 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 self.block_context.invoke_tx_max_n_steps,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
+
+        if let Some(call_info) = call_info.call_info {
+            self.internal_calls.push(call_info);
+        }
+
         Ok(())
     }
 }

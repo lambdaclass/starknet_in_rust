@@ -27,6 +27,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 /// Represents a declare transaction in the starknet network.
@@ -295,6 +296,15 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::Declare,
+        self.version = ?self.version,
+        self.sierra_class_hash = ?self.sierra_class_hash,
+        self.compiled_class_hash = ?self.compiled_class_hash,
+        self.hash_value = ?self.hash_value,
+        self.sender_address = ?self.sender_address,
+        self.nonce = ?self.nonce,
+    ))]
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -375,9 +385,7 @@ impl DeclareV2 {
             ));
         }
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
-        // theorically class_hash == compiled_class_hash in v2, so this is like setting class_hash -> compiled_class_hash
-        // which is needed for get_compiled_class_hash later to work.
-        state.set_compiled_class_hash(&self.compiled_class_hash, &self.compiled_class_hash)?;
+
         state.set_contract_class(
             &self.compiled_class_hash.to_be_bytes(),
             &CompiledClass::Casm(Arc::new(casm_class)),
