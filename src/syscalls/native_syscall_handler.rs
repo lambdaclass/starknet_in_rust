@@ -157,12 +157,13 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         address_domain: u32,
         address: cairo_vm::felt::Felt252,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
-        println!("Called `storage_read({address_domain}, {address})` from MLIR.");
-        match self.starknet_storage_state.read(&address.to_be_bytes()) {
-            Ok(value) => Ok(value),
+        let value = match self.starknet_storage_state.read(&address.to_be_bytes()) {
+            Ok(value) => Ok(dbg!(value)),
             Err(_e @ StateError::Io(_)) => todo!(),
-            Err(_) => Ok(Felt252::zero()),
-        }
+            Err(_) => Ok(dbg!(Felt252::zero())),
+        };
+        println!("Called `storage_read({address_domain}, {address}) = {value:?}` from MLIR.");
+        value
     }
 
     fn storage_write(

@@ -12,7 +12,7 @@ use crate::{
         cached_state::CachedState,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
-        ExecutionResourcesManager,
+        ExecutionResourcesManager, StateDiff,
     },
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
@@ -165,23 +165,31 @@ impl ExecutionEntryPoint {
                 }
             }
             CompiledClass::Sierra(sierra_contract_class) => {
-                let mut tmp_state =
-                    CachedState::new(state.state_reader.clone(), state.contract_classes.clone());
-                tmp_state.cache = state.cache.clone();
+                let mut transactional_state = state.create_transactional();
 
                 match self.native_execute(
-                    &mut tmp_state,
+                    &mut transactional_state,
                     sierra_contract_class,
                     tx_execution_context,
                     block_context,
                 ) {
-                    Ok(call_info) => Ok(ExecutionResult {
-                        call_info: Some(call_info),
-                        revert_error: None,
-                        n_reverted_steps: 0,
-                    }),
+                    Ok(call_info) => {
+                        state.apply_state_update(&StateDiff::from_cached_state(
+                            transactional_state,
+                        )?)?;
+
+                        Ok(ExecutionResult {
+                            call_info: Some(call_info),
+                            revert_error: None,
+                            n_reverted_steps: 0,
+                        })
+                    }
                     Err(e) => {
                         if !support_reverted {
+                            state.apply_state_update(&StateDiff::from_cached_state(
+                                transactional_state,
+                            )?)?;
+
                             return Err(e);
                         }
 
