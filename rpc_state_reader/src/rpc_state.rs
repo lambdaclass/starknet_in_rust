@@ -11,6 +11,7 @@ use starknet_api::{
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
+use starknet_in_rust::definitions::block_context::StarknetChainId;
 use std::{collections::HashMap, env, fmt::Display};
 use thiserror::Error;
 
@@ -22,6 +23,16 @@ pub enum RpcChain {
     MainNet,
     TestNet,
     TestNet2,
+}
+
+impl From<RpcChain> for StarknetChainId {
+    fn from(network: RpcChain) -> StarknetChainId {
+        match network {
+            RpcChain::MainNet => StarknetChainId::MainNet,
+            RpcChain::TestNet => StarknetChainId::TestNet,
+            RpcChain::TestNet2 => StarknetChainId::TestNet2,
+        }
+    }
 }
 
 impl fmt::Display for RpcChain {
