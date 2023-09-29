@@ -245,8 +245,12 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
+        let validate_info = if self.skip_validation {
+            None
+        } else {
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+        };
+
         // Execute transaction
         let ExecutionResult {
             call_info,
