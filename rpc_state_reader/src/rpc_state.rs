@@ -1,5 +1,4 @@
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
-use starknet_in_rust::definitions::block_context::StarknetChainId;
 use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
@@ -12,6 +11,7 @@ use starknet_api::{
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
+use starknet_in_rust::definitions::block_context::StarknetChainId;
 use std::{collections::HashMap, env, fmt::Display};
 use thiserror::Error;
 
@@ -33,7 +33,7 @@ impl Into<StarknetChainId> for RpcChain {
             RpcChain::TestNet2 => StarknetChainId::TestNet2,
         }
     }
-} 
+}
 
 impl fmt::Display for RpcChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

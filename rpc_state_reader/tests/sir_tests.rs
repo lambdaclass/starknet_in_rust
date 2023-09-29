@@ -439,7 +439,6 @@ fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: 
     }
 }
 
-
 #[test_case(
     "0x038c307a0a324dc92778820f2c6317f40157c06b12a7e537f7a16b2c015f64e7",
     274333-1,
@@ -449,7 +448,7 @@ fn test_validate_fee(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, _trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
     let (tx_info_without_fee, _trace, _receipt) =
         execute_tx_without_validate(hash, chain, BlockNumber(block_number));
-    
+
     assert_eq!(tx_info.actual_fee, receipt.actual_fee);
     assert!(tx_info_without_fee.actual_fee < tx_info.actual_fee);
 }
