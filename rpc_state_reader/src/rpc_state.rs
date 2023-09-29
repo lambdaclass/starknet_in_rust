@@ -25,9 +25,9 @@ pub enum RpcChain {
     TestNet2,
 }
 
-impl Into<StarknetChainId> for RpcChain {
-    fn into(self) -> StarknetChainId {
-        match self {
+impl From<RpcChain> for StarknetChainId {
+    fn from(network: RpcChain) -> StarknetChainId {
+        match network {
             RpcChain::MainNet => StarknetChainId::MainNet,
             RpcChain::TestNet => StarknetChainId::TestNet,
             RpcChain::TestNet2 => StarknetChainId::TestNet2,
