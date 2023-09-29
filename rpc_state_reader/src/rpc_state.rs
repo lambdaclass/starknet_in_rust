@@ -1,4 +1,5 @@
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
+use starknet_in_rust::definitions::block_context::StarknetChainId;
 use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
@@ -23,6 +24,16 @@ pub enum RpcChain {
     TestNet,
     TestNet2,
 }
+
+impl Into<StarknetChainId> for RpcChain {
+    fn into(self) -> StarknetChainId {
+        match self {
+            RpcChain::MainNet => StarknetChainId::MainNet,
+            RpcChain::TestNet => StarknetChainId::TestNet,
+            RpcChain::TestNet2 => StarknetChainId::TestNet2,
+        }
+    }
+} 
 
 impl fmt::Display for RpcChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
