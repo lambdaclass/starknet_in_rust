@@ -13,7 +13,6 @@ use starknet_in_rust::{
 use std::collections::HashMap;
 use std::{any::Any, hint::black_box};
 
-#[allow(dead_code)]
 fn criterion_benchmark(c: &mut Criterion) {
     let exec_scopes = &mut ExecutionScopes::new();
     let ids_names = vec!["syscall_ptr"];
