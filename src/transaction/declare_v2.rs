@@ -5,6 +5,7 @@ use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
@@ -26,6 +27,8 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 /// Represents a declare transaction in the starknet network.
 /// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
@@ -33,7 +36,6 @@ use num_traits::Zero;
 #[derive(Debug, Clone)]
 pub struct DeclareV2 {
     pub sender_address: Address,
-    pub tx_type: TransactionType,
     pub validate_entry_point_selector: Felt252,
     pub version: Felt252,
     pub max_fee: u128,
@@ -133,7 +135,6 @@ impl DeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sierra_class_hash,
             sender_address,
-            tx_type: TransactionType::Declare,
             validate_entry_point_selector,
             version,
             max_fee,
@@ -295,6 +296,15 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::Declare,
+        self.version = ?self.version,
+        self.sierra_class_hash = ?self.sierra_class_hash,
+        self.compiled_class_hash = ?self.compiled_class_hash,
+        self.hash_value = ?self.hash_value,
+        self.sender_address = ?self.sender_address,
+        self.nonce = ?self.nonce,
+    ))]
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -318,11 +328,14 @@ impl DeclareV2 {
             (info, gas)
         };
 
-        let storage_changes = state.count_actual_storage_changes();
+        let storage_changes = state.count_actual_storage_changes(Some((
+            &block_context.starknet_os_config.fee_token_address,
+            &self.sender_address,
+        )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[execution_result.call_info.clone()],
-            self.tx_type,
+            TransactionType::Declare,
             storage_changes,
             None,
             execution_result.n_reverted_steps,
@@ -345,7 +358,7 @@ impl DeclareV2 {
             None,
             None,
             actual_resources,
-            Some(self.tx_type),
+            Some(TransactionType::Declare),
         );
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
@@ -372,7 +385,11 @@ impl DeclareV2 {
             ));
         }
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
-        state.set_compiled_class(&self.compiled_class_hash, casm_class)?;
+
+        state.set_contract_class(
+            &self.compiled_class_hash.to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(casm_class)),
+        )?;
 
         Ok(())
     }
@@ -510,7 +527,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache);
 
         // call compile and store
         assert!(internal_declare
@@ -528,7 +545,7 @@ mod tests {
             .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
-            CompiledClass::Casm(casm) => *casm,
+            CompiledClass::Casm(casm) => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -579,7 +596,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache);
 
         // call compile and store
         assert!(internal_declare
@@ -597,7 +614,7 @@ mod tests {
             .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
-            CompiledClass::Casm(casm) => *casm,
+            CompiledClass::Casm(casm) => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -650,7 +667,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache);
 
         // call compile and store
         assert!(internal_declare
@@ -668,7 +685,7 @@ mod tests {
             .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
-            CompiledClass::Casm(casm) => *casm,
+            CompiledClass::Casm(casm) => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -719,7 +736,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache);
 
         // call compile and store
         assert!(internal_declare
@@ -737,7 +754,7 @@ mod tests {
             .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
             .unwrap()
         {
-            CompiledClass::Casm(casm) => *casm,
+            CompiledClass::Casm(casm) => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -789,7 +806,7 @@ mod tests {
         // crate state to store casm contract class
         let casm_contract_class_cache = HashMap::new();
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, None, Some(casm_contract_class_cache));
+        let mut state = CachedState::new(state_reader, casm_contract_class_cache);
 
         let expected_err = format!(
             "Invalid compiled class, expected class hash: {}, but received: {}",

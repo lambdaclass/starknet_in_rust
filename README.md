@@ -3,7 +3,7 @@
 
 ### 🦀 Starknet in Rust 🦀
 
-Starknet library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdaclass/cairo-vm)
+Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdaclass/cairo-vm)
 
 [Report Bug](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=bug&title=bug%3A+) · [Request Feature](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+)
 
@@ -13,8 +13,8 @@ Starknet library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdacl
 [![Telegram Chat][tg-badge]][tg-url]
 
 [pr-welcome]: https://img.shields.io/static/v1?color=orange&label=PRs&style=flat&message=welcome
-[tg-badge]: https://img.shields.io/static/v1?color=green&logo=telegram&label=chat&style=flat&message=join
-[tg-url]: https://t.me/starknet_rs
+[tg-badge]: https://img.shields.io/endpoint?url=https%3A%2F%2Ftg.sumanjay.workers.dev%2FLambdaStarkNet%2F&logo=telegram&label=chat&color=neon
+[tg-url]: https://t.me/LambdaStarkNet
 
 </div>
 
@@ -52,15 +52,24 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 ### Dependencies
 - Rust 1.70
 - A working installation of cairo-lang 0.12 (for compiling the cairo files)
-- [Optional, for testing purposes] Heaptrack 
+- [Optional, for testing purposes] Heaptrack
 
 ### Installation
 
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
+
+#### Linux (x86-64)
 ```bash
 $ make deps
 $ make build
 ```
+
+#### OSX (Apple Silicon)
+```bash
+$ make deps-macos
+$ make build
+```
+
 Check the [Makefile](/Makefile) for additional targets.
 
 #### RPC State Reader
@@ -100,6 +109,13 @@ You can find a tutorial on running contracts [here](/examples/contract_execution
 ### Using the CLI
 You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
+### Customization
+
+#### Logging configuration
+
+This project uses the [`tracing`](https://crates.io/crates/tracing) crate as a library. Check out
+its documentation for more information.
+
 ### Testing
 
 [Add an Infura API key.](#rpc-state-reader)
@@ -129,7 +145,7 @@ $ make benchmark
 
 ## 🛠 Contributing
 
-The open source community is a fantastic place for learning, inspiration, and creation, and this is all thanks to contributions from people like you. Your contributions are **greatly appreciated**. 
+The open source community is a fantastic place for learning, inspiration, and creation, and this is all thanks to contributions from people like you. Your contributions are **greatly appreciated**.
 
 If you have any suggestions for how to improve the project, please feel free to fork the repo and create a pull request, or [open an issue](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+) with the tag 'enhancement'.
 

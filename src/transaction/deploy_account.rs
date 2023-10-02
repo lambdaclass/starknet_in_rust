@@ -1,9 +1,10 @@
-use super::fee::charge_fee;
+use super::fee::{calculate_tx_fee, charge_fee};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
+use crate::state::StateDiff;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -34,6 +35,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
@@ -150,28 +152,61 @@ impl DeployAccount {
         }
     }
 
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::DeployAccount,
+        self.version = ?self.version,
+        self.class_hash = ?self.class_hash,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.contract_address_salt = ?self.contract_address_salt,
+        self.nonce = ?self.nonce,
+    ))]
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
-        let mut tx_info = self.apply(state, block_context)?;
+
+        let mut transactional_state = state.create_transactional();
+        let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
+
+        let actual_fee = calculate_tx_fee(
+            &tx_exec_info.actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
+
+        if let Some(revert_error) = tx_exec_info.revert_error.clone() {
+            // execution error
+            tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
+        } else if actual_fee > self.max_fee {
+            // max_fee exceeded
+            tx_exec_info = tx_exec_info.to_revert_error(
+                format!(
+                    "Calculated fee ({}) exceeds max fee ({})",
+                    actual_fee, self.max_fee
+                )
+                .as_str(),
+            );
+        } else {
+            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+        }
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
         let (fee_transfer_info, actual_fee) = charge_fee(
             state,
-            &tx_info.actual_resources,
+            &tx_exec_info.actual_resources,
             block_context,
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
 
-        tx_info.set_fee_info(actual_fee, fee_transfer_info);
+        tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
-        Ok(tx_info)
+        Ok(tx_exec_info)
     }
 
     fn constructor_entry_points_empty(
@@ -213,7 +248,10 @@ impl DeployAccount {
             resources_manager,
             &[Some(constructor_call_info.clone()), validate_info.clone()],
             TransactionType::DeployAccount,
-            state.count_actual_storage_changes(),
+            state.count_actual_storage_changes(Some((
+                &block_context.starknet_os_config.fee_token_address,
+                &self.contract_address,
+            )))?,
             None,
             0,
         )
@@ -383,9 +421,54 @@ impl DeployAccount {
     }
 }
 
+// ----------------------------------
+//      Try from starknet api
+// ----------------------------------
+
+impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
+    type Error = SyscallHandlerError;
+
+    fn try_from(
+        value: starknet_api::transaction::DeployAccountTransaction,
+    ) -> Result<Self, SyscallHandlerError> {
+        let max_fee = value.max_fee.0;
+        let version = Felt252::from_bytes_be(value.version.0.bytes());
+        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
+        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
+
+        let signature = value
+            .signature
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect();
+        let constructor_calldata = value
+            .constructor_calldata
+            .0
+            .as_ref()
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect();
+
+        let chain_id = Felt252::zero();
+
+        DeployAccount::new(
+            class_hash,
+            max_fee,
+            version,
+            nonce,
+            constructor_calldata,
+            signature,
+            contract_address_salt,
+            chain_id,
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, sync::Arc};
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     use super::*;
     use crate::{
@@ -406,11 +489,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut _state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut _state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -442,11 +521,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -473,7 +548,9 @@ mod tests {
         .unwrap();
 
         let class_hash = internal_deploy.class_hash();
-        state.set_contract_class(class_hash, &contract).unwrap();
+        state
+            .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
+            .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
         assert_matches!(
             internal_deploy_error
@@ -494,11 +571,7 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(
-            Arc::new(InMemoryStateReader::default()),
-            Some(Default::default()),
-            None,
-        );
+        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -513,7 +586,9 @@ mod tests {
         .unwrap();
 
         let class_hash = internal_deploy.class_hash();
-        state.set_contract_class(class_hash, &contract).unwrap();
+        state
+            .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
+            .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
     }
 }

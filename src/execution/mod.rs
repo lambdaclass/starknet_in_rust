@@ -4,6 +4,7 @@ pub mod os_usage;
 
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::utils::parse_felt_array;
 use crate::{
     definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
     state::state_cache::StorageEntry,
@@ -18,6 +19,7 @@ use cairo_vm::{
 };
 use getset::Getters;
 use num_traits::{ToPrimitive, Zero};
+use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -102,45 +104,64 @@ impl CallInfo {
         )
     }
 
-    /// Yields the contract calls in DFS (preorder).
+    /// Returns the contract calls in DFS (preorder).
     pub fn gen_call_topology(&self) -> Vec<CallInfo> {
         let mut calls = Vec::new();
-        if self.internal_calls.is_empty() {
-            calls.push(self.clone())
-        } else {
-            calls.push(self.clone());
-            for call_info in self.internal_calls.clone() {
-                calls.extend(call_info.gen_call_topology());
+        // add the current call
+        calls.push(self.clone());
+
+        // if it has internal calls we need to add them too.
+        if !self.internal_calls.is_empty() {
+            for inner_call in self.internal_calls.clone() {
+                calls.extend(inner_call.gen_call_topology());
             }
         }
+
         calls
     }
 
-    /// Returns a list of StarkNet Event objects collected during the execution, sorted by the order
+    /// Returns a list of [`Event`] objects collected during the execution, sorted by the order
     /// in which they were emitted.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
+        // collect a vector of the full call topology (all the internal
+        // calls performed during the current call)
         let calls = self.gen_call_topology();
-        let n_events = calls.iter().fold(0, |acc, c| acc + c.events.len());
+        let mut collected_events = Vec::new();
 
-        let mut starknet_events: Vec<Option<Event>> = (0..n_events).map(|_| None).collect();
+        // for each call, collect its ordered events
+        for c in calls {
+            collected_events.extend(
+                c.events
+                    .iter()
+                    .map(|oe| (oe.clone(), c.contract_address.clone())),
+            );
+        }
+        // sort the collected events using the ordering given by the order
+        collected_events.sort_by_key(|(oe, _)| oe.order);
 
-        for call in calls {
-            for ordered_event in call.events {
-                let event = Event::new(ordered_event.clone(), call.contract_address.clone());
-                starknet_events.remove(ordered_event.order as usize - 1);
-                starknet_events.insert(ordered_event.order as usize - 1, Some(event));
+        // check that there is no holes.
+        // since it is already sorted, we only need to check for continuity
+        let mut i = 0;
+        for (oe, _) in collected_events.iter() {
+            if i == oe.order {
+                continue;
+            }
+            i += 1;
+            if i != oe.order {
+                return Err(TransactionError::UnexpectedHolesInEventOrder);
             }
         }
 
-        let are_all_some = starknet_events.iter().all(|e| e.is_some());
-
-        if !are_all_some {
-            return Err(TransactionError::UnexpectedHolesInEventOrder);
-        }
-        Ok(starknet_events.into_iter().flatten().collect())
+        // now that it is ordered and without holes, we can discard the order and
+        // convert each [`OrderedEvent`] to the underlying [`Event`].
+        let collected_events = collected_events
+            .into_iter()
+            .map(|(oe, ca)| Event::new(oe, ca))
+            .collect();
+        Ok(collected_events)
     }
 
-    /// Returns a list of StarkNet L2ToL1MessageInfo objects collected during the execution, sorted
+    /// Returns a list of L2ToL1MessageInfo objects collected during the execution, sorted
     /// by the order in which they were sent.
     pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, TransactionError> {
         let calls = self.gen_call_topology();
@@ -226,6 +247,56 @@ impl Default for CallInfo {
             gas_consumed: 0,
             failure_flag: false,
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for CallInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        // Parse execution_resources
+        let execution_resources_value = value["execution_resources"].clone();
+
+        let execution_resources = ExecutionResources {
+            n_steps: serde_json::from_value(execution_resources_value["n_steps"].clone())
+                .map_err(serde::de::Error::custom)?,
+            n_memory_holes: serde_json::from_value(
+                execution_resources_value["n_memory_holes"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+            builtin_instance_counter: serde_json::from_value(
+                execution_resources_value["builtin_instance_counter"].clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
+        };
+
+        // Parse retdata
+        let retdata_value = value["result"].clone();
+        let retdata = parse_felt_array(retdata_value.as_array().unwrap());
+
+        // Parse calldata
+        let calldata_value = value["calldata"].clone();
+        let calldata = parse_felt_array(calldata_value.as_array().unwrap());
+
+        // Parse internal calls
+        let internal_calls_value = value["internal_calls"].clone();
+        let mut internal_calls = vec![];
+
+        for call in internal_calls_value.as_array().unwrap() {
+            internal_calls
+                .push(serde_json::from_value(call.clone()).map_err(serde::de::Error::custom)?);
+        }
+
+        Ok(CallInfo {
+            execution_resources,
+            retdata,
+            calldata,
+            internal_calls,
+            ..Default::default()
+        })
     }
 }
 
@@ -439,7 +510,7 @@ pub struct TransactionExecutionInfo {
 }
 
 impl TransactionExecutionInfo {
-    pub fn new(
+    pub const fn new(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
         revert_error: Option<String>,
@@ -498,7 +569,7 @@ impl TransactionExecutionInfo {
         }
     }
 
-    pub fn new_without_fee_info(
+    pub const fn new_without_fee_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
         revert_error: Option<String>,
@@ -531,6 +602,8 @@ impl TransactionExecutionInfo {
         })
     }
 
+    /// Returns an ordered vector with all the event emitted during the transaction.
+    /// Including the ones emitted by internal calls.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
         let calls = self.non_optional_calls();
         let mut sorted_events: Vec<Event> = Vec::new();
@@ -553,6 +626,16 @@ impl TransactionExecutionInfo {
         }
 
         Ok(sorted_messages)
+    }
+
+    pub fn to_revert_error(self, revert_error: &str) -> Self {
+        TransactionExecutionInfo {
+            validate_info: None,
+            call_info: None,
+            revert_error: Some(revert_error.to_string()),
+            fee_transfer_info: None,
+            ..self
+        }
     }
 }
 
@@ -612,6 +695,26 @@ impl L2toL1MessageInfo {
 mod tests {
     use super::*;
     use crate::utils::{string_to_hash, Address};
+
+    #[test]
+    fn test_get_sorted_single_event() {
+        let address = Address(Felt252::zero());
+        let ordered_event = OrderedEvent::new(0, vec![], vec![]);
+        let event = Event::new(ordered_event.clone(), address.clone());
+        let internal_calls = vec![CallInfo {
+            events: vec![ordered_event],
+            ..Default::default()
+        }];
+        let call_info = CallInfo {
+            contract_address: address,
+            internal_calls,
+            ..Default::default()
+        };
+
+        let sorted_events = call_info.get_sorted_events().unwrap();
+
+        assert_eq!(sorted_events, vec![event]);
+    }
 
     #[test]
     fn non_optional_calls_test() {
@@ -753,7 +856,7 @@ mod tests {
 
         call_root.internal_calls = [child1, child2].to_vec();
 
-        assert!(call_root.get_sorted_events().is_err())
+        assert!(call_root.get_sorted_events().is_ok())
     }
 
     #[test]

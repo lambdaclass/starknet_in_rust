@@ -2,6 +2,7 @@
 
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -33,7 +34,10 @@ fn delegate_call() {
     let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
     let class_hash = [2; 32];
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -64,7 +68,10 @@ fn delegate_call() {
     let address = Address(1111.into());
     let class_hash = [1; 32];
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
     state_reader
         .address_to_class_hash_mut()
         .insert(address.clone(), class_hash);
@@ -76,7 +83,7 @@ fn delegate_call() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     //* ------------------------------------
     //*    Create execution entry point

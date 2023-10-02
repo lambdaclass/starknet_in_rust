@@ -6,6 +6,7 @@ use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"COMPILED_CLASS_V1";
 
+/// Return hashed entry points for a given contract class and entry point type.
 fn get_contract_entry_points_hashed(
     contract_class: &CasmContractClass,
     entry_point_type: &EntryPointType,
@@ -38,6 +39,7 @@ fn get_contract_entry_points_hashed(
     Ok(poseidon_hash_many(&entry_points_flatted))
 }
 
+/// Compute hash for the entire CASM contract class.
 pub fn compute_casm_class_hash(
     contract_class: &CasmContractClass,
 ) -> Result<Felt252, ContractAddressError> {
@@ -80,6 +82,7 @@ pub fn compute_casm_class_hash(
     ))
 }
 
+/// Helper function to fetch entry points based on their type.
 fn get_contract_entry_points(
     contract_class: &CasmContractClass,
     entry_point_type: &EntryPointType,
@@ -264,5 +267,23 @@ mod tests {
             compute_casm_class_hash(&contract_class).unwrap(),
             expected_result
         );
+    }
+
+    #[test]
+    fn test_declare_tx_class_hash() {
+        let file = File::open("starknet_programs/cairo2/events.casm").unwrap();
+        let reader = BufReader::new(file);
+
+        let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
+
+        // this is the compiled_class_hash from: https://alpha4.starknet.io/feeder_gateway/get_transaction?transactionHash=0x01b852f1fe2b13db21a44f8884bc4b7760dc277bb3820b970dba929860275617
+        let expected_result = felt_str!(
+            "2011836827876139258613930428521012424481847645471980617287552173098289225455"
+        );
+
+        assert_eq!(
+            compute_casm_class_hash(&contract_class).unwrap(),
+            expected_result
+        )
     }
 }

@@ -1,41 +1,21 @@
-#![allow(unused_imports)]
-use std::{collections::HashMap, io::Bytes, path::Path, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-use crate::{
+use cairo_vm::felt::{felt_str, Felt252};
+use num_traits::Zero;
+use starknet_in_rust::{
     call_contract,
-    definitions::{
-        block_context::{BlockContext, StarknetChainId},
-        constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
-    },
+    definitions::block_context::{BlockContext, StarknetChainId},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::CachedState,
-        in_memory_state_reader::InMemoryStateReader,
-        state_api::{State, StateReader},
+        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
         ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, DeployAccount, InvokeFunction},
-    utils::calculate_sn_keccak,
-    EntryPointType, Felt252,
-};
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::felt_str;
-use lazy_static::lazy_static;
-use num_traits::Zero;
-pub const ERC20_CONTRACT_PATH: &str = "starknet_programs/cairo2/ERC20.casm";
-use crate::{
-    state::state_cache::StorageEntry,
-    utils::{felt_to_hash, Address, ClassHash},
-};
-
-use super::{
-    new_starknet_block_context_for_testing, ACCOUNT_CONTRACT_PATH, ACTUAL_FEE,
-    TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_ACCOUNT_CONTRACT_CLASS_HASH, TEST_CLASS_HASH,
-    TEST_CONTRACT_ADDRESS, TEST_CONTRACT_PATH, TEST_ERC20_ACCOUNT_BALANCE_KEY,
-    TEST_ERC20_CONTRACT_CLASS_HASH,
+    transaction::DeployAccount,
+    utils::{calculate_sn_keccak, Address, ClassHash},
+    CasmContractClass, EntryPointType,
 };
 
 #[test]
@@ -58,8 +38,11 @@ fn test_erc20_cairo2() {
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, contract_class);
-    contract_class_cache.insert(erc20_class_hash, test_contract_class);
+    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.insert(
+        erc20_class_hash,
+        CompiledClass::Casm(Arc::new(test_contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -70,7 +53,7 @@ fn test_erc20_cairo2() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let name_ = Felt252::from_bytes_be(b"some-token");
     let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");
@@ -125,7 +108,7 @@ fn test_erc20_cairo2() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps,
+            block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
     let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
@@ -137,7 +120,13 @@ fn test_erc20_cairo2() {
         serde_json::from_slice(program_data_account).unwrap();
 
     state
-        .set_compiled_class(&felt_str!("1"), contract_class_account)
+        .set_contract_class(
+            &felt_str!("1").to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(contract_class_account)),
+        )
+        .unwrap();
+    state
+        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash))
         .unwrap();
 
     let contract_address_salt =
@@ -164,9 +153,9 @@ fn test_erc20_cairo2() {
 
     let account_address_1 = internal_deploy_account
         .execute(&mut state, &Default::default())
-        .unwrap()
+        .expect("failed to execute internal_deploy_account")
         .validate_info
-        .unwrap()
+        .expect("validate_info missing")
         .contract_address;
 
     // ACCOUNT 2
@@ -176,7 +165,13 @@ fn test_erc20_cairo2() {
         serde_json::from_slice(program_data_account).unwrap();
 
     state
-        .set_compiled_class(&felt_str!("1"), contract_class_account)
+        .set_contract_class(
+            &felt_str!("1").to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(contract_class_account)),
+        )
+        .unwrap();
+    state
+        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash))
         .unwrap();
 
     let contract_address_salt = felt_str!("123123123123123");
