@@ -22,7 +22,7 @@ use cairo_vm::{
 };
 use std::{any::Any, collections::HashMap};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Hint {
     Deploy,
     EmitEvent,

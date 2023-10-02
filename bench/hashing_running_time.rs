@@ -6,6 +6,7 @@ use cairo_vm::{
 };
 use criterion::{criterion_group, criterion_main, Criterion};
 use starknet_in_rust::syscalls::deprecated_syscall_handler::DeprecatedSyscallHintProcessor;
+use starknet_in_rust::syscalls::hint_code_map;
 use starknet_in_rust::{
     state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
     syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
@@ -30,37 +31,39 @@ fn criterion_benchmark(c: &mut Criterion) {
         references
     };
 
-    let mut ids_data =
-        HashMap::<String, cairo_vm::hint_processor::hint_processor_definition::HintReference>::new(
-        );
-    for (i, name) in ids_names.iter().enumerate() {
-        ids_data.insert(name.to_string(), references.get(&i).unwrap().clone());
+    for (hint_code, hint_name) in &hint_code_map::HINTCODE {
+        let mut ids_data = HashMap::<
+            String,
+            cairo_vm::hint_processor::hint_processor_definition::HintReference,
+        >::new();
+        for (i, name) in ids_names.iter().enumerate() {
+            ids_data.insert(name.to_string(), references.get(&i).unwrap().clone());
+        }
+
+        let hint_data: Box<dyn Any> = Box::new(HintProcessorData::new_default(
+            hint_code.to_string(),
+            ids_data.clone(),
+        ));
+
+        // Changed the string passed to bench_function to include the hint_name for unique labeling
+        c.bench_function(&format!("execute_hint_{:?}", hint_name), |b| {
+            b.iter(|| {
+                let mut vm = VirtualMachine::new(false);
+                let mut state = CachedState::<InMemoryStateReader>::default();
+                let mut syscall_handler = DeprecatedSyscallHintProcessor::new(
+                    DeprecatedBLSyscallHandler::default_with(&mut state),
+                    RunResources::default(),
+                );
+                let constants = &HashMap::new();
+                let _ = black_box(syscall_handler.execute_hint(
+                    &mut vm,
+                    exec_scopes,
+                    &hint_data,
+                    constants,
+                ));
+            })
+        });
     }
-
-    let hint_data: Box<dyn Any> = Box::new(HintProcessorData::new_default(
-        "syscall_handler.get_block_timestamp(segments=segments, syscall_ptr=ids.syscall_ptr)"
-            .to_string(),
-        ids_data,
-    ));
-
-    // Benchmark the execute_hint method
-    c.bench_function("execute_hint", |b| {
-        b.iter(|| {
-            let mut vm = VirtualMachine::new(false);
-            let mut state = CachedState::<InMemoryStateReader>::default();
-            let mut syscall_handler = DeprecatedSyscallHintProcessor::new(
-                DeprecatedBLSyscallHandler::default_with(&mut state),
-                RunResources::default(),
-            );
-            let constants = &HashMap::new();
-            let _ = black_box(syscall_handler.execute_hint(
-                &mut vm,
-                exec_scopes,
-                &hint_data,
-                constants,
-            ));
-        })
-    });
 }
 
 criterion_group!(bench, criterion_benchmark);
