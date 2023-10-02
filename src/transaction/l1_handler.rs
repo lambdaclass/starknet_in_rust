@@ -1,12 +1,4 @@
-use crate::{
-    execution::execution_entry_point::ExecutionResult,
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
-    state::cached_state::CachedState,
-};
-use cairo_vm::felt::Felt252;
-use getset::Getters;
-use num_traits::Zero;
-
+use super::Transaction;
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -14,18 +6,21 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        TransactionExecutionContext, TransactionExecutionInfo,
     },
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
+        cached_state::CachedState,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
     transaction::{error::TransactionError, fee::calculate_tx_fee},
     utils::{calculate_tx_resources, Address},
 };
-
-use super::Transaction;
+use cairo_vm::felt::Felt252;
+use getset::Getters;
+use num_traits::Zero;
 
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
@@ -93,6 +88,13 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::L1Handler,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.entry_point_selector = ?self.entry_point_selector,
+        self.nonce = ?self.nonce,
+    ))]
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -128,7 +130,7 @@ impl L1Handler {
             )?
         };
 
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
@@ -211,7 +213,9 @@ mod test {
         sync::Arc,
     };
 
-    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+    use crate::services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    };
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
@@ -266,13 +270,16 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), None, None);
+        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         // Initialize state.contract_classes
         state.set_contract_classes(HashMap::new()).unwrap();
 
         state
-            .set_contract_class(&class_hash, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
             .unwrap();
 
         let mut block_context = BlockContext::default();
@@ -318,7 +325,7 @@ mod test {
                 },
                 events: vec![],
                 l2_to_l1_messages: vec![],
-                storage_read_values: vec![0.into()],
+                storage_read_values: vec![0.into(), 0.into()],
                 accessed_storage_keys: HashSet::from([[
                     4, 40, 11, 247, 0, 35, 63, 18, 141, 159, 101, 81, 182, 2, 213, 216, 100, 110,
                     5, 5, 101, 122, 13, 252, 204, 72, 77, 8, 58, 226, 194, 24,
@@ -331,10 +338,10 @@ mod test {
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources: HashMap::from([
-                ("n_steps".to_string(), 1229),
+                ("n_steps".to_string(), 1319),
                 ("pedersen_builtin".to_string(), 13),
                 ("range_check_builtin".to_string(), 23),
-                ("l1_gas_usage".to_string(), 19695),
+                ("l1_gas_usage".to_string(), 18471),
             ]),
             tx_type: Some(TransactionType::L1Handler),
         }

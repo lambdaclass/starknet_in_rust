@@ -4,7 +4,10 @@ use cairo_lang_starknet::{
     contract_class::{ContractClass as SierraContractClass, ContractEntryPoint},
 };
 use cairo_vm::felt::Felt252;
+use serde::Serialize;
+use serde_json::ser::Formatter;
 use starknet_crypto::{poseidon_hash_many, FieldElement, PoseidonHasher};
+use std::io::{self, Cursor};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
 
@@ -12,6 +15,7 @@ const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
 //  Version 2 functions and structs
 // ---------------------------------
 
+/// Computes the hash of contract entry points.
 fn get_contract_entry_points_hashed(
     contract_class: &SierraContractClass,
     entry_point_type: &EntryPointType,
@@ -33,6 +37,7 @@ fn get_contract_entry_points_hashed(
     Ok(hasher.finalize())
 }
 
+/// Computes the hash of a given Sierra contract class.
 pub fn compute_sierra_class_hash(
     contract_class: &SierraContractClass,
 ) -> Result<Felt252, ContractAddressError> {
@@ -58,14 +63,22 @@ pub fn compute_sierra_class_hash(
     hasher.update(constructors);
 
     // Hash abi
-    let abi = serde_json_pythonic::to_string_pythonic(
-        &contract_class
+    let abi = {
+        let mut buf = Cursor::new(Vec::new());
+        let mut fmt = serde_json::Serializer::with_formatter(&mut buf, PythonJsonFormatter);
+
+        contract_class
             .abi
-            .clone()
+            .as_ref()
             .ok_or(ContractAddressError::MissingAbi)?
-            .items,
-    )
-    .map_err(|_| ContractAddressError::MissingAbi)?;
+            .items
+            .serialize(&mut fmt)
+            .map_err(|_| ContractAddressError::MissingAbi)?;
+
+        // Note: The following unwrap should never be triggered as long as serde_json generates
+        //   UTF-8 encoded data, which in practice means it should never panic.
+        String::from_utf8(buf.into_inner()).unwrap()
+    };
 
     let abi_hash = FieldElement::from_byte_slice_be(&starknet_keccak(abi.as_bytes()).to_bytes_be())
         .map_err(|_err| {
@@ -90,6 +103,7 @@ pub fn compute_sierra_class_hash(
     Ok(Felt252::from_bytes_be(&hash.to_bytes_be()))
 }
 
+/// Returns the contract entry points.
 fn get_contract_entry_points(
     contract_class: &SierraContractClass,
     entry_point_type: &EntryPointType,
@@ -120,6 +134,7 @@ mod tests {
     use cairo_vm::felt::felt_str;
     use std::{fs::File, io::BufReader};
 
+    /// Test the correctness of the compute_sierra_class_hash function for a specific testnet contract.
     #[test]
     fn test_declare_tx_from_testnet() {
         let file = File::open("starknet_programs/cairo2/events.sierra").unwrap();
@@ -136,5 +151,58 @@ mod tests {
             compute_sierra_class_hash(&sierra_contract_class).unwrap(),
             expected_result
         )
+    }
+}
+
+struct PythonJsonFormatter;
+
+impl Formatter for PythonJsonFormatter {
+    fn begin_array_value<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
+    where
+        W: ?Sized + io::Write,
+    {
+        if first {
+            Ok(())
+        } else {
+            writer.write_all(b", ")
+        }
+    }
+
+    fn begin_object_key<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
+    where
+        W: ?Sized + io::Write,
+    {
+        if first {
+            Ok(())
+        } else {
+            writer.write_all(b", ")
+        }
+    }
+
+    fn begin_object_value<W>(&mut self, writer: &mut W) -> io::Result<()>
+    where
+        W: ?Sized + io::Write,
+    {
+        writer.write_all(b": ")
+    }
+
+    fn write_string_fragment<W>(&mut self, writer: &mut W, fragment: &str) -> io::Result<()>
+    where
+        W: ?Sized + io::Write,
+    {
+        let mut buf = [0, 0];
+
+        for c in fragment.chars() {
+            if c.is_ascii() {
+                writer.write_all(&[c as u8])?;
+            } else {
+                let buf = c.encode_utf16(&mut buf);
+                for i in buf {
+                    write!(writer, r"\u{i:04x}")?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }

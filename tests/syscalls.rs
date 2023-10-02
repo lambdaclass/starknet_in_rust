@@ -10,7 +10,7 @@ use cairo_vm::{
     },
 };
 use num_traits::{Num, One, Zero};
-use starknet_in_rust::EntryPointType;
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId},
@@ -20,15 +20,16 @@ use starknet_in_rust::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, L2toL1MessageInfo,
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     },
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{
-        cached_state::{CachedState, ContractClassCache},
+        cached_state::CachedState,
         state_api::{State, StateReader},
     },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
+};
+use starknet_in_rust::{
+    services::api::contract_classes::compiled_class::CompiledClass, EntryPointType,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -85,19 +86,23 @@ fn test_contract<'a>(
     state_reader
         .address_to_nonce_mut()
         .insert(contract_address.clone(), nonce);
-    state_reader
-        .class_hash_to_contract_class_mut()
-        .insert(class_hash, contract_class);
+    state_reader.class_hash_to_compiled_class_mut().insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
 
     let mut storage_entries = Vec::new();
     let contract_class_cache = {
-        let mut contract_class_cache = ContractClassCache::new();
+        let mut contract_class_cache = HashMap::new();
 
         for (class_hash, contract_path, contract_address) in extra_contracts {
             let contract_class = ContractClass::from_path(contract_path)
                 .expect("Could not load extra contract from JSON");
 
-            contract_class_cache.insert(class_hash, contract_class.clone());
+            contract_class_cache.insert(
+                class_hash,
+                CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+            );
 
             if let Some((contract_address, data)) = contract_address {
                 storage_entries.extend(
@@ -108,15 +113,16 @@ fn test_contract<'a>(
                 state_reader
                     .address_to_class_hash_mut()
                     .insert(contract_address.clone(), class_hash);
-                state_reader
-                    .class_hash_to_contract_class_mut()
-                    .insert(class_hash, contract_class.clone());
+                state_reader.class_hash_to_compiled_class_mut().insert(
+                    class_hash,
+                    CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+                );
             }
         }
 
-        Some(contract_class_cache)
+        contract_class_cache
     };
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache, None);
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
     storage_entries
         .into_iter()
         .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
@@ -165,8 +171,8 @@ fn test_contract<'a>(
         accessed_storage_keys.collect()
     );
     assert_eq!(result.calldata, calldata);
-    assert_eq!(result.retdata, return_data.into());
-    assert_eq!(result.internal_calls, internal_calls.into());
+    assert_eq_sorted!(result.retdata, return_data.into());
+    assert_eq_sorted!(result.internal_calls, internal_calls.into());
     assert_eq!(result.execution_resources, execution_resources);
 
     assert_eq!(result.gas_consumed, 0);
@@ -185,7 +191,7 @@ fn call_contract_syscall() {
         None,
         [],
         [],
-        [10.into()],
+        [0.into(), 10.into()],
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2u8; 32],
@@ -224,7 +230,7 @@ fn call_contract_syscall() {
                     "1785358123477195475640323002883645042461033713657726545236059599395452130340"
                 )),
                 entry_point_type: Some(EntryPointType::External),
-                storage_read_values: vec![10.into()],
+                storage_read_values: vec![10.into(), 10.into()],
                 accessed_storage_keys: [[
                     3, 189, 169, 58, 108, 116, 165, 116, 249, 48, 17, 133, 28, 149, 186, 141, 157,
                     76, 34, 41, 77, 210, 154, 246, 164, 151, 207, 138, 139, 182, 155, 161,
@@ -680,7 +686,7 @@ fn library_call_syscall() {
         None,
         [],
         [],
-        [11.into()],
+        [0.into(), 11.into()],
         [calculate_sn_keccak("lib_state".as_bytes())].into_iter(),
         [(
             [2; 32],
@@ -717,7 +723,7 @@ fn library_call_syscall() {
                     "1785358123477195475640323002883645042461033713657726545236059599395452130340"
                 )),
                 entry_point_type: Some(EntryPointType::External),
-                storage_read_values: vec![10.into()],
+                storage_read_values: vec![10.into(), 10.into()],
                 accessed_storage_keys: [[
                     3, 189, 169, 58, 108, 116, 165, 116, 249, 48, 17, 133, 28, 149, 186, 141, 157,
                     76, 34, 41, 77, 210, 154, 246, 164, 151, 207, 138, 139, 182, 155, 161,
@@ -795,6 +801,7 @@ fn library_call_l1_handler_syscall() {
             ]]
             .into_iter()
             .collect(),
+            storage_read_values: vec![0.into()],
             execution_resources: ExecutionResources {
                 n_steps: 40,
                 ..Default::default()
@@ -900,13 +907,20 @@ fn deploy_with_constructor_syscall() {
         10,
     )
     .unwrap();
+    let entry_point_selector = Felt252::from_str_radix(
+        "1159040026212278395030414237414753050475174923702621880048416706425641521556",
+        10,
+    )
+    .unwrap();
 
     let deploy_class_hash = [2u8; 32];
+    let caller_address = Address(11111.into());
+
     test_contract(
         "starknet_programs/syscalls.json",
         "test_deploy_with_constructor",
         [1; 32],
-        Address(11111.into()),
+        caller_address.clone(),
         Address(0.into()),
         BlockContext::default(),
         None,
@@ -925,7 +939,26 @@ fn deploy_with_constructor_syscall() {
             0.into(),
             550.into(),
         ],
-        [],
+        [CallInfo {
+            caller_address,
+            call_type: Some(CallType::Call),
+            contract_address: Address(deploy_address.clone()),
+            class_hash: Some(deploy_class_hash),
+            entry_point_selector: Some(entry_point_selector),
+            entry_point_type: Some(EntryPointType::Constructor),
+            calldata: [550.into()].to_vec(),
+            execution_resources: ExecutionResources {
+                n_steps: 40,
+                n_memory_holes: 0,
+                ..Default::default()
+            },
+            accessed_storage_keys: HashSet::<[u8; 32]>::from([[
+                2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27,
+                162, 147, 169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
+            ]]),
+            storage_read_values: [0.into()].to_vec(),
+            ..Default::default()
+        }],
         [deploy_address],
         ExecutionResources {
             n_steps: 84,
@@ -976,86 +1009,113 @@ fn test_deploy_and_call_contract_syscall() {
             new_constant.clone(),
         ],
         [
-        // Invoke storage_var_and_constructor.cairo mult_constant function
-        CallInfo {
-            caller_address: Address(11111.into()),
-            call_type: Some(CallType::Call),
-            contract_address: deploy_address.clone(),
-            code_address: None,
-            class_hash: Some(deploy_class_hash),
-            entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "1576037374104670872807053137865113122553607263175471701007015754752102201893",
-                    10,
-                )
-                .unwrap(),
-            ),
-            entry_point_type: Some(EntryPointType::External),
-            calldata: vec![4.into()],
-            retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
-            storage_read_values: vec![constructor_constant],
-            accessed_storage_keys: HashSet::from([constant_storage_key]),
-            execution_resources: ExecutionResources {
-                n_steps: 52,
+            // constructor
+            CallInfo {
+                caller_address: Address(11111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: deploy_address.clone(),
+                code_address: None,
+                class_hash: Some(deploy_class_hash),
+                entry_point_selector: Some(
+                    Felt252::from_str_radix(
+                        "1159040026212278395030414237414753050475174923702621880048416706425641521556",
+                        10,
+                    )
+                    .unwrap(),
+                ),
+                entry_point_type: Some(EntryPointType::Constructor),
+                calldata: vec![550.into()],
+                retdata: vec![],
+                storage_read_values: vec![0.into()],
+                accessed_storage_keys: HashSet::from([constant_storage_key]),
+                execution_resources: ExecutionResources {
+                    n_steps: 40,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },
-        // Invoke storage_var_and_constructor.cairo set_constant function
-        CallInfo {
-            caller_address: Address(11111.into()),
-            call_type: Some(CallType::Call),
-            contract_address: deploy_address.clone(),
-            code_address: None,
-            class_hash: Some(deploy_class_hash),
-            entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "1201037417712951658445715615949920673423990292207294106968654696818998525373",
-                    10,
-                )
-                .unwrap(),
-            ),
-            entry_point_type: Some(EntryPointType::External),
-            calldata: vec![new_constant.clone()],
-            retdata: vec![],
-            storage_read_values: vec![],
-            accessed_storage_keys: HashSet::from([constant_storage_key]),
-            execution_resources: ExecutionResources {
-                n_steps: 40,
+            // Invoke storage_var_and_constructor.cairo mult_constant function
+            CallInfo {
+                caller_address: Address(11111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: deploy_address.clone(),
+                code_address: None,
+                class_hash: Some(deploy_class_hash),
+                entry_point_selector: Some(
+                    Felt252::from_str_radix(
+                        "1576037374104670872807053137865113122553607263175471701007015754752102201893",
+                        10,
+                    )
+                    .unwrap(),
+                ),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![4.into()],
+                retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
+                storage_read_values: vec![constructor_constant.clone()],
+                accessed_storage_keys: HashSet::from([constant_storage_key]),
+                execution_resources: ExecutionResources {
+                    n_steps: 52,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        },
-        // Invoke storage_var_and_constructor.cairo get_constant function
-        CallInfo {
-            caller_address: Address(11111.into()),
-            call_type: Some(CallType::Call),
-            contract_address: deploy_address,
-            code_address: None,
-            class_hash: Some(deploy_class_hash),
-            entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "915547745133109687566886827729966789818200062539892992518817034473866315209",
-                    10,
-                )
-                .unwrap(),
-            ),
-            entry_point_type: Some(EntryPointType::External),
-            calldata: vec![],
-            retdata: vec![new_constant.clone()],
-            storage_read_values: vec![new_constant.clone()],
-            accessed_storage_keys: HashSet::from([constant_storage_key]),
-            execution_resources: ExecutionResources {
-                n_steps: 46,
+            // Invoke storage_var_and_constructor.cairo set_constant function
+            CallInfo {
+                caller_address: Address(11111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: deploy_address.clone(),
+                code_address: None,
+                class_hash: Some(deploy_class_hash),
+                entry_point_selector: Some(
+                    Felt252::from_str_radix(
+                        "1201037417712951658445715615949920673423990292207294106968654696818998525373",
+                        10,
+                    )
+                    .unwrap(),
+                ),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![new_constant.clone()],
+                retdata: vec![],
+                storage_read_values: vec![constructor_constant],
+                accessed_storage_keys: HashSet::from([constant_storage_key]),
+                execution_resources: ExecutionResources {
+                    n_steps: 40,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        }        ],
+            // Invoke storage_var_and_constructor.cairo get_constant function
+            CallInfo {
+                caller_address: Address(11111.into()),
+                call_type: Some(CallType::Call),
+                contract_address: deploy_address,
+                code_address: None,
+                class_hash: Some(deploy_class_hash),
+                entry_point_selector: Some(
+                    Felt252::from_str_radix(
+                        "915547745133109687566886827729966789818200062539892992518817034473866315209",
+                        10,
+                    )
+                    .unwrap(),
+                ),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![],
+                retdata: vec![new_constant.clone()],
+                storage_read_values: vec![new_constant.clone()],
+                accessed_storage_keys: HashSet::from([constant_storage_key]),
+                execution_resources: ExecutionResources {
+                    n_steps: 46,
+                    ..Default::default()
+                },
+                ..Default::default()
+            }
+        ],
         [new_constant],
         ExecutionResources {
             n_steps: 325,
             n_memory_holes: 2,
-            builtin_instance_counter: HashMap::default()},
+            builtin_instance_counter: HashMap::default()
+        },
     );
 }
 
@@ -1079,7 +1139,6 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut casm_contract_class_cache = HashMap::new();
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
@@ -1087,8 +1146,14 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let nonce = Felt252::zero();
 
     // simulate contract declare
-    casm_contract_class_cache.insert(test_class_hash, test_contract_class.clone());
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(
+        test_class_hash,
+        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+    );
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1099,11 +1164,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        Arc::new(state_reader),
-        Some(contract_class_cache),
-        Some(casm_contract_class_cache),
-    );
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt, Felt252::one()].to_vec();
@@ -1154,7 +1215,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => *class,
+        CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
     };
 
@@ -1180,7 +1241,6 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut casm_contract_class_cache = HashMap::new();
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
@@ -1188,8 +1248,14 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let nonce = Felt252::zero();
 
     // simulate contract declare
-    casm_contract_class_cache.insert(test_class_hash, test_contract_class.clone());
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(
+        test_class_hash,
+        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+    );
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1200,11 +1266,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        Arc::new(state_reader),
-        Some(contract_class_cache),
-        Some(casm_contract_class_cache),
-    );
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -1257,7 +1319,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => *class,
+        CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
     };
 
@@ -1283,7 +1345,6 @@ fn deploy_cairo1_and_invoke() {
     let test_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut casm_contract_class_cache = HashMap::new();
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
@@ -1291,8 +1352,14 @@ fn deploy_cairo1_and_invoke() {
     let nonce = Felt252::zero();
 
     // simulate contract declare
-    casm_contract_class_cache.insert(test_class_hash, test_contract_class.clone());
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(
+        test_class_hash,
+        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+    );
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1303,11 +1370,7 @@ fn deploy_cairo1_and_invoke() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        Arc::new(state_reader),
-        Some(contract_class_cache),
-        Some(casm_contract_class_cache),
-    );
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -1358,7 +1421,7 @@ fn deploy_cairo1_and_invoke() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => *class,
+        CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
     };
 
@@ -1408,13 +1471,16 @@ fn send_messages_to_l1_different_contract_calls() {
         .to_owned();
 
     // Create state reader with class hash data
-    let mut deprecated_contract_class_cache = HashMap::new();
+    let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    deprecated_contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -1432,7 +1498,10 @@ fn send_messages_to_l1_different_contract_calls() {
     let send_msg_class_hash: ClassHash = [2; 32];
     let send_msg_nonce = Felt252::zero();
 
-    deprecated_contract_class_cache.insert(send_msg_class_hash, send_msg_contract_class);
+    contract_class_cache.insert(
+        send_msg_class_hash,
+        CompiledClass::Deprecated(Arc::new(send_msg_contract_class)),
+    );
     state_reader
         .address_to_class_hash_mut()
         .insert(send_msg_address.clone(), send_msg_class_hash);
@@ -1441,11 +1510,7 @@ fn send_messages_to_l1_different_contract_calls() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        Arc::new(state_reader),
-        Some(deprecated_contract_class_cache),
-        None,
-    );
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
