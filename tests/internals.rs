@@ -12,6 +12,7 @@ use cairo_vm::vm::{
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, Num, One, Zero};
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::core::contract_address::{
     compute_casm_class_hash, compute_sierra_class_hash,
 };
@@ -41,7 +42,7 @@ use starknet_in_rust::{
     execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
     state::in_memory_state_reader::InMemoryStateReader,
     state::{
-        cached_state::{CachedState, ContractClassCache},
+        cached_state::CachedState,
         state_api::{State, StateReader},
         state_cache::StateCache,
         state_cache::StorageEntry,
@@ -188,14 +189,14 @@ fn create_account_tx_test_state(
                 state_reader.address_to_storage_mut().extend(stored);
             }
             for (class_hash, contract_class) in class_hash_to_class {
-                state_reader
-                    .class_hash_to_contract_class_mut()
-                    .insert(class_hash, contract_class);
+                state_reader.class_hash_to_compiled_class_mut().insert(
+                    class_hash,
+                    CompiledClass::Deprecated(Arc::new(contract_class)),
+                );
             }
             Arc::new(state_reader)
         },
-        Some(HashMap::new()),
-        Some(HashMap::new()),
+        HashMap::new(),
     );
 
     Ok((block_context, cached_state))
@@ -204,56 +205,45 @@ fn create_account_tx_test_state(
 fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    let state_cache = ContractClassCache::new();
-
-    CachedState::new(
-        Arc::new(in_memory_state_reader),
-        Some(state_cache),
-        Some(HashMap::new()),
-    )
+    CachedState::new(Arc::new(in_memory_state_reader), HashMap::new())
 }
 
 fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    let contract_classes_cache = ContractClassCache::from([
+    let contract_classes_cache = HashMap::from([
         (
             felt_to_hash(&TEST_CLASS_HASH.clone()),
-            ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+            CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+            )),
         ),
         (
             felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
-            ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            )),
         ),
         (
             felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
-            ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            )),
         ),
     ]);
 
     CachedState::new_for_testing(
         Arc::new(in_memory_state_reader),
-        Some(contract_classes_cache),
         state_cache_after_invoke_tx(fee),
-        Some(HashMap::new()),
+        contract_classes_cache,
     )
 }
 
 fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
-    let class_hash_initial_values = HashMap::from([
-        (
-            TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-            felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
-        ),
-        (
-            TEST_CONTRACT_ADDRESS.clone(),
-            felt_to_hash(&TEST_CLASS_HASH.clone()),
-        ),
-        (
-            TEST_ERC20_CONTRACT_ADDRESS.clone(),
-            felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
-        ),
-    ]);
+    let class_hash_initial_values = HashMap::from([(
+        TEST_ERC20_CONTRACT_ADDRESS.clone(),
+        felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
+    )]);
 
     let nonce_initial_values =
         HashMap::from([(TEST_ACCOUNT_CONTRACT_ADDRESS.clone(), Felt252::zero())]);
@@ -372,18 +362,23 @@ fn initial_in_memory_state_reader() -> InMemoryStateReader {
         HashMap::from([
             (
                 felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
-                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                CompiledClass::Deprecated(Arc::new(
+                    ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                )),
             ),
             (
                 felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                CompiledClass::Deprecated(Arc::new(
+                    ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                )),
             ),
             (
                 felt_to_hash(&TEST_CLASS_HASH),
-                ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                CompiledClass::Deprecated(Arc::new(
+                    ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                )),
             ),
         ]),
-        HashMap::new(),
         HashMap::new(),
     )
 }
@@ -414,7 +409,7 @@ fn expected_validate_call_info(
 fn expected_fee_transfer_call_info(
     block_context: &BlockContext,
     account_address: &Address,
-    actual_fee: u64,
+    actual_fee: u128,
 ) -> CallInfo {
     CallInfo {
         entry_point_type: EntryPointType::External.into(),
@@ -464,6 +459,10 @@ fn expected_fee_transfer_call_info(
         ]),
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
@@ -525,10 +524,6 @@ fn test_create_account_tx_test_state() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -542,21 +537,21 @@ fn test_create_account_tx_test_state() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -588,11 +583,11 @@ fn test_create_account_tx_test_state() {
     // );
 }
 
-fn invoke_tx(calldata: Vec<Felt252>) -> InvokeFunction {
+fn invoke_tx(calldata: Vec<Felt252>, max_fee: u128) -> InvokeFunction {
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        50000000,
+        max_fee,
         TRANSACTION_VERSION.clone(),
         calldata,
         vec![],
@@ -638,13 +633,17 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
@@ -652,7 +651,7 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
             ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
@@ -698,25 +697,29 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone() - Felt252::from(1252),
             Felt252::zero(),
+            INITIAL_BALANCE.clone() - Felt252::from(1252),
+            Felt252::zero(),
+            Felt252::from(1252),
+            Felt252::zero(),
             Felt252::from(1252),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
-            [
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ],
-            [
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+            ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
+            ],
+            [
+                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
         ]),
     }
@@ -727,7 +730,6 @@ fn declare_tx() -> Declare {
         contract_class: ContractClass::from_path(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
         version: 1.into(),
         max_fee: 100000,
@@ -753,7 +755,6 @@ fn declarev2_tx() -> DeclareV2 {
 
     DeclareV2 {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        tx_type: TransactionType::Declare,
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
         version: 1.into(),
         max_fee: 50000000,
@@ -777,7 +778,7 @@ fn deploy_fib_syscall() -> Deploy {
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let casm_class = CasmContractClass::from_contract_class(sierra_contract_class, true).unwrap();
-    let contract_class = CompiledClass::Casm(Box::new(casm_class));
+    let contract_class = CompiledClass::Casm(Arc::new(casm_class));
 
     let contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -796,7 +797,6 @@ fn deploy_fib_syscall() -> Deploy {
         contract_hash,
         contract_class,
         constructor_calldata: Vec::new(),
-        tx_type: TransactionType::Deploy,
         skip_execute: false,
         skip_fee_transfer: false,
         skip_validate: false,
@@ -832,27 +832,32 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),
+            INITIAL_BALANCE.clone(),
+            Felt252::zero(),
+            Felt252::zero(),
+            Felt252::zero(),
             Felt252::zero(),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ],
-            [
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
             ],
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
+                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
             [
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
             ],
+            [
+                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
+                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
+            ],
         ]),
+
         execution_resources: ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
@@ -875,10 +880,6 @@ fn test_declare_tx() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -892,21 +893,21 @@ fn test_declare_tx() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -963,10 +964,6 @@ fn test_declarev2_tx() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -980,21 +977,21 @@ fn test_declarev2_tx() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -1232,10 +1229,10 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
 
 fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3445),
+        ("n_steps".to_string(), 4135),
         ("pedersen_builtin".to_string(), 16),
         ("l1_gas_usage".to_string(), 2448),
-        ("range_check_builtin".to_string(), 82),
+        ("range_check_builtin".to_string(), 101),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
@@ -1255,17 +1252,17 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3541;
+        n_steps = 4231;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3544;
+        n_steps = 4234;
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 7344),
+        ("l1_gas_usage".to_string(), 4896),
         ("pedersen_builtin".to_string(), 16),
-        ("range_check_builtin".to_string(), 85),
+        ("range_check_builtin".to_string(), 104),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
     TransactionExecutionInfo::new(
@@ -1289,14 +1286,60 @@ fn test_invoke_tx() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
-    let invoke_tx = invoke_tx(calldata);
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
     let result = invoke_tx.execute(state, block_context, 0).unwrap();
     let expected_execution_info = expected_transaction_execution_info(block_context);
 
-    assert_eq!(result, expected_execution_info);
+    assert_eq_sorted!(result, expected_execution_info);
+}
+
+#[test]
+fn test_invoke_tx_exceeded_max_fee() {
+    let (block_context, state) = &mut create_account_tx_test_state().unwrap();
+    let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
+    let calldata = vec![
+        test_contract_address, // CONTRACT_ADDRESS
+        Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
+        Felt252::from(2),                                               // CONTRACT_CALLDATA
+    ];
+    let max_fee = 3;
+    let actual_fee = 2490;
+    let invoke_tx = invoke_tx(calldata, max_fee);
+
+    // Extract invoke transaction fields for testing, as it is consumed when creating an account
+    // transaction.
+    let result = invoke_tx.execute(state, block_context, 0).unwrap();
+    let mut expected_result = expected_transaction_execution_info(block_context).to_revert_error(
+        format!(
+            "Calculated fee ({}) exceeds max fee ({})",
+            actual_fee, max_fee
+        )
+        .as_str(),
+    );
+    expected_result.set_fee_info(max_fee, Some(expected_fee_transfer_info(max_fee)));
+
+    assert_eq_sorted!(result, expected_result);
+
+    // Check final balance
+    let test_erc20_address = block_context
+        .starknet_os_config()
+        .fee_token_address()
+        .clone();
+    let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+
+    let balance = state
+        .get_storage_at(&(
+            test_erc20_address,
+            felt_to_hash(&test_erc20_account_balance_key),
+        ))
+        .unwrap();
+    let expected_balance = INITIAL_BALANCE.clone() - Felt252::from(max_fee);
+
+    assert_eq!(balance, expected_balance);
 }
 
 #[test]
@@ -1307,10 +1350,6 @@ fn test_invoke_tx_state() {
     assert_eq!(
         &state.contract_classes(),
         &expected_initial_state.contract_classes()
-    );
-    assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -1326,21 +1365,21 @@ fn test_invoke_tx_state() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -1353,7 +1392,7 @@ fn test_invoke_tx_state() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
-    let invoke_tx = invoke_tx(calldata);
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     let result = invoke_tx
         .execute(state, starknet_general_context, 0)
@@ -1362,10 +1401,6 @@ fn test_invoke_tx_state() {
     let expected_final_state = expected_state_after_tx(result.actual_fee);
 
     assert_eq!(&state.cache(), &expected_final_state.cache());
-    assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_final_state.casm_contract_classes()
-    );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_final_state.state_reader.address_to_class_hash
@@ -1390,10 +1425,6 @@ fn test_invoke_with_declarev2_tx() {
         &expected_initial_state.contract_classes()
     );
     assert_eq!(
-        &state.casm_contract_classes(),
-        &expected_initial_state.casm_contract_classes()
-    );
-    assert_eq!(
         &state.state_reader.address_to_class_hash,
         &expected_initial_state.state_reader.address_to_class_hash
     );
@@ -1407,21 +1438,21 @@ fn test_invoke_with_declarev2_tx() {
     );
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
         ]));
     assert!(&state
         .state_reader
-        .class_hash_to_contract_class
+        .class_hash_to_compiled_class
         .contains_key(&[
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
@@ -1444,7 +1475,7 @@ fn test_invoke_with_declarev2_tx() {
         Felt252::from(0),                                     // b
         Felt252::from(0),                                     // n
     ];
-    let invoke_tx = invoke_tx(calldata);
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     let expected_gas_consumed = 4908;
     let result = invoke_tx
@@ -1452,14 +1483,14 @@ fn test_invoke_with_declarev2_tx() {
         .unwrap();
 
     let expected_execution_info = expected_fib_transaction_execution_info(block_context);
-    assert_eq!(result, expected_execution_info);
+    assert_eq_sorted!(result, expected_execution_info);
 }
 
 #[test]
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let expected_fee = 3684;
+    let expected_fee = 3709;
 
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
@@ -1488,20 +1519,13 @@ fn test_deploy_account() {
 
     assert_eq!(&state.cache(), &state_before.cache());
     assert_eq!(&state.contract_classes(), &state_before.contract_classes());
-    assert_eq!(
-        &state.casm_contract_classes(),
-        &state_before.casm_contract_classes()
-    );
 
     let tx_info = deploy_account_tx
         .execute(&mut state, &block_context)
         .unwrap();
 
-    assert_eq!(
-        state.casm_contract_classes(),
-        state_after.casm_contract_classes()
-    );
-    assert_eq!(state.cache(), state_after.cache());
+    use pretty_assertions_sorted::assert_eq_sorted;
+    assert_eq_sorted!(state.cache(), state_after.cache());
 
     let expected_validate_call_info = expected_validate_call_info(
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
@@ -1530,19 +1554,19 @@ fn test_deploy_account() {
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &block_context,
         deploy_account_tx.contract_address(),
-        expected_fee as u64,
+        expected_fee,
     );
 
     let resources = HashMap::from([
         ("n_steps".to_string(), 3625),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 6120),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 6157);
+    assert_eq!(fee, expected_fee);
 
     let expected_execution_info = TransactionExecutionInfo::new(
         expected_validate_call_info.into(),
@@ -1572,15 +1596,163 @@ fn test_deploy_account() {
     assert_eq!(class_hash_from_state, *deploy_account_tx.class_hash());
 }
 
+#[test]
+fn test_deploy_account_revert() {
+    let (block_context, mut state) = create_account_tx_test_state().unwrap();
+
+    let expected_fee = 1;
+
+    let deploy_account_tx = DeployAccount::new(
+        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+        1,
+        TRANSACTION_VERSION.clone(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        StarknetChainId::TestNet.to_felt(),
+    )
+    .unwrap();
+
+    state.set_storage_at(
+        &(
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
+            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+        ),
+        INITIAL_BALANCE.clone(),
+    );
+
+    let (state_before, mut state_after) = expected_deploy_account_states();
+
+    assert_eq_sorted!(&state.cache(), &state_before.cache());
+    assert_eq_sorted!(&state.contract_classes(), &state_before.contract_classes());
+    assert!(&state.contract_classes().is_empty());
+
+    let tx_info = deploy_account_tx
+        .execute(&mut state, &block_context)
+        .unwrap();
+
+    assert!(tx_info.revert_error.is_some());
+
+    let mut state_reverted = state_before;
+
+    // Add initial writes (these 'bypass' the transactional state because it's a state reader and
+    // it will cache initial values when looking for them).
+    state_reverted
+        .cache_mut()
+        .class_hash_initial_values_mut()
+        .extend(
+            state_after
+                .cache_mut()
+                .class_hash_initial_values_mut()
+                .clone(),
+        );
+    state_reverted
+        .cache_mut()
+        .nonce_initial_values_mut()
+        .extend(state_after.cache_mut().nonce_initial_values_mut().clone());
+    state_reverted
+        .cache_mut()
+        .storage_initial_values_mut()
+        .extend(state_after.cache_mut().storage_initial_values_mut().clone());
+    state_reverted
+        .cache_mut()
+        .storage_initial_values_mut()
+        .extend(state_after.cache_mut().storage_initial_values_mut().clone());
+
+    // Set contract class cache
+    state_reverted
+        .set_contract_classes(state_after.contract_classes().clone())
+        .unwrap();
+
+    // Set storage writes related to the fee transfer
+    state_reverted
+        .cache_mut()
+        .storage_writes_mut()
+        .extend(state_after.cache_mut().storage_writes().clone());
+    state_reverted.set_storage_at(
+        &(
+            Address(0x1001.into()),
+            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+        ),
+        INITIAL_BALANCE.clone() - Felt252::one(), // minus the max fee that will be transfered
+    );
+    state_reverted.cache_mut().storage_writes_mut().insert(
+        (
+            Address(0x1001.into()),
+            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
+        ),
+        Felt252::one(), // the max fee received by the sequencer
+    );
+
+    // Set nonce
+    state_reverted
+        .cache_mut()
+        .nonce_writes_mut()
+        .extend(state_after.cache_mut().nonce_writes_mut().clone());
+
+    assert_eq_sorted!(state.cache(), state_reverted.cache());
+
+    let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
+        &block_context,
+        deploy_account_tx.contract_address(),
+        expected_fee,
+    );
+
+    let resources = HashMap::from([
+        ("n_steps".to_string(), 3625),
+        ("range_check_builtin".to_string(), 83),
+        ("pedersen_builtin".to_string(), 23),
+        ("l1_gas_usage".to_string(), 3672),
+    ]);
+
+    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+
+    assert_eq!(fee, 3709);
+
+    let mut expected_execution_info = TransactionExecutionInfo::new(
+        None,
+        None,
+        None,
+        None,
+        expected_fee,
+        // Entry **not** in blockifier.
+        // Default::default(),
+        resources,
+        TransactionType::DeployAccount.into(),
+    )
+    .to_revert_error(format!("Calculated fee ({}) exceeds max fee ({})", fee, 1).as_str());
+
+    expected_execution_info.set_fee_info(expected_fee, expected_fee_transfer_call_info.into());
+
+    assert_eq_sorted!(tx_info, expected_execution_info);
+
+    let nonce_from_state = state
+        .get_nonce_at(deploy_account_tx.contract_address())
+        .unwrap();
+    assert_eq!(nonce_from_state, Felt252::one());
+
+    let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
+
+    validate_final_balances(&mut state, &block_context, &hash, expected_fee);
+
+    let class_hash_from_state = state
+        .get_class_hash_at(deploy_account_tx.contract_address())
+        .unwrap();
+    assert_eq!(class_hash_from_state, [0; 32]);
+}
+
 fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader>,
     CachedState<InMemoryStateReader>,
 ) {
-    let fee = Felt252::from(3684);
+    let fee = Felt252::from(3709);
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([
-                (Address(0x101.into()), felt_to_hash(&0x111.into())),
                 (Address(0x100.into()), felt_to_hash(&0x110.into())),
                 (Address(0x1001.into()), felt_to_hash(&0x1010.into())),
             ]),
@@ -1599,22 +1771,26 @@ fn expected_deploy_account_states() -> (
             HashMap::from([
                 (
                     felt_to_hash(&0x110.into()),
-                    ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                    CompiledClass::Deprecated(Arc::new(
+                        ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+                    )),
                 ),
                 (
                     felt_to_hash(&0x111.into()),
-                    ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                    CompiledClass::Deprecated(Arc::new(
+                        ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+                    )),
                 ),
                 (
                     felt_to_hash(&0x1010.into()),
-                    ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                    CompiledClass::Deprecated(Arc::new(
+                        ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+                    )),
                 ),
             ]),
             HashMap::new(),
-            HashMap::new(),
         )),
-        Some(ContractClassCache::new()),
-        Some(HashMap::new()),
+        HashMap::new(),
     );
     state_before.set_storage_at(
         &(
@@ -1635,15 +1811,6 @@ fn expected_deploy_account_states() -> (
         .cache_mut()
         .class_hash_initial_values_mut()
         .insert(Address(0x1001.into()), felt_to_hash(&0x1010.into()));
-    state_after
-        .cache_mut()
-        .class_hash_initial_values_mut()
-        .insert(
-            Address(felt_str!(
-                "386181506763903095743576862849245034886954647214831045800703908858571591162"
-            )),
-            [0; 32],
-        );
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
@@ -1667,6 +1834,7 @@ fn expected_deploy_account_states() -> (
         ),
         Felt252::zero(),
     );
+
     state_after.cache_mut().nonce_writes_mut().insert(
         Address(felt_str!(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
@@ -1712,13 +1880,17 @@ fn expected_deploy_account_states() -> (
     state_after
         .set_contract_class(
             &felt_to_hash(&0x1010.into()),
-            &ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            &CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+            )),
         )
         .unwrap();
     state_after
         .set_contract_class(
             &felt_to_hash(&0x111.into()),
-            &ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            &CompiledClass::Deprecated(Arc::new(
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+            )),
         )
         .unwrap();
 
@@ -1918,7 +2090,7 @@ fn test_invoke_tx_wrong_call_data() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
                                                                         // CONTRACT_CALLDATA
     ];
-    let invoke_tx = invoke_tx(calldata);
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     // Execute transaction
     let result = invoke_tx.execute(state, starknet_general_context, 0);
@@ -2034,7 +2206,7 @@ fn test_library_call_with_declare_v2() {
         .insert(address.clone(), nonce);
 
     state
-        .set_compiled_class(&Felt252::from_bytes_be(&class_hash), contract_class)
+        .set_contract_class(&class_hash, &CompiledClass::Casm(Arc::new(contract_class)))
         .unwrap();
 
     let create_execute_extrypoint = |selector: &BigUint,

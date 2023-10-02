@@ -1,5 +1,4 @@
 use crate::core::errors::hash_errors::HashError;
-use crate::definitions::constants::FEE_TRANSFER_N_STORAGE_CHANGES_TO_CHARGE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::state_api::State;
 use crate::{
@@ -17,10 +16,14 @@ use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use num_integer::Integer;
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha3::{Digest, Keccak256};
-use starknet_crypto::FieldElement;
+use starknet::core::types::FromByteArrayError;
+use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
+use starknet_crypto::{pedersen_hash, FieldElement};
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -184,7 +187,7 @@ pub fn calculate_tx_resources(
     let l1_gas_usage = calculate_tx_gas_usage(
         l2_to_l1_messages,
         n_modified_contracts,
-        n_storage_changes + FEE_TRANSFER_N_STORAGE_CHANGES_TO_CHARGE,
+        n_storage_changes,
         l1_handler_payload_size,
         n_deployments,
     );
@@ -227,18 +230,36 @@ where
     V: PartialEq + Clone,
 {
     let val = map.get(key);
-    !(map.contains_key(key) && (Some(value) == val))
+    Some(value) != val
 }
 
-pub fn subtract_mappings<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> HashMap<K, V>
+pub fn subtract_mappings<'a, K, V>(
+    map_a: &'a HashMap<K, V>,
+    map_b: &'a HashMap<K, V>,
+) -> HashMap<K, V>
 where
     K: Hash + Eq + Clone,
     V: PartialEq + Clone,
 {
     map_a
-        .into_iter()
-        .filter(|(k, v)| contained_and_not_updated(k, v, &map_b))
+        .iter()
+        .filter(|(k, v)| contained_and_not_updated(*k, *v, map_b))
+        .map(|(k, v)| (k.clone(), v.clone()))
         .collect()
+}
+
+pub fn subtract_mappings_keys<'a, K, V>(
+    map_a: &'a HashMap<K, V>,
+    map_b: &'a HashMap<K, V>,
+) -> impl Iterator<Item = &'a K>
+where
+    K: Hash + Eq + Clone,
+    V: PartialEq + Clone,
+{
+    map_a
+        .iter()
+        .filter(|(k, v)| contained_and_not_updated(*k, *v, map_b))
+        .map(|x| x.0)
 }
 
 /// Converts StateDiff storage mapping (addresses map to a key-value mapping) to CachedState
@@ -257,16 +278,61 @@ pub fn to_cache_state_storage_mapping(
 
 // get a vector of keys from two hashmaps
 
-pub fn get_keys<K, V>(map_a: HashMap<K, V>, map_b: HashMap<K, V>) -> Vec<K>
+pub fn get_keys<'a, K, V>(map_a: &'a HashMap<K, V>, map_b: &'a HashMap<K, V>) -> Vec<&'a K>
 where
     K: Hash + Eq,
 {
-    let mut keys1: HashSet<K> = map_a.into_keys().collect();
-    let keys2: HashSet<K> = map_b.into_keys().collect();
+    let mut keys1: HashSet<&K> = map_a.keys().collect();
+    let keys2: HashSet<&K> = map_b.keys().collect();
 
     keys1.extend(keys2);
 
     keys1.into_iter().collect()
+}
+
+/// Returns the storage address of a StarkNet storage variable given its name and arguments.
+pub fn get_storage_var_address(
+    storage_var_name: &str,
+    args: &[Felt252],
+) -> Result<Felt252, FromByteArrayError> {
+    let felt_to_field_element = |felt: &Felt252| -> Result<FieldElement, FromByteArrayError> {
+        FieldElement::from_bytes_be(&felt.to_be_bytes())
+    };
+
+    let args = args
+        .iter()
+        .map(|felt| felt_to_field_element(felt))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let storage_var_name_hash =
+        FieldElement::from_bytes_be(&calculate_sn_keccak(storage_var_name.as_bytes()))?;
+    let storage_key_hash = args
+        .iter()
+        .fold(storage_var_name_hash, |res, arg| pedersen_hash(&res, arg));
+
+    let storage_key = field_element_to_felt(&storage_key_hash).mod_floor(&Felt252::from_bytes_be(
+        &L2_ADDRESS_UPPER_BOUND.to_bytes_be(),
+    ));
+
+    Ok(storage_key)
+}
+
+/// Gets storage keys for a Uint256 storage variable.
+pub fn get_uint256_storage_var_addresses(
+    storage_var_name: &str,
+    args: &[Felt252],
+) -> Result<(Felt252, Felt252), FromByteArrayError> {
+    let low_key = get_storage_var_address(storage_var_name, args)?;
+    let high_key = &low_key + &Felt252::from(1);
+    Ok((low_key, high_key))
+}
+
+pub fn get_erc20_balance_var_addresses(
+    contract_address: &Address,
+) -> Result<([u8; 32], [u8; 32]), FromByteArrayError> {
+    let (felt_low, felt_high) =
+        get_uint256_storage_var_addresses("ERC20_balances", &[contract_address.clone().0])?;
+    Ok((felt_low.to_be_bytes(), felt_high.to_be_bytes()))
 }
 
 //* ----------------------------
@@ -346,6 +412,21 @@ pub(crate) fn parse_builtin_names(
         .collect()
 }
 
+/// Parses an array of strings representing Felt252 as hex
+pub fn parse_felt_array(felt_strings: &[Value]) -> Vec<Felt252> {
+    let mut felts = vec![];
+
+    for felt in felt_strings {
+        let felt_string = felt.as_str().unwrap();
+        felts.push(match felt_string.starts_with("0x") {
+            true => Felt252::parse_bytes(felt_string[2..].as_bytes(), 16).unwrap(),
+            false => Felt252::parse_bytes(felt_string.as_bytes(), 16).unwrap(),
+        })
+    }
+
+    felts
+}
+
 //* -------------------
 //*      Macros
 //* -------------------
@@ -355,12 +436,33 @@ pub(crate) fn parse_builtin_names(
 pub mod test_utils {
     #![allow(unused_imports)]
 
+    use crate::{
+        definitions::{
+            block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+            constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
+        },
+        services::api::contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+        },
+        state::{
+            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+            state_cache::StorageEntry, BlockInfo,
+        },
+        utils::Address,
+    };
+    use cairo_vm::felt::{felt_str, Felt252};
+    use num_traits::Zero;
+    use std::{collections::HashMap, sync::Arc};
+
+    use super::{felt_to_hash, ClassHash};
+
     #[macro_export]
     macro_rules! any_box {
         ($val : expr) => {
             Box::new($val) as Box<dyn Any>
         };
     }
+
     pub(crate) use any_box;
 
     macro_rules! references {
@@ -380,6 +482,7 @@ pub mod test_utils {
             references
         }};
     }
+
     pub(crate) use references;
 
     macro_rules! ids_data {
@@ -536,6 +639,148 @@ pub mod test_utils {
         }};
     }
     pub(crate) use run_syscall_hint;
+
+    pub(crate) const ACCOUNT_CONTRACT_PATH: &str =
+        "starknet_programs/account_without_validation.json";
+    pub(crate) const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
+    pub(crate) const TEST_CONTRACT_PATH: &str = "starknet_programs/fibonacci.json";
+
+    lazy_static::lazy_static! {
+        // Addresses.
+        pub(crate) static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
+        pub(crate) static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
+        pub(crate) static ref TEST_SEQUENCER_ADDRESS: Address =
+        Address(felt_str!("4096"));
+        pub(crate) static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
+        Address(felt_str!("4097"));
+
+
+        // Class hashes.
+        pub(crate) static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt252 = felt_str!("273");
+        pub(crate) static ref TEST_CLASS_HASH: Felt252 = felt_str!("272");
+        pub(crate) static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str!("274");
+        pub(crate) static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = felt_str!("4112");
+        pub(crate) static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1948962768849191111780391610229754715773924969841143100991524171924131413970");
+
+        // Storage keys.
+        pub(crate) static ref TEST_ERC20_ACCOUNT_BALANCE_KEY: Felt252 =
+            felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515");
+        pub(crate) static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt252 =
+            felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768274");
+        pub(crate) static ref TEST_ERC20_BALANCE_KEY_1: Felt252 =
+            felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516");
+        pub(crate) static ref TEST_ERC20_BALANCE_KEY_2: Felt252 =
+            felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275");
+
+        pub(crate) static ref TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY: Felt252 =
+            felt_str!("2542253978940891427830343982984992363331567580652119103860970381451088310289");
+
+        // Others.
+        // Blockifier had this value hardcoded to 2.
+        pub(crate) static ref ACTUAL_FEE: Felt252 = Felt252::from(10000000);
+    }
+
+    pub(crate) fn new_starknet_block_context_for_testing() -> BlockContext {
+        BlockContext::new(
+            StarknetOsConfig::new(
+                StarknetChainId::TestNet.to_felt(),
+                TEST_ERC20_CONTRACT_ADDRESS.clone(),
+                1,
+            ),
+            0,
+            0,
+            DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS.clone(),
+            1_000_000,
+            0,
+            BlockInfo::empty(TEST_SEQUENCER_ADDRESS.clone()),
+            HashMap::default(),
+            true,
+        )
+    }
+
+    pub(crate) fn create_account_tx_test_state(
+    ) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+        let block_context = new_starknet_block_context_for_testing();
+
+        let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
+        let test_account_contract_class_hash =
+            felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
+        let test_erc20_class_hash = felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone());
+        let class_hash_to_class = HashMap::from([
+            (
+                test_account_contract_class_hash,
+                ContractClass::from_path(ACCOUNT_CONTRACT_PATH)?,
+            ),
+            (
+                test_contract_class_hash,
+                ContractClass::from_path(TEST_CONTRACT_PATH)?,
+            ),
+            (
+                test_erc20_class_hash,
+                ContractClass::from_path(ERC20_CONTRACT_PATH)?,
+            ),
+        ]);
+
+        let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
+        let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
+        let test_erc20_address = block_context
+            .starknet_os_config()
+            .fee_token_address()
+            .clone();
+        let address_to_class_hash = HashMap::from([
+            (test_contract_address, test_contract_class_hash),
+            (
+                test_account_contract_address,
+                test_account_contract_class_hash,
+            ),
+            (test_erc20_address.clone(), test_erc20_class_hash),
+        ]);
+
+        let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+
+        let storage_view = HashMap::from([(
+            (test_erc20_address, test_erc20_account_balance_key),
+            ACTUAL_FEE.clone(),
+        )]);
+
+        let cached_state = CachedState::new(
+            {
+                let mut state_reader = InMemoryStateReader::default();
+                for (contract_address, class_hash) in address_to_class_hash {
+                    let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
+                        .iter()
+                        .filter_map(|((address, storage_key), storage_value)| {
+                            (address == &contract_address).then_some((
+                                (address.clone(), felt_to_hash(storage_key)),
+                                storage_value.clone(),
+                            ))
+                        })
+                        .collect();
+
+                    let stored: HashMap<StorageEntry, Felt252> = storage_keys;
+
+                    state_reader
+                        .address_to_class_hash_mut()
+                        .insert(contract_address.clone(), class_hash);
+
+                    state_reader
+                        .address_to_nonce_mut()
+                        .insert(contract_address.clone(), Felt252::zero());
+                    state_reader.address_to_storage_mut().extend(stored);
+                }
+                for (class_hash, contract_class) in class_hash_to_class {
+                    state_reader.class_hash_to_compiled_class_mut().insert(
+                        class_hash,
+                        CompiledClass::Deprecated(Arc::new(contract_class)),
+                    );
+                }
+                Arc::new(state_reader)
+            },
+            HashMap::new(),
+        );
+
+        Ok((block_context, cached_state))
+    }
 }
 
 #[cfg(test)]
@@ -569,7 +814,6 @@ mod test {
     }
 
     #[test]
-
     fn subtract_mappings_test() {
         let mut a = HashMap::new();
         let mut b = HashMap::new();
@@ -585,7 +829,7 @@ mod test {
             .into_iter()
             .collect::<HashMap<&str, i32>>();
 
-        assert_eq!(subtract_mappings(a, b), res);
+        assert_eq!(subtract_mappings(&a, &b), res);
 
         let mut c = HashMap::new();
         let mut d = HashMap::new();
@@ -602,7 +846,7 @@ mod test {
             .into_iter()
             .collect::<HashMap<i32, i32>>();
 
-        assert_eq!(subtract_mappings(c, d), res);
+        assert_eq!(subtract_mappings(&c, &d), res);
 
         let mut e = HashMap::new();
         let mut f = HashMap::new();
@@ -614,11 +858,10 @@ mod test {
         f.insert(3, 4);
         f.insert(6, 7);
 
-        assert_eq!(subtract_mappings(e, f), HashMap::new())
+        assert_eq!(subtract_mappings(&e, &f), HashMap::new())
     }
 
     #[test]
-
     fn to_cache_state_storage_mapping_test() {
         let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());

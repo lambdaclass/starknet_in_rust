@@ -7,9 +7,7 @@ pub mod state_cache;
 use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::compiled_class::CompiledClass,
-    utils::{
-        get_keys, subtract_mappings, to_cache_state_storage_mapping, to_state_diff_storage_mapping,
-    },
+    utils::{get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping},
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use getset::Getters;
@@ -29,14 +27,14 @@ pub struct BlockInfo {
     /// Timestamp of the beginning of the last block creation attempt.
     pub block_timestamp: u64,
     /// L1 gas price (in Wei) measured at the beginning of the last block creation attempt.
-    pub gas_price: u64,
+    pub gas_price: u128,
     /// The sequencer address of this block.
     pub sequencer_address: Address,
 }
 
 impl BlockInfo {
     /// Creates an empty BlockInfo with given sequencer address.
-    pub fn empty(sequencer_address: Address) -> Self {
+    pub const fn empty(sequencer_address: Address) -> Self {
         BlockInfo {
             block_number: 0, // To do: In cairo-lang, this value is set to -1
             block_timestamp: 0,
@@ -46,7 +44,7 @@ impl BlockInfo {
     }
 
     /// Validates that the progression from the current block to the next is legal.
-    pub fn validate_legal_progress(
+    pub const fn validate_legal_progress(
         &self,
         next_block_info: &BlockInfo,
     ) -> Result<(), TransactionError> {
@@ -97,10 +95,11 @@ impl ExecutionResourcesManager {
     }
 
     /// Increments the syscall counter for a given syscall name by a specified amount.
-    pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) -> Option<()> {
-        self.syscall_counter
-            .get_mut(syscall_name)
-            .map(|val| *val += amount)
+    pub fn increment_syscall_counter(&mut self, syscall_name: &str, amount: u64) {
+        *self
+            .syscall_counter
+            .entry(syscall_name.to_string())
+            .or_default() += amount
     }
 
     /// Returns the current count for a given syscall name.
@@ -112,7 +111,7 @@ impl ExecutionResourcesManager {
 }
 
 /// Represents a difference in state between two points in time.
-#[derive(Default, Clone, PartialEq, Debug, Getters)]
+#[derive(Default, Clone, PartialEq, Eq, Debug, Getters)]
 #[getset(get = "pub")]
 pub struct StateDiff {
     /// Mapping of address to class hash.
@@ -127,7 +126,7 @@ pub struct StateDiff {
 
 impl StateDiff {
     /// Constructs a new StateDiff.
-    pub fn new(
+    pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
         class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
@@ -148,27 +147,12 @@ impl StateDiff {
     {
         let state_cache = cached_state.cache().to_owned();
 
-        let substracted_maps = subtract_mappings(
-            state_cache.storage_writes.clone(),
-            state_cache.storage_initial_values.clone(),
-        );
-
+        let substracted_maps = state_cache.storage_writes;
         let storage_updates = to_state_diff_storage_mapping(substracted_maps);
 
-        let address_to_nonce = subtract_mappings(
-            state_cache.nonce_writes.clone(),
-            state_cache.nonce_initial_values.clone(),
-        );
-
-        let class_hash_to_compiled_class = subtract_mappings(
-            state_cache.compiled_class_hash_writes.clone(),
-            state_cache.compiled_class_hash_initial_values.clone(),
-        );
-
-        let address_to_class_hash = subtract_mappings(
-            state_cache.class_hash_writes.clone(),
-            state_cache.class_hash_initial_values,
-        );
+        let address_to_nonce = state_cache.nonce_writes;
+        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes;
+        let address_to_class_hash = state_cache.class_hash_writes;
 
         Ok(StateDiff {
             address_to_class_hash,
@@ -183,7 +167,7 @@ impl StateDiff {
     where
         T: StateReader + Clone,
     {
-        let mut cache_state = CachedState::new(state_reader, None, None);
+        let mut cache_state = CachedState::new(state_reader, HashMap::new());
         let cache_storage_mapping = to_cache_state_storage_mapping(&self.storage_updates);
 
         cache_state.cache_mut().set_initial_values(
@@ -210,23 +194,22 @@ impl StateDiff {
 
         let mut storage_updates = HashMap::new();
 
-        let addresses: Vec<Address> =
-            get_keys(self.storage_updates.clone(), other.storage_updates.clone());
+        let addresses: Vec<&Address> = get_keys(&self.storage_updates, &other.storage_updates);
 
         for address in addresses {
             let default: HashMap<Felt252, Felt252> = HashMap::new();
             let mut map_a = self
                 .storage_updates
-                .get(&address)
+                .get(address)
                 .unwrap_or(&default)
                 .to_owned();
             let map_b = other
                 .storage_updates
-                .get(&address)
+                .get(address)
                 .unwrap_or(&default)
                 .to_owned();
             map_a.extend(map_b);
-            storage_updates.insert(address, map_a.clone());
+            storage_updates.insert(address.clone(), map_a.clone());
         }
 
         StateDiff {
@@ -259,7 +242,7 @@ mod test {
     use crate::{
         state::in_memory_state_reader::InMemoryStateReader,
         state::{
-            cached_state::{CachedState, ContractClassCache},
+            cached_state::CachedState,
             state_api::StateReader,
             state_cache::{StateCache, StorageEntry},
         },
@@ -283,7 +266,7 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let cached_state = CachedState::new(Arc::new(state_reader), None, None);
+        let cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         let diff = StateDiff::from_cached_state(cached_state).unwrap();
 
@@ -316,9 +299,7 @@ mod test {
             Default::default(),
         );
 
-        execution_resources_manager
-            .increment_syscall_counter("syscall1", 1)
-            .unwrap();
+        execution_resources_manager.increment_syscall_counter("syscall1", 1);
 
         assert_eq!(
             execution_resources_manager.get_syscall_counter("syscall1"),
@@ -327,6 +308,31 @@ mod test {
         assert_eq!(
             execution_resources_manager.get_syscall_counter("syscall2"),
             Some(0)
+        );
+    }
+
+    #[test]
+    fn execution_resources_manager_should_add_syscall_if_not_present() {
+        let mut execution_resources_manager = super::ExecutionResourcesManager::default();
+
+        execution_resources_manager.increment_syscall_counter("syscall1", 1);
+
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall1"),
+            Some(1)
+        );
+    }
+
+    /// Verifies that converting a `StateDiff` back to a `CachedState` results in an equivalent `CachedState` to the original.
+    #[test]
+    fn execution_resources_manager_should_add_syscall_if_not_present() {
+        let mut execution_resources_manager = super::ExecutionResourcesManager::default();
+
+        execution_resources_manager.increment_syscall_counter("syscall1", 1);
+
+        assert_eq!(
+            execution_resources_manager.get_syscall_counter("syscall1"),
+            Some(1)
         );
     }
 
@@ -346,7 +352,8 @@ mod test {
             .address_to_nonce
             .insert(contract_address.clone(), nonce);
 
-        let cached_state_original = CachedState::new(Arc::new(state_reader.clone()), None, None);
+        let cached_state_original =
+            CachedState::new(Arc::new(state_reader.clone()), HashMap::new());
 
         let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
 
@@ -394,12 +401,8 @@ mod test {
             storage_writes,
             HashMap::new(),
         );
-        let cached_state = CachedState::new_for_testing(
-            Arc::new(state_reader),
-            Some(ContractClassCache::new()),
-            cache,
-            None,
-        );
+        let cached_state =
+            CachedState::new_for_testing(Arc::new(state_reader), cache, HashMap::new());
 
         let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
 

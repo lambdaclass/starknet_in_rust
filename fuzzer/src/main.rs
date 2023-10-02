@@ -25,6 +25,7 @@ use std::{
     path::PathBuf,
 };
 
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use std::fs;
 use std::process::Command;
 use std::thread;
@@ -44,11 +45,11 @@ fn main() {
             let file_content1 = "
             %lang starknet
             from starkware.cairo.common.cairo_builtins import HashBuiltin
-            
+
             @storage_var
             func _counter() -> (res: felt) {
             }
-            
+
             @external
             func write_and_read{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (res:felt) {
                 _counter.write('";
@@ -116,7 +117,10 @@ fn main() {
             let address = Address(1111.into());
             let class_hash = [1; 32];
 
-            contract_class_cache.insert(class_hash, contract_class);
+            contract_class_cache.insert(
+                class_hash,
+                CompiledClass::Deprecated(Arc::new(contract_class)),
+            );
             let mut state_reader = InMemoryStateReader::default();
             state_reader
                 .address_to_class_hash_mut()
@@ -126,8 +130,7 @@ fn main() {
             //*    Create state with previous data
             //* ---------------------------------------
 
-            let mut state =
-                CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+            let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
             //* ------------------------------------
             //*    Create execution entry point
