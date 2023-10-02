@@ -14,13 +14,6 @@ pub(crate) const N_DEFAULT_TOPICS: usize = 1; // Events have one default topic.
 pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
     (L1_TO_L2_MSG_HEADER_SIZE + 1) - CONSUMED_MSG_TO_L2_N_TOPICS;
 
-/// Sender and sequencer balance updates.
-pub(crate) const FEE_TRANSFER_N_STORAGE_CHANGES: usize = 2;
-
-/// Exclude the sequencer balance update, since it's charged once throught the batch.
-pub(crate) const FEE_TRANSFER_N_STORAGE_CHANGES_TO_CHARGE: usize =
-    FEE_TRANSFER_N_STORAGE_CHANGES - 1;
-
 lazy_static! {
     pub(crate) static ref QUERY_VERSION_BASE: Felt252 =
         felt_str!("340282366920938463463374607431768211456");
@@ -82,7 +75,7 @@ pub static ref DECLARE_VERSION: Felt252 = 2.into();
 pub static ref TRANSACTION_VERSION: Felt252 = 1.into();
 }
 
-pub const DEFAULT_GAS_PRICE: u64 = 100_000_000_000; // 100 * 10**9
+pub const DEFAULT_GAS_PRICE: u128 = 100_000_000_000; // 100 * 10**9
 pub const DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT: u64 = 251;
 pub const DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT: u64 = 251;
 pub const DEFAULT_INVOKE_TX_MAX_N_STEPS: u64 = 1000000;
