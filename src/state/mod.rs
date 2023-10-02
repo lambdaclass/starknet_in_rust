@@ -311,18 +311,6 @@ mod test {
         );
     }
 
-    #[test]
-    fn execution_resources_manager_should_add_syscall_if_not_present() {
-        let mut execution_resources_manager = super::ExecutionResourcesManager::default();
-
-        execution_resources_manager.increment_syscall_counter("syscall1", 1);
-
-        assert_eq!(
-            execution_resources_manager.get_syscall_counter("syscall1"),
-            Some(1)
-        );
-    }
-
     /// Verifies that converting a `StateDiff` back to a `CachedState` results in an equivalent `CachedState` to the original.
     #[test]
     fn execution_resources_manager_should_add_syscall_if_not_present() {
