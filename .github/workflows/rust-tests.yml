@@ -298,14 +298,13 @@ jobs:
         keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
     - name: Install LLVM
       run: sudo apt-get install -y llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
-
-    - name: Install pyenv
-      uses: "gabrielfalcao/pyenv-action@v13"
-
+    - name: Fetch programs
+      uses: actions/cache/restore@v3
+      with:
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
     - name: Run make deps
       run: make deps
-
     - name: Run make test-cairo-native
-      run: |
-        . starknet-venv/bin/activate; \
-        make test-cairo-native
+      run: make test-cairo-native
