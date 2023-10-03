@@ -19,7 +19,8 @@ jobs:
             deps_suffix: ''
     runs-on: ${{ matrix.os }}
     env:
-      MLIR_SYS_160_PREFIX: /usr/lib/llvm-16/
+      MLIR_SYS_170_PREFIX: /usr/lib/llvm-17/
+      TABLEGEN_170_PREFIX: /usr/lib/llvm-17/
     name: "Make deps, build & test on fresh ${{ matrix.os }} system"
     steps:
     - uses: actions/checkout@v3
@@ -35,11 +36,11 @@ jobs:
     - name: add llvm deb repository
       uses: myci-actions/add-deb-repo@10
       with:
-        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
         repo-name: llvm-repo
         keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
     - name: Install LLVM
-      run: sudo apt-get install -y llvm-16 llvm-16-dev llvm-16-runtime clang-16 clang-tools-16 lld-16 libpolly-16-dev libmlir-16-dev mlir-16-tools
+      run: sudo apt-get install -y llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
 
     - name: Install pyenv
       uses: "gabrielfalcao/pyenv-action@v13"
@@ -58,7 +59,7 @@ jobs:
       run: |
         if [ ${{ steps.deps.outcome }} = failure ]; then
             FAILED_TARGET=deps${{ matrix.deps_suffix }}
-        else 
+        else
             FAILED_TARGET=test
         fi
         echo "FAILED_TARGET=$FAILED_TARGET" >> $GITHUB_ENV
