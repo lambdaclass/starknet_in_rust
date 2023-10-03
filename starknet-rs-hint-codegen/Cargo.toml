@@ -12,9 +12,6 @@ starknet_in_rust = { path = "../", version = "0.4.0" }
 num-traits = "0.2.15"
 serde = { version = "1.0.152", features = ["derive"] }
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
-clap = { version = "4.1.8", features = ["derive"] }
-actix-web = "4.3.1"
-awc = "3.1.1"
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
 codegen = "0.2.0"
 phf = { version = "0.11.1", default-features = false }

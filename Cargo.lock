@@ -4067,11 +4067,8 @@ dependencies = [
 name = "starknet-rs-hint-codegen"
 version = "0.4.0"
 dependencies = [
- "actix-web",
  "assert_matches",
- "awc",
  "cairo-vm",
- "clap",
  "codegen",
  "coverage-helper 0.1.1",
  "mimalloc",
