@@ -488,6 +488,7 @@ pub mod test_utils {
     macro_rules! ids_data {
         ( $( $name: expr ),* ) => {
             {
+                #[allow(clippy::useless_vec)]
                 let ids_names = vec![$( $name ),*];
                 let references = $crate::utils::test_utils::references!(ids_names.len() as i32);
                 let mut ids_data = HashMap::<String, cairo_vm::hint_processor::hint_processor_definition::HintReference>::new();
