@@ -690,7 +690,7 @@ impl ExecutionEntryPoint {
             .get_metadata::<SyscallHandlerMeta>()
             .unwrap()
             .as_ptr()
-            .addr();
+            .as_ptr() as *const () as usize;
 
         let fn_id = &sierra_program
             .funcs
