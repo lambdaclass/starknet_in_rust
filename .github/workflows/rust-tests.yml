@@ -304,7 +304,11 @@ jobs:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         fail-on-cache-miss: true
-    - name: Run make deps
-      run: make deps
+    - name: Install testing tools
+      # TODO: remove `if` when nextest adds doctests support
+      if: ${{ matrix.target != 'test-doctests' }}
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-nextest@0.9.49
     - name: Run make test-cairo-native
       run: make test-cairo-native
