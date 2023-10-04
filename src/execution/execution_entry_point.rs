@@ -175,7 +175,7 @@ impl ExecutionEntryPoint {
                 ) {
                     Ok(call_info) => {
                         state.apply_state_update(&StateDiff::from_cached_state(
-                            transactional_state,
+                            transactional_state.cache(),
                         )?)?;
 
                         Ok(ExecutionResult {
@@ -187,7 +187,7 @@ impl ExecutionEntryPoint {
                     Err(e) => {
                         if !support_reverted {
                             state.apply_state_update(&StateDiff::from_cached_state(
-                                transactional_state,
+                                transactional_state.cache(),
                             )?)?;
 
                             return Err(e);

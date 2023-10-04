@@ -202,7 +202,7 @@ fn invoke_parser(
     )?;
     let mut transactional_state = cached_state.create_transactional();
     let _tx_info = internal_invoke.apply(&mut transactional_state, &BlockContext::default(), 0)?;
-    cached_state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+    cached_state.apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
