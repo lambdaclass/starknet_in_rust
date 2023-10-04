@@ -9,7 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: 1.70.0
+  RUST_TOOLCHAIN: 1.72.1
   CAIRO_PROGRAMS_PATH: |
     cairo_programs/**/*.casm
     cairo_programs/**/*.sierra
@@ -47,6 +47,11 @@ jobs:
         key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         restore-keys: ${{ matrix.program-target }}-cache-
 
+    # This is not pretty, but we need `make` to see the compiled programs are
+    # actually newer than the sources, otherwise it will try to rebuild them
+    - name: Restore timestamps
+      uses: chetan/git-restore-mtime-action@v1
+
     - name: Python3 Build
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
       uses: actions/setup-python@v4
@@ -57,11 +62,6 @@ jobs:
     - name: Install deps
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
       run: make deps
-
-    # This is not pretty, but we need `make` to see the compiled programs are
-    # actually newer than the sources, otherwise it will try to rebuild them
-    - name: Restore timestamps
-      uses: chetan/git-restore-mtime-action@v1
 
     - name: Build programs
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
@@ -280,3 +280,35 @@ jobs:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
         files: lcov.info
+  cairo_native:
+    name: Test with cairo-native
+    runs-on: ubuntu-22.04
+    env:
+      MLIR_SYS_170_PREFIX: /usr/lib/llvm-17/
+      TABLEGEN_170_PREFIX: /usr/lib/llvm-17/
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install rust
+      uses: dtolnay/rust-toolchain@stable
+    - name: add llvm deb repository
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      run: sudo apt-get install -y llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
+    - name: Fetch programs
+      uses: actions/cache/restore@v3
+      with:
+        path: ${{ env.CAIRO_PROGRAMS_PATH }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        fail-on-cache-miss: true
+    - name: Install testing tools
+      # TODO: remove `if` when nextest adds doctests support
+      if: ${{ matrix.target != 'test-doctests' }}
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-nextest@0.9.49
+    - name: Run make test-cairo-native
+      run: make test-cairo-native

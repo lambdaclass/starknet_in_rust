@@ -20,8 +20,8 @@ use starknet_in_rust::{
 };
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::sync::Arc;
 use std::println;
+use std::sync::Arc;
 
 #[test]
 fn integration_test_erc20() {

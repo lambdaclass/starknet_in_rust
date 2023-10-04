@@ -175,7 +175,7 @@ impl ExecutionEntryPoint {
                 ) {
                     Ok(call_info) => {
                         state.apply_state_update(&StateDiff::from_cached_state(
-                            transactional_state,
+                            transactional_state.cache(),
                         )?)?;
 
                         Ok(ExecutionResult {
@@ -187,7 +187,7 @@ impl ExecutionEntryPoint {
                     Err(e) => {
                         if !support_reverted {
                             state.apply_state_update(&StateDiff::from_cached_state(
-                                transactional_state,
+                                transactional_state.cache(),
                             )?)?;
 
                             return Err(e);
@@ -690,7 +690,7 @@ impl ExecutionEntryPoint {
             .get_metadata::<SyscallHandlerMeta>()
             .unwrap()
             .as_ptr()
-            .addr();
+            .as_ptr() as *const () as usize;
 
         let fn_id = &sierra_program
             .funcs
