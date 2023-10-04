@@ -18,7 +18,7 @@ use crate::{
     utils::{Address, ClassHash},
 };
 
-use self::{cached_state::CachedState, state_api::StateReader};
+use self::{cached_state::CachedState, state_api::StateReader, state_cache::StateCache};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockInfo {
@@ -125,18 +125,13 @@ impl StateDiff {
         }
     }
 
-    pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
-    where
-        T: StateReader,
-    {
-        let state_cache = cached_state.cache().to_owned();
-
-        let substracted_maps = state_cache.storage_writes;
+    pub fn from_cached_state(state_cache: &StateCache) -> Result<Self, StateError> {
+        let substracted_maps = &state_cache.storage_writes;
         let storage_updates = to_state_diff_storage_mapping(substracted_maps);
 
-        let address_to_nonce = state_cache.nonce_writes;
-        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes;
-        let address_to_class_hash = state_cache.class_hash_writes;
+        let address_to_nonce = state_cache.nonce_writes.clone();
+        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes.clone();
+        let address_to_class_hash = state_cache.class_hash_writes.clone();
 
         Ok(StateDiff {
             address_to_class_hash,
@@ -248,7 +243,7 @@ mod test {
 
         let cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
-        let diff = StateDiff::from_cached_state(cached_state).unwrap();
+        let diff = StateDiff::from_cached_state(&cached_state.cache).unwrap();
 
         assert_eq!(0, diff.storage_updates.len());
     }
@@ -319,7 +314,7 @@ mod test {
         let cached_state_original =
             CachedState::new(Arc::new(state_reader.clone()), HashMap::new());
 
-        let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
+        let diff = StateDiff::from_cached_state(cached_state_original.cache()).unwrap();
 
         let cached_state = diff.to_cached_state(Arc::new(state_reader)).unwrap();
 
@@ -367,7 +362,7 @@ mod test {
         let cached_state =
             CachedState::new_for_testing(Arc::new(state_reader), cache, HashMap::new());
 
-        let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
+        let mut diff = StateDiff::from_cached_state(cached_state.cache()).unwrap();
 
         let diff_squashed = diff.squash(diff.clone());
 

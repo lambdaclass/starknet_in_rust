@@ -28,7 +28,7 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::{InvokeFunction, Transaction},
+    transaction::InvokeFunction,
     utils::{Address, ClassHash},
 };
 
@@ -87,10 +87,12 @@ impl StateReader for RpcStateReader {
 }
 
 #[allow(unused)]
-pub fn execute_tx(
+pub fn execute_tx_configurable(
     tx_hash: &str,
     network: RpcChain,
     block_number: BlockNumber,
+    skip_validate: bool,
+    skip_nonce_check: bool,
 ) -> (
     TransactionExecutionInfo,
     TransactionTrace,
@@ -138,9 +140,9 @@ pub fn execute_tx(
     // Get transaction before giving ownership of the reader
     let tx_hash = TransactionHash(stark_felt!(tx_hash));
     let tx = match rpc_reader.0.get_transaction(&tx_hash) {
-        SNTransaction::Invoke(tx) => Transaction::InvokeFunction(
-            InvokeFunction::from_invoke_transaction(tx, chain_id).unwrap(),
-        ),
+        SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
+            .unwrap()
+            .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
         _ => unimplemented!(),
     };
 
@@ -167,6 +169,30 @@ pub fn execute_tx(
         trace,
         receipt,
     )
+}
+
+pub fn execute_tx(
+    tx_hash: &str,
+    network: RpcChain,
+    block_number: BlockNumber,
+) -> (
+    TransactionExecutionInfo,
+    TransactionTrace,
+    RpcTransactionReceipt,
+) {
+    execute_tx_configurable(tx_hash, network, block_number, false, false)
+}
+
+pub fn execute_tx_without_validate(
+    tx_hash: &str,
+    network: RpcChain,
+    block_number: BlockNumber,
+) -> (
+    TransactionExecutionInfo,
+    TransactionTrace,
+    RpcTransactionReceipt,
+) {
+    execute_tx_configurable(tx_hash, network, block_number, true, true)
 }
 
 #[test]
@@ -360,4 +386,18 @@ fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: 
             "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
         );
     }
+}
+
+#[test_case(
+    "0x038c307a0a324dc92778820f2c6317f40157c06b12a7e537f7a16b2c015f64e7",
+    274333-1,
+    RpcChain::MainNet
+)]
+fn test_validate_fee(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, _trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+    let (tx_info_without_fee, _trace, _receipt) =
+        execute_tx_without_validate(hash, chain, BlockNumber(block_number));
+
+    assert_eq!(tx_info.actual_fee, receipt.actual_fee);
+    assert!(tx_info_without_fee.actual_fee < tx_info.actual_fee);
 }
