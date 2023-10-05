@@ -192,7 +192,7 @@ test-cairo-1:
 test-cairo-2:
 	cargo nextest run --workspace --all-targets --features=metrics
 
-test-cairo-native: compile-cairo-2-casm
+test-cairo-native:
 	cargo nextest run --workspace --test cairo_native --features=cairo-native
 
 test-doctests:
