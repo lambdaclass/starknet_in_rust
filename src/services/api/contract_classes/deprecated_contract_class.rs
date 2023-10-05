@@ -1,10 +1,7 @@
 use crate::core::contract_address::compute_hinted_class_hash;
 use crate::services::api::contract_class_errors::ContractClassError;
-use cairo_vm::felt::{Felt252, PRIME_STR};
-use cairo_vm::serde::deserialize_program::{
-    deserialize_array_of_bigint_hex, deserialize_felt_hex, Attribute, BuiltinName, HintParams,
-    Identifier, ReferenceManager,
-};
+use cairo_vm::felt::Felt252;
+use cairo_vm::serde::deserialize_program::deserialize_felt_hex;
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
 use core::str::FromStr;
@@ -12,9 +9,7 @@ use getset::{CopyGetters, Getters};
 use serde;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use starknet_api::deprecated_contract_class::{
-    number_or_string, ContractClassAbiEntry, EntryPoint,
-};
+use starknet_api::deprecated_contract_class::{number_or_string, ContractClassAbiEntry};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -102,12 +97,6 @@ pub struct ContractClass {
     pub(crate) entry_points_by_type: HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     #[getset(get = "pub")]
     pub(crate) abi: Option<AbiType>,
-}
-
-fn deserialize_program<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Program, D::Error> {
-    use cairo_vm::serde::deserialize_program::{parse_program_json, ProgramJson};
-    let json = ProgramJson::deserialize(d)?;
-    Ok(parse_program_json(json, None).unwrap())
 }
 
 impl ContractClass {
@@ -207,18 +196,9 @@ impl FromStr for ContractClass {
 
     /// Parses a [`ContractClass`] from a compiled Cairo 0 program's JSON.
     fn from_str(program_json: &str) -> Result<Self, ProgramError> {
-        let contract_class: starknet_api::deprecated_contract_class::ContractClass =
-            serde_json::from_str(program_json)?;
-        let program = to_cairo_runner_program(contract_class.program)?;
-        let entry_points_by_type = convert_entry_points(contract_class.entry_points_by_type);
         let hinted_class_hash =
             compute_hinted_class_hash(&serde_json::from_str(program_json)?).unwrap();
-        Ok(ContractClass {
-            hinted_class_hash,
-            program,
-            entry_points_by_type,
-            abi: contract_class.abi,
-        })
+        Self::from_program_json_and_class_hash(program_json, hinted_class_hash)
     }
 }
 
@@ -226,53 +206,10 @@ impl FromStr for ContractClass {
 //  Helper Functions
 // -------------------
 
-pub(crate) fn convert_entry_points(
-    entry_points: HashMap<starknet_api::deprecated_contract_class::EntryPointType, Vec<EntryPoint>>,
-) -> HashMap<EntryPointType, Vec<ContractEntryPoint>> {
-    let mut converted_entries: HashMap<EntryPointType, Vec<ContractEntryPoint>> = HashMap::new();
-    for (entry_type, entry_points) in entry_points {
-        let en_type = entry_type.into();
-
-        let contracts_entry_points = entry_points
-            .into_iter()
-            .map(|e| {
-                let selector = Felt252::from_bytes_be(e.selector.0.bytes());
-                let offset = e.offset.0;
-                ContractEntryPoint::new(selector, offset)
-            })
-            .collect::<Vec<ContractEntryPoint>>();
-
-        converted_entries.insert(en_type, contracts_entry_points);
-    }
-
-    converted_entries
-}
-
-pub(crate) fn to_cairo_runner_program(
-    program: starknet_api::deprecated_contract_class::Program,
-) -> Result<Program, ProgramError> {
-    let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
-
-    if program.prime != *PRIME_STR {
-        return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
-    };
-
-    let mut error_message_attributes =
-        serde_json::from_value::<Vec<Attribute>>(program.attributes).unwrap_or_default();
-    error_message_attributes.retain(|attr| attr.name == "error_message");
-
-    let program = Program::new(
-        serde_json::from_value::<Vec<BuiltinName>>(program.builtins)?,
-        deserialize_array_of_bigint_hex(program.data)?,
-        None,
-        serde_json::from_value::<HashMap<usize, Vec<HintParams>>>(program.hints)?,
-        serde_json::from_value::<ReferenceManager>(program.reference_manager)?,
-        identifiers,
-        error_message_attributes,
-        None,
-    )?;
-
-    Ok(program)
+fn deserialize_program<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Program, D::Error> {
+    use cairo_vm::serde::deserialize_program::{parse_program_json, ProgramJson};
+    let json = ProgramJson::deserialize(d)?;
+    Ok(parse_program_json(json, None).unwrap())
 }
 
 #[cfg(test)]
