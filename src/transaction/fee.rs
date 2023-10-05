@@ -17,7 +17,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{ToPrimitive, Zero};
-use std::cmp::min;
 use std::collections::HashMap;
 
 // second element is the actual fee that the transaction uses
@@ -73,11 +72,9 @@ pub(crate) fn execute_fee_transfer<S: StateReader>(
     call_info.ok_or(TransactionError::CallInfoIsNone)
 }
 
-// ----------------------------------------------------------------------------------------
 /// Calculates the fee of a transaction given its execution resources.
 /// We add the l1_gas_usage (which may include, for example, the direct cost of L2-to-L1
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
-
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
     gas_price: u128,
@@ -94,11 +91,9 @@ pub fn calculate_tx_fee(
     Ok(total_l1_gas_usage.ceil() as u128 * gas_price)
 }
 
-// ----------------------------------------------------------------------------------------
 /// Calculates the L1 gas consumed when submitting the underlying Cairo program to SHARP.
 /// I.e., returns the heaviest Cairo resource weight (in terms of L1 gas), as the size of
 /// a proof is determined similarly - by the (normalized) largest segment.
-
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
     block_context: &BlockContext,
     cairo_resource_usage: &HashMap<String, usize>,
@@ -117,6 +112,7 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     ))
 }
 
+/// Calculates the maximum weighted value from a given resource usage mapping.
 fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64>) -> f64 {
     let mut max = 0.0_f64;
     for (k, v) in weights {
@@ -136,6 +132,11 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 /// - `tx_execution_context`: The transaction's execution context.
 /// - `skip_fee_transfer`: Whether to skip the fee transfer.
 ///
+/// # Errors
+/// - [TransactionError::ActualFeeExceedsMaxFee] - If the actual fee is bigger than the maximal fee.
+///
+/// # Returns
+/// The [FeeInfo] with the given actual fee.
 pub fn charge_fee<S: StateReader>(
     state: &mut CachedState<S>,
     resources: &HashMap<String, usize>,
@@ -154,19 +155,18 @@ pub fn charge_fee<S: StateReader>(
         block_context,
     )?;
 
-    if actual_fee > max_fee {
-        // TODO: Charge max_fee
-        return Err(TransactionError::ActualFeeExceedsMaxFee(
-            actual_fee, max_fee,
-        ));
-    }
+    let actual_fee = {
+        let version_0 = tx_execution_context.version == 0.into()
+            || tx_execution_context.version == *QUERY_VERSION_BASE;
+        let fee_exceeded_max = actual_fee > max_fee;
 
-    let actual_fee = if tx_execution_context.version != 0.into()
-        && tx_execution_context.version != *QUERY_VERSION_BASE
-    {
-        min(actual_fee, max_fee) * FEE_FACTOR
-    } else {
-        actual_fee
+        if version_0 && fee_exceeded_max {
+            0
+        } else if version_0 && !fee_exceeded_max {
+            actual_fee
+        } else {
+            actual_fee.min(max_fee) * FEE_FACTOR
+        }
     };
 
     let fee_transfer_info = if skip_fee_transfer {
@@ -190,13 +190,21 @@ mod tests {
     use crate::{
         definitions::block_context::BlockContext,
         execution::TransactionExecutionContext,
-        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
-        transaction::{error::TransactionError, fee::charge_fee},
+        state::{
+            cached_state::{CachedState, ContractClassCache},
+            in_memory_state_reader::InMemoryStateReader,
+        },
+        transaction::fee::charge_fee,
     };
 
+    /// Tests the behavior of the charge_fee function when the actual fee exceeds the maximum fee
+    /// for version 0. It expects to return an ActualFeeExceedsMaxFee error.
     #[test]
-    fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_error() {
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+    fn charge_fee_v0_max_fee_exceeded_should_charge_nothing() {
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            ContractClassCache::default(),
+        );
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
@@ -215,14 +223,19 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        assert_eq!(result.1, 0);
     }
 
+    /// Tests the behavior of the charge_fee function when the actual fee exceeds the maximum fee
+    /// for version 1. It expects the function to return the maximum fee.
     #[test]
-    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_error() {
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+    fn charge_fee_v1_max_fee_exceeded_should_charge_max_fee() {
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            ContractClassCache::default(),
+        );
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
             ..Default::default()
@@ -244,8 +257,8 @@ mod tests {
             &mut tx_execution_context,
             skip_fee_transfer,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        assert_eq!(result.1, max_fee);
     }
 }
