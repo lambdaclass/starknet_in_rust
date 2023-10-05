@@ -271,7 +271,7 @@ fn library_call() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 2255,
+        n_steps: 247,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 259,
         n_memory_holes: 8,
@@ -279,7 +279,7 @@ fn library_call() {
     };
     let expected_execution_resources_internal_call = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 84,
+        n_steps: 80,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
         n_memory_holes: 5,
@@ -322,7 +322,7 @@ fn library_call() {
         storage_read_values: vec![],
         accessed_storage_keys: HashSet::new(),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 78650,
+        gas_consumed: 78250,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 78980,
         ..Default::default()

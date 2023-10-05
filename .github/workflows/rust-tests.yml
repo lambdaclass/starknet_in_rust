@@ -47,11 +47,6 @@ jobs:
         key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
         restore-keys: ${{ matrix.program-target }}-cache-
 
-    # This is not pretty, but we need `make` to see the compiled programs are
-    # actually newer than the sources, otherwise it will try to rebuild them
-    - name: Restore timestamps
-      uses: chetan/git-restore-mtime-action@v1
-
     - name: Python3 Build
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
       uses: actions/setup-python@v4
@@ -66,6 +61,11 @@ jobs:
     - name: Build programs
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
       run: make -j ${{ matrix.program-target }}
+
+     # This is not pretty, but we need `make` to see the compiled programs are
+    # actually newer than the sources, otherwise it will try to rebuild them
+    - name: Restore timestamps
+      uses: chetan/git-restore-mtime-action@v1
 
   # NOTE: used to reduce the amount of cache steps we need in later jobs
   # TODO: remove this cache once the workflow finishes
