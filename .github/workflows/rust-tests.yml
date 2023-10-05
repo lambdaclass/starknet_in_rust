@@ -18,6 +18,7 @@ env:
     starknet_programs/**/*.sierra
     starknet_programs/**/*.json
     !starknet_programs/raw_contract_classes/*
+  CAIRO_2_VERSION_CACHE: 2.2.0
 
 jobs:
   build-programs:
@@ -44,8 +45,8 @@ jobs:
       id: cache-programs
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
-        restore-keys: ${{ matrix.program-target }}-cache-
+        key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
+
 
     # This is not pretty, but we need `make` to see the compiled programs are
     # actually newer than the sources, otherwise it will try to rebuild them
@@ -82,56 +83,56 @@ jobs:
       id: cache-programs
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-starknet)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-starknet-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-starknet-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-1-casm)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-1-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-1-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-1-sierra)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-1-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-1-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-casm)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-2-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-2-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-sierra)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-sierra)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Merge caches
       uses: actions/cache/save@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
 
   build:
     name: Build with release profile
@@ -152,7 +153,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Build
@@ -177,7 +178,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Format
@@ -188,14 +189,26 @@ jobs:
   tests:
     env:
       INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+      MLIR_SYS_170_PREFIX: /usr/lib/llvm-17/
+      TABLEGEN_170_PREFIX: /usr/lib/llvm-17/
     strategy:
       fail-fast: false
       matrix:
-        target: [ test-cairo-1, test-cairo-2, test-doctests ]
+        target: [ test-cairo-1, test-cairo-2, test-doctests, test-cairo-native ]
     name: Run tests
     needs: merge-caches
     runs-on: ubuntu-22.04
     steps:
+    - name: add llvm deb repository
+      if: ${{ matrix.target == 'test-cairo-native' }}
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      if: ${{ matrix.target == 'test-cairo-native' }}
+      run: sudo apt-get install -y llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -211,7 +224,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Install testing tools
@@ -260,7 +273,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Generate coverage report
@@ -280,35 +293,3 @@ jobs:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
         files: lcov.info
-  cairo_native:
-    name: Test with cairo-native
-    runs-on: ubuntu-22.04
-    env:
-      MLIR_SYS_170_PREFIX: /usr/lib/llvm-17/
-      TABLEGEN_170_PREFIX: /usr/lib/llvm-17/
-    steps:
-    - uses: actions/checkout@v3
-    - name: Install rust
-      uses: dtolnay/rust-toolchain@stable
-    - name: add llvm deb repository
-      uses: myci-actions/add-deb-repo@10
-      with:
-        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
-        repo-name: llvm-repo
-        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
-    - name: Install LLVM
-      run: sudo apt-get install -y llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
-    - name: Fetch programs
-      uses: actions/cache/restore@v3
-      with:
-        path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
-        fail-on-cache-miss: true
-    - name: Install testing tools
-      # TODO: remove `if` when nextest adds doctests support
-      if: ${{ matrix.target != 'test-doctests' }}
-      uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-nextest@0.9.49
-    - name: Run make test-cairo-native
-      run: make test-cairo-native
