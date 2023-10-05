@@ -18,6 +18,7 @@ env:
     starknet_programs/**/*.sierra
     starknet_programs/**/*.json
     !starknet_programs/raw_contract_classes/*
+  CAIRO_2_VERSION_CACHE: 2.2.0
 
 jobs:
   build-programs:
@@ -44,8 +45,13 @@ jobs:
       id: cache-programs
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         restore-keys: ${{ matrix.program-target }}-cache-
+
+    # This is not pretty, but we need `make` to see the compiled programs are
+    # actually newer than the sources, otherwise it will try to rebuild them
+    - name: Restore timestamps
+      uses: chetan/git-restore-mtime-action@v1
 
     - name: Python3 Build
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
@@ -62,11 +68,6 @@ jobs:
       if: ${{ steps.cache-programs.outputs.cache-hit != 'true' }}
       run: make -j ${{ matrix.program-target }}
 
-     # This is not pretty, but we need `make` to see the compiled programs are
-    # actually newer than the sources, otherwise it will try to rebuild them
-    - name: Restore timestamps
-      uses: chetan/git-restore-mtime-action@v1
-
   # NOTE: used to reduce the amount of cache steps we need in later jobs
   # TODO: remove this cache once the workflow finishes
   merge-caches:
@@ -82,56 +83,56 @@ jobs:
       id: cache-programs
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-starknet)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-starknet-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-starknet-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-1-casm)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-1-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-1-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-1-sierra)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-1-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-1-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-casm)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-2-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-2-casm-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-sierra)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Fetch from cache (compile-cairo-2-sierra)
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: compile-cairo-2-sierra-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Merge caches
       uses: actions/cache/save@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
 
   build:
     name: Build with release profile
@@ -152,7 +153,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Build
@@ -177,7 +178,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Format
@@ -223,7 +224,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Install testing tools
@@ -272,7 +273,7 @@ jobs:
       uses: actions/cache/restore@v3
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
-        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}
+        key: all-programs-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
         fail-on-cache-miss: true
 
     - name: Generate coverage report
