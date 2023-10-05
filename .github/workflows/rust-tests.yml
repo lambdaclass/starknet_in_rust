@@ -46,7 +46,7 @@ jobs:
       with:
         path: ${{ env.CAIRO_PROGRAMS_PATH }}
         key: ${{ matrix.program-target }}-cache-${{ hashFiles('cairo_programs/**/*.cairo', 'starknet_programs/**/*.cairo') }}-${{ env.CAIRO_2_VERSION_CACHE }}
-        restore-keys: ${{ matrix.program-target }}-cache-
+
 
     # This is not pretty, but we need `make` to see the compiled programs are
     # actually newer than the sources, otherwise it will try to rebuild them
