@@ -17,7 +17,7 @@ use crate::{
     },
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
-        cached_state::{CachedState, TransactionalCachedState},
+        cached_state::CachedState,
         state_api::{State, StateReader},
         ExecutionResourcesManager, StateDiff,
     },
@@ -239,7 +239,7 @@ impl InvokeFunction {
     /// - remaining_gas: The amount of gas that the transaction disposes.
     pub fn apply<S: StateReader>(
         &self,
-        state: &mut TransactionalCachedState<S>,
+        state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
@@ -334,7 +334,8 @@ impl InvokeFunction {
                 .as_str(),
             );
         } else {
-            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+            state
+                .apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
         }
 
         let mut tx_execution_context =
@@ -674,7 +675,7 @@ mod tests {
             .apply(&mut transactional, &BlockContext::default(), 0)
             .unwrap();
         state
-            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
+            .apply_state_update(&StateDiff::from_cached_state(transactional.cache()).unwrap())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -882,7 +883,7 @@ mod tests {
             .apply(&mut transactional, &BlockContext::default(), 0)
             .unwrap();
         state
-            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
+            .apply_state_update(&StateDiff::from_cached_state(transactional.cache()).unwrap())
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
