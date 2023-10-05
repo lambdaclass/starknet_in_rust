@@ -199,14 +199,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: add llvm deb repository
-      if: ${{ matrix.target != 'test-cairo-native' }}
+      if: ${{ matrix.target == 'test-cairo-native' }}
       uses: myci-actions/add-deb-repo@10
       with:
         repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
         repo-name: llvm-repo
         keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
     - name: Install LLVM
-      if: ${{ matrix.target != 'test-cairo-native' }}
+      if: ${{ matrix.target == 'test-cairo-native' }}
       run: sudo apt-get install -y llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
