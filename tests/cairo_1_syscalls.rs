@@ -24,6 +24,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 
 fn create_execute_extrypoint(
     address: Address,
@@ -327,7 +328,7 @@ fn library_call() {
         ..Default::default()
     };
 
-    assert_eq!(
+    assert_eq_sorted!(
         exec_entry_point
             .execute(
                 &mut state,
