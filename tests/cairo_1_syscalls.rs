@@ -10,6 +10,7 @@ use cairo_vm::{
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -24,7 +25,6 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
-use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 
 fn create_execute_extrypoint(
     address: Address,
