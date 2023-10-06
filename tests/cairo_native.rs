@@ -783,6 +783,125 @@ fn call_events_contract_test() {
     assert_eq!(sorted_events, vec![event]);
 }
 
+#[test]
+#[cfg(feature = "cairo-native")]
+fn get_execution_info_test() {
+    // get_execution_info test contract
+    let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/get_execution_info.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // Contract entrypoints
+    let entrypoints = sierra_contract_class.clone().entry_points_by_type;
+    let selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    // Contract data
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+    );
+
+    let mut state_reader = InMemoryStateReader::default();
+
+    // Insert caller contract info into state reader
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+    let calldata = [].to_vec();
+
+    // Create the entrypoint
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address.clone(),
+        calldata.to_vec(),
+        Felt252::new(selector),
+        Address(0.into()),
+        EntryPointType::External,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        u128::MAX,
+    );
+
+    // Create default BlockContext
+    let block_context = BlockContext::default();
+
+    // Create TransactionExecutionContext
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        vec![22.into(), 33.into()],
+        0,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    // Execute the entrypoint
+    let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps(),
+        )
+        .unwrap()
+        .call_info
+        .unwrap();
+
+    let expected_ret_data = vec![
+        block_context.block_info().sequencer_address.0.clone(),
+        0.into(),
+        0.into(),
+        address.0.clone(),
+    ];
+
+    // TODO should use same expected_gas_consumed and expected_execution_resources
+    // as for cairo_1_syscalls::test_get_execution_info test
+    // let expected_gas_consumed = 28580;
+    // let expected_execution_resources = Some(ExecutionResources {
+    //     n_steps: expected_n_steps,
+    //     n_memory_holes: 4,
+    //     builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
+    // });
+    let expected_gas_consumed = 0;
+    let expected_execution_resources = None;
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: address,
+        class_hash: Some(class_hash),
+        entry_point_selector: Some(selector.into()),
+        entry_point_type: Some(EntryPointType::External),
+        retdata: expected_ret_data,
+        execution_resources: expected_execution_resources,
+        gas_consumed: expected_gas_consumed,
+        ..Default::default()
+    };
+
+    assert_eq!(call_info, expected_call_info);
+}
+
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,
