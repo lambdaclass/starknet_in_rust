@@ -19,7 +19,7 @@ use blockifier::{
 use cairo_lang_starknet::{
     casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
 };
-use cairo_vm::types::program::Program;
+use cairo_vm_blockifier::types::program::Program;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use rpc_state_reader::rpc_state::*;
 use rpc_state_reader::utils;
@@ -217,14 +217,24 @@ fn blockifier_test_recent_tx() {
         ..
     } = execute_call_info.unwrap();
 
+    let trace_resources = &trace
+        .function_invocation
+        .as_ref()
+        .unwrap()
+        .execution_resources;
     assert_eq!(actual_fee.0, receipt.actual_fee);
-    assert_eq!(
-        vm_resources,
-        trace
-            .function_invocation
-            .as_ref()
-            .unwrap()
-            .execution_resources
+    // NOTE: had to check field by field due to version mismatch causing type errors
+    assert_eq_sorted!(
+        (
+            vm_resources.n_steps,
+            vm_resources.n_memory_holes,
+            &vm_resources.builtin_instance_counter
+        ),
+        (
+            trace_resources.n_steps,
+            trace_resources.n_memory_holes,
+            &trace_resources.builtin_instance_counter
+        ),
     );
     assert_eq!(
         inner_calls.len(),
@@ -313,13 +323,23 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
         }
     }
 
+    let trace_resources = &trace
+        .function_invocation
+        .as_ref()
+        .unwrap()
+        .execution_resources;
+    // NOTE: had to check field by field due to version mismatch causing type errors
     assert_eq_sorted!(
-        vm_resources,
-        trace
-            .function_invocation
-            .as_ref()
-            .unwrap()
-            .execution_resources
+        (
+            vm_resources.n_steps,
+            vm_resources.n_memory_holes,
+            &vm_resources.builtin_instance_counter
+        ),
+        (
+            trace_resources.n_steps,
+            trace_resources.n_memory_holes,
+            &trace_resources.builtin_instance_counter
+        ),
     );
     assert_eq!(
         inner_calls.len(),
