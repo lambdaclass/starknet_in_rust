@@ -1,4 +1,4 @@
-.PHONY: build check clean clippy compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra \
+.PHONY: usage build check clean clippy compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra \
 		 compile-cairo-2-casm compile-cairo-2-sierra coverage deps test heaptrack check-python-version
 
 export PATH:=$(shell pyenv root)/shims:$(PATH)
@@ -9,7 +9,6 @@ ifeq ($(OS), Darwin)
 	export CFLAGS  += -I/opt/homebrew/opt/gmp/include
 	export LDFLAGS += -L/opt/homebrew/opt/gmp/lib
 endif
-
 
 CAIRO_SOURCES=$(wildcard cairo_programs/*.cairo)
 CAIRO_TARGETS=$(patsubst %.cairo,%.json,$(CAIRO_SOURCES))
@@ -27,6 +26,24 @@ STARKNET_SIERRA_COMPILE_CAIRO_1:=cairo1/bin/starknet-sierra-compile
 
 STARKNET_COMPILE_CAIRO_2:=cairo2/bin/starknet-compile
 STARKNET_SIERRA_COMPILE_CAIRO_2:=cairo2/bin/starknet-sierra-compile
+
+usage:
+	@echo 'Usage:'
+	@echo '    build:           Builds the Rust code'
+	@echo '    check:           Runs cargo check'
+	@echo '    deps:            Installs dependencies'
+	@echo '    deps-macos:      Installs depedencies for MacOS'
+	@echo '    clean:           Cleans all build artifacts'
+	@echo '    clippy:          Runs clippy'
+	@echo '    test:            Runs all tests'
+	@echo '    test-cairo-1:    Runs the Cairo 1 tests'
+	@echo '    test-cairo-2:    Runs the Cairo 2 tests'
+	@echo '    test-doctests:   Runs the doctests'
+	@echo '    coverage:        Runs everything necessary to generate the coverate report'
+	@echo '    coverage-report: Just generates the coverage report'
+	@echo '    heaptrack:       Runs the heaptrack script'
+	@echo '    flamegraph:      Runs cargo flamegraph'
+	@echo '    benchmark:       Runs the benchmarks scripts'
 
 #
 # VENV rules.
@@ -106,7 +123,6 @@ $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 
-
 CAIRO_2_VERSION=2.0.1
 
 cairo-repo-2-dir = cairo2
@@ -132,7 +148,6 @@ cairo-%-macos.tar:
 
 cairo-%.tar:
 	curl -L -o "$@" "https://github.com/starkware-libs/cairo/releases/download/v$*/release-x86_64-unknown-linux-musl.tar.gz"
-
 
 # =================
 # Normal rules.
