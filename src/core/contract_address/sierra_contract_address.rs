@@ -114,7 +114,6 @@ fn get_contract_entry_points(
         EntryPointType::Constructor => contract_class.entry_points_by_type.constructor.clone(),
         EntryPointType::External => contract_class.entry_points_by_type.external.clone(),
         EntryPointType::L1Handler => contract_class.entry_points_by_type.l1_handler.clone(),
-        //_ => todo!(),
     };
 
     for entry_point in &entry_points {

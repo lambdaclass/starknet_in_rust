@@ -15,6 +15,10 @@ struct Signature {
     type_name: EntryPointType,
 }
 
+// We should should consider reading all the information from the abi in the future. Right now we
+// are not considering:
+// // - type: "event"
+// // - type: "struct"
 pub fn read_abi(abi_name: &PathBuf) -> HashMap<String, (usize, EntryPointType)> {
     let abi: Vec<Signature> = serde_json::from_reader(&File::open(abi_name).unwrap()).unwrap();
     let mut func_type_counter: HashMap<EntryPointType, usize> = HashMap::new();
