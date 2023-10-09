@@ -21,7 +21,6 @@ use super::{
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
 use crate::definitions::block_context::BlockContext;
-use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
@@ -482,7 +481,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         let block_number = request.block_number;
         let current_block_number = self.block_context.block_info.block_number;
         
-        if block_number + 10 > current_block_number {
+        if block_number > current_block_number - 10 {
             let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
             let retdata_start =
                 self.allocate_segment(vm, vec![MaybeRelocatable::from(out_of_range_felt)])?;
@@ -502,10 +501,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
             Felt252::zero()
         } else {
-            self.starknet_storage_state.state.get_storage_at(&(
-                BLOCK_HASH_CONTRACT_ADDRESS.clone(),
-                Felt252::new(block_number).to_be_bytes(),
-            ))?
+                match self.block_context.blocks.get(&request.block_number.to_owned()) {
+                    Some(block) => Felt252::from_bytes_be(block.header.block_hash.0.bytes()),
+                    None => Felt252::zero()
+                }            
         };
 
         Ok(SyscallResponse {
