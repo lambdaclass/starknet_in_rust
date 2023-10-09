@@ -4,9 +4,11 @@ use crate::CallType::Call;
 use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
 use num_traits::Zero;
+#[cfg(feature = "cairo-native")]
+use starknet_api::block::Block;
 use starknet_api::{
     block::{BlockHash, BlockHeader},
-    hash::StarkHash
+    hash::StarkHash,
 };
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::execution::{Event, OrderedEvent};
@@ -26,106 +28,99 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::println;
 use std::sync::Arc;
-#[cfg(feature = "cairo-native")]
-use starknet_api::block::Block;
 
 #[test]
-#[cfg(feature="cairo-native")]
+#[cfg(feature = "cairo-native")]
 fn get_block_hash_test() {
-
     let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
             std::fs::read_to_string("starknet_programs/cairo2/get_block_hash_basic.sierra")
-            .unwrap()
-            .as_str(),
+                .unwrap()
+                .as_str(),
         )
         .unwrap();
 
-        let casm_data = include_bytes!("../starknet_programs/cairo2/get_block_hash_basic.casm");
-        let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
+    let casm_data = include_bytes!("../starknet_programs/cairo2/get_block_hash_basic.casm");
+    let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
 
+    let native_entrypoints = sierra_contract_class.clone().entry_points_by_type;
+    let native_external_selector = &native_entrypoints.external.get(0).unwrap().selector;
 
-        let native_entrypoints = sierra_contract_class.clone().entry_points_by_type;
-        let native_external_selector = &native_entrypoints.external.get(0).unwrap().selector;
-        
-        let casm_entrypoints = casm_contract_class.clone().entry_points_by_type;
-        let casm_external_selector = &casm_entrypoints.external.get(0).unwrap().selector;
+    let casm_entrypoints = casm_contract_class.clone().entry_points_by_type;
+    let casm_external_selector = &casm_entrypoints.external.get(0).unwrap().selector;
 
-        // Create state reader with class hash data
-        let mut contract_class_cache = HashMap::new();
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
 
-        let native_class_hash: ClassHash = [1; 32];
-        let casm_class_hash: ClassHash = [3; 32];
-        let caller_address = Address(1.into());
+    let native_class_hash: ClassHash = [1; 32];
+    let casm_class_hash: ClassHash = [3; 32];
+    let caller_address = Address(1.into());
 
-        contract_class_cache.insert(
-            native_class_hash,
-            CompiledClass::Sierra(Arc::new(sierra_contract_class)),
-        );
-        contract_class_cache.insert(
-            casm_class_hash,
-            CompiledClass::Casm(Arc::new(casm_contract_class)),
-        );
+    contract_class_cache.insert(
+        native_class_hash,
+        CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+    );
+    contract_class_cache.insert(
+        casm_class_hash,
+        CompiledClass::Casm(Arc::new(casm_contract_class)),
+    );
 
-        let mut state_reader = InMemoryStateReader::default();
-        let nonce = Felt252::zero();
+    let mut state_reader = InMemoryStateReader::default();
+    let nonce = Felt252::zero();
 
-        state_reader
+    state_reader
         .address_to_class_hash_mut()
         .insert(caller_address.clone(), casm_class_hash);
-        state_reader
+    state_reader
         .address_to_nonce_mut()
         .insert(caller_address.clone(), nonce);
 
-        // Create state from the state_reader and contract cache.
-        let state_reader = Arc::new(state_reader);
-        let mut state_vm = CachedState::new(state_reader.clone(), contract_class_cache.clone());
-        let mut state_native = CachedState::new(state_reader.clone(), contract_class_cache.clone());
+    // Create state from the state_reader and contract cache.
+    let state_reader = Arc::new(state_reader);
+    let mut state_vm = CachedState::new(state_reader.clone(), contract_class_cache.clone());
+    let mut state_native = CachedState::new(state_reader.clone(), contract_class_cache.clone());
 
-        /*
-            1 recipient
-        */
+    /*
+        1 recipient
+    */
 
-        let calldata = [
-            10.into()
-        ]
-        .to_vec();
+    let calldata = [10.into()].to_vec();
 
-        let block = Block {
-            header: BlockHeader {
-                block_hash: BlockHash(StarkHash::new([5; 32]).unwrap()),
-                ..Default::default()
-            },
+    let block = Block {
+        header: BlockHeader {
+            block_hash: BlockHash(StarkHash::new([5; 32]).unwrap()),
             ..Default::default()
-        };
-        
-        let mut block_context = BlockContext::default();
-        block_context.blocks_mut().insert(10, block);
-        block_context.block_info_mut().block_number = 30;
+        },
+        ..Default::default()
+    };
 
-        println!("Native execution");
-        let native_result = execute(
-            &mut state_native,
-            &caller_address,
-            &caller_address,
-            native_external_selector,
-            &calldata,
-            EntryPointType::External,
-            &native_class_hash,
-            &block_context
-        );
-        println!("VM execution");
-        let vm_result = execute(
-            &mut state_vm,
-            &caller_address,
-            &caller_address,
-            casm_external_selector,
-            &calldata,
-            EntryPointType::External,
-            &casm_class_hash,
-            &block_context
-        );
-        
+    let mut block_context = BlockContext::default();
+    block_context.blocks_mut().insert(10, block);
+    block_context.block_info_mut().block_number = 30;
+
+    println!("Native execution");
+    let native_result = execute(
+        &mut state_native,
+        &caller_address,
+        &caller_address,
+        native_external_selector,
+        &calldata,
+        EntryPointType::External,
+        &native_class_hash,
+        &block_context,
+    );
+    println!("VM execution");
+    let vm_result = execute(
+        &mut state_vm,
+        &caller_address,
+        &caller_address,
+        casm_external_selector,
+        &calldata,
+        EntryPointType::External,
+        &casm_class_hash,
+        &block_context,
+    );
+
     assert_eq!(vm_result.caller_address, caller_address);
     assert_eq!(vm_result.call_type, Some(CallType::Delegate));
     assert_eq!(vm_result.contract_address, caller_address);
@@ -133,13 +128,16 @@ fn get_block_hash_test() {
         vm_result.entry_point_selector,
         Some(Felt252::new(casm_external_selector))
     );
-    assert_eq!(
-        vm_result.entry_point_type,
-        Some(EntryPointType::External)
-    );
+    assert_eq!(vm_result.entry_point_type, Some(EntryPointType::External));
     assert_eq!(vm_result.calldata, calldata);
     assert!(!vm_result.failure_flag);
-    assert_eq!(vm_result.retdata, [Felt252::from_bytes_be(StarkHash::new([5; 32]).unwrap().bytes())].to_vec());
+    assert_eq!(
+        vm_result.retdata,
+        [Felt252::from_bytes_be(
+            StarkHash::new([5; 32]).unwrap().bytes()
+        )]
+        .to_vec()
+    );
     assert_eq!(vm_result.class_hash, Some(casm_class_hash));
 
     assert_eq!(native_result.caller_address, caller_address);
@@ -155,7 +153,13 @@ fn get_block_hash_test() {
     );
     assert_eq!(native_result.calldata, calldata);
     assert!(!native_result.failure_flag);
-    assert_eq!(native_result.retdata, [Felt252::from_bytes_be(StarkHash::new([5; 32]).unwrap().bytes())].to_vec());
+    assert_eq!(
+        native_result.retdata,
+        [Felt252::from_bytes_be(
+            StarkHash::new([5; 32]).unwrap().bytes()
+        )]
+        .to_vec()
+    );
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(native_class_hash));
     assert_eq!(native_result.gas_consumed, 0);
@@ -166,8 +170,6 @@ fn get_block_hash_test() {
         native_result.accessed_storage_keys
     );
     assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
-    
-
 }
 
 #[test]
@@ -235,7 +237,7 @@ fn integration_test_erc20() {
         5.into(),
     ]
     .to_vec();
-    
+
     let block_context = BlockContext::default();
 
     let vm_result = execute(
@@ -246,7 +248,7 @@ fn integration_test_erc20() {
         &calldata,
         EntryPointType::Constructor,
         &casm_class_hash,
-        &block_context
+        &block_context,
     );
 
     let native_result = execute(
@@ -257,7 +259,7 @@ fn integration_test_erc20() {
         &calldata,
         EntryPointType::Constructor,
         &native_class_hash,
-        &block_context
+        &block_context,
     );
 
     assert_eq!(vm_result.caller_address, caller_address);
@@ -312,7 +314,6 @@ fn integration_test_erc20() {
     let calldata = [].to_vec();
     let block_context = BlockContext::default();
 
-
     let vm_result = execute(
         &mut state_vm,
         &caller_address,
@@ -321,7 +322,7 @@ fn integration_test_erc20() {
         &calldata,
         EntryPointType::External,
         &casm_class_hash,
-        &block_context
+        &block_context,
     );
 
     println!("BEFORE");
@@ -333,7 +334,7 @@ fn integration_test_erc20() {
         &calldata,
         EntryPointType::External,
         &native_class_hash,
-        &block_context
+        &block_context,
     );
     println!("AFTER");
 
@@ -716,7 +717,6 @@ fn call_contract_test() {
     let calldata = [fn_selector.into()].to_vec();
     let block_context = BlockContext::default();
 
-
     let result = execute(
         &mut state,
         &caller_address,
@@ -725,7 +725,7 @@ fn call_contract_test() {
         &calldata,
         EntryPointType::External,
         &caller_class_hash,
-        &block_context
+        &block_context,
     );
 
     assert_eq!(result.retdata, [Felt252::new(44)]);
@@ -806,7 +806,6 @@ fn call_echo_contract_test() {
     let calldata = [fn_selector.into(), 99999999.into()].to_vec();
     let block_context = BlockContext::default();
 
-
     let result = execute(
         &mut state,
         &caller_address,
@@ -815,7 +814,7 @@ fn call_echo_contract_test() {
         &calldata,
         EntryPointType::External,
         &caller_class_hash,
-        &block_context
+        &block_context,
     );
 
     assert_eq!(result.retdata, [Felt252::new(99999999)]);
@@ -897,7 +896,6 @@ fn call_events_contract_test() {
     let calldata = [fn_selector.into()].to_vec();
     let block_context = BlockContext::default();
 
-
     let result = execute(
         &mut state,
         &caller_address,
@@ -906,7 +904,7 @@ fn call_events_contract_test() {
         &calldata,
         EntryPointType::External,
         &caller_class_hash,
-        &block_context
+        &block_context,
     );
 
     let internal_call = CallInfo {
@@ -960,7 +958,6 @@ fn execute(
     class_hash: &ClassHash,
     block_context: &BlockContext,
 ) -> CallInfo {
-    
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
         calldata.to_vec(),

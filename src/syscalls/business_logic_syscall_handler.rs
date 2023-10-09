@@ -480,7 +480,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let block_number = request.block_number;
         let current_block_number = self.block_context.block_info.block_number;
-        
+
         if block_number > current_block_number - 10 {
             let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
             let retdata_start =
@@ -501,10 +501,14 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
             Felt252::zero()
         } else {
-                match self.block_context.blocks.get(&request.block_number.to_owned()) {
-                    Some(block) => Felt252::from_bytes_be(block.header.block_hash.0.bytes()),
-                    None => Felt252::zero()
-                }            
+            match self
+                .block_context
+                .blocks
+                .get(&request.block_number.to_owned())
+            {
+                Some(block) => Felt252::from_bytes_be(block.header.block_hash.0.bytes()),
+                None => Felt252::zero(),
+            }
         };
 
         Ok(SyscallResponse {

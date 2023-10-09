@@ -45,12 +45,10 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         // should return same message than vm
         println!("Called `get_block_hash({block_number})` from MLIR.");
         match self.block_context.blocks.get(&block_number) {
-            Some(block) =>  {
-                Ok(Felt252::from_bytes_be(block.header.block_hash.0.bytes()))
-            },
-            None => Ok(Felt252::zero())
+            Some(block) => Ok(Felt252::from_bytes_be(block.header.block_hash.0.bytes())),
+            None => Ok(Felt252::zero()),
+        }
     }
-}
 
     fn get_execution_info(&self) -> SyscallResult<cairo_native::starknet::ExecutionInfo> {
         println!("Called `get_execution_info()` from MLIR.");
