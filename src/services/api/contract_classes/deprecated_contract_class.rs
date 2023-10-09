@@ -33,10 +33,12 @@ pub enum EntryPointType {
     L1Handler,
     #[serde(rename = "constructor", alias = "CONSTRUCTOR")]
     Constructor,
+    /*
     #[serde(rename = "event", alias = "EVENT")]
     Event,
     #[serde(rename = "struct", alias = "STRUCT")]
     Struct,
+    */
 }
 
 #[derive(Clone, CopyGetters, Debug, Default, Eq, Getters, Hash, PartialEq, Deserialize)]
