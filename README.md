@@ -109,7 +109,6 @@ You can find a tutorial on running contracts [here](/examples/contract_execution
 ### Using the CLI
 You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
-
 ### Customization
 
 #### Contract class cache behavior
