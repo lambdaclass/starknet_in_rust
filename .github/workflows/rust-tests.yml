@@ -9,7 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: 1.72.1
+  RUST_TOOLCHAIN: '1.72.1'
   CAIRO_PROGRAMS_PATH: |
     cairo_programs/**/*.casm
     cairo_programs/**/*.sierra
@@ -27,16 +27,15 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+          components: rustfmt, clippy
     - name: Install python 3.9
       uses: gabrielfalcao/pyenv-action@v11
       with:
         default: 3.9
         command: pyenv local 3.9
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: rustfmt, clippy
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
@@ -52,11 +51,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: rustfmt, clippy
+    - name: Set rust stable as default
+      run: rustup default stable
     - name: Install python 3.9
       uses: gabrielfalcao/pyenv-action@v11
       with:
@@ -86,11 +82,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: rustfmt, clippy
+    - name: Set rust stable as default
+      run: rustup default stable
     - name: Install python 3.9
       uses: gabrielfalcao/pyenv-action@v11
       with:
@@ -119,10 +112,6 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        toolchain: ${{ env.RUST_TOOLCHAIN }}
 
     - name: Set nightly as default
       run: rustup default nightly
