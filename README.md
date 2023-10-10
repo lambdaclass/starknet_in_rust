@@ -106,10 +106,11 @@ Starknet in Rust can be integrated with [Cairo Native](https://github.com/lambda
   ```
   rustup default nightly
   ```
-- LLVM `16` needs to be installed and the `MLIR_SYS_160_PREFIX` environment variable needs to point to said installation. In macOS, run
+- LLVM `17` needs to be installed and the `MLIR_SYS_170_PREFIX` and `TABLEGEN_170_PREFIX` environment variable needs to point to said installation. In macOS, run
   ```
-  brew install llvm@16
-  export MLIR_SYS_160_PREFIX=/opt/homebrew/opt/llvm@16
+  brew install llvm@17
+  export MLIR_SYS_170_PREFIX=/opt/homebrew/opt/llvm@17
+  export TABLEGEN_170_PREFIX=/opt/homebrew/opt/llvm@17
   ```
   and you're set.
 
