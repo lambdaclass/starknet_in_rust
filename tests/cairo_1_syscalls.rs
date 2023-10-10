@@ -1252,12 +1252,12 @@ fn test_get_execution_info() {
     ];
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_n_steps = 213;
+    let expected_n_steps = 268;
     #[cfg(feature = "cairo_1_tests")]
     let expected_n_steps = 268;
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_gas_consumed = 22980;
+    let expected_gas_consumed = 28580;
     #[cfg(feature = "cairo_1_tests")]
     let expected_gas_consumed = 28580;
 
