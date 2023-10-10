@@ -3033,14 +3033,13 @@ fn library_call_recursive_50_calls() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let contract_class_cache = PermanentContractClassCache::default();
+    let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3062,7 +3061,7 @@ fn library_call_recursive_50_calls() {
     let lib_class_hash: ClassHash = [2; 32];
     let lib_nonce = Felt252::zero();
 
-    contract_class_cache.set_contract_class(
+    contract_class_cache.insert(
         lib_class_hash,
         CompiledClass::Casm(Arc::new(lib_contract_class)),
     );
@@ -3074,7 +3073,7 @@ fn library_call_recursive_50_calls() {
         .insert(lib_address, lib_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     // Create an execution entry point
     let calldata = [
