@@ -133,11 +133,11 @@ impl StateDiff {
         let state_cache = cached_state.cache().to_owned();
 
         let substracted_maps = state_cache.storage_writes;
-        let storage_updates = to_state_diff_storage_mapping(substracted_maps);
+        let storage_updates = to_state_diff_storage_mapping(&substracted_maps);
 
-        let address_to_nonce = state_cache.nonce_writes;
-        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes;
-        let address_to_class_hash = state_cache.class_hash_writes;
+        let address_to_nonce = state_cache.nonce_writes.clone();
+        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes.clone();
+        let address_to_class_hash = state_cache.class_hash_writes.clone();
 
         Ok(StateDiff {
             address_to_class_hash,

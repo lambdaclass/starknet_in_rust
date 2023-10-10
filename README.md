@@ -109,6 +109,7 @@ You can find a tutorial on running contracts [here](/examples/contract_execution
 ### Using the CLI
 You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
+<<<<<<< HEAD
 
 ### Customization
 
@@ -152,6 +153,14 @@ let state2 = CachedState::new(state_reader.clone(), cache.clone()); // Cache is 
 cache.extend(state1.state.drain_private_contract_class_cache());
 cache.extend(state2.state.drain_private_contract_class_cache());
 ```
+=======
+### Customization
+
+#### Logging configuration
+
+This project uses the [`tracing`](https://crates.io/crates/tracing) crate as a library. Check out
+its documentation for more information.
+>>>>>>> 484acb3e58e438dae8bcca22d78eedc38eb8c140
 
 ### Testing
 

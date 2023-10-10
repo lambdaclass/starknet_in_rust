@@ -135,17 +135,17 @@ pub fn string_to_hash(class_string: &String) -> ClassHash {
 
 /// Converts CachedState storage mapping to StateDiff storage mapping.
 pub fn to_state_diff_storage_mapping(
-    storage_writes: HashMap<StorageEntry, Felt252>,
+    storage_writes: &HashMap<StorageEntry, Felt252>,
 ) -> HashMap<Address, HashMap<Felt252, Felt252>> {
     let mut storage_updates: HashMap<Address, HashMap<Felt252, Felt252>> = HashMap::new();
-    for ((address, key), value) in storage_writes.into_iter() {
+    for ((address, key), value) in storage_writes.iter() {
         storage_updates
-            .entry(address)
+            .entry(address.clone())
             .and_modify(|updates_for_address: &mut HashMap<Felt252, Felt252>| {
-                let key_fe = Felt252::from_bytes_be(&key);
+                let key_fe = Felt252::from_bytes_be(key);
                 updates_for_address.insert(key_fe, value.clone());
             })
-            .or_insert_with(|| HashMap::from([(Felt252::from_bytes_be(&key), value)]));
+            .or_insert_with(|| HashMap::from([(Felt252::from_bytes_be(key), value.clone())]));
     }
     storage_updates
 }
@@ -810,7 +810,7 @@ mod test {
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
 
-        let map = to_state_diff_storage_mapping(storage);
+        let map = to_state_diff_storage_mapping(&storage);
 
         let key1_fe = Felt252::from_bytes_be(key1.as_slice());
         let key2_fe = Felt252::from_bytes_be(key2.as_slice());
@@ -881,7 +881,7 @@ mod test {
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
 
-        let state_dff = to_state_diff_storage_mapping(storage);
+        let state_dff = to_state_diff_storage_mapping(&storage);
         let cache_storage = to_cache_state_storage_mapping(&state_dff);
 
         let mut expected_res = HashMap::new();

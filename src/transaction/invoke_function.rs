@@ -28,6 +28,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use std::fmt::Debug;
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -244,8 +245,12 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
+        let validate_info = if self.skip_validation {
+            None
+        } else {
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+        };
+
         // Execute transaction
         let ExecutionResult {
             call_info,
@@ -289,6 +294,14 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::InvokeFunction,
+        self.version = ?self.version,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.entry_point_selector = ?self.entry_point_selector,
+        self.entry_point_type = ?self.entry_point_type,
+    ))]
     pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
@@ -322,7 +335,8 @@ impl InvokeFunction {
                 .as_str(),
             );
         } else {
-            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+            state
+                .apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
         }
 
         let mut tx_execution_context =
