@@ -80,6 +80,7 @@ lazy_static! {
             map.insert(75202468540281_u128.into(), "deploy");
             map.insert(1280709301550335749748_u128.into(), "emit_event");
             map.insert(25828017502874050592466629733_u128.into(), "storage_write");
+            map.insert(22096086224907272360718070632_u128.into(), "get_block_hash");
             map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_timestamp".as_bytes())), "get_block_timestamp");
             map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes())), "get_block_number");
             map.insert(Felt252::from_bytes_be("Keccak".as_bytes()), "keccak");
@@ -499,10 +500,14 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
             Felt252::zero()
         } else {
-            self.starknet_storage_state.state.get_storage_at(&(
-                BLOCK_HASH_CONTRACT_ADDRESS.clone(),
-                Felt252::new(block_number).to_be_bytes(),
-            ))?
+            match self
+                .block_context
+                .blocks
+                .get(&request.block_number.to_owned())
+            {
+                Some(block) => Felt252::from_bytes_be(block.header.block_hash.0.bytes()),
+                None => Felt252::zero(),
+            }
         };
 
         Ok(SyscallResponse {
@@ -847,6 +852,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
             "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
+            "get_block_hash" => GetBlockHashRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "get_execution_info" => Ok(SyscallRequest::GetExecutionInfo),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
