@@ -40,12 +40,19 @@ where
 }
 
 impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> {
-    fn get_block_hash(&self, block_number: u64) -> SyscallResult<cairo_vm::felt::Felt252> {
+    fn get_block_hash(
+        &self,
+        block_number: u64,
+        _gas: &mut u64,
+    ) -> SyscallResult<cairo_vm::felt::Felt252> {
         println!("Called `get_block_hash({block_number})` from MLIR.");
         Ok(Felt252::from_bytes_be(b"get_block_hash ok"))
     }
 
-    fn get_execution_info(&self) -> SyscallResult<cairo_native::starknet::ExecutionInfo> {
+    fn get_execution_info(
+        &self,
+        _gas: &mut u64,
+    ) -> SyscallResult<cairo_native::starknet::ExecutionInfo> {
         println!("Called `get_execution_info()` from MLIR.");
         Ok(ExecutionInfo {
             block_info: BlockInfo {
@@ -78,6 +85,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         contract_address_salt: cairo_vm::felt::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
         deploy_from_zero: bool,
+        _gas: &mut u64,
     ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
         println!("Called `deploy({class_hash}, {contract_address_salt}, {calldata:?}, {deploy_from_zero})` from MLIR.");
         Ok((
@@ -86,7 +94,11 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         ))
     }
 
-    fn replace_class(&self, class_hash: cairo_vm::felt::Felt252) -> SyscallResult<()> {
+    fn replace_class(
+        &self,
+        class_hash: cairo_vm::felt::Felt252,
+        _gas: &mut u64,
+    ) -> SyscallResult<()> {
         println!("Called `replace_class({class_hash})` from MLIR.");
         Ok(())
     }
@@ -96,6 +108,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         class_hash: cairo_vm::felt::Felt252,
         function_selector: cairo_vm::felt::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
+        _gas: &mut u64,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
         println!(
             "Called `library_call({class_hash}, {function_selector}, {calldata:?})` from MLIR."
@@ -108,6 +121,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         address: cairo_vm::felt::Felt252,
         entrypoint_selector: cairo_vm::felt::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
+        _gas: &mut u64,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
         println!(
             "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from MLIR."
@@ -156,6 +170,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &mut self,
         address_domain: u32,
         address: cairo_vm::felt::Felt252,
+        _gas: &mut u64,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
         let value = match self.starknet_storage_state.read(&address.to_be_bytes()) {
             Ok(value) => Ok(dbg!(value)),
@@ -171,6 +186,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         address_domain: u32,
         address: cairo_vm::felt::Felt252,
         value: cairo_vm::felt::Felt252,
+        _gas: &mut u64,
     ) -> SyscallResult<()> {
         println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
         self.starknet_storage_state
@@ -182,6 +198,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &mut self,
         keys: &[cairo_vm::felt::Felt252],
         data: &[cairo_vm::felt::Felt252],
+        _gas: &mut u64,
     ) -> SyscallResult<()> {
         let order = self.n_emitted_events;
         println!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from MLIR.");
@@ -195,6 +212,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &mut self,
         to_address: cairo_vm::felt::Felt252,
         payload: &[cairo_vm::felt::Felt252],
+        _gas: &mut u64,
     ) -> SyscallResult<()> {
         println!("Called `send_message_to_l1({to_address}, {payload:?})` from MLIR.");
         let addr = Address(to_address);
@@ -209,7 +227,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         Ok(())
     }
 
-    fn keccak(&self, input: &[u64]) -> SyscallResult<cairo_native::starknet::U256> {
+    fn keccak(&self, input: &[u64], _gas: &mut u64) -> SyscallResult<cairo_native::starknet::U256> {
         println!("Called `keccak({input:?})` from MLIR.");
         Ok(U256(Felt252::from(1234567890).to_le_bytes()))
     }
@@ -218,6 +236,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &self,
         _p0: cairo_native::starknet::Secp256k1Point,
         _p1: cairo_native::starknet::Secp256k1Point,
+        _gas: &mut u64,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
         todo!()
     }
@@ -226,6 +245,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &self,
         _x: cairo_native::starknet::U256,
         _y_parity: bool,
+        _gas: &mut u64,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
         todo!()
     }
@@ -233,6 +253,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     fn secp256k1_get_xy(
         &self,
         _p: cairo_native::starknet::Secp256k1Point,
+        _gas: &mut u64,
     ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
         todo!()
     }
@@ -241,6 +262,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &self,
         _p: cairo_native::starknet::Secp256k1Point,
         _m: cairo_native::starknet::U256,
+        _gas: &mut u64,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
         todo!()
     }
@@ -249,6 +271,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &self,
         _x: cairo_native::starknet::U256,
         _y: cairo_native::starknet::U256,
+        _gas: &mut u64,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
         todo!()
     }
@@ -257,6 +280,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &self,
         _p0: cairo_native::starknet::Secp256k1Point,
         _p1: cairo_native::starknet::Secp256k1Point,
+        _gas: &mut u64,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
         todo!()
     }
@@ -265,6 +289,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &self,
         _x: cairo_native::starknet::U256,
         _y_parity: bool,
+        _gas: &mut u64,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
         todo!()
     }
@@ -272,6 +297,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     fn secp256r1_get_xy(
         &self,
         _p: cairo_native::starknet::Secp256k1Point,
+        _gas: &mut u64,
     ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
         todo!()
     }
@@ -280,6 +306,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &self,
         _p: cairo_native::starknet::Secp256k1Point,
         _m: cairo_native::starknet::U256,
+        _gas: &mut u64,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
         todo!()
     }
@@ -288,6 +315,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &self,
         _x: cairo_native::starknet::U256,
         _y: cairo_native::starknet::U256,
+        _gas: &mut u64,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
         todo!()
     }
