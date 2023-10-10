@@ -129,6 +129,23 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
     }
 }
 
+impl<T: StateReader, C: ContractClassCache> Clone for CachedState<T, C> {
+    fn clone(&self) -> Self {
+        Self {
+            state_reader: self.state_reader.clone(),
+            cache: self.cache.clone(),
+            contract_class_cache: self.contract_class_cache.clone(),
+            contract_class_cache_private: RwLock::new(
+                self.contract_class_cache_private.read().unwrap().clone(),
+            ),
+            #[cfg(feature = "metrics")]
+            cache_hits: self.cache_hits.clone(),
+            #[cfg(feature = "metrics")]
+            cache_misses: self.cache_misses.clone(),
+        }
+    }
+}
+
 impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
     /// Returns the class hash for a given contract address.
     /// Returns zero as default value if missing
