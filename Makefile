@@ -177,7 +177,7 @@ clean:
 	-rm -rf cairo2/
 	-rm -rf cairo-*.tar
 
-clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
+clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo clippy --workspace --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
@@ -186,13 +186,13 @@ test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	echo "Cairo2 tests"
 	$(MAKE) test-cairo-2
 
-test-cairo-1:
+test-cairo-1: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics
 
-test-cairo-2:
+test-cairo-2: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --all-targets --features=metrics
 
-test-cairo-native:
+test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --test cairo_native --features=cairo-native
 
 test-doctests:
