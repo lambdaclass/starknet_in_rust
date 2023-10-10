@@ -10,7 +10,6 @@ use cairo_vm::{
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
-use starknet_in_rust::{EntryPointType, utils::calculate_sn_keccak};
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -24,6 +23,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
+use starknet_in_rust::{utils::calculate_sn_keccak, EntryPointType};
 
 fn create_execute_extrypoint(
     address: Address,
@@ -353,8 +353,10 @@ fn call_contract_storage_write_read() {
     let program_data = include_bytes!("../starknet_programs/cairo1/wallet_wrapper.casm");
 
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let get_balance_entrypoint_selector = &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
-    let increase_balance_entrypoint_selector = &BigUint::from_bytes_be(&calculate_sn_keccak("increase_balance".as_bytes()));
+    let get_balance_entrypoint_selector =
+        &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
+    let increase_balance_entrypoint_selector =
+        &BigUint::from_bytes_be(&calculate_sn_keccak("increase_balance".as_bytes()));
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -3086,7 +3088,7 @@ fn library_call_recursive_50_calls() {
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
-        calldata.clone(),
+        calldata,
         Felt252::new(entrypoint_selector.clone()),
         caller_address,
         entry_point_type,
@@ -3153,9 +3155,8 @@ fn library_call_recursive_50_calls() {
         }
     );
     assert_eq!(call_info.retdata, [1.into()].to_vec());
-    assert_eq!(call_info.failure_flag, false);
+    assert!(!call_info.failure_flag);
 }
-
 
 #[test]
 fn call_contract_storage_write_read_recursive_50_calls() {
@@ -3166,8 +3167,11 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     let program_data = include_bytes!("../starknet_programs/cairo1/wallet_wrapper.casm");
 
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let get_balance_entrypoint_selector = &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
-    let increase_balance_entrypoint_selector = &BigUint::from_bytes_be(&calculate_sn_keccak("increase_balance_recursive".as_bytes()));
+    let get_balance_entrypoint_selector =
+        &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
+    let increase_balance_entrypoint_selector = &BigUint::from_bytes_be(&calculate_sn_keccak(
+        "increase_balance_recursive".as_bytes(),
+    ));
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -3320,10 +3324,12 @@ fn call_contract_storage_write_read_recursive_50_calls() {
             false,
             block_context.invoke_tx_max_n_steps(),
         )
-        .unwrap().call_info.unwrap();
+        .unwrap()
+        .call_info
+        .unwrap();
     // Check that the recursive function did in fact call the simple_wallet contract 50 times
     assert_eq!(call_info.internal_calls.len(), 50);
-    assert_eq!(call_info.failure_flag, false);
+    assert!(!call_info.failure_flag);
 
     // RUN GET_BALANCE
     // Create an execution entry point
