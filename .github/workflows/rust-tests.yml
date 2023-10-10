@@ -25,6 +25,8 @@ jobs:
     name: Build with release profile
     runs-on: ubuntu-22.04
     steps:
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: Python3 Build
       uses: actions/setup-python@v4
       with:
@@ -38,8 +40,6 @@ jobs:
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
-    - name: Checkout
-      uses: actions/checkout@v3
 
     - name: Install deps
       run: make deps
@@ -50,6 +50,8 @@ jobs:
     name: Lint with fmt and clippy
     runs-on: ubuntu-22.04
     steps:
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -63,9 +65,6 @@ jobs:
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
-    - name: Checkout
-      uses: actions/checkout@v3
-
     - name: Install deps
       run: make deps
     - name: Format
@@ -85,6 +84,8 @@ jobs:
     name: Run tests
     runs-on: ubuntu-22.04
     steps:
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: add llvm deb repository
       if: ${{ matrix.target == 'test-cairo-native' }}
       uses: myci-actions/add-deb-repo@10
@@ -108,8 +109,6 @@ jobs:
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
-    - name: Checkout
-      uses: actions/checkout@v3
 
     - name: Install deps
       run: make deps
