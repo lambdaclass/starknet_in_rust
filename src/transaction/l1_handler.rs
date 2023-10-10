@@ -15,10 +15,9 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint,
-        TransactionExecutionContext, TransactionExecutionInfo,
+        execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
+        TransactionExecutionInfo,
     },
-    
     state::{
         state_api::{State, StateReader},
         ExecutionResourcesManager,

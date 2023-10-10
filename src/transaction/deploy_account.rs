@@ -195,8 +195,7 @@ impl DeployAccount {
                 .as_str(),
             );
         } else {
-            state
-                .apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
+            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
         }
 
         let mut tx_execution_context =
