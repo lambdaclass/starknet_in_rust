@@ -166,6 +166,8 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        self.handle_nonce(state)?;
+
         let mut transactional_state = state.create_transactional();
         let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
 
@@ -230,18 +232,18 @@ impl DeployAccount {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let contract_class = state.get_contract_class(&self.class_hash)?;
+
+        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
+
         let mut resources_manager = ExecutionResourcesManager::default();
+        let constructor_call_info =
+            self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
+
         let validate_info = if self.skip_validate {
             None
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
-        self.handle_nonce(state)?;
-
-        state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
-
-        let constructor_call_info =
-            self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
 
         let actual_resources = calculate_tx_resources(
             resources_manager,
