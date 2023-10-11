@@ -1355,7 +1355,7 @@ mod tests {
         let mut state =
             CachedState::new(Arc::new(state_reader), Arc::new(casm_contract_class_cache));
 
-        let state_before_execution = state.clone();
+        let state_before_execution = state.clone_for_testing();
 
         let result = internal_invoke_function
             .execute(&mut state, &BlockContext::default(), 0)

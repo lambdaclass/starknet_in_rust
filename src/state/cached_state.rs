@@ -100,6 +100,22 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
         }
     }
 
+    /// Clones a CachedState for testing purposes.
+    pub fn clone_for_testing(&self) -> Self {
+        Self {
+            state_reader: self.state_reader.clone(),
+            cache: self.cache.clone(),
+            contract_class_cache: self.contract_class_cache.clone(),
+            contract_class_cache_private: RwLock::new(
+                self.contract_class_cache_private.read().unwrap().clone(),
+            ),
+            #[cfg(feature = "metrics")]
+            cache_hits: self.cache_hits.clone(),
+            #[cfg(feature = "metrics")]
+            cache_misses: self.cache_misses.clone(),
+        }
+    }
+
     pub fn drain_private_contract_class_cache(
         &self,
     ) -> Result<impl Iterator<Item = (ClassHash, CompiledClass)>, StateError> {
@@ -129,24 +145,6 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
             #[cfg(feature = "metrics")]
             cache_misses: 0,
         })
-    }
-}
-
-#[cfg(test)]
-impl<T: StateReader, C: ContractClassCache> Clone for CachedState<T, C> {
-    fn clone(&self) -> Self {
-        Self {
-            state_reader: self.state_reader.clone(),
-            cache: self.cache.clone(),
-            contract_class_cache: self.contract_class_cache.clone(),
-            contract_class_cache_private: RwLock::new(
-                self.contract_class_cache_private.read().unwrap().clone(),
-            ),
-            #[cfg(feature = "metrics")]
-            cache_hits: self.cache_hits.clone(),
-            #[cfg(feature = "metrics")]
-            cache_misses: self.cache_misses.clone(),
-        }
     }
 }
 

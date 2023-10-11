@@ -330,7 +330,7 @@ mod test {
             Arc::new(PermanentContractClassCache::default()),
         );
 
-        let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
+        let diff = StateDiff::from_cached_state(cached_state_original.clone_for_testing()).unwrap();
 
         let cached_state = diff
             .to_cached_state::<_, PermanentContractClassCache>(

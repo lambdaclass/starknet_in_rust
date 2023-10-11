@@ -711,7 +711,7 @@ mod test {
 
         simulate_transaction(
             &[&internal_deploy],
-            state.clone(),
+            state.clone_for_testing(),
             state.contract_class_cache().clone(),
             block_context,
             100_000_000,
@@ -752,7 +752,7 @@ mod test {
 
         simulate_transaction(
             &[&declare_tx],
-            state.clone(),
+            state.clone_for_testing(),
             state.contract_class_cache().clone(),
             block_context,
             100_000_000,
@@ -820,7 +820,7 @@ mod test {
 
         simulate_transaction(
             &[&invoke_tx],
-            state.clone(),
+            state.clone_for_testing(),
             state.contract_class_cache().clone(),
             &block_context,
             100_000_000,
@@ -867,7 +867,7 @@ mod test {
 
         simulate_transaction(
             &[&deploy_account_tx],
-            state.clone(),
+            state.clone_for_testing(),
             state.contract_class_cache().clone(),
             block_context,
             100_000_000,
@@ -912,7 +912,7 @@ mod test {
 
         simulate_transaction(
             &[&declare_tx],
-            state.clone(),
+            state.clone_for_testing(),
             state.contract_class_cache().clone(),
             &block_context,
             100_000_000,
@@ -981,7 +981,7 @@ mod test {
 
         simulate_transaction(
             &[&l1_handler_tx],
-            state.clone(),
+            state.clone_for_testing(),
             state.contract_class_cache().clone(),
             &block_context,
             100_000_000,
@@ -1042,7 +1042,7 @@ mod test {
 
         simulate_transaction(
             &[&deploy, &invoke_tx],
-            state.clone(),
+            state.clone_for_testing(),
             state.contract_class_cache().clone(),
             block_context,
             100_000_000,

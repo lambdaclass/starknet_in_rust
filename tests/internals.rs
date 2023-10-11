@@ -1838,7 +1838,7 @@ fn expected_deploy_account_states() -> (
         INITIAL_BALANCE.clone(),
     );
 
-    let mut state_after = state_before.clone();
+    let mut state_after = state_before.clone_for_testing();
 
     // Make the contract cache independent (otherwise tests will fail because the initial state's
     // cache will not be empty anymore).
