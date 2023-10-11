@@ -173,7 +173,7 @@ impl DeployAccount {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
 
-        let mut transactional_state = state.create_transactional();
+        let mut transactional_state = state.create_transactional()?;
         let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
 
         let actual_fee = calculate_tx_fee(

@@ -312,7 +312,7 @@ impl InvokeFunction {
             self.handle_nonce(state)?;
         }
 
-        let mut transactional_state = state.create_transactional();
+        let mut transactional_state = state.create_transactional()?;
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
 
@@ -672,7 +672,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let result = internal_invoke_function
             .apply(&mut transactional, &BlockContext::default(), 0)
@@ -817,7 +817,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         let expected_error =
             internal_invoke_function.apply(&mut transactional, &BlockContext::default(), 0);
 
@@ -880,7 +880,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let result = internal_invoke_function
             .apply(&mut transactional, &BlockContext::default(), 0)
@@ -953,7 +953,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let expected_error =
             internal_invoke_function.apply(&mut transactional, &BlockContext::default(), 0);

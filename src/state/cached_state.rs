@@ -102,32 +102,37 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
 
     pub fn drain_private_contract_class_cache(
         &self,
-    ) -> impl Iterator<Item = (ClassHash, CompiledClass)> {
-        self.contract_class_cache_private
+    ) -> Result<impl Iterator<Item = (ClassHash, CompiledClass)>, StateError> {
+        Ok(self
+            .contract_class_cache_private
             .read()
-            .unwrap()
+            .map_err(|_| StateError::FailedToReadContractClassCache)?
             .clone()
-            .into_iter()
+            .into_iter())
     }
 
     /// Creates a copy of this state with an empty cache for saving changes and applying them
     /// later.
-    pub fn create_transactional(&self) -> CachedState<T, C> {
-        CachedState {
+    pub fn create_transactional(&self) -> Result<CachedState<T, C>, StateError> {
+        Ok(CachedState {
             state_reader: self.state_reader.clone(),
             cache: self.cache.clone(),
             contract_class_cache: self.contract_class_cache.clone(),
             contract_class_cache_private: RwLock::new(
-                self.contract_class_cache_private.read().unwrap().clone(),
+                self.contract_class_cache_private
+                    .read()
+                    .map_err(|_| StateError::FailedToReadContractClassCache)?
+                    .clone(),
             ),
             #[cfg(feature = "metrics")]
             cache_hits: 0,
             #[cfg(feature = "metrics")]
             cache_misses: 0,
-        }
+        })
     }
 }
 
+#[cfg(test)]
 impl<T: StateReader, C: ContractClassCache> Clone for CachedState<T, C> {
     fn clone(&self) -> Self {
         Self {
@@ -196,7 +201,10 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
         }
 
         // I: FETCHING FROM CACHE
-        let mut private_cache = self.contract_class_cache_private.write().unwrap();
+        let mut private_cache = self
+            .contract_class_cache_private
+            .write()
+            .map_err(|_| StateError::FailedToReadContractClassCache)?;
         if let Some(compiled_class) = private_cache.get(class_hash) {
             return Ok(compiled_class.clone());
         } else if let Some(compiled_class) =
@@ -240,7 +248,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         // have a mutable reference to the `RefCell` available.
         self.contract_class_cache_private
             .get_mut()
-            .unwrap()
+            .map_err(|_| StateError::FailedToReadContractClassCache)?
             .insert(*class_hash, contract_class.clone());
 
         Ok(())
@@ -466,7 +474,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         if let Some(compiled_class) = self
             .contract_class_cache_private
             .get_mut()
-            .unwrap()
+            .map_err(|_| StateError::FailedToReadContractClassCache)?
             .get(class_hash)
             .cloned()
         {
@@ -478,7 +486,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             self.add_hit();
             self.contract_class_cache_private
                 .get_mut()
-                .unwrap()
+                .map_err(|_| StateError::FailedToReadContractClassCache)?
                 .insert(*class_hash, compiled_class.clone());
             return Ok(compiled_class);
         }
@@ -487,7 +495,10 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            let write_guard = self.contract_class_cache_private.get_mut().unwrap();
+            let write_guard = self
+                .contract_class_cache_private
+                .get_mut()
+                .map_err(|_| StateError::FailedToReadContractClassCache)?;
 
             // `RefCell::get_mut()` provides a mutable reference without the borrowing overhead when
             // we have a mutable reference to the `RefCell` available.
@@ -501,7 +512,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
                 self.add_hit();
                 self.contract_class_cache_private
                     .get_mut()
-                    .unwrap()
+                    .map_err(|_| StateError::FailedToReadContractClassCache)?
                     .insert(*class_hash, casm_class.clone());
                 return Ok(casm_class);
             }
