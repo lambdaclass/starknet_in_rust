@@ -21,7 +21,6 @@ use super::{
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
 use crate::definitions::block_context::BlockContext;
-use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
