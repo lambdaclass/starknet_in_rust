@@ -9,7 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: 1.72.1
+  RUST_TOOLCHAIN: '1.72.1'
   CAIRO_PROGRAMS_PATH: |
     cairo_programs/**/*.casm
     cairo_programs/**/*.sierra
@@ -23,20 +23,19 @@ env:
 jobs:
   build:
     name: Build with release profile
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, debian-12]
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Python3 Build
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        cache: 'pip'
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
+    - name: Install python 3.9
+      uses: gabrielfalcao/pyenv-action@v11
+      with:
+        default: 3.9
+        command: pyenv local 3.9
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
@@ -48,20 +47,17 @@ jobs:
 
   lint:
     name: Lint with fmt and clippy
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, debian-12]
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+    - name: Set rust stable as default
+      run: rustup default stable
+    - name: Install python 3.9
+      uses: gabrielfalcao/pyenv-action@v11
       with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: rustfmt, clippy
-    - name: Python3 Build
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        cache: 'pip'
+        default: 3.9
+        command: pyenv local 3.9
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
@@ -82,30 +78,17 @@ jobs:
       matrix:
         target: [ test-cairo-1, test-cairo-2, test-doctests, test-cairo-native ]
     name: Run tests
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, debian-12]
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: add llvm deb repository
-      if: ${{ matrix.target == 'test-cairo-native' }}
-      uses: myci-actions/add-deb-repo@10
+    - name: Set rust stable as default
+      run: rustup default stable
+    - name: Install python 3.9
+      uses: gabrielfalcao/pyenv-action@v11
       with:
-        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
-        repo-name: llvm-repo
-        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
-    - name: Install LLVM
-      if: ${{ matrix.target == 'test-cairo-native' }}
-      run: sudo apt-get install -y llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: rustfmt, clippy
-    - name: Python3 Build
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        cache: 'pip'
+        default: 3.9
+        command: pyenv local 3.9
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
@@ -125,22 +108,13 @@ jobs:
 
   coverage:
     name: Generate and upload coverage report
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, debian-12]
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        toolchain: ${{ env.RUST_TOOLCHAIN }}
 
     - name: Set nightly as default
       run: rustup default nightly
-
-    - name: Install testing tools
-      uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-nextest@0.9.49,cargo-llvm-cov
 
     - uses: Swatinem/rust-cache@v2
       with:
@@ -153,11 +127,11 @@ jobs:
         path: lcov.info
         key: coverage-cache-${{ github.sha }}
 
-    - name: Python3 Build
-      uses: actions/setup-python@v4
+    - name: Install python 3.9
+      uses: gabrielfalcao/pyenv-action@v11
       with:
-        python-version: '3.9'
-        cache: 'pip'
+        default: 3.9
+        command: pyenv local 3.9
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true

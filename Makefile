@@ -186,10 +186,10 @@ test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	echo "Cairo2 tests"
 	$(MAKE) test-cairo-2
 
-test-cairo-1: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
+test-cairo-1: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics
 
-test-cairo-2: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierra
+test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --all-targets --features=metrics
 
 test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
