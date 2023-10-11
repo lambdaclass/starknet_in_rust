@@ -12,7 +12,12 @@ cairo_1_tests = []
 metrics = []
 
 [workspace]
-members = ["cli", "fuzzer", "rpc_state_reader"]
+members = [
+    "cli",
+    "fuzzer",
+    "rpc_state_reader",
+    "replay"
+]
 
 [workspace.dependencies]
 cairo-lang-casm = "2.1.0-rc4"

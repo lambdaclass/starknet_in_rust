@@ -3,10 +3,12 @@ pub mod utils;
 
 // only export the sir_state_reader module when the starknet_in_rust feature
 // is enabled.
-#[cfg(feature="starknet_in_rust")]
+#[cfg(feature = "starknet_in_rust")]
 mod sir_state_reader;
-#[cfg(feature="starknet_in_rust")]
-pub use sir_state_reader::{RpcStateReader, execute_tx, execute_tx_configurable, execute_tx_without_validate};
+#[cfg(feature = "starknet_in_rust")]
+pub use sir_state_reader::{
+    execute_tx, execute_tx_configurable, execute_tx_without_validate, RpcStateReader,
+};
 
 #[cfg(test)]
 mod tests {

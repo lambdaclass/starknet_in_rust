@@ -1,4 +1,4 @@
-#![cfg(feature="starknet_in_rust")]
+#![cfg(feature = "starknet_in_rust")]
 
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_api::{
@@ -15,9 +15,7 @@ use starknet_in_rust::{
 
 use test_case::test_case;
 
-use rpc_state_reader::{rpc_state::*, execute_tx, execute_tx_without_validate};
-
-
+use rpc_state_reader::{execute_tx, execute_tx_without_validate, rpc_state::*};
 
 #[test]
 fn test_get_transaction_try_from() {

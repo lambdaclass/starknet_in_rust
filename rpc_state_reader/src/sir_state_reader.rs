@@ -31,7 +31,7 @@ use starknet_in_rust::{
     utils::{Address, ClassHash},
 };
 
-use crate::rpc_state::{RpcState, TransactionTrace, RpcTransactionReceipt, RpcChain, RpcBlockInfo};
+use crate::rpc_state::{RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace};
 
 #[derive(Debug)]
 pub struct RpcStateReader(RpcState);
