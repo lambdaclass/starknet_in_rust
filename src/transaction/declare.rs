@@ -929,8 +929,19 @@ mod tests {
 
         let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
         // Insert pubkey storage var to pass validation
-        let storage_entry = &(sender_address, felt_str!("1672321442399497129215646424919402195095307045612040218489019266998007191460").to_be_bytes());
-        state.set_storage_at(storage_entry, felt_str!("1735102664668487605176656616876767369909409133946409161569774794110049207117"));
+        let storage_entry = &(
+            sender_address,
+            felt_str!(
+                "1672321442399497129215646424919402195095307045612040218489019266998007191460"
+            )
+            .to_be_bytes(),
+        );
+        state.set_storage_at(
+            storage_entry,
+            felt_str!(
+                "1735102664668487605176656616876767369909409133946409161569774794110049207117"
+            ),
+        );
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -963,7 +974,9 @@ mod tests {
         declare.skip_fee_transfer = true;
         declare.hash_value = felt_str!("2718");
 
-        let simulate_declare = declare.clone().create_for_simulation(true, false, true, false);
+        let simulate_declare = declare
+            .clone()
+            .create_for_simulation(true, false, true, false);
 
         // ---------------------
         //      Comparison
@@ -972,18 +985,14 @@ mod tests {
         let mut bock_context = BlockContext::default();
         bock_context.starknet_os_config.gas_price = 12;
         assert!(
-            dbg!(
-                declare
-                    .execute(&mut state, &bock_context)
-                    .unwrap()
-                    .actual_fee
-            ) > 
-            dbg!(
-                simulate_declare
+            declare
+                .execute(&mut state, &bock_context)
+                .unwrap()
+                .actual_fee
+                > simulate_declare
                     .execute(&mut state_copy, &bock_context, 0)
                     .unwrap()
-                    .actual_fee
-            ),
+                    .actual_fee,
         );
     }
 }
