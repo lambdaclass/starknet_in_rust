@@ -910,7 +910,7 @@ mod tests {
 
         contract_class_cache.insert(
             class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+            CompiledClass::Deprecated(Arc::new(contract_class)),
         );
 
         // store sender_address
