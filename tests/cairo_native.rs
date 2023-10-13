@@ -141,7 +141,7 @@ fn integration_test_erc20() {
     assert_eq!(native_result.retdata, [].to_vec());
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(native_class_hash));
-    assert_eq!(native_result.gas_consumed, 0);
+    assert_eq!(native_result.gas_consumed, 18446744073709551615); // (u64::MAX)
 
     assert_eq!(vm_result.events, native_result.events);
     assert_eq!(
@@ -800,7 +800,7 @@ fn execute(
         entrypoint_type,
         Some(CallType::Delegate),
         Some(*class_hash),
-        u128::MAX,
+        u64::MAX.into(), // gas is u64 in cairo-native and sierra
     );
 
     // Execute the entrypoint
