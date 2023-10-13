@@ -4,6 +4,7 @@ use crate::CallType::Call;
 use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
 use num_traits::Zero;
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::execution::{Event, OrderedEvent};
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
@@ -22,7 +23,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::println;
 use std::sync::Arc;
-use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 
 #[test]
 fn integration_test_erc20() {
