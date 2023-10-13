@@ -103,7 +103,7 @@ jobs:
       with:
         tool: cargo-nextest@0.9.49
 
-    - name: checking space left
+    - name: check and free hdd space left
       run: |
         echo "Listing 20 largest packages"
         dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 20
@@ -129,7 +129,7 @@ jobs:
         repo-name: llvm-repo
         keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
     - name: Install LLVM
-      run: sudo apt-get install llvm-17-dev llvm-17-runtime clang-17 libmlir-17-dev mlir-17-tools
+      run: sudo apt-get install llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
     - name: Run tests (${{ matrix.target }})
       run: make ${{ matrix.target }}
 
