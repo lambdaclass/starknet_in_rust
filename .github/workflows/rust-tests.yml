@@ -105,14 +105,15 @@ jobs:
 
     - name: checking space left
       run: |
-        echo "Listing 100 largest packages"
-        dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
-        sudo apt-get remove -y '^llvm-14.*'
-        sudo apt-get remove -y '^llvm-15.*'
-        sudo apt-get remove -y '^llvm-16.*'
-        sudo apt-get remove -y 'php.*'
+        echo "Listing 20 largest packages"
+        dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 20
         sudo apt-get remove -y '^ghc-8.*'
+        sudo apt-get remove -y '^llvm-.*'
+        sudo apt-get remove -y 'php.*'
         sudo apt-get remove -y '^dotnet-.*'
+        sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel
+        sudo apt-get autoremove -y
+        sudo apt-get clean
     - name: add llvm deb repository
       uses: myci-actions/add-deb-repo@10
       with:
