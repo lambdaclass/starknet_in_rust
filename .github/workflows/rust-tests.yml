@@ -23,7 +23,7 @@ env:
 jobs:
   build:
     name: Build with release profile
-    runs-on: [self-hosted, debian-12]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -47,7 +47,7 @@ jobs:
 
   lint:
     name: Lint with fmt and clippy
-    runs-on: [self-hosted, debian-12]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -78,7 +78,7 @@ jobs:
       matrix:
         target: [ test-cairo-1, test-cairo-2, test-doctests, test-cairo-native ]
     name: Run tests
-    runs-on: [self-hosted, debian-12]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -103,12 +103,30 @@ jobs:
       with:
         tool: cargo-nextest@0.9.49
 
+    - name: checking space left
+      run: |
+        echo "Listing 100 largest packages"
+        dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
+        sudo apt-get remove -y '^llvm-14.*'
+        sudo apt-get remove -y '^llvm-15.*'
+        sudo apt-get remove -y '^llvm-16.*'
+        sudo apt-get remove -y 'php.*'
+        sudo apt-get remove -y '^ghc-8.*'
+        sudo apt-get remove -y '^dotnet-.*'
+    - name: add llvm deb repository
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      run: sudo apt-get install llvm-17-dev llvm-17-runtime clang-17 libmlir-17-dev mlir-17-tools
     - name: Run tests (${{ matrix.target }})
       run: make ${{ matrix.target }}
 
   coverage:
     name: Generate and upload coverage report
-    runs-on: [self-hosted, debian-12]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
