@@ -201,7 +201,7 @@ test-doctests:
 coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
 	$(MAKE) coverage-report
 
-coverage-report:
+coverage-report: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo +nightly llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
 
 heaptrack:
