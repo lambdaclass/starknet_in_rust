@@ -42,7 +42,7 @@ pub struct Address(pub Felt252);
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.to_str_radix(16))
+        write!(f, "0x{}", self.0.to_str_radix(16))
     }
 }
 
@@ -932,6 +932,6 @@ mod test {
     #[test]
     fn test_address_display() {
         let address = Address(Felt252::from(123456789));
-        assert_eq!(format!("{}", address), "75bcd15".to_string());
+        assert_eq!(format!("{}", address), "0x75bcd15".to_string());
     }
 }
