@@ -16,6 +16,7 @@ use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use core::fmt;
 use num_integer::Integer;
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -36,8 +37,20 @@ pub type CompiledClassHash = [u8; 32];
 //*      Address
 //* -------------------
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt252);
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.to_str_radix(16))
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
 
 //* -------------------
 //*  Helper Functions
@@ -914,5 +927,11 @@ mod test {
                 224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
             ],
         );
+    }
+
+    #[test]
+    fn test_address_display() {
+        let address = Address(Felt252::from(123456789));
+        assert_eq!(format!("{}", address), "75bcd15".to_string());
     }
 }
