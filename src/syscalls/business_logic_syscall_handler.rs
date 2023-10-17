@@ -342,6 +342,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(_) => todo!(),
         }
     }
 
@@ -922,7 +923,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     /// Sends a message from L2 to L1, including the destination address and payload.
     fn send_message_to_l1(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         request: SendMessageToL1Request,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
