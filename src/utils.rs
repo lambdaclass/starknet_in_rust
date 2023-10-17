@@ -301,7 +301,7 @@ pub fn get_storage_var_address(
 
     let args = args
         .iter()
-        .map(|felt| felt_to_field_element(felt))
+        .map(felt_to_field_element)
         .collect::<Result<Vec<_>, _>>()?;
 
     let storage_var_name_hash =
@@ -488,6 +488,7 @@ pub mod test_utils {
     macro_rules! ids_data {
         ( $( $name: expr ),* ) => {
             {
+                #[allow(clippy::useless_vec)]
                 let ids_names = vec![$( $name ),*];
                 let references = $crate::utils::test_utils::references!(ids_names.len() as i32);
                 let mut ids_data = HashMap::<String, cairo_vm::hint_processor::hint_processor_definition::HintReference>::new();
