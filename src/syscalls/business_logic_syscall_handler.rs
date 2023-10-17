@@ -554,24 +554,6 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         }
         Ok(())
     }
-
-    /// Marks read-only segments as accessed
-    pub(crate) fn mark_read_only_segments_as_accessed(
-        &self,
-        vm: &mut VirtualMachine,
-    ) -> Result<(), TransactionError> {
-        for (segment_ptr, segment_size) in self.read_only_segments.clone() {
-            vm.mark_address_range_as_accessed(
-                segment_ptr,
-                segment_size
-                    .get_int_ref()
-                    .ok_or(TransactionError::NotAFelt)?
-                    .to_usize()
-                    .unwrap_or_default(),
-            )?;
-        }
-        Ok(())
-    }
 }
 
 impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
