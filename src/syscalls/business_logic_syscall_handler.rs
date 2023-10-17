@@ -496,20 +496,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             });
         }
 
-        // FIXME: Update this after release.
-        const V_0_12_0_FIRST_BLOCK: u64 = 0;
-        let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
-            Felt252::zero()
-        } else {
-            match self
-                .block_context
-                .blocks
-                .get(&request.block_number.to_owned())
-            {
-                Some(block) => Felt252::from_bytes_be(block.header.block_hash.0.bytes()),
-                None => Felt252::zero(),
-            }
-        };
+        let key: Felt252 = block_number.into();
+        let block_hash_address = Address(1.into());
+
+        let block_hash = self
+            .starknet_storage_state
+            .state
+            .get_storage_at(&(block_hash_address, key.to_le_bytes()))?;
 
         Ok(SyscallResponse {
             gas: remaining_gas,

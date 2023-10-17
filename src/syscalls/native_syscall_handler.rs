@@ -46,9 +46,16 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         _gas: &mut u64,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
         println!("Called `get_block_hash({block_number})` from MLIR.");
-        match self.block_context.blocks.get(&block_number) {
-            Some(block) => Ok(Felt252::from_bytes_be(block.header.block_hash.0.bytes())),
-            None => Ok(Felt252::zero()),
+        let key: Felt252 = block_number.into();
+        let block_hash_address = Address(1.into());
+
+        match self
+            .starknet_storage_state
+            .state
+            .get_storage_at(&(block_hash_address, key.to_be_bytes()))
+        {
+            Ok(value) => Ok(value),
+            Err(_) => Ok(Felt252::zero()),
         }
     }
 
