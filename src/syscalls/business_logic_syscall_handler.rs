@@ -667,6 +667,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         ];
         let tx_info_ptr = self.allocate_segment(vm, tx_info_data)?;
 
+        // Allocate execution_info
         let execution_info = vec![
             block_info_ptr.into(),
             tx_info_ptr.into(),
