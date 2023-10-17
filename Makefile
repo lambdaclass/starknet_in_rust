@@ -39,9 +39,10 @@ compile-cairo: $(CAIRO_TARGETS) $(CAIRO_ABI_TARGETS)
 compile-starknet: $(STARKNET_TARGETS) $(STARKNET_ABI_TARGETS)
 
 cairo_programs/%.json cairo_programs/%_abi.json: cairo_programs/%.cairo
-	cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
+	. starknet-venv/bin/activate && \
 	cd starknet_programs/ && \
 	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
 	../$< \
