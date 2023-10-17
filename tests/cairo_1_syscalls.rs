@@ -10,6 +10,7 @@ use cairo_vm::{
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -327,7 +328,7 @@ fn library_call() {
         ..Default::default()
     };
 
-    assert_eq!(
+    assert_eq_sorted!(
         exec_entry_point
             .execute(
                 &mut state,

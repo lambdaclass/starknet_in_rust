@@ -12,7 +12,7 @@ use crate::{
         cached_state::CachedState,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
-        ExecutionResourcesManager,
+        ExecutionResourcesManager, StateDiff,
     },
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
@@ -165,23 +165,31 @@ impl ExecutionEntryPoint {
                 }
             }
             CompiledClass::Sierra(sierra_contract_class) => {
-                let mut tmp_state =
-                    CachedState::new(state.state_reader.clone(), state.contract_classes.clone());
-                tmp_state.cache = state.cache.clone();
+                let mut transactional_state = state.create_transactional();
 
                 match self.native_execute(
-                    &mut tmp_state,
+                    &mut transactional_state,
                     sierra_contract_class,
                     tx_execution_context,
                     block_context,
                 ) {
-                    Ok(call_info) => Ok(ExecutionResult {
-                        call_info: Some(call_info),
-                        revert_error: None,
-                        n_reverted_steps: 0,
-                    }),
+                    Ok(call_info) => {
+                        state.apply_state_update(&StateDiff::from_cached_state(
+                            transactional_state.cache(),
+                        )?)?;
+
+                        Ok(ExecutionResult {
+                            call_info: Some(call_info),
+                            revert_error: None,
+                            n_reverted_steps: 0,
+                        })
+                    }
                     Err(e) => {
                         if !support_reverted {
+                            state.apply_state_update(&StateDiff::from_cached_state(
+                                transactional_state.cache(),
+                            )?)?;
+
                             return Err(e);
                         }
 
@@ -632,6 +640,8 @@ impl ExecutionEntryPoint {
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
+        use serde_json::json;
+
         let entry_point = match self.entry_point_type {
             EntryPointType::External => contract_class
                 .entry_points_by_type
@@ -682,7 +692,7 @@ impl ExecutionEntryPoint {
             .get_metadata::<SyscallHandlerMeta>()
             .unwrap()
             .as_ptr()
-            .addr();
+            .as_ptr() as *const () as usize;
 
         let fn_id = &sierra_program
             .funcs
@@ -690,8 +700,6 @@ impl ExecutionEntryPoint {
             .find(|x| x.id.id == (entry_point.function_idx as u64))
             .unwrap()
             .id;
-
-        let number_of_params = sierra_program.funcs[fn_id.id as usize].params.len();
 
         let required_init_gas = native_program.get_required_init_gas(fn_id);
 
@@ -708,37 +716,31 @@ impl ExecutionEntryPoint {
             - The maximum amout of gas allowed by the call.
             - `syscall_addr`, the address of the syscall handler.
             - `calldata`, an array of Felt arguments to the method being called.
-
-            The code to construct it is complex and obscure for the following reason: because the amount of syscalls
-            to be called depends on the method, we don't know beforehand how many `null`s to append to the beginning
-            of the parameters. Ideally, we would like to use the `json!` macro to construct the `params`, but I found
-            no way of doing so; thus, string interpolation.
-
-            To know how many `null`s to append, we fetch the total amount of arguments for the function from
-            the sierra program, then substract 3 from it, to account for the other arguments (gas, syscall_addr, calldata).
         */
-        let mut builtins_string = "".to_owned();
-        for _ in 0..(number_of_params - 3) {
-            builtins_string.push_str("null,");
-        }
 
-        let params: Value = serde_json::from_str(&format!(
-            "
-            [
-                {}
-                {},
-                {},
-                [
-                    {:?}
-                ]
-            ]
-        ",
-            builtins_string,
-            u64::MAX,
-            syscall_addr,
-            calldata
-        ))
-        .unwrap();
+        let wrapped_calldata = vec![calldata];
+        let params: Vec<Value> = sierra_program.funcs[fn_id.id as usize]
+            .params
+            .iter()
+            .map(|param| {
+                match param.ty.debug_name.as_ref().unwrap().as_str() {
+                    "GasBuiltin" => {
+                        json!(self.initial_gas as u64)
+                    }
+                    "Pedersen" | "SegmentArena" | "RangeCheck" | "Bitwise" | "Poseidon" => {
+                        json!(null)
+                    }
+                    "System" => {
+                        json!(syscall_addr)
+                    }
+                    // calldata
+                    "core::array::Span::<core::felt252>" => json!(wrapped_calldata),
+                    x => {
+                        unimplemented!("unhandled param type: {:?}", x);
+                    }
+                }
+            })
+            .collect();
 
         let mut writer: Vec<u8> = Vec::new();
         let returns = &mut serde_json::Serializer::new(&mut writer);
@@ -746,8 +748,8 @@ impl ExecutionEntryPoint {
         let native_executor = NativeExecutor::new(native_program);
 
         native_executor
-            .execute(fn_id, params, returns, required_init_gas)
-            .map_err(|e| TransactionError::CustomError(e.to_string()))?;
+            .execute(fn_id, json!(params), returns, required_init_gas)
+            .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
 
         let result: String = String::from_utf8(writer).unwrap();
         let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
@@ -771,9 +773,8 @@ impl ExecutionEntryPoint {
             failure_flag: value.failure_flag,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             internal_calls: syscall_handler.internal_calls,
-
-            // TODO
-            gas_consumed: 0,
+            // TODO: check it's correct
+            gas_consumed: self.initial_gas - u128::from(value.gas_builtin.unwrap_or(0)),
         })
     }
 }

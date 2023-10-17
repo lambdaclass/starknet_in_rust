@@ -173,7 +173,7 @@ fn test_contract<'a>(
     assert_eq!(result.calldata, calldata);
     assert_eq_sorted!(result.retdata, return_data.into());
     assert_eq_sorted!(result.internal_calls, internal_calls.into());
-    assert_eq_sorted!(result.execution_resources, Some(execution_resources));
+    assert_eq!(result.execution_resources, Some(execution_resources));
 
     assert_eq!(result.gas_consumed, 0);
     assert!(!result.failure_flag);
@@ -947,11 +947,11 @@ fn deploy_with_constructor_syscall() {
             entry_point_selector: Some(entry_point_selector),
             entry_point_type: Some(EntryPointType::Constructor),
             calldata: [550.into()].to_vec(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 40,
                 n_memory_holes: 0,
                 ..Default::default()
-            },
+            }),
             accessed_storage_keys: HashSet::<[u8; 32]>::from([[
                 2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27,
                 162, 147, 169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
@@ -1028,10 +1028,10 @@ fn test_deploy_and_call_contract_syscall() {
                 retdata: vec![],
                 storage_read_values: vec![0.into()],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 40,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             },
             // Invoke storage_var_and_constructor.cairo mult_constant function
