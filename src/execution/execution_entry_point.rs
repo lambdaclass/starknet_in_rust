@@ -517,20 +517,19 @@ impl ExecutionEntryPoint {
         ));
 
         let ref_vec: Vec<&CairoArg> = entrypoint_args.iter().collect();
-
+        dbg!(&runner.hint_processor.syscall_handler.read_only_segments);
         // run the Cairo1 entrypoint
         runner.run_from_entrypoint(
             entry_point.offset,
             &ref_vec,
             Some(program.data_len() + program_extra_data.len()),
         )?;
-        dbg!("mark", core_program_end_ptr, program_extra_data.len());
+        dbg!(&runner.hint_processor.syscall_handler.read_only_segments);
         runner
             .vm
             .mark_address_range_as_accessed(core_program_end_ptr, program_extra_data.len())?;
 
         runner.validate_and_process_os_context(os_context)?;
-        runner.hint_processor.syscall_handler.mark_read_only_segments_as_accessed(&mut runner.vm)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
         let initial_fp = runner
@@ -539,10 +538,13 @@ impl ExecutionEntryPoint {
             .ok_or(TransactionError::MissingInitialFp)?;
 
         let args_ptr = initial_fp - (entrypoint_args.len() + 2);
-
         runner
             .vm
             .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
+        runner
+            .hint_processor
+            .syscall_handler
+            .mark_read_only_segments_as_accessed(&mut runner.vm)?;
 
         *resources_manager = runner
             .hint_processor
