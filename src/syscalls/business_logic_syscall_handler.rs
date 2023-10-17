@@ -532,10 +532,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     /// them as accessed.
     pub(crate) fn validate_read_only_segments(
         &self,
-        runner: &mut VirtualMachine,
+        vm: &mut VirtualMachine,
     ) -> Result<(), TransactionError> {
         for (segment_ptr, segment_size) in self.read_only_segments.clone() {
-            let used_size = runner
+            let used_size = vm
                 .get_segment_used_size(segment_ptr.segment_index as usize)
                 .ok_or(TransactionError::InvalidSegmentSize)?;
 
@@ -547,7 +547,18 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             if seg_size != used_size.into() {
                 return Err(TransactionError::OutOfBound);
             }
-            runner.mark_address_range_as_accessed(segment_ptr, used_size)?;
+            vm.mark_address_range_as_accessed(segment_ptr, used_size)?;
+        }
+        Ok(())
+    }
+
+    /// Marks read-only segments as accessed
+    pub(crate) fn mark_read_only_segments_as_accessed(
+        &self,
+        vm: &mut VirtualMachine,
+    ) -> Result<(), TransactionError> {
+        for (segment_ptr, segment_size) in self.read_only_segments.clone() {
+            vm.mark_address_range_as_accessed(segment_ptr, segment_size.get_int_ref().ok_or(TransactionError::NotAFelt)?.to_usize().unwrap_or_default())?;
         }
         Ok(())
     }

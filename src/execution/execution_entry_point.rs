@@ -524,12 +524,13 @@ impl ExecutionEntryPoint {
             &ref_vec,
             Some(program.data_len() + program_extra_data.len()),
         )?;
-
+        dbg!("mark", core_program_end_ptr, program_extra_data.len());
         runner
             .vm
             .mark_address_range_as_accessed(core_program_end_ptr, program_extra_data.len())?;
 
         runner.validate_and_process_os_context(os_context)?;
+        runner.hint_processor.syscall_handler.mark_read_only_segments_as_accessed(&mut runner.vm)?;
 
         // When execution starts the stack holds entry_points_args + [ret_fp, ret_pc].
         let initial_fp = runner
