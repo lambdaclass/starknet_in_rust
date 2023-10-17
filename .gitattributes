@@ -1,1 +1,2 @@
-*.sierra linguist-generated=true
+*.sierra linguist-generated
+*.casm linguist-generated
