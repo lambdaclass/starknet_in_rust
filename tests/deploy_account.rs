@@ -177,11 +177,11 @@ fn internal_deploy_account_cairo1() {
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3948;
+        n_steps = 3933;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3952;
+        n_steps = 3937;
     }
 
     assert_eq!(
@@ -217,7 +217,7 @@ fn internal_deploy_account_cairo1() {
                     n_steps: 152,
                     #[cfg(feature="cairo_1_tests")]
                     n_steps: 155,
-                    n_memory_holes: 17,
+                    n_memory_holes: 2,
                     builtin_instance_counter:
                     [
                     ("range_check_builtin", 2),
