@@ -627,6 +627,8 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
+    // Returns the pointer to the segment with the execution info if it was already written.
+    // If it wasn't, it writes the execution info into memory and returns its start address.
     fn get_or_allocate_execution_info(
         &mut self,
         vm: &mut VirtualMachine,
