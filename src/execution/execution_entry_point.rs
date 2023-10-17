@@ -517,14 +517,12 @@ impl ExecutionEntryPoint {
         ));
 
         let ref_vec: Vec<&CairoArg> = entrypoint_args.iter().collect();
-        dbg!(&runner.hint_processor.syscall_handler.read_only_segments);
         // run the Cairo1 entrypoint
         runner.run_from_entrypoint(
             entry_point.offset,
             &ref_vec,
             Some(program.data_len() + program_extra_data.len()),
         )?;
-        dbg!(&runner.hint_processor.syscall_handler.read_only_segments);
         runner
             .vm
             .mark_address_range_as_accessed(core_program_end_ptr, program_extra_data.len())?;
