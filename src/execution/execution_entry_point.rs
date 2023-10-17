@@ -517,12 +517,14 @@ impl ExecutionEntryPoint {
         ));
 
         let ref_vec: Vec<&CairoArg> = entrypoint_args.iter().collect();
+
         // run the Cairo1 entrypoint
         runner.run_from_entrypoint(
             entry_point.offset,
             &ref_vec,
             Some(program.data_len() + program_extra_data.len()),
         )?;
+
         runner
             .vm
             .mark_address_range_as_accessed(core_program_end_ptr, program_extra_data.len())?;
@@ -536,6 +538,7 @@ impl ExecutionEntryPoint {
             .ok_or(TransactionError::MissingInitialFp)?;
 
         let args_ptr = initial_fp - (entrypoint_args.len() + 2);
+
         runner
             .vm
             .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
