@@ -648,10 +648,11 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         let block_info_ptr = self.allocate_segment(vm, block_info_data)?;
 
         // Allocate signature
-        let signature: Vec<MaybeRelocatable> = self.tx_execution_context
+        let signature: Vec<MaybeRelocatable> = self
+            .tx_execution_context
             .signature
             .iter()
-            .map(|s| MaybeRelocatable::from(s))
+            .map(MaybeRelocatable::from)
             .collect();
         let signature_start_ptr = self.allocate_segment(vm, signature)?;
         let signature_end_ptr = (signature_start_ptr + self.tx_execution_context.signature.len())?;
