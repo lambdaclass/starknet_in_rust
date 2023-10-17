@@ -39,7 +39,7 @@ usage:
 	@echo '    test-cairo-1:    Runs the Cairo 1 tests'
 	@echo '    test-cairo-2:    Runs the Cairo 2 tests'
 	@echo '    test-doctests:   Runs the doctests'
-	@echo '    coverage:        Runs everything necessary to generate the coverate report'
+	@echo '    coverage:        Runs everything necessary to generate the coverage report'
 	@echo '    coverage-report: Just generates the coverage report'
 	@echo '    heaptrack:       Runs the heaptrack script'
 	@echo '    flamegraph:      Runs cargo flamegraph'
