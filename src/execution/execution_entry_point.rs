@@ -539,10 +539,6 @@ impl ExecutionEntryPoint {
         runner
             .vm
             .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
-        runner
-            .hint_processor
-            .syscall_handler
-            .mark_read_only_segments_as_accessed(&mut runner.vm)?;
 
         *resources_manager = runner
             .hint_processor
