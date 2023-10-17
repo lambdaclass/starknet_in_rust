@@ -39,10 +39,9 @@ compile-cairo: $(CAIRO_TARGETS) $(CAIRO_ABI_TARGETS)
 compile-starknet: $(STARKNET_TARGETS) $(STARKNET_ABI_TARGETS)
 
 cairo_programs/%.json cairo_programs/%_abi.json: cairo_programs/%.cairo
-	. starknet-venv/bin/activate && cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
+	cd cairo_programs/ && cairo-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) ../$< --output ../$@ || rm ../$@
 
 starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
-	. starknet-venv/bin/activate && \
 	cd starknet_programs/ && \
 	starknet-compile $(shell grep "^// @compile-flags += .*$$" $< | cut -c 22-) \
 	../$< \
@@ -98,7 +97,7 @@ CAIRO_2_COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.ca
 CAIRO_2_COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm, $(CAIRO_2_COMPILED_SIERRA_CONTRACTS))
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.cairo
-	$(STARKNET_COMPILE_CAIRO_2) $< $@
+	$(STARKNET_COMPILE_CAIRO_2) --single-file $< $@ --replace-ids
 
 $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 	$(STARKNET_SIERRA_COMPILE_CAIRO_2) --add-pythonic-hints $< $@
@@ -107,7 +106,7 @@ compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 
 
-CAIRO_2_VERSION=2.0.1
+CAIRO_2_VERSION=2.2.0
 
 cairo-repo-2-dir = cairo2
 cairo-repo-2-dir-macos = cairo2-macos
@@ -147,13 +146,15 @@ check: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierr
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
+	-pyenv && pyenv install -s pypy3.9-7.3.9
+	-pyenv && pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest --version 0.9.49
 
 deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
-	cargo install flamegraph --version 0.6.2
-	cargo install cargo-llvm-cov --version 0.5.14
+	-pyenv install -s pypy3.9-7.3.9
+	-pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest
@@ -173,7 +174,7 @@ clean:
 	-rm -rf cairo2/
 	-rm -rf cairo-*.tar
 
-clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
+clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo clippy --workspace --all-targets -- -D warnings
 
 test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
@@ -182,11 +183,14 @@ test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	echo "Cairo2 tests"
 	$(MAKE) test-cairo-2
 
-test-cairo-1:
+test-cairo-1: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics
 
-test-cairo-2:
+test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --all-targets --features=metrics
+
+test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
+	cargo nextest run --workspace --test cairo_native --features=cairo-native
 
 test-doctests:
 	cargo test --workspace --doc
@@ -194,7 +198,7 @@ test-doctests:
 coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
 	$(MAKE) coverage-report
 
-coverage-report:
+coverage-report: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo +nightly llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
 
 heaptrack:

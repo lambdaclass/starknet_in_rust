@@ -294,12 +294,14 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
 
     // check Cairo VM execution resources
     assert_eq_sorted!(
-        execution_resources,
-        trace
-            .function_invocation
-            .as_ref()
-            .unwrap()
-            .execution_resources,
+        execution_resources.as_ref(),
+        Some(
+            &trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources
+        ),
         "execution resources mismatch"
     );
 
