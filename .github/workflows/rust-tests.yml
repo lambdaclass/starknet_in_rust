@@ -10,15 +10,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_TOOLCHAIN: '1.72.1'
-  CAIRO_PROGRAMS_PATH: |
-    cairo_programs/**/*.casm
-    cairo_programs/**/*.sierra
-    cairo_programs/**/*.json
-    starknet_programs/**/*.casm
-    starknet_programs/**/*.sierra
-    starknet_programs/**/*.json
-    !starknet_programs/raw_contract_classes/*
-  CAIRO_2_VERSION_CACHE: 2.2.0
 
 jobs:
   build:
@@ -27,10 +18,11 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+    - name: Install Rust $RUST_TOOLCHAIN
+      uses: dtolnay/rust-toolchain@master
       with:
-          components: rustfmt, clippy
+        toolchain: $RUST_TOOLCHAIN
+        components: rustfmt, clippy
     - name: Python3 Build
       uses: actions/setup-python@v4
       with:
@@ -51,8 +43,11 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Set rust stable as default
-      run: rustup default stable
+    - name: Install Rust $RUST_TOOLCHAIN
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: $RUST_TOOLCHAIN
+        components: rustfmt, clippy
     - name: Python3 Build
       uses: actions/setup-python@v4
       with:
@@ -82,8 +77,11 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Set rust stable as default
-      run: rustup default stable
+    - name: Install Rust $RUST_TOOLCHAIN
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: $RUST_TOOLCHAIN
+        components: rustfmt, clippy
     - name: Python3 Build
       uses: actions/setup-python@v4
       with:
@@ -140,8 +138,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Set nightly as default
-      run: rustup default nightly
+    - name: Install Rust nightly
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: nightly
 
     - uses: Swatinem/rust-cache@v2
       with:
