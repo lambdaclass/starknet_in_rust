@@ -147,8 +147,8 @@ check: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierr
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
-	# pyenv install -s pypy3.9-7.3.9
-	# pyenv install -s 3.9.15
+	-pyenv && pyenv install -s pypy3.9-7.3.9
+	-pyenv && pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest --version 0.9.49
@@ -156,8 +156,8 @@ deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
-	# pyenv install -s pypy3.9-7.3.9
-	# pyenv install -s 3.9.15
+	-pyenv install -s pypy3.9-7.3.9
+	-pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest
@@ -201,7 +201,7 @@ test-doctests:
 coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
 	$(MAKE) coverage-report
 
-coverage-report:
+coverage-report: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo +nightly llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
 
 heaptrack:

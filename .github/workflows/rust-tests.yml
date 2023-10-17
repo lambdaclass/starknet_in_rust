@@ -10,32 +10,24 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_TOOLCHAIN: '1.72.1'
-  CAIRO_PROGRAMS_PATH: |
-    cairo_programs/**/*.casm
-    cairo_programs/**/*.sierra
-    cairo_programs/**/*.json
-    starknet_programs/**/*.casm
-    starknet_programs/**/*.sierra
-    starknet_programs/**/*.json
-    !starknet_programs/raw_contract_classes/*
-  CAIRO_2_VERSION_CACHE: 2.2.0
 
 jobs:
   build:
     name: Build with release profile
-    runs-on: [self-hosted, debian-12]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+    - name: Install Rust $RUST_TOOLCHAIN
+      uses: dtolnay/rust-toolchain@master
       with:
-          components: rustfmt, clippy
-    - name: Install python 3.9
-      uses: gabrielfalcao/pyenv-action@v11
+        toolchain: $RUST_TOOLCHAIN
+        components: rustfmt, clippy
+    - name: Python3 Build
+      uses: actions/setup-python@v4
       with:
-        default: 3.9
-        command: pyenv local 3.9
+        python-version: '3.9'
+        cache: 'pip'
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
@@ -47,17 +39,20 @@ jobs:
 
   lint:
     name: Lint with fmt and clippy
-    runs-on: [self-hosted, debian-12]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Set rust stable as default
-      run: rustup default stable
-    - name: Install python 3.9
-      uses: gabrielfalcao/pyenv-action@v11
+    - name: Install Rust $RUST_TOOLCHAIN
+      uses: dtolnay/rust-toolchain@master
       with:
-        default: 3.9
-        command: pyenv local 3.9
+        toolchain: $RUST_TOOLCHAIN
+        components: rustfmt, clippy
+    - name: Python3 Build
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
@@ -78,17 +73,20 @@ jobs:
       matrix:
         target: [ test-cairo-1, test-cairo-2, test-doctests, test-cairo-native ]
     name: Run tests
-    runs-on: [self-hosted, debian-12]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    - name: Set rust stable as default
-      run: rustup default stable
-    - name: Install python 3.9
-      uses: gabrielfalcao/pyenv-action@v11
+    - name: Install Rust $RUST_TOOLCHAIN
+      uses: dtolnay/rust-toolchain@master
       with:
-        default: 3.9
-        command: pyenv local 3.9
+        toolchain: $RUST_TOOLCHAIN
+        components: rustfmt, clippy
+    - name: Python3 Build
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
@@ -103,18 +101,47 @@ jobs:
       with:
         tool: cargo-nextest@0.9.49
 
+    - name: check and free hdd space left
+      run: |
+        echo "Listing 20 largest packages"
+        dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 20
+        df -h
+        sudo apt-get update
+        sudo apt-get remove -y '^llvm-.*'
+        sudo apt-get remove -y 'php.*'
+        sudo apt-get remove -y '^dotnet-.*'
+        sudo apt-get remove -y '^temurin-.*'
+        sudo apt-get remove -y azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox powershell mono-devel
+        sudo apt-get autoremove -y
+        sudo apt-get clean
+        df -h
+        echo "Removing large directories"
+        # deleting 15GB
+        sudo rm -rf /usr/share/dotnet/
+        sudo rm -rf /usr/local/lib/android
+        df -h
+    - name: add llvm deb repository
+      uses: myci-actions/add-deb-repo@10
+      with:
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main
+        repo-name: llvm-repo
+        keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
+    - name: Install LLVM
+      run: sudo apt-get install llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
     - name: Run tests (${{ matrix.target }})
       run: make ${{ matrix.target }}
 
   coverage:
     name: Generate and upload coverage report
-    runs-on: [self-hosted, debian-12]
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Set nightly as default
-      run: rustup default nightly
+    - name: Install Rust nightly
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: nightly
 
     - uses: Swatinem/rust-cache@v2
       with:
@@ -127,11 +154,11 @@ jobs:
         path: lcov.info
         key: coverage-cache-${{ github.sha }}
 
-    - name: Install python 3.9
-      uses: gabrielfalcao/pyenv-action@v11
+    - name: Python3 Build
+      uses: actions/setup-python@v4
       with:
-        default: 3.9
-        command: pyenv local 3.9
+        python-version: '3.9'
+        cache: 'pip'
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
