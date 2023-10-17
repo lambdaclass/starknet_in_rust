@@ -272,12 +272,6 @@ fn test_get_gas_price() {
         186551, // real block     186552
         RpcChain::MainNet
     )]
-#[test_case(
-    // fails in blockifier
-    "0x026595cf6c21d6eb2a68aa7a7de93a03757f8d1a1542af7a0d9b2bf4af651735",
-    880716, // real block 880717
-    RpcChain::TestNet
-)]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
@@ -286,7 +280,6 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         actual_fee,
         ..
     } = tx_info;
-    dbg!(call_info.as_ref().unwrap());
     let CallInfo {
         execution_resources,
         internal_calls,

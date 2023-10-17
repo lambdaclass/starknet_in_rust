@@ -502,7 +502,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         let block_hash = self
             .starknet_storage_state
             .state
-            .get_storage_at(&(block_hash_address, key.to_le_bytes()))?;
+            .get_storage_at(&(block_hash_address, key.to_be_bytes()))?;
 
         Ok(SyscallResponse {
             gas: remaining_gas,
