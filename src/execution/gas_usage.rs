@@ -110,7 +110,9 @@ pub const fn get_onchain_data_segment_length(
     n_storage_changes: usize,
     n_deployments: usize,
 ) -> usize {
-    n_modified_contracts * 2 + n_storage_changes * 2 + n_deployments * DEPLOYMENT_INFO_SIZE
+    n_modified_contracts * 2
+    + n_deployments * DEPLOYMENT_INFO_SIZE
+    + n_storage_changes * 2
 }
 
 /// Calculates the cost of ConsumedMessageToL2 event emissions caused by an L1 handler with the given
