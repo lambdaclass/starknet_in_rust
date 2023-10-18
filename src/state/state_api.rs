@@ -26,6 +26,13 @@ pub trait StateReader {
     ) -> Result<CompiledClassHash, StateError>;
 }
 
+pub struct StorageChangesCount {
+    pub n_storage_updates: usize,
+    pub n_class_hash_updates: usize,
+    pub n_compiled_class_hash_updates: usize,
+    pub n_modified_contracts: usize
+}
+
 pub trait State {
     fn set_contract_class(
         &mut self,
