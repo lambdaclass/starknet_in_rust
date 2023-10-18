@@ -328,51 +328,51 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         todo!()
     }
 
-    fn set_account_contract_address(&mut self, contract_address: cairo_vm::felt::Felt252) {
-        self.tx_execution_context.account_contract_address = Address(contract_address);
+    fn set_account_contract_address(&mut self, _contract_address: cairo_vm::felt::Felt252) {
+        todo!()
     }
 
-    fn set_block_number(&mut self, block_number: u64) {
-        self.block_context.block_info.block_number = block_number;
+    fn set_block_number(&mut self, _block_number: u64) {
+        todo!()
     }
 
-    fn set_block_timestamp(&mut self, block_timestamp: u64) {
-        self.block_context.block_info.block_timestamp = block_timestamp;
+    fn set_block_timestamp(&mut self, _block_timestamp: u64) {
+        todo!()
     }
 
-    fn set_caller_address(&mut self, address: cairo_vm::felt::Felt252) {
-        self.caller_address = Address(address);
+    fn set_caller_address(&mut self, _address: cairo_vm::felt::Felt252) {
+        todo!()
     }
 
-    fn set_chain_id(&mut self, chain_id: cairo_vm::felt::Felt252) {
-        self.block_context.starknet_os_config.chain_id = chain_id;
+    fn set_chain_id(&mut self, _chain_id: cairo_vm::felt::Felt252) {
+        todo!()
     }
 
-    fn set_contract_address(&mut self, address: cairo_vm::felt::Felt252) {
-        self.contract_address = Address(address);
+    fn set_contract_address(&mut self, _address: cairo_vm::felt::Felt252) {
+        todo!()
     }
 
-    fn set_max_fee(&mut self, max_fee: u128) {
-        self.tx_execution_context.max_fee = max_fee;
+    fn set_max_fee(&mut self, _max_fee: u128) {
+        todo!()
     }
 
-    fn set_nonce(&mut self, nonce: cairo_vm::felt::Felt252) {
-        self.tx_execution_context.nonce = nonce;
+    fn set_nonce(&mut self, _nonce: cairo_vm::felt::Felt252) {
+        todo!()
     }
 
     fn set_sequencer_address(&mut self, _address: cairo_vm::felt::Felt252) {
         todo!()
     }
 
-    fn set_signature(&mut self, signature: &[cairo_vm::felt::Felt252]) {
-        self.tx_execution_context.signature = signature.to_vec();
+    fn set_signature(&mut self, _signature: &[cairo_vm::felt::Felt252]) {
+        todo!()
     }
 
-    fn set_transaction_hash(&mut self, transaction_hash: cairo_vm::felt::Felt252) {
-        self.tx_execution_context.transaction_hash = transaction_hash;
+    fn set_transaction_hash(&mut self, _transaction_hash: cairo_vm::felt::Felt252) {
+        todo!()
     }
 
-    fn set_version(&mut self, version: cairo_vm::felt::Felt252) {
-        self.tx_execution_context.version = version;
+    fn set_version(&mut self, _version: cairo_vm::felt::Felt252) {
+        todo!()
     }
 }
