@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(about = "Replay is a tool for executing Starknet transactions.", long_about = None)]
-struct ReplayArgs {
+struct ReplayCLI {
     #[command(subcommand)]
     subcommand: ReplaySubCommand,
     // /// Display the help text.
@@ -25,7 +25,7 @@ struct ReplayArgs {
 
 #[derive(Subcommand, Debug)]
 enum ReplaySubCommand {
-    Help,
+    // #[clap(long = "execute-tx")] 
     ExecuteSingleTx { tx_hash: String },
     ExecuteTxRange { tx_start: String, tx_end: String },
     ExecuteSingleBlock { block_number: String },
@@ -33,5 +33,9 @@ enum ReplaySubCommand {
 }
 
 fn main() {
-    println!("Hello, world!");
+    let cli = ReplayCLI::parse();
+    println!("{:?}", cli);
+    // You can check for the existence of subcommands, and if found use their
+    // matches just as you would the top level cmd
+
 }
