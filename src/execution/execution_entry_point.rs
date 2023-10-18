@@ -675,6 +675,7 @@ impl ExecutionEntryPoint {
             n_emitted_events: 0,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
+            resources_manager: Default::default(),
             n_sent_messages: 0,
             contract_address: self.contract_address.clone(),
             internal_calls: Vec::new(),
