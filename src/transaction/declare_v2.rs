@@ -3,9 +3,8 @@ use super::{verify_version, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
@@ -29,6 +28,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::fmt::Debug;
 use std::sync::Arc;
+use traceon;
 
 /// Represents a declare transaction in the starknet network.
 /// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
@@ -296,7 +296,7 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[traceon::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
         tx_type = ?TransactionType::Declare,
         self.version = ?self.version,
         self.sierra_class_hash = ?self.sierra_class_hash,

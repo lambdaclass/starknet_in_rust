@@ -293,14 +293,7 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
-        tx_type = ?TransactionType::InvokeFunction,
-        self.version = ?self.version,
-        self.hash_value = ?self.hash_value,
-        self.contract_address = ?self.contract_address,
-        self.entry_point_selector = ?self.entry_point_selector,
-        self.entry_point_type = ?self.entry_point_type,
-    ))]
+    #[traceon::instrument(level = "debug", err, skip(self, state, block_context))]
     pub fn execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
@@ -315,11 +308,22 @@ impl InvokeFunction {
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
 
+        traceon::debug!(
+            "Return value: {:?}",
+            &tx_exec_info.call_info.as_ref().unwrap().retdata
+        );
+        traceon::debug!(
+            "Calculated resources: {:?}",
+            &tx_exec_info.call_info.as_ref().unwrap().execution_resources
+        );
+
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
             block_context.starknet_os_config.gas_price,
             block_context,
         )?;
+
+        traceon::debug!("Calculated fee: {}, max fee: {}", actual_fee, self.max_fee);
 
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error

@@ -406,3 +406,63 @@ fn test_validate_fee(hash: &str, block_number: u64, chain: RpcChain) {
     assert_eq!(tx_info.actual_fee, receipt.actual_fee);
     assert!(tx_info_without_fee.actual_fee < tx_info.actual_fee);
 }
+
+// #[traced_test]
+#[test]
+fn test_0x176a92e8df0128d47f24eebc17174363457a956fa233cc6a7f8561bfbd5023a() {
+    traceon::on();
+
+    let tx_hash = "0x176a92e8df0128d47f24eebc17174363457a956fa233cc6a7f8561bfbd5023a";
+    let block_number = 317092;
+    let chain = RpcChain::MainNet;
+    let (tx_info, trace, receipt) = execute_tx(tx_hash, chain, BlockNumber(block_number));
+
+    let TransactionExecutionInfo {
+        call_info,
+        actual_fee,
+        ..
+    } = tx_info;
+
+    let CallInfo {
+        execution_resources,
+        internal_calls,
+        ..
+    } = call_info.unwrap();
+
+    // check Cairo VM execution resources
+    assert_eq_sorted!(
+        execution_resources.as_ref(),
+        Some(
+            &trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources
+        ),
+        "execution resources mismatch"
+    );
+
+    // check amount of internal calls
+    assert_eq!(
+        internal_calls.len(),
+        trace
+            .function_invocation
+            .as_ref()
+            .unwrap()
+            .internal_calls
+            .len(),
+        "internal calls length mismatch"
+    );
+
+    // check actual fee calculation
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+        if diff >= 5 {
+            assert_eq!(
+                actual_fee, receipt.actual_fee,
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            );
+        }
+    }
+}
