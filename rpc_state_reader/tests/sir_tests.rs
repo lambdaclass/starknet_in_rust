@@ -277,6 +277,11 @@ fn test_get_gas_price() {
     317092, // real block 317093
     RpcChain::MainNet
 )]
+#[test_case(
+    "0x1cbc74e101a1533082a021ce53235cfd744899b0ff948d1949a64646e0f15c2",
+    885298, // real block 885299
+    RpcChain::MainNet
+)]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
