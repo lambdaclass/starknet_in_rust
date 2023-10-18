@@ -390,6 +390,10 @@ impl DeclareV2 {
             &self.compiled_class_hash.to_be_bytes(),
             &CompiledClass::Casm(Arc::new(casm_class)),
         )?;
+        state.set_sierra_program(
+            &self.sierra_class_hash,
+            self.sierra_contract_class.sierra_program.clone(),
+        )?;
 
         Ok(())
     }
@@ -628,13 +632,13 @@ mod tests {
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = &2.into() | &QUERY_VERSION_BASE.clone();
+            version = &Into::<Felt252>::into(2) | &QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = &1.into() | &QUERY_VERSION_BASE.clone();
+            version = &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 

@@ -138,6 +138,7 @@ impl Deploy {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(_) => todo!(),
         }
     }
     /// Deploys the contract in the starknet network and calls its constructor if it has one.
@@ -149,7 +150,13 @@ impl Deploy {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        state.set_contract_class(&self.contract_hash, &self.contract_class)?;
+        match self.contract_class {
+            CompiledClass::Sierra(_) => todo!(),
+            _ => {
+                state.set_contract_class(&self.contract_hash, &self.contract_class)?;
+            }
+        }
+
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
 
         if self.constructor_entry_points_empty(self.contract_class.clone())? {
