@@ -705,7 +705,6 @@ fn call_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let calldata = [fn_selector.into()].to_vec();
-
     let result = execute(
         &mut state,
         &caller_address,
@@ -792,7 +791,6 @@ fn call_echo_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let calldata = [fn_selector.into(), 99999999.into()].to_vec();
-
     let result = execute(
         &mut state,
         &caller_address,
@@ -880,7 +878,6 @@ fn call_events_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let calldata = [fn_selector.into()].to_vec();
-
     let result = execute(
         &mut state,
         &caller_address,
@@ -953,11 +950,7 @@ fn execute(
     );
 
     // Execute the entrypoint
-    // Todo: Insert block with custom adress and custom hash to check is obtained correctly
-
-    let mut block_context = BlockContext::default();
-    block_context.blocks_mut().insert(10, Block::default());
-
+    let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
