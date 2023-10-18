@@ -21,6 +21,7 @@ use super::{
     syscall_response::{CallContractResponse, FailureReason, ResponseBody},
 };
 use crate::definitions::block_context::BlockContext;
+use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
@@ -496,13 +497,16 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             });
         }
 
-        let key: Felt252 = block_number.into();
-        let block_hash_address = Address(1.into());
-
-        let block_hash = self
-            .starknet_storage_state
-            .state
-            .get_storage_at(&(block_hash_address, key.to_be_bytes()))?;
+        // FIXME: Update this after release.
+        const V_0_12_0_FIRST_BLOCK: u64 = 0;
+        let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
+            Felt252::zero()
+        } else {
+            self.starknet_storage_state.state.get_storage_at(&(
+                BLOCK_HASH_CONTRACT_ADDRESS.clone(),
+                Felt252::new(block_number).to_be_bytes(),
+            ))?
+        };
 
         Ok(SyscallResponse {
             gas: remaining_gas,
