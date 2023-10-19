@@ -171,6 +171,7 @@ pub fn execute_tx_configurable(
         Default::default(),
         true,
     );
+
     (
         tx.execute(&mut state, &block_context, u128::MAX).unwrap(),
         trace,
@@ -291,6 +292,7 @@ fn test_get_gas_price() {
 )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+
     let TransactionExecutionInfo {
         call_info,
         actual_fee,
