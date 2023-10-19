@@ -301,11 +301,6 @@ impl<T: StateReader> State for CachedState<T> {
             &self.cache.class_hash_initial_values,
         );
 
-        let compiled_class_hash_updates = subtract_mappings_keys(
-            &self.cache.compiled_class_hash_writes,
-            &self.cache.compiled_class_hash_initial_values,
-        );
-
         let nonce_updates =
             subtract_mappings_keys(&self.cache.nonce_writes, &self.cache.nonce_initial_values);
 
