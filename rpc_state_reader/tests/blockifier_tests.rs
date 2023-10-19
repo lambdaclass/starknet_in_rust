@@ -19,7 +19,7 @@ use blockifier::{
 use cairo_lang_starknet::{
     casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
 };
-use cairo_vm::{types::program::Program, felt::felt_str};
+use cairo_vm::types::program::Program;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use rpc_state_reader::rpc_state::*;
 use rpc_state_reader::utils;
@@ -27,7 +27,7 @@ use starknet::core::types::ContractClass as SNContractClass;
 use starknet_api::{
     block::BlockNumber,
     contract_address,
-    core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey},
+    core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey, calculate_contract_address},
     hash::{StarkFelt, StarkHash},
     patricia_key, stark_felt,
     state::StorageKey,
@@ -176,7 +176,9 @@ pub fn execute_tx(
             let invoke = InvokeTransaction { tx, tx_hash };
             AccountTransaction::Invoke(invoke)
         }
-        SNTransaction::DeployAccount(tx) =>AccountTransaction::DeployAccount(DeployAccountTransaction { tx, tx_hash, contract_address: ContractAddress(StarkHash::new(felt_str!("1358183270800653661466375915013911001148965821491018888567169956392292310604").to_be_bytes()).unwrap().try_into().unwrap()) }),
+        SNTransaction::DeployAccount(tx) =>{
+            let contract_address = calculate_contract_address(tx.contract_address_salt,tx.class_hash, &tx.constructor_calldata, ContractAddress::default()).unwrap();
+            AccountTransaction::DeployAccount(DeployAccountTransaction { tx, tx_hash, contract_address: contract_address})},
         _ => unimplemented!(),
     };
 
