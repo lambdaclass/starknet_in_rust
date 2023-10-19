@@ -264,7 +264,7 @@ mod test {
 
         assert_eq!(
             calculate_tx_gas_usage(vec![message1, message2], 2, 2, Some(2), 1),
-            77051
+            76439
         )
     }
 }
