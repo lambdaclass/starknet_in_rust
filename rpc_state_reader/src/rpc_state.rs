@@ -431,6 +431,7 @@ impl RpcState {
                 contract_address.0.key().clone().to_string()
             ]),
         )
+        // When running deploy_account transactions, the nonce doesn't exist on the previous block so we return 0
         .unwrap_or_default()
     }
 
