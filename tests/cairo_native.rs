@@ -6,7 +6,6 @@ use num_bigint::BigUint;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 #[cfg(feature = "cairo-native")]
-use starknet_api::block::Block;
 use starknet_api::hash::StarkHash;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::execution::{Event, OrderedEvent};
@@ -78,6 +77,7 @@ fn get_block_hash_test() {
     // Create state from the state_reader and contract cache.
     let state_reader = Arc::new(state_reader);
     let mut state_vm = CachedState::new(state_reader.clone(), contract_class_cache.clone());
+
     state_vm.cache_mut().storage_initial_values_mut().insert(
         (Address(1.into()), felt_to_hash(&Felt252::from(10))),
         Felt252::from_bytes_be(StarkHash::new([5; 32]).unwrap().bytes()),
@@ -159,6 +159,7 @@ fn get_block_hash_test() {
     );
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(native_class_hash));
+    // Fix when gas consumed is implemented for native
     //assert_eq!(native_result.gas_consumed, 0);
 
     assert_eq!(vm_result.events, native_result.events);
@@ -950,7 +951,10 @@ fn execute(
     );
 
     // Execute the entrypoint
-    let block_context = BlockContext::default();
+    // Set up the current block number
+    let mut block_context = BlockContext::default();
+    block_context.block_info_mut().block_number = 30;
+
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
         Felt252::zero(),
