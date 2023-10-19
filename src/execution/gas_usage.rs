@@ -93,20 +93,17 @@ pub fn get_message_segment_lenght(
 }
 
 /// Calculates the amount of `felt252` added to the output message's segment by the given operations.
-///
-/// # Parameters:
-///
-/// - `n_modified_contracts`: The number of contracts modified by the transaction.
-/// - `n_storage_changes`: The number of storage changes made by the transaction.
-/// - `n_deployments`: The number of contracts deployed by the transaction.
-///
-/// # Returns:
-///
-/// The on-chain data segment length
 pub const fn get_onchain_data_segment_length(storage_changes: &StorageChangesCount) -> usize {
+    // For each newly modified contract:
+    // contract address (1 word).
+    // + 1 word with the following info: A flag indicating whether the class hash was updated, the
+    // number of entry updates, and the new nonce.
     storage_changes.n_modified_contracts * 2
+    // For each class updated (through a deploy or a class replacement).
         + storage_changes.n_class_hash_updates * CLASS_UPDATE_SIZE
+        // For each modified storage cell: key, new value.
         + storage_changes.n_storage_updates * 2
+         // For each compiled class updated (through declare): class_hash, compiled_class_hash
         + storage_changes.n_compiled_class_hash_updates * 2
 }
 
