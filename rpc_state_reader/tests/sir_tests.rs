@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use cairo_vm::{felt::{felt_str, Felt252}, vm::errors::vm_errors::VirtualMachineError};
+use cairo_vm::{
+    felt::{felt_str, Felt252},
+    vm::errors::vm_errors::VirtualMachineError,
+};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_api::{
     block::BlockNumber,
@@ -28,7 +31,7 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::{InvokeFunction, DeployAccount},
+    transaction::{DeployAccount, InvokeFunction},
     utils::{Address, ClassHash},
 };
 
@@ -144,8 +147,10 @@ pub fn execute_tx_configurable(
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
         SNTransaction::DeployAccount(tx) => {
-            DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt()).unwrap().create_for_simulation(skip_validate, false, false, false)
-        },
+            DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
+                .unwrap()
+                .create_for_simulation(skip_validate, false, false, false)
+        }
         _ => unimplemented!(),
     };
 

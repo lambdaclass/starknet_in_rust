@@ -431,7 +431,7 @@ impl DeployAccount {
         let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
         let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
         let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
-    
+
         let signature = value
             .signature
             .0
@@ -445,7 +445,7 @@ impl DeployAccount {
             .iter()
             .map(|f| Felt252::from_bytes_be(f.bytes()))
             .collect();
-    
+
         DeployAccount::new(
             class_hash,
             max_fee,
