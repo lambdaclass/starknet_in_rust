@@ -254,6 +254,56 @@ fn blockifier_test_recent_tx() {
             .len()
     );
 }
+
+#[test_case(
+    "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+    90006,
+    RpcChain::MainNet
+    => ignore["old transaction, gas mismatch"]
+)]
+#[test_case(
+    "0x025844447697eb7d5df4d8268b23aef6c11de4087936048278c2559fc35549eb",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+    169928, // real block 169929
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
+    169928, // real block 169929
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
+    169928, // real block 169929
+    RpcChain::MainNet
+    => ignore["resource mismatch"]
+)]
+#[test_case(
+    "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
+    169928, // real block 169929
+    RpcChain::MainNet
+)]
+#[test_case(
+    // review later
+    "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
+    186548, // real block     186549
+    RpcChain::MainNet
+    => ignore["resource mismatch"]
+)]
+#[test_case(
+    "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
+    186551, // real block     186552
+    RpcChain::MainNet
+)]
 #[test_case(
     "0x1cbc74e101a1533082a021ce53235cfd744899b0ff948d1949a64646e0f15c2",
     885298, // real block 885299
