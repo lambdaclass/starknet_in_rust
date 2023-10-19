@@ -26,8 +26,10 @@ pub fn calculate_tx_gas_usage(
 ) -> usize {
     let residual_message_segment_length =
         get_message_segment_lenght(&l2_to_l1_messages, l1_handler_payload_size);
+
     let residual_onchain_data_segment_length =
         get_onchain_data_segment_length(n_modified_contracts, n_storage_changes, n_deployments);
+
     let n_l2_to_l1_messages = l2_to_l1_messages.len();
     let n_l1_to_l2_messages = match l1_handler_payload_size {
         Some(_size) => 1,
