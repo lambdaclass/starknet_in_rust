@@ -1,6 +1,6 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::state_api::State;
+use crate::state::state_api::{State, StorageChangesCount};
 use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
@@ -169,14 +169,11 @@ pub fn calculate_tx_resources(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
-    storage_changes: (usize, usize),
+    storage_changes: StorageChangesCount,
     l1_handler_payload_size: Option<usize>,
     n_reverted_steps: usize,
 ) -> Result<HashMap<String, usize>, TransactionError> {
-    let (n_modified_contracts, n_storage_changes) = storage_changes;
-
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
-    let n_deployments = non_optional_calls.iter().map(get_call_n_deployments).sum();
 
     let mut l2_to_l1_messages = Vec::new();
 
@@ -184,13 +181,8 @@ pub fn calculate_tx_resources(
         l2_to_l1_messages.extend(call_info.get_sorted_l2_to_l1_messages()?)
     }
 
-    let l1_gas_usage = calculate_tx_gas_usage(
-        l2_to_l1_messages,
-        n_modified_contracts,
-        n_storage_changes,
-        l1_handler_payload_size,
-        n_deployments,
-    );
+    let l1_gas_usage =
+        calculate_tx_gas_usage(l2_to_l1_messages, &storage_changes, l1_handler_payload_size);
 
     let cairo_usage = resources_manager.cairo_usage.clone();
     let tx_syscall_counter = resources_manager.syscall_counter;

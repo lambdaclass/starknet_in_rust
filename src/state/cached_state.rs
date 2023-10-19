@@ -296,10 +296,12 @@ impl<T: StateReader> State for CachedState<T> {
 
         let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
 
-        let class_hash_updates = subtract_mappings_keys(
+        let class_hash_updates: Vec<&Address> = subtract_mappings_keys(
             &self.cache.class_hash_writes,
             &self.cache.class_hash_initial_values,
-        );
+        )
+        .collect();
+        let n_class_hash_updates = class_hash_updates.len();
 
         let compiled_class_hash_updates = subtract_mappings_keys(
             &self.cache.compiled_class_hash_writes,
@@ -311,7 +313,7 @@ impl<T: StateReader> State for CachedState<T> {
 
         let mut modified_contracts: HashSet<Address> = HashSet::new();
         modified_contracts.extend(storage_unique_updates);
-        modified_contracts.extend(class_hash_updates.cloned());
+        modified_contracts.extend(class_hash_updates.into_iter().cloned());
         modified_contracts.extend(nonce_updates.cloned());
 
         // Add fee transfer storage update before actually charging it, as it needs to be included in the
@@ -327,7 +329,7 @@ impl<T: StateReader> State for CachedState<T> {
 
         Ok(StorageChangesCount {
             n_storage_updates: storage_updates.len(),
-            n_class_hash_updates: class_hash_updates.count(),
+            n_class_hash_updates,
             n_compiled_class_hash_updates: compiled_class_hash_updates.count(),
             n_modified_contracts: modified_contracts.len(),
         })
@@ -832,7 +834,7 @@ mod tests {
         let fee_token_address = Address(123.into());
         let sender_address = Address(321.into());
 
-        let expected_changes = StorageChangesCount{
+        let expected_changes = StorageChangesCount {
             n_storage_updates: 3 + 1, // + 1 fee transfer balance update,
             n_class_hash_updates: 0,
             n_compiled_class_hash_updates: 0,
