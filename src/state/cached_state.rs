@@ -1,5 +1,5 @@
 use super::{
-    state_api::{State, StateReader, StorageChangesCount},
+    state_api::{State, StateChangesCount, StateReader},
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
@@ -283,10 +283,10 @@ impl<T: StateReader> State for CachedState<T> {
         Ok(())
     }
 
-    fn count_actual_storage_changes(
+    fn count_actual_state_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<StorageChangesCount, StateError> {
+    ) -> Result<StateChangesCount, StateError> {
         self.update_initial_values_of_write_only_accesses()?;
 
         let mut storage_updates = subtract_mappings(
@@ -327,7 +327,7 @@ impl<T: StateReader> State for CachedState<T> {
             modified_contracts.remove(fee_token_address);
         }
 
-        Ok(StorageChangesCount {
+        Ok(StateChangesCount {
             n_storage_updates: storage_updates.len(),
             n_class_hash_updates,
             n_compiled_class_hash_updates: compiled_class_hash_updates.count(),
@@ -812,7 +812,7 @@ mod tests {
 
     /// This test calculate the number of actual storage changes.
     #[test]
-    fn count_actual_storage_changes_test() {
+    fn count_actual_state_changes_test() {
         let state_reader = InMemoryStateReader::default();
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
@@ -834,7 +834,7 @@ mod tests {
         let fee_token_address = Address(123.into());
         let sender_address = Address(321.into());
 
-        let expected_changes = StorageChangesCount {
+        let expected_changes = StateChangesCount {
             n_storage_updates: 3 + 1, // + 1 fee transfer balance update,
             n_class_hash_updates: 0,
             n_compiled_class_hash_updates: 0,
@@ -842,7 +842,7 @@ mod tests {
         };
 
         let changes = cached_state
-            .count_actual_storage_changes(Some((&fee_token_address, &sender_address)))
+            .count_actual_state_changes(Some((&fee_token_address, &sender_address)))
             .unwrap();
 
         assert_eq!(changes, expected_changes);

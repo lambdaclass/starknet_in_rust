@@ -1,7 +1,7 @@
 use crate::definitions::constants::*;
 use crate::execution::L2toL1MessageInfo;
 use crate::services::eth_definitions::eth_gas_constants::*;
-use crate::state::state_api::StorageChangesCount;
+use crate::state::state_api::StateChangesCount;
 
 /// Estimates L1 gas usage by Starknet's update state and the verifier
 ///
@@ -20,13 +20,13 @@ use crate::state::state_api::StorageChangesCount;
 /// The estimation of L1 gas usage as a `usize` value.
 pub fn calculate_tx_gas_usage(
     l2_to_l1_messages: Vec<L2toL1MessageInfo>,
-    storage_changes: &StorageChangesCount,
+    state_changes: &StateChangesCount,
     l1_handler_payload_size: Option<usize>,
 ) -> usize {
     let residual_message_segment_length =
         get_message_segment_lenght(&l2_to_l1_messages, l1_handler_payload_size);
 
-    let residual_onchain_data_segment_length = get_onchain_data_segment_length(storage_changes);
+    let residual_onchain_data_segment_length = get_onchain_data_segment_length(state_changes);
 
     let n_l2_to_l1_messages = l2_to_l1_messages.len();
     let n_l1_to_l2_messages = match l1_handler_payload_size {
@@ -93,18 +93,18 @@ pub fn get_message_segment_lenght(
 }
 
 /// Calculates the amount of `felt252` added to the output message's segment by the given operations.
-pub const fn get_onchain_data_segment_length(storage_changes: &StorageChangesCount) -> usize {
+pub const fn get_onchain_data_segment_length(state_changes: &StateChangesCount) -> usize {
     // For each newly modified contract:
     // contract address (1 word).
     // + 1 word with the following info: A flag indicating whether the class hash was updated, the
     // number of entry updates, and the new nonce.
-    storage_changes.n_modified_contracts * 2
+    state_changes.n_modified_contracts * 2
     // For each class updated (through a deploy or a class replacement).
-        + storage_changes.n_class_hash_updates * CLASS_UPDATE_SIZE
+        + state_changes.n_class_hash_updates * CLASS_UPDATE_SIZE
         // For each modified storage cell: key, new value.
-        + storage_changes.n_storage_updates * 2
+        + state_changes.n_storage_updates * 2
          // For each compiled class updated (through declare): class_hash, compiled_class_hash
-        + storage_changes.n_compiled_class_hash_updates * 2
+        + state_changes.n_compiled_class_hash_updates * 2
 }
 
 /// Calculates the cost of ConsumedMessageToL2 event emissions caused by an L1 handler with the given
@@ -257,7 +257,7 @@ mod test {
         assert_eq!(
             calculate_tx_gas_usage(
                 vec![message1, message2],
-                &StorageChangesCount {
+                &StateChangesCount {
                     n_storage_updates: 2,
                     n_class_hash_updates: 1,
                     n_compiled_class_hash_updates: 0,

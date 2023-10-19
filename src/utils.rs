@@ -1,6 +1,6 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::state_api::{State, StorageChangesCount};
+use crate::state::state_api::{State, StateChangesCount};
 use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
@@ -169,7 +169,7 @@ pub fn calculate_tx_resources(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
-    storage_changes: StorageChangesCount,
+    state_changes: StateChangesCount,
     l1_handler_payload_size: Option<usize>,
     n_reverted_steps: usize,
 ) -> Result<HashMap<String, usize>, TransactionError> {
@@ -182,7 +182,7 @@ pub fn calculate_tx_resources(
     }
 
     let l1_gas_usage =
-        calculate_tx_gas_usage(l2_to_l1_messages, &storage_changes, l1_handler_payload_size);
+        calculate_tx_gas_usage(l2_to_l1_messages, &state_changes, l1_handler_payload_size);
 
     let cairo_usage = resources_manager.cairo_usage.clone();
     let tx_syscall_counter = resources_manager.syscall_counter;

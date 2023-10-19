@@ -27,7 +27,7 @@ pub trait StateReader {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StorageChangesCount {
+pub struct StateChangesCount {
     pub n_storage_updates: usize,
     pub n_class_hash_updates: usize,
     pub n_compiled_class_hash_updates: usize,
@@ -71,11 +71,11 @@ pub trait State {
 
     fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
 
-    /// Counts the amount of modified contracts and the updates to the storage
-    fn count_actual_storage_changes(
+    /// Counts the amount of state changes
+    fn count_actual_state_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<StorageChangesCount, StateError>;
+    ) -> Result<StateChangesCount, StateError>;
 
     /// Returns the class hash of the contract class at the given address.
     /// Returns zero by default if the value is not present
