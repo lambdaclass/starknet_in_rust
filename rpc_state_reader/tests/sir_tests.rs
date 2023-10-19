@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use cairo_vm::{
-    felt::{felt_str, Felt252},
-    vm::errors::vm_errors::VirtualMachineError,
-};
+use cairo_vm::felt::{felt_str, Felt252};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_api::{
     block::BlockNumber,

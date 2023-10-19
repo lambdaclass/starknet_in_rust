@@ -191,7 +191,7 @@ pub fn execute_tx(
             AccountTransaction::DeployAccount(DeployAccountTransaction {
                 tx,
                 tx_hash,
-                contract_address: contract_address,
+                contract_address,
             })
         }
         _ => unimplemented!(),
