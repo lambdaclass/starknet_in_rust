@@ -72,7 +72,6 @@ impl Transaction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        dbg!("execute");
         match self {
             Transaction::Declare(tx) => tx.execute(state, block_context),
             Transaction::DeclareV2(tx) => tx.execute(state, block_context),

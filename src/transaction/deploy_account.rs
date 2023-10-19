@@ -166,9 +166,7 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        dbg!("handle nonce");
         self.handle_nonce(state)?;
-        dbg!("handled nonce");
 
         let mut transactional_state = state.create_transactional();
         let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
@@ -260,7 +258,6 @@ impl DeployAccount {
             0,
         )
         .map_err::<TransactionError, _>(|_| TransactionError::ResourcesCalculation)?;
-        dbg!(&actual_resources);
 
         Ok(TransactionExecutionInfo::new_without_fee_info(
             validate_info,
@@ -431,7 +428,7 @@ impl DeployAccount {
     ) -> Result<Self, SyscallHandlerError> {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
-        let nonce = dbg!(Felt252::from_bytes_be(value.nonce.0.bytes()));
+        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
         let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
         let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
     

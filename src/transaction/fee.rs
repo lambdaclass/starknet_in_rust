@@ -86,7 +86,6 @@ pub fn calculate_tx_fee(
         .to_owned();
 
     let l1_gas_by_cairo_usage = calculate_l1_gas_by_cairo_usage(block_context, resources)?;
-    dbg!(l1_gas_by_cairo_usage);
     let total_l1_gas_usage = gas_usage.to_f64().unwrap() + l1_gas_by_cairo_usage;
 
     Ok(total_l1_gas_usage.ceil() as u128 * gas_price)
