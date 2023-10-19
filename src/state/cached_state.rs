@@ -1,5 +1,5 @@
 use super::{
-    state_api::{State, StateReader},
+    state_api::{State, StateReader, StorageChangesCount},
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
@@ -286,7 +286,7 @@ impl<T: StateReader> State for CachedState<T> {
     fn count_actual_storage_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<(usize, usize), StateError> {
+    ) -> Result<StorageChangesCount, StateError> {
         self.update_initial_values_of_write_only_accesses()?;
 
         let mut storage_updates = subtract_mappings(
@@ -299,6 +299,11 @@ impl<T: StateReader> State for CachedState<T> {
         let class_hash_updates = subtract_mappings_keys(
             &self.cache.class_hash_writes,
             &self.cache.class_hash_initial_values,
+        );
+
+        let compiled_class_hash_updates = subtract_mappings_keys(
+            &self.cache.compiled_class_hash_writes,
+            &self.cache.compiled_class_hash_initial_values,
         );
 
         let nonce_updates =
@@ -320,7 +325,12 @@ impl<T: StateReader> State for CachedState<T> {
             modified_contracts.remove(fee_token_address);
         }
 
-        Ok((modified_contracts.len(), storage_updates.len()))
+        Ok(StorageChangesCount {
+            n_storage_updates: storage_updates.len(),
+            n_class_hash_updates: class_hash_updates.count(),
+            n_compiled_class_hash_updates: compiled_class_hash_updates.count(),
+            n_modified_contracts: modified_contracts.len(),
+        })
     }
 
     /// Returns the class hash for a given contract address.
@@ -822,12 +832,13 @@ mod tests {
         let fee_token_address = Address(123.into());
         let sender_address = Address(321.into());
 
-        let expected_changes = {
-            let n_storage_updates = 3 + 1; // + 1 fee transfer balance update
-            let n_modified_contracts = 2;
-
-            (n_modified_contracts, n_storage_updates)
+        let expected_changes = StorageChangesCount{
+            n_storage_updates: 3 + 1, // + 1 fee transfer balance update,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 2,
         };
+
         let changes = cached_state
             .count_actual_storage_changes(Some((&fee_token_address, &sender_address)))
             .unwrap();
