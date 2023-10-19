@@ -36,6 +36,12 @@ use crate::rpc_state::{RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, 
 #[derive(Debug)]
 pub struct RpcStateReader(RpcState);
 
+impl RpcStateReader {
+    pub fn new(state: RpcState) -> Self {
+        Self(state)
+    }
+}
+
 impl StateReader for RpcStateReader {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         let hash = SNClassHash(StarkHash::new(*class_hash).unwrap());

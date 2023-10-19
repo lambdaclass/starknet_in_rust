@@ -3129,6 +3129,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "rpc_state_reader",
+ "starknet_api",
  "starknet_in_rust",
 ]
 
