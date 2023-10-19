@@ -173,7 +173,6 @@ pub fn calculate_tx_resources(
     l1_handler_payload_size: Option<usize>,
     n_reverted_steps: usize,
 ) -> Result<HashMap<String, usize>, TransactionError> {
-    dbg!(storage_changes);
     let (n_modified_contracts, n_storage_changes) = storage_changes;
 
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
@@ -184,9 +183,6 @@ pub fn calculate_tx_resources(
     for call_info in non_optional_calls {
         l2_to_l1_messages.extend(call_info.get_sorted_l2_to_l1_messages()?)
     }
-    dbg!(&l2_to_l1_messages);
-    dbg!(l1_handler_payload_size);
-    dbg!(n_deployments);
 
     let l1_gas_usage = calculate_tx_gas_usage(
         l2_to_l1_messages,
