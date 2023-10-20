@@ -46,8 +46,8 @@ fn integration_test_erc20() {
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
 
-    let native_class_hash: ClassHash = [1; 32];
-    let casm_class_hash: ClassHash = [2; 32];
+    let native_class_hash: ClassHash = ClassHash::from([1; 32]);
+    let casm_class_hash: ClassHash = ClassHash::from([2; 32]);
 
     let caller_address = Address(123456789.into());
 
@@ -521,12 +521,12 @@ fn call_contract_test() {
 
     // Caller contract data
     let caller_address = Address(1111.into());
-    let caller_class_hash: ClassHash = [1; 32];
+    let caller_class_hash: ClassHash = ClassHash::from([1; 32]);
     let caller_nonce = Felt252::zero();
 
     // Callee contract data
     let callee_address = Address(1112.into());
-    let callee_class_hash: ClassHash = [2; 32];
+    let callee_class_hash: ClassHash = ClassHash::from([2; 32]);
     let callee_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -606,12 +606,12 @@ fn call_echo_contract_test() {
 
     // Caller contract data
     let caller_address = Address(1111.into());
-    let caller_class_hash: ClassHash = [1; 32];
+    let caller_class_hash: ClassHash = ClassHash::from([1; 32]);
     let caller_nonce = Felt252::zero();
 
     // Callee contract data
     let callee_address = Address(1112.into());
-    let callee_class_hash: ClassHash = [2; 32];
+    let callee_class_hash: ClassHash = ClassHash::from([2; 32]);
     let callee_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -693,12 +693,12 @@ fn call_events_contract_test() {
 
     // Caller contract data
     let caller_address = Address(1111.into());
-    let caller_class_hash: ClassHash = [1; 32];
+    let caller_class_hash: ClassHash = ClassHash::from([1; 32]);
     let caller_nonce = Felt252::zero();
 
     // Callee contract data
     let callee_address = Address(1112.into());
-    let callee_class_hash: ClassHash = [2; 32];
+    let callee_class_hash: ClassHash = ClassHash::from([2; 32]);
     let callee_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -748,10 +748,10 @@ fn call_events_contract_test() {
         call_type: Some(Call),
         contract_address: Address(1112.into()),
         code_address: None,
-        class_hash: Some([
+        class_hash: Some(ClassHash::from([
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             2, 2, 2,
-        ]),
+        ])),
         entry_point_selector: Some(fn_selector.into()),
         entry_point_type: Some(External),
         calldata: Vec::new(),

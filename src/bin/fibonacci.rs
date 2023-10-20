@@ -14,7 +14,7 @@ use starknet_in_rust::{
     },
     state::cached_state::CachedState,
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    utils::Address,
+    utils::{Address, ClassHash},
     EntryPointType,
 };
 
@@ -33,7 +33,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/fibonacci.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [1; 32];
+    static ref CONTRACT_CLASS_HASH_BYTES: [u8; 32] = [1; 32];
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
@@ -65,7 +65,7 @@ fn main() {
     //  ------------ contract data --------------------
 
     let contract_address = CONTRACT_ADDRESS.clone();
-    let class_hash = *CONTRACT_CLASS_HASH;
+    let class_hash = ClassHash::from(*CONTRACT_CLASS_HASH_BYTES);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(

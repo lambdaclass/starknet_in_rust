@@ -2,6 +2,7 @@ use cairo_vm::felt::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::ToPrimitive;
 
+use crate::utils::ClassHash;
 use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address},
@@ -82,7 +83,7 @@ pub(crate) struct DeployRequest {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct StorageReadRequest {
     /// The key associated with the requested storage value.
-    pub(crate) key: [u8; 32],
+    pub(crate) key: ClassHash,
     pub(crate) reserved: Felt252,
 }
 
@@ -328,7 +329,7 @@ impl FromPtr for StorageReadRequest {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let reserved = get_big_int(vm, syscall_ptr)?;
-        let key = get_big_int(vm, &syscall_ptr + 1)?.to_be_bytes();
+        let key = ClassHash::from(get_big_int(vm, &syscall_ptr + 1)?);
         Ok(StorageReadRequest { key, reserved }.into())
     }
 }

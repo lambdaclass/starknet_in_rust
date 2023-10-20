@@ -17,7 +17,7 @@ use starknet_in_rust::{
     state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
-    utils::Address,
+    utils::{Address, ClassHash},
 };
 use std::{collections::HashMap, hint::black_box, sync::Arc};
 
@@ -67,7 +67,7 @@ fn deploy_account() {
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &ClassHash::from(*CLASS_HASH_BYTES),
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();
@@ -76,7 +76,7 @@ fn deploy_account() {
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
-        let class_hash = *CLASS_HASH_BYTES;
+        let class_hash = ClassHash::from(*CLASS_HASH_BYTES);
         let signature = SIGNATURE.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
@@ -138,7 +138,7 @@ fn deploy() {
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &ClassHash::from(*CLASS_HASH_BYTES),
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();
@@ -176,7 +176,7 @@ fn invoke() {
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &ClassHash::from(*CLASS_HASH_BYTES),
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();

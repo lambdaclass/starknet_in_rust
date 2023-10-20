@@ -7,7 +7,7 @@ use starknet_in_rust::{
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
     transaction::{InvokeFunction, Transaction},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
     CasmContractClass,
 };
 
@@ -17,13 +17,15 @@ fn account_panic() {
     let contract_data = include_bytes!("../starknet_programs/cairo2/contract_a.casm");
 
     let account_contract_class: CasmContractClass = serde_json::from_slice(account_data).unwrap();
-    let account_class_hash = compute_casm_class_hash(&account_contract_class)
-        .unwrap()
-        .to_be_bytes();
+    let account_class_hash = ClassHash::from(
+        compute_casm_class_hash(&account_contract_class)
+            .unwrap()
+            .to_be_bytes(),
+    );
 
     let contract_class: CasmContractClass = serde_json::from_slice(contract_data).unwrap();
     let contract_class_hash_felt = compute_casm_class_hash(&contract_class).unwrap();
-    let contract_class_hash = contract_class_hash_felt.to_be_bytes();
+    let contract_class_hash = ClassHash::from(contract_class_hash_felt.to_be_bytes());
 
     let account_address = Address(1111.into());
     let contract_address = Address(0000.into());
@@ -57,7 +59,7 @@ fn account_panic() {
         .insert(contract_address, 1.into());
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
-    let selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"__execute__"));
+    let selector = &calculate_sn_keccak(b"__execute__");
 
     // arguments of contract_a contract
     // calldata is a Vec of Call, which is
@@ -89,7 +91,7 @@ fn account_panic() {
 
     let invoke = InvokeFunction::new(
         account_address,
-        Felt252::new(selector),
+        selector.clone(),
         0,
         TRANSACTION_VERSION.clone(),
         calldata,

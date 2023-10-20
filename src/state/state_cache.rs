@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 /// (contract_address, key)
 // TODO: Change [u8; 32] to Felt252.
-pub type StorageEntry = (Address, [u8; 32]);
+pub type StorageEntry = (Address, ClassHash);
 
 /// Struct that keeps track of initial and written state of contracts
 #[derive(Default, Clone, Debug, Eq, Getters, MutGetters, PartialEq)]
@@ -83,14 +83,14 @@ impl StateCache {
     /// Creates a new instance of `StateCache` for testing purposes with the provided initial values and writes.
     #[allow(clippy::too_many_arguments)]
     pub const fn new_for_testing(
-        class_hash_initial_values: HashMap<Address, [u8; 32]>,
+        class_hash_initial_values: HashMap<Address, ClassHash>,
         compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
         nonce_initial_values: HashMap<Address, Felt252>,
         storage_initial_values: HashMap<StorageEntry, Felt252>,
-        class_hash_writes: HashMap<Address, [u8; 32]>,
+        class_hash_writes: HashMap<Address, ClassHash>,
         compiled_class_hash_writes: HashMap<ClassHash, CompiledClass>,
         nonce_writes: HashMap<Address, Felt252>,
-        storage_writes: HashMap<(Address, [u8; 32]), Felt252>,
+        storage_writes: HashMap<(Address, ClassHash), Felt252>,
         class_hash_to_compiled_class_hash: HashMap<ClassHash, ClassHash>,
     ) -> Self {
         Self {
@@ -228,14 +228,16 @@ mod tests {
     #[test]
     fn state_chache_set_initial_values() {
         let mut state_cache = StateCache::default();
-        let address_to_class_hash = HashMap::from([(Address(10.into()), [8; 32])]);
+        let address_to_class_hash = HashMap::from([(Address(10.into()), ClassHash::from([8; 32]))]);
         let contract_class =
             ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
                 .unwrap();
         let compiled_class = CompiledClass::Deprecated(Arc::new(contract_class));
-        let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class)]);
+        let class_hash_to_compiled_class_hash =
+            HashMap::from([(ClassHash::from([8; 32]), compiled_class)]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
-        let storage_updates = HashMap::from([((Address(4.into()), [1; 32]), 18.into())]);
+        let storage_updates =
+            HashMap::from([((Address(4.into()), ClassHash::from([1; 32])), 18.into())]);
 
         assert!(state_cache
             .set_initial_values(

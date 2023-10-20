@@ -2,20 +2,17 @@
 
 use cairo_vm::felt::Felt252;
 use starknet_in_rust::{
-        execution::{
-            execution_entry_point::ExecutionEntryPoint,
-            objects::{CallInfo, CallType, TransactionExecutionContext},
-        },
-        state::{
-            contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
-            structs::ExecutionResourcesManager,
-        },
-        state::cached_state::CachedState,
-    definitions::{
-        constants::TRANSACTION_VERSION,
-        block_context::BlockContext,
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    execution::{
+        execution_entry_point::ExecutionEntryPoint,
+        objects::{CallInfo, CallType, TransactionExecutionContext},
     },
     services::api::contract_class::{ContractClass, EntryPointType},
+    state::cached_state::CachedState,
+    state::{
+        contract_state::ContractState, in_memory_state_reader::InMemoryStateReader,
+        structs::ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
 };
 use std::path::Path;
@@ -28,8 +25,6 @@ fn test_contract(
 ) {
     let contract_class = ContractClass::try_from(contract_path.as_ref().to_path_buf())
         .expect("Could not load contract from JSON");
-
-
 
     //* --------------------------------------------
     //*       Create a default contract data
@@ -44,14 +39,13 @@ fn test_contract(
 
     let block_context = BlockContext::default();
 
-    let tx_execution_context =
-        TransactionExecutionContext::create_for_testing(
-            Address(0.into()),
-            10,
-            0.into(),
-            block_context.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION,
-        );
+    let tx_execution_context = TransactionExecutionContext::create_for_testing(
+        Address(0.into()),
+        10,
+        0.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION,
+    );
 
     //* --------------------------------------------
     //*  Create starknet state with the contract
@@ -59,11 +53,8 @@ fn test_contract(
     //*  declaring and deploying the contract)
     //* -------------------------------------------
 
-    let contract_state = ContractState::new(
-        class_hash,
-        tx_execution_context.nonce(),
-        Default::default(),
-    );
+    let contract_state =
+        ContractState::new(class_hash, tx_execution_context.nonce(), Default::default());
     let mut state_reader = InMemoryStateReader::new(HashMap::new(), HashMap::new());
     state_reader
         .contract_states_mut()
@@ -117,7 +108,7 @@ fn test_contract(
 }
 
 #[test]
-fn test_fibonacci(){
+fn test_fibonacci() {
     test_contract(
         "starknet_programs/fibonacci.json",
         "fib",
@@ -127,10 +118,11 @@ fn test_fibonacci(){
 }
 
 #[test]
-fn test_factorial(){
-    test_contract("starknet_programs/factorial.json",
+fn test_factorial() {
+    test_contract(
+        "starknet_programs/factorial.json",
         "factorial",
         [10.into()].to_vec(),
-        [3628800.into()].to_vec()
+        [3628800.into()].to_vec(),
     );
 }

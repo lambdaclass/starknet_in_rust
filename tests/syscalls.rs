@@ -125,11 +125,12 @@ fn test_contract<'a>(
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
     storage_entries
         .into_iter()
-        .for_each(|(a, b, c)| state.set_storage_at(&(a, b), c));
+        .for_each(|(a, b, c)| state.set_storage_at(&(a, ClassHash::from(b)), c));
 
     let calldata = arguments.into();
 
-    let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
+    let entry_point_selector =
+        Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()).to_be_bytes());
     let entry_point = ExecutionEntryPoint::new(
         contract_address.clone(),
         calldata.clone(),
@@ -184,7 +185,7 @@ fn call_contract_syscall() {
     test_contract(
         "starknet_programs/syscalls.json",
         "test_call_contract",
-        [1; 32],
+        ClassHash::from([1; 32]),
         Address(1111.into()),
         Address(0.into()),
         BlockContext::default(),

@@ -439,7 +439,7 @@ fn expected_fee_transfer_call_info(
         // Entries **not** in blockifier.
         class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
         call_type: Some(CallType::Call),
-        accessed_storage_keys: HashSet::from([
+        accessed_storage_keys: HashSet::from(ClassHash::from([
             [
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
@@ -456,7 +456,7 @@ fn expected_fee_transfer_call_info(
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
             ],
-        ]),
+        ])),
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
             Felt252::zero(),

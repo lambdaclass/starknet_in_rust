@@ -14,7 +14,7 @@ use starknet_in_rust::{
     state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, BlockInfo},
     transaction::InvokeFunction,
-    utils::Address,
+    utils::{Address, ClassHash},
 };
 
 use lazy_static::lazy_static;
@@ -34,7 +34,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/first_contract.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [5, 133, 114, 83, 104, 231, 159, 23, 87, 255, 235, 75, 170, 4, 84, 140, 49, 77, 101, 41, 147, 198, 201, 231, 38, 189, 215, 84, 231, 141, 140, 122];
+    static ref CONTRACT_CLASS_HASH_BYTES: [u8; 32] = [5, 133, 114, 83, 104, 231, 159, 23, 87, 255, 235, 75, 170, 4, 84, 140, 49, 77, 101, 41, 147, 198, 201, 231, 38, 189, 215, 84, 231, 141, 140, 122];
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
@@ -94,21 +94,23 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
     let cached_state = CachedState::new(
         {
             let mut state_reader = InMemoryStateReader::default();
-            state_reader
-                .address_to_class_hash_mut()
-                .insert(CONTRACT_ADDRESS.clone(), *CONTRACT_CLASS_HASH);
+            state_reader.address_to_class_hash_mut().insert(
+                CONTRACT_ADDRESS.clone(),
+                ClassHash::from(*CONTRACT_CLASS_HASH_BYTES),
+            );
 
             state_reader
                 .address_to_nonce_mut()
                 .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
             state_reader.class_hash_to_compiled_class_mut().insert(
-                *CONTRACT_CLASS_HASH,
+                ClassHash::from(*CONTRACT_CLASS_HASH_BYTES),
                 CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
             );
 
-            state_reader
-                .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
+            state_reader.address_to_storage_mut().insert(
+                (CONTRACT_ADDRESS.clone(), ClassHash::from([0; 32])),
+                Felt252::zero(),
+            );
             Arc::new(state_reader)
         },
         HashMap::new(),

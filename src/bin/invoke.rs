@@ -11,7 +11,7 @@ use starknet_in_rust::{
     state::cached_state::CachedState,
     state::in_memory_state_reader::InMemoryStateReader,
     transaction::{InvokeFunction, Transaction},
-    utils::Address,
+    utils::{Address, ClassHash},
 };
 
 use lazy_static::lazy_static;
@@ -31,7 +31,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/first_contract.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [1; 32];
+    static ref CONTRACT_CLASS_HASH_BYTES: [u8; 32] = [1; 32];
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
@@ -48,21 +48,23 @@ fn main() {
     let mut state = CachedState::new(
         {
             let mut state_reader = InMemoryStateReader::default();
-            state_reader
-                .address_to_class_hash_mut()
-                .insert(CONTRACT_ADDRESS.clone(), *CONTRACT_CLASS_HASH);
+            state_reader.address_to_class_hash_mut().insert(
+                CONTRACT_ADDRESS.clone(),
+                ClassHash::from(*CONTRACT_CLASS_HASH_BYTES),
+            );
 
             state_reader
                 .address_to_nonce_mut()
                 .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
             state_reader.class_hash_to_compiled_class_mut().insert(
-                *CONTRACT_CLASS_HASH,
+                ClassHash::from(*CONTRACT_CLASS_HASH_BYTES),
                 CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
             );
 
-            state_reader
-                .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
+            state_reader.address_to_storage_mut().insert(
+                (CONTRACT_ADDRESS.clone(), ClassHash::from([0; 32])),
+                Felt252::zero(),
+            );
             Arc::new(state_reader)
         },
         HashMap::new(),

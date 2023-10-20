@@ -16,6 +16,7 @@ use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use core::fmt;
 use num_integer::Integer;
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -29,8 +30,59 @@ use std::{
     hash::Hash,
 };
 
-pub type ClassHash = [u8; 32];
-pub type CompiledClassHash = [u8; 32];
+#[derive(Clone, PartialEq, Hash, Default, Serialize, Deserialize, Copy)]
+pub struct ClassHash([u8; 32]);
+
+impl ClassHash {
+    pub fn new(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+
+    pub fn to_bytes_be(&self) -> &[u8] {
+        &self.0
+    }
+
+    pub fn as_slice(&self) -> [u8; 32] {
+        self.0
+    }
+}
+
+impl fmt::Display for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for byte in self.0.iter() {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl From<Felt252> for ClassHash {
+    fn from(felt: Felt252) -> Self {
+        felt_to_hash(&felt)
+    }
+}
+
+impl From<[u8; 32]> for ClassHash {
+    fn from(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+}
+
+impl Eq for ClassHash {}
+
+impl PartialEq<[u8; 32]> for ClassHash {
+    fn eq(&self, other: &[u8; 32]) -> bool {
+        &self.0 == other
+    }
+}
+
+pub type CompiledClassHash = ClassHash;
 
 //* -------------------
 //*      Address
@@ -114,7 +166,7 @@ pub fn felt_to_hash(value: &Felt252) -> ClassHash {
     let bytes = value.to_bytes_be();
     output[32 - bytes.len()..].copy_from_slice(&bytes);
 
-    output
+    ClassHash(output)
 }
 
 pub fn string_to_hash(class_string: &String) -> ClassHash {
@@ -142,10 +194,12 @@ pub fn to_state_diff_storage_mapping(
         storage_updates
             .entry(address.clone())
             .and_modify(|updates_for_address: &mut HashMap<Felt252, Felt252>| {
-                let key_fe = Felt252::from_bytes_be(key);
+                let key_fe = Felt252::from_bytes_be(key.to_bytes_be());
                 updates_for_address.insert(key_fe, value.clone());
             })
-            .or_insert_with(|| HashMap::from([(Felt252::from_bytes_be(key), value.clone())]));
+            .or_insert_with(|| {
+                HashMap::from([(Felt252::from_bytes_be(key.to_bytes_be()), value.clone())])
+            });
     }
     storage_updates
 }
@@ -304,8 +358,9 @@ pub fn get_storage_var_address(
         .map(felt_to_field_element)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let storage_var_name_hash =
-        FieldElement::from_bytes_be(&calculate_sn_keccak(storage_var_name.as_bytes()))?;
+    let storage_var_name_hash = FieldElement::from_bytes_be(
+        &calculate_sn_keccak(storage_var_name.as_bytes()).to_be_bytes(),
+    )?;
     let storage_key_hash = args
         .iter()
         .fold(storage_var_name_hash, |res, arg| pedersen_hash(&res, arg));
@@ -329,10 +384,10 @@ pub fn get_uint256_storage_var_addresses(
 
 pub fn get_erc20_balance_var_addresses(
     contract_address: &Address,
-) -> Result<([u8; 32], [u8; 32]), FromByteArrayError> {
+) -> Result<(Felt252, Felt252), FromByteArrayError> {
     let (felt_low, felt_high) =
         get_uint256_storage_var_addresses("ERC20_balances", &[contract_address.clone().0])?;
-    Ok((felt_low.to_be_bytes(), felt_high.to_be_bytes()))
+    Ok((felt_low, felt_high))
 }
 
 //* ----------------------------
@@ -378,13 +433,14 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     }
     Ok(())
 }
-pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
+// Changed to felt because even if its a hash is not a ClassHash
+pub fn calculate_sn_keccak(data: &[u8]) -> Felt252 {
     let mut hasher = Keccak256::default();
     hasher.update(data);
-    let mut result: ClassHash = hasher.finalize().into();
+    let mut result: [u8; 32] = hasher.finalize().into();
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
-    result
+    Felt252::from_bytes_be(&result)
 }
 
 //* ------------------------
@@ -656,7 +712,7 @@ pub mod test_utils {
         Address(felt_str!("4097"));
 
 
-        // Class hashes.
+        // Class hashes, felt value.
         pub(crate) static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt252 = felt_str!("273");
         pub(crate) static ref TEST_CLASS_HASH: Felt252 = felt_str!("272");
         pub(crate) static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str!("274");
@@ -793,13 +849,13 @@ mod test {
 
     #[test]
     fn to_state_diff_storage_mapping_test() {
-        let mut storage: HashMap<(Address, [u8; 32]), Felt252> = HashMap::new();
+        let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());
-        let key1 = [0; 32];
+        let key1 = ClassHash([0; 32]);
         let value1: Felt252 = 2.into();
 
         let address2: Address = Address(3.into());
-        let key2 = [1; 32];
+        let key2 = ClassHash([1; 32]);
 
         let value2: Felt252 = 4.into();
 
@@ -808,8 +864,8 @@ mod test {
 
         let map = to_state_diff_storage_mapping(&storage);
 
-        let key1_fe = Felt252::from_bytes_be(key1.as_slice());
-        let key2_fe = Felt252::from_bytes_be(key2.as_slice());
+        let key1_fe = Felt252::from_bytes_be(key1.to_bytes_be());
+        let key2_fe = Felt252::from_bytes_be(key2.to_bytes_be());
         assert_eq!(*map.get(&address1).unwrap().get(&key1_fe).unwrap(), value1);
         assert_eq!(*map.get(&address2).unwrap().get(&key2_fe).unwrap(), value2);
     }
@@ -866,11 +922,11 @@ mod test {
     fn to_cache_state_storage_mapping_test() {
         let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());
-        let key1 = [0; 32];
+        let key1 = ClassHash([0; 32]);
         let value1: Felt252 = 2.into();
 
         let address2: Address = Address(3.into());
-        let key2 = [1; 32];
+        let key2 = ClassHash([1; 32]);
 
         let value2: Felt252 = 4.into();
 
@@ -890,30 +946,30 @@ mod test {
 
     #[test]
     fn test_felt_to_hash() {
-        assert_eq!(felt_to_hash(&Felt252::zero()), [0; 32]);
+        assert_eq!(felt_to_hash(&Felt252::zero()), ClassHash([0; 32]));
         assert_eq!(
             felt_to_hash(&Felt252::one()),
-            [
+            ClassHash([
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1
-            ],
+            ]),
         );
         assert_eq!(
             felt_to_hash(&257.into()),
-            [
+            ClassHash([
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 1, 1
-            ],
+            ]),
         );
 
         assert_eq!(
             felt_to_hash(&felt_str!(
                 "2151680050850558576753658069693146429350618838199373217695410689374331200218"
             )),
-            [
+            ClassHash([
                 4, 193, 206, 200, 202, 13, 38, 110, 16, 37, 89, 67, 39, 3, 185, 128, 123, 117, 218,
                 224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
-            ],
+            ]),
         );
     }
 }

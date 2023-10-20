@@ -337,7 +337,7 @@ mod tests {
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
         let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
         //transform class_hash to [u8; 32]
-        let class_hash_bytes = class_hash.to_be_bytes();
+        let class_hash_bytes = ClassHash::from(class_hash);
 
         let internal_deploy = Deploy::new(
             0.into(),
@@ -364,7 +364,7 @@ mod tests {
             class_hash_bytes
         );
 
-        let storage_key = calculate_sn_keccak(b"owner");
+        let storage_key = ClassHash::from(calculate_sn_keccak(b"owner"));
 
         assert_eq!(
             state
@@ -383,13 +383,13 @@ mod tests {
         let contract_class =
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
 
-        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash: ClassHash =
+            ClassHash::from(compute_deprecated_class_hash(&contract_class).unwrap());
         //transform class_hash to [u8; 32]
-        let class_hash_bytes = class_hash.to_be_bytes();
 
         state
             .set_contract_class(
-                &class_hash_bytes,
+                &class_hash,
                 &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
             )
             .unwrap();
@@ -412,14 +412,12 @@ mod tests {
         let contract_path = "starknet_programs/amm.json";
         let contract_class = ContractClass::from_path(contract_path).unwrap();
 
-        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
-        //transform class_hash to [u8; 32]
-        let mut class_hash_bytes = [0u8; 32];
-        class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
+        let class_hash: ClassHash =
+            ClassHash::from(compute_deprecated_class_hash(&contract_class).unwrap());
 
         state
             .set_contract_class(
-                &class_hash_bytes,
+                &class_hash,
                 &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
             )
             .unwrap();

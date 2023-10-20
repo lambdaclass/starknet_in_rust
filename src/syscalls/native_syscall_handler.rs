@@ -15,7 +15,7 @@ use crate::{
         contract_storage_state::ContractStorageState, state_api::StateReader,
         ExecutionResourcesManager,
     },
-    utils::Address,
+    utils::{Address, ClassHash},
     EntryPointType,
 };
 
@@ -172,7 +172,10 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         address: cairo_vm::felt::Felt252,
         _gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
-        let value = match self.starknet_storage_state.read(&address.to_be_bytes()) {
+        let value = match self
+            .starknet_storage_state
+            .read(&ClassHash::from(address.clone()))
+        {
             Ok(value) => Ok(dbg!(value)),
             Err(_e @ StateError::Io(_)) => todo!(),
             Err(_) => Ok(dbg!(Felt252::zero())),
@@ -190,7 +193,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     ) -> SyscallResult<()> {
         println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
         self.starknet_storage_state
-            .write(&address.to_be_bytes(), value);
+            .write(&ClassHash::from(address), value);
         Ok(())
     }
 

@@ -11,7 +11,6 @@ use cairo_vm::{
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -23,8 +22,9 @@ use starknet_in_rust::{
     },
     state::{cached_state::CachedState, state_api::StateReader},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    utils::{Address, ClassHash},
+    utils::Address,
 };
+use starknet_in_rust::{utils::ClassHash, EntryPointType};
 
 fn create_execute_extrypoint(
     address: Address,
@@ -63,7 +63,7 @@ fn storage_write_read() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -202,7 +202,7 @@ fn library_call() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -224,7 +224,7 @@ fn library_call() {
     let lib_contract_class: CasmContractClass = serde_json::from_slice(lib_program_data).unwrap();
 
     let lib_address = Address(1112.into());
-    let lib_class_hash: ClassHash = [2; 32];
+    let lib_class_hash: ClassHash = ClassHash::from(ClassHash::from([2; 32]));
     let lib_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -242,7 +242,11 @@ fn library_call() {
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     // Create an execution entry point
-    let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash)].to_vec();
+    let calldata = [
+        25.into(),
+        Felt252::from_bytes_be(&lib_class_hash.to_bytes_be()),
+    ]
+    .to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -362,7 +366,7 @@ fn call_contract_storage_write_read() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -393,7 +397,7 @@ fn call_contract_storage_write_read() {
         .clone();
 
     let simple_wallet_address = Address(1112.into());
-    let simple_wallet_class_hash: ClassHash = [2; 32];
+    let simple_wallet_class_hash: ClassHash = ClassHash::from(ClassHash::from([2; 32]));
     let simple_wallet_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -426,7 +430,7 @@ fn call_contract_storage_write_read() {
     let create_execute_extrypoint = |selector: &BigUint,
                                      calldata: Vec<Felt252>,
                                      entry_point_type: EntryPointType,
-                                     class_hash: [u8; 32],
+                                     class_hash: ClassHash,
                                      address: Address|
      -> ExecutionEntryPoint {
         ExecutionEntryPoint::new(
@@ -551,7 +555,7 @@ fn emit_event() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -641,8 +645,8 @@ fn emit_event() {
 #[test]
 fn deploy_cairo1_from_cairo1() {
     // data to deploy
-    let test_class_hash: ClassHash = [2; 32];
-    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+    let test_class_hash: ClassHash = ClassHash::from(ClassHash::from([2; 32]));
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.to_bytes_be());
     let salt = Felt252::zero();
     #[cfg(not(feature = "cairo_1_tests"))]
     let test_data = include_bytes!("../starknet_programs/cairo2/contract_a.casm");
@@ -663,7 +667,7 @@ fn deploy_cairo1_from_cairo1() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -743,8 +747,8 @@ fn deploy_cairo1_from_cairo1() {
 #[test]
 fn deploy_cairo0_from_cairo1_without_constructor() {
     // data to deploy
-    let test_class_hash: ClassHash = [2; 32];
-    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+    let test_class_hash: ClassHash = ClassHash::from(ClassHash::from([2; 32]));
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.to_bytes_be());
     let salt = Felt252::zero();
     let contract_path = "starknet_programs/fibonacci.json";
     let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
@@ -764,7 +768,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -844,8 +848,8 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
 #[test]
 fn deploy_cairo0_from_cairo1_with_constructor() {
     // data to deploy
-    let test_class_hash: ClassHash = [2; 32];
-    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+    let test_class_hash: ClassHash = ClassHash::from(ClassHash::from([2; 32]));
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.to_bytes_be());
     let salt = Felt252::zero();
     let contract_path = "starknet_programs/test_contract.json";
     let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
@@ -863,7 +867,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     // simulate contract declare
@@ -944,8 +948,8 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
 #[test]
 fn deploy_cairo0_and_invoke() {
     // data to deploy
-    let test_class_hash: ClassHash = [2; 32];
-    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash);
+    let test_class_hash: ClassHash = ClassHash::from(ClassHash::from([2; 32]));
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.to_bytes_be());
     let salt = Felt252::zero();
     let contract_path = "starknet_programs/factorial.json";
     let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
@@ -965,7 +969,7 @@ fn deploy_cairo0_and_invoke() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -1090,7 +1094,7 @@ fn test_send_message_to_l1_syscall() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -1194,7 +1198,7 @@ fn test_get_execution_info() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -1299,7 +1303,7 @@ fn replace_class_internal() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash_a: ClassHash = [1; 32];
+    let class_hash_a: ClassHash = ClassHash::from(ClassHash::from([1; 32]));
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -1321,7 +1325,7 @@ fn replace_class_internal() {
     let program_data_b = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data_b).unwrap();
 
-    let class_hash_b: ClassHash = [2; 32];
+    let class_hash_b: ClassHash = ClassHash::from([2; 32]);
 
     contract_class_cache.insert(
         class_hash_b,
@@ -1333,7 +1337,7 @@ fn replace_class_internal() {
 
     // Run upgrade entrypoint and check that the storage was updated with the new contract class
     // Create an execution entry point
-    let calldata = [Felt252::from_bytes_be(&class_hash_b)].to_vec();
+    let calldata = [Felt252::from_bytes_be(class_hash_b.to_bytes_be())].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -1373,7 +1377,7 @@ fn replace_class_internal() {
         .unwrap();
     // Check that the class was indeed replaced in storage
     assert_eq!(state.get_class_hash_at(&address).unwrap(), class_hash_b);
-    // Check that the class_hash_b leads to contract_class_b for soundness
+    // Check that the class_hash_b.to_bytes_be() leads to contract_class_b for soundness
     assert_eq!(
         state.get_contract_class(&class_hash_b).unwrap(),
         CompiledClass::Casm(Arc::new(contract_class_b))
@@ -1401,7 +1405,7 @@ fn replace_class_contract_call() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(Felt252::one());
-    let class_hash_a: ClassHash = [1; 32];
+    let class_hash_a: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -1426,7 +1430,7 @@ fn replace_class_contract_call() {
     let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
-    let class_hash_b: ClassHash = [2; 32];
+    let class_hash_b: ClassHash = ClassHash::from([2; 32]);
 
     contract_class_cache.insert(
         class_hash_b,
@@ -1446,7 +1450,7 @@ fn replace_class_contract_call() {
     let upgrade_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     let wrapper_address = Address(Felt252::from(2));
-    let wrapper_class_hash: ClassHash = [3; 32];
+    let wrapper_class_hash: ClassHash = ClassHash::from([3; 32]);
 
     contract_class_cache.insert(
         wrapper_class_hash,
@@ -1506,7 +1510,7 @@ fn replace_class_contract_call() {
 
     // REPLACE_CLASS
 
-    let calldata = [Felt252::from_bytes_be(&class_hash_b)].to_vec();
+    let calldata = [Felt252::from_bytes_be(class_hash_b.to_bytes_be())].to_vec();
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
@@ -1577,7 +1581,7 @@ fn replace_class_contract_call_same_transaction() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(Felt252::one());
-    let class_hash_a: ClassHash = [1; 32];
+    let class_hash_a: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -1602,7 +1606,7 @@ fn replace_class_contract_call_same_transaction() {
     let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
-    let class_hash_b: ClassHash = [2; 32];
+    let class_hash_b: ClassHash = ClassHash::from([2; 32]);
 
     contract_class_cache.insert(
         class_hash_b,
@@ -1621,7 +1625,7 @@ fn replace_class_contract_call_same_transaction() {
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
 
     let wrapper_address = Address(Felt252::from(2));
-    let wrapper_class_hash: ClassHash = [3; 32];
+    let wrapper_class_hash: ClassHash = ClassHash::from([3; 32]);
 
     contract_class_cache.insert(
         wrapper_class_hash,
@@ -1652,7 +1656,7 @@ fn replace_class_contract_call_same_transaction() {
 
     // CALL GET_NUMBERS_OLD_NEW
 
-    let calldata = [Felt252::from_bytes_be(&class_hash_b)].to_vec();
+    let calldata = [Felt252::from_bytes_be(&class_hash_b.to_bytes_be())].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -1700,7 +1704,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(Felt252::one());
-    let class_hash_c: ClassHash = Felt252::one().to_be_bytes();
+    let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -1725,7 +1729,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
-    let class_hash_b: ClassHash = Felt252::from(2).to_be_bytes();
+    let class_hash_b: ClassHash = ClassHash::from(Felt252::from(2));
 
     contract_class_cache.insert(
         class_hash_b,
@@ -1744,7 +1748,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
 
     let wrapper_address = Address(Felt252::from(2));
-    let wrapper_class_hash: ClassHash = [3; 32];
+    let wrapper_class_hash: ClassHash = ClassHash::from([3; 32]);
 
     contract_class_cache.insert(
         wrapper_class_hash,
@@ -1775,7 +1779,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
 
     // CALL GET_NUMBERS_OLD_NEW
 
-    let calldata = [Felt252::from_bytes_be(&class_hash_b)].to_vec();
+    let calldata = [Felt252::from_bytes_be(&class_hash_b.to_bytes_be())].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -1821,7 +1825,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(Felt252::one());
-    let class_hash_c: ClassHash = Felt252::one().to_be_bytes();
+    let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -1839,7 +1843,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let program_data = include_bytes!("../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
-    let class_hash_b: ClassHash = Felt252::from(2).to_be_bytes();
+    let class_hash_b: ClassHash = ClassHash::from(Felt252::from(2));
 
     contract_class_cache.insert(
         class_hash_b,
@@ -1865,7 +1869,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
 
     let wrapper_address = Address(Felt252::from(2));
-    let wrapper_class_hash: ClassHash = [3; 32];
+    let wrapper_class_hash: ClassHash = ClassHash::from([3; 32]);
 
     contract_class_cache.insert(
         wrapper_class_hash,
@@ -1896,7 +1900,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
 
     // CALL GET_NUMBERS_OLD_NEW
 
-    let calldata = [Felt252::from_bytes_be(&class_hash_c)].to_vec();
+    let calldata = [Felt252::from_bytes_be(&class_hash_c.to_bytes_be())].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -1942,7 +1946,7 @@ fn call_contract_replace_class_cairo_0() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(Felt252::one());
-    let class_hash_c: ClassHash = Felt252::one().to_be_bytes();
+    let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -1956,7 +1960,7 @@ fn call_contract_replace_class_cairo_0() {
 
     let contract_class_d = ContractClass::from_path("starknet_programs/get_number_d.json").unwrap();
 
-    let class_hash_d: ClassHash = Felt252::from(2).to_be_bytes();
+    let class_hash_d: ClassHash = ClassHash::from(Felt252::from(2));
 
     contract_class_cache.insert(
         class_hash_d,
@@ -1982,7 +1986,7 @@ fn call_contract_replace_class_cairo_0() {
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
 
     let wrapper_address = Address(Felt252::from(2));
-    let wrapper_class_hash: ClassHash = [3; 32];
+    let wrapper_class_hash: ClassHash = ClassHash::from([3; 32]);
 
     contract_class_cache.insert(
         wrapper_class_hash,
@@ -2013,7 +2017,7 @@ fn call_contract_replace_class_cairo_0() {
 
     // CALL GET_NUMBERS_OLD_NEW
 
-    let calldata = [Felt252::from_bytes_be(&class_hash_c)].to_vec();
+    let calldata = [Felt252::from_bytes_be(&class_hash_c.to_bytes_be())].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -2059,7 +2063,7 @@ fn test_out_of_gas_failure() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2136,7 +2140,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2190,7 +2194,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         )
         .unwrap();
     assert_eq!(
-        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "CLASS_HASH_NOT_FOUND"
@@ -2212,7 +2216,7 @@ fn deploy_syscall_failure_in_constructor() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2232,7 +2236,7 @@ fn deploy_syscall_failure_in_constructor() {
     let f_c_contract_class: CasmContractClass = serde_json::from_slice(f_c_program_data).unwrap();
     let f_c_class_hash = Felt252::one();
     contract_class_cache.insert(
-        f_c_class_hash.to_be_bytes(),
+        ClassHash::from(f_c_class_hash.clone()),
         CompiledClass::Casm(Arc::new(f_c_contract_class)),
     );
 
@@ -2280,7 +2284,7 @@ fn deploy_syscall_failure_in_constructor() {
     // Check that we get the error from the constructor
     // assert( 1 == 0 , 'Oops');
     assert_eq!(
-        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "Oops"
@@ -2302,7 +2306,7 @@ fn storage_read_no_value() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2373,7 +2377,7 @@ fn storage_read_unavailable_address_domain() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2447,7 +2451,7 @@ fn storage_write_unavailable_address_domain() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2519,7 +2523,7 @@ fn library_call_failure() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2540,7 +2544,7 @@ fn library_call_failure() {
     let lib_contract_class: CasmContractClass = serde_json::from_slice(lib_program_data).unwrap();
 
     let lib_address = Address(1112.into());
-    let lib_class_hash: ClassHash = [2; 32];
+    let lib_class_hash: ClassHash = ClassHash::from([2; 32]);
     let lib_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -2558,7 +2562,11 @@ fn library_call_failure() {
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     // Create an execution entry point
-    let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash)].to_vec();
+    let calldata = [
+        25.into(),
+        Felt252::from_bytes_be(&lib_class_hash.to_bytes_be()),
+    ]
+    .to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
@@ -2605,7 +2613,7 @@ fn library_call_failure() {
     let call_info = call_info.call_info.unwrap();
 
     assert_eq!(
-        std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "Unimplemented"
@@ -2631,7 +2639,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2652,7 +2660,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
-    let send_msg_class_hash: ClassHash = [2; 32];
+    let send_msg_class_hash: ClassHash = ClassHash::from([2; 32]);
     let send_msg_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -2754,7 +2762,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2772,7 +2780,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         ContractClass::from_path("starknet_programs/send_message_to_l1.json").unwrap();
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
-    let send_msg_class_hash: ClassHash = [2; 32];
+    let send_msg_class_hash: ClassHash = ClassHash::from([2; 32]);
     let send_msg_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -2869,7 +2877,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -2893,7 +2901,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
     let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
-    let send_msg_class_hash: ClassHash = [2; 32];
+    let send_msg_class_hash: ClassHash = ClassHash::from([2; 32]);
     let send_msg_nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -2989,7 +2997,7 @@ fn keccak_syscall() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash::from([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));

@@ -18,7 +18,7 @@ use starknet_in_rust::{
     state::{cached_state::CachedState, state_api::State},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{error::TransactionError, Deploy},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use starknet_in_rust::{ContractEntryPoint, EntryPointType};
 use std::{
@@ -37,9 +37,12 @@ pub struct CallConfig<'a> {
     pub resources_manager: &'a mut ExecutionResourcesManager,
 }
 
-pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) -> HashSet<[u8; 32]> {
+pub fn get_accessed_keys(
+    variable_name: &str,
+    fields: Vec<Vec<FieldElement>>,
+) -> HashSet<ClassHash> {
     let variable_hash = calculate_sn_keccak(variable_name.as_bytes());
-    let variable_hash = FieldElement::from_bytes_be(&variable_hash).unwrap();
+    let variable_hash = FieldElement::from_bytes_be(&variable_hash.to_be_bytes()).unwrap();
 
     let keys = fields
         .iter()
@@ -50,13 +53,13 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
         })
         .collect::<Vec<FieldElement>>();
 
-    let mut accessed_storage_keys: HashSet<[u8; 32]> = HashSet::new();
+    let mut accessed_storage_keys: HashSet<ClassHash> = HashSet::new();
 
     if keys.is_empty() {
-        accessed_storage_keys.insert(variable_hash.to_bytes_be());
+        accessed_storage_keys.insert(ClassHash::from(variable_hash.to_bytes_be()));
     }
     for key in keys {
-        accessed_storage_keys.insert(key.to_bytes_be());
+        accessed_storage_keys.insert(ClassHash::from(key.to_bytes_be()));
     }
 
     accessed_storage_keys
@@ -66,15 +69,14 @@ pub fn get_entry_points(
     function_name: &str,
     entry_point_type: &EntryPointType,
     address: &Address,
-    class_hash: &[u8; 32],
+    class_hash: &ClassHash,
     calldata: &[Felt252],
     caller_address: &Address,
 ) -> (ExecutionEntryPoint, Felt252) {
     //* ------------------------------------
     //*    Create entry point selector
     //* ------------------------------------
-    let entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(function_name.as_bytes()));
+    let entrypoint_selector = calculate_sn_keccak(function_name.as_bytes());
 
     //* ------------------------------------
     //*    Create execution entry point

@@ -5,6 +5,7 @@ use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     execution::{CallInfo, CallType},
@@ -38,11 +39,14 @@ fn amm_proxy_init_pool_test() {
     )
     .unwrap();
 
-    let proxy_entry_points_by_type =
-        TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
-            .unwrap()
-            .entry_points_by_type()
-            .clone();
+    let proxy_entry_points_by_type = TryInto::<ContractClass>::try_into(
+        state
+            .get_contract_class(&ClassHash::from(proxy_class_hash))
+            .unwrap(),
+    )
+    .unwrap()
+    .entry_points_by_type()
+    .clone();
 
     let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
@@ -60,9 +64,8 @@ fn amm_proxy_init_pool_test() {
     };
 
     let result = execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
-    let amm_proxy_entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_init_pool"));
-    let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"init_pool"));
+    let amm_proxy_entrypoint_selector = calculate_sn_keccak(b"proxy_init_pool");
+    let amm_entrypoint_selector = calculate_sn_keccak(b"init_pool");
 
     let accessed_storage_keys =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);
@@ -83,7 +86,7 @@ fn amm_proxy_init_pool_test() {
                 ("range_check_builtin".to_string(), 14),
             ]),
         }),
-        class_hash: Some(contract_class_hash),
+        class_hash: Some(ClassHash::from(contract_class_hash)),
         accessed_storage_keys,
         storage_read_values: vec![Felt252::zero(), Felt252::zero()],
         ..Default::default()
@@ -105,7 +108,7 @@ fn amm_proxy_init_pool_test() {
                 ("range_check_builtin".to_string(), 14),
             ]),
         }),
-        class_hash: Some(proxy_class_hash),
+        class_hash: Some(ClassHash::from(proxy_class_hash)),
         internal_calls,
         ..Default::default()
     };

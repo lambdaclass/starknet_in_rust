@@ -80,8 +80,8 @@ lazy_static! {
             map.insert(75202468540281_u128.into(), "deploy");
             map.insert(1280709301550335749748_u128.into(), "emit_event");
             map.insert(25828017502874050592466629733_u128.into(), "storage_write");
-            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_timestamp".as_bytes())), "get_block_timestamp");
-            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes())), "get_block_number");
+            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_timestamp".as_bytes()).to_bytes_be()), "get_block_timestamp");
+            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes()).to_bytes_be()), "get_block_number");
             map.insert(Felt252::from_bytes_be("Keccak".as_bytes()), "keccak");
 
             map
@@ -389,7 +389,8 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
-        self.starknet_storage_state.write(&key.to_be_bytes(), value)
+        self.starknet_storage_state
+            .write(&ClassHash::from(key), value)
     }
 
     pub fn syscall(
@@ -505,7 +506,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         } else {
             self.starknet_storage_state.state.get_storage_at(&(
                 BLOCK_HASH_CONTRACT_ADDRESS.clone(),
-                Felt252::new(block_number).to_be_bytes(),
+                ClassHash::from(Felt252::new(block_number)),
             ))?
         };
 
@@ -590,7 +591,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
-    fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
+    fn _storage_read(&mut self, key: ClassHash) -> Result<Felt252, StateError> {
         match self.starknet_storage_state.read(&key) {
             Ok(value) => Ok(value),
             Err(e @ StateError::Io(_)) => Err(e),
@@ -931,7 +932,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            Some(request.class_hash.to_be_bytes()),
+            Some(ClassHash::from(request.class_hash)),
             remaining_gas,
         );
 
@@ -960,7 +961,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         self.starknet_storage_state.state.set_class_hash_at(
             self.contract_address.clone(),
-            request.class_hash.to_be_bytes(),
+            ClassHash::from(request.class_hash),
         )?;
         Ok(SyscallResponse {
             gas: remaining_gas,

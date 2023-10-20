@@ -250,7 +250,7 @@ mod test {
         )
         .unwrap();
         static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
-        static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
+        static ref CLASS_HASH_BYTES: ClassHash = ClassHash::new(CLASS_HASH.clone().to_be_bytes());
         static ref SALT: Felt252 = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
@@ -304,7 +304,7 @@ mod test {
         let mut contract_class_cache = HashMap::new();
 
         let address = Address(1111.into());
-        let class_hash: ClassHash = [1; 32];
+        let class_hash: ClassHash = ClassHash::from([1; 32]);
         let nonce = Felt252::zero();
 
         contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -355,7 +355,7 @@ mod test {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash = ClassHash::from([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -397,7 +397,7 @@ mod test {
         let mut contract_class_cache = HashMap::new();
 
         let address = Address(1111.into());
-        let class_hash: ClassHash = [1; 32];
+        let class_hash: ClassHash = ClassHash::from([1; 32]);
         let nonce = Felt252::zero();
 
         contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -463,7 +463,7 @@ mod test {
         let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
         let address = Address(1111.into());
-        let class_hash: ClassHash = [1; 32];
+        let class_hash: ClassHash = ClassHash::from([1; 32]);
         let nonce = Felt252::one();
 
         let mut state_reader = InMemoryStateReader::default();
@@ -592,7 +592,7 @@ mod test {
         let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
         let address = Address(1111.into());
-        let class_hash: ClassHash = [1; 32];
+        let class_hash: ClassHash = ClassHash::from([1; 32]);
         let nonce = Felt252::one();
 
         let mut state_reader = InMemoryStateReader::default();
@@ -924,7 +924,7 @@ mod test {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash = ClassHash::from([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());

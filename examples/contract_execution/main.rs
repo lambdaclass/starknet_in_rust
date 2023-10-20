@@ -125,7 +125,8 @@ fn test_contract(
     //* --------------------------------------------
     //*        Execute contract entrypoint
     //* --------------------------------------------
-    let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
+    let entry_point_selector =
+        Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()).to_be_bytes());
 
     let invoke_tx = InvokeFunction::new(
         contract_address,

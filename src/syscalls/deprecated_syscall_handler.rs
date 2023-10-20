@@ -230,6 +230,7 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::state::StateDiff;
+    use crate::utils::ClassHash;
     use crate::{
         add_segments, allocate_selector, any_box,
         definitions::{
@@ -896,7 +897,7 @@ mod tests {
                         .starknet_storage_state
                         .contract_address
                         .clone(),
-                    address.to_bytes_be().try_into().unwrap(),
+                    ClassHash::from(address),
                 ),
                 storage_value.clone(),
             );
@@ -960,7 +961,7 @@ mod tests {
                         .starknet_storage_state
                         .contract_address
                         .clone(),
-                    address.to_bytes_be().try_into().unwrap(),
+                    ClassHash::from(address.clone()),
                 ),
                 Felt252::new(3),
             );
@@ -1007,7 +1008,7 @@ mod tests {
             16,
         )
         .unwrap();
-        let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
+        let class_hash: ClassHash = ClassHash::from(class_hash_felt.clone());
 
         vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
@@ -1098,7 +1099,7 @@ mod tests {
             16,
         )
         .unwrap();
-        let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
+        let class_hash: ClassHash = ClassHash::from(class_hash_felt.clone());
 
         vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();

@@ -229,7 +229,7 @@ impl Default for CallInfo {
             call_type: None,
             contract_address: Address(0.into()),
             code_address: None,
-            class_hash: Some([0; 32]),
+            class_hash: Some(ClassHash::default()),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
             storage_read_values: Vec::new(),
