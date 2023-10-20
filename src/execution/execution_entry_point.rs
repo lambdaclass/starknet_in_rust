@@ -640,6 +640,10 @@ impl ExecutionEntryPoint {
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
+        use cairo_lang_sierra::{
+            extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
+            program_registry::ProgramRegistry,
+        };
         use serde_json::json;
 
         let entry_point = match self.entry_point_type {
@@ -664,6 +668,8 @@ impl ExecutionEntryPoint {
         };
 
         let sierra_program = contract_class.extract_sierra_program().unwrap();
+        let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
+            ProgramRegistry::new(&sierra_program).unwrap();
 
         let native_context = NativeContext::new();
         let mut native_program = native_context.compile(&sierra_program).unwrap();
@@ -694,14 +700,20 @@ impl ExecutionEntryPoint {
             .as_ptr()
             .as_ptr() as *const () as usize;
 
-        let fn_id = &sierra_program
+        let entry_point_fn = &sierra_program
             .funcs
             .iter()
             .find(|x| x.id.id == (entry_point.function_idx as u64))
-            .unwrap()
-            .id;
+            .unwrap();
+        let ret_types: Vec<&CoreTypeConcrete> = entry_point_fn
+            .signature
+            .ret_types
+            .iter()
+            .map(|x| program_registry.get_type(x).unwrap())
+            .collect();
+        let entry_point_id = &entry_point_fn.id;
 
-        let required_init_gas = native_program.get_required_init_gas(fn_id);
+        let required_init_gas = native_program.get_required_init_gas(entry_point_id);
 
         let calldata: Vec<_> = self
             .calldata
@@ -719,13 +731,13 @@ impl ExecutionEntryPoint {
         */
 
         let wrapped_calldata = vec![calldata];
-        let params: Vec<Value> = sierra_program.funcs[fn_id.id as usize]
+        let params: Vec<Value> = sierra_program.funcs[entry_point_id.id as usize]
             .params
             .iter()
             .map(|param| {
                 match param.ty.debug_name.as_ref().unwrap().as_str() {
                     "GasBuiltin" => {
-                        json!(self.initial_gas as u64)
+                        json!(self.initial_gas)
                     }
                     "Pedersen" | "SegmentArena" | "RangeCheck" | "Bitwise" | "Poseidon" => {
                         json!(null)
@@ -748,11 +760,14 @@ impl ExecutionEntryPoint {
         let native_executor = NativeExecutor::new(native_program);
 
         native_executor
-            .execute(fn_id, json!(params), returns, required_init_gas)
+            .execute(entry_point_id, json!(params), returns, required_init_gas)
             .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
 
-        let result: String = String::from_utf8(writer).unwrap();
-        let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
+        let value = NativeExecutionResult::deserialize_from_ret_types(
+            &mut serde_json::Deserializer::from_slice(&writer),
+            &ret_types,
+        )
+        .expect("failed to serialize starknet execution result");
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
@@ -774,7 +789,7 @@ impl ExecutionEntryPoint {
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             internal_calls: syscall_handler.internal_calls,
             // TODO: check it's correct
-            gas_consumed: self.initial_gas - u128::from(value.gas_builtin.unwrap_or(0)),
+            gas_consumed: value.gas_consumed,
         })
     }
 }

@@ -50,7 +50,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     }
 
     fn get_execution_info(
-        &self,
+        &mut self,
         _gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::ExecutionInfo> {
         println!("Called `get_execution_info()` from MLIR.");

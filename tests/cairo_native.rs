@@ -143,7 +143,7 @@ fn integration_test_erc20() {
     assert_eq!(native_result.retdata, [].to_vec());
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(NATIVE_CLASS_HASH));
-    assert_eq!(native_result.gas_consumed, 18446744073709551615); // (u64::MAX)
+    assert_eq!(native_result.gas_consumed, 0);
 
     assert_eq!(vm_result.events, native_result.events);
     assert_eq!(
@@ -671,7 +671,7 @@ fn call_events_contract_test() {
         storage_read_values: Vec::new(),
         accessed_storage_keys: HashSet::new(),
         internal_calls: Vec::new(),
-        gas_consumed: 340282366920938463463374607431768211455, // TODO: fix gas consumed
+        gas_consumed: 0,
         failure_flag: false,
     };
 
