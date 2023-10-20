@@ -1,6 +1,8 @@
-use cairo_native::starknet::{
+use std::{rc::Rc, cell::RefCell};
+
+use cairo_native::{starknet::{
     BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
-};
+}, cache::ProgramCache};
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
@@ -15,12 +17,12 @@ use crate::{
         contract_storage_state::ContractStorageState, state_api::StateReader,
         ExecutionResourcesManager,
     },
-    utils::Address,
+    utils::{Address, ClassHash},
     EntryPointType,
 };
 
 #[derive(Debug)]
-pub struct NativeSyscallHandler<'a, S>
+pub struct NativeSyscallHandler<'a, 'cache, S>
 where
     S: StateReader,
 {
@@ -37,9 +39,10 @@ where
     // TODO: This may not be really needed for Cairo Native, just passing
     // it to be able to call the `execute` method of ExecutionEntrypoint.
     pub(crate) internal_calls: Vec<CallInfo>,
+    pub(crate) program_cache: Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
 }
 
-impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> {
+impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, 'cache, S> {
     fn get_block_hash(
         &mut self,
         block_number: u64,

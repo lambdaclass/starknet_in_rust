@@ -212,7 +212,7 @@ impl ExecutionEntryPoint {
         }
     }
 
-    pub fn execute_with_native_cache<T>(
+    pub fn execute_with_native_cache<'a, T>(
         &self,
         state: &mut CachedState<T>,
         block_context: &BlockContext,
@@ -220,7 +220,7 @@ impl ExecutionEntryPoint {
         tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
         max_steps: u64,
-        program_cache: &mut ProgramCache<'_, ClassHash>,
+        program_cache: &'a mut ProgramCache<'a, ClassHash>,
     ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
@@ -747,14 +747,14 @@ impl ExecutionEntryPoint {
 
     #[cfg(feature = "cairo-native")]
     #[inline(always)]
-    fn native_execute<S: StateReader>(
+    fn native_execute<'a, S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
         class_hash: &[u8; 32],
-        program_cache: &mut ProgramCache<'_, [u8; 32]>,
+        program_cache: &'a mut ProgramCache<'a, [u8; 32]>,
     ) -> Result<CallInfo, TransactionError> {
         use cairo_lang_sierra::{
             extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
@@ -804,8 +804,10 @@ impl ExecutionEntryPoint {
             entry_point_selector: self.entry_point_selector.clone(),
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
+            program_cache
         };
 
+        native_program.remove_metadata::<SyscallHandlerMeta>();
         native_program.insert_metadata(SyscallHandlerMeta::new(&syscall_handler));
 
         let syscall_addr = native_program
