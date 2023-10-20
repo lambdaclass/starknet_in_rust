@@ -6,7 +6,7 @@ description = "A Rust implementation of Starknet execution logic"
 license = "Apache-2.0"
 
 [features]
-default = ["with_mimalloc"]
+default = ["with_mimalloc", "cairo-native"]
 with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
 metrics = []
