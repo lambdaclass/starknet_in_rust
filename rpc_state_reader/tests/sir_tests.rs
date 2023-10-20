@@ -407,7 +407,6 @@ fn test_validate_fee(hash: &str, block_number: u64, chain: RpcChain) {
     assert!(tx_info_without_fee.actual_fee < tx_info.actual_fee);
 }
 
-// #[traced_test]
 #[test]
 fn test_0x176a92e8df0128d47f24eebc17174363457a956fa233cc6a7f8561bfbd5023a() {
     traceon::on();
