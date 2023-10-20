@@ -23,8 +23,10 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::rc::Rc;
 use std::sync::Arc;
 
 #[test]
@@ -78,7 +80,7 @@ fn integration_test_erc20() {
 
     let mut state_native = CachedState::new(state_reader, contract_class_cache);
     let native_context = NativeContext::new();
-    let mut program_cache = ProgramCache::new(&native_context);
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
 
     /*
         1 recipient
@@ -104,7 +106,7 @@ fn integration_test_erc20() {
         &calldata,
         EntryPointType::Constructor,
         &CASM_CLASS_HASH,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     let native_result = execute(
@@ -115,7 +117,7 @@ fn integration_test_erc20() {
         &calldata,
         EntryPointType::Constructor,
         &NATIVE_CLASS_HASH,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     assert_eq!(vm_result.caller_address, caller_address);
@@ -171,7 +173,7 @@ fn integration_test_erc20() {
         casm_entrypoints: &CasmContractEntryPoints,
         calldata: &[Felt252],
         caller_address: &Address,
-        program_cache: &mut ProgramCache<'_, ClassHash>,
+        program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) {
         let native_selector = &native_entrypoints
             .external
@@ -192,7 +194,7 @@ fn integration_test_erc20() {
             calldata,
             EntryPointType::External,
             &CASM_CLASS_HASH,
-            program_cache,
+            program_cache.clone(),
         );
 
         let native_result = execute(
@@ -203,7 +205,7 @@ fn integration_test_erc20() {
             calldata,
             EntryPointType::External,
             &NATIVE_CLASS_HASH,
-            program_cache,
+            program_cache.clone(),
         );
 
         assert_eq!(vm_result.failure_flag, native_result.failure_flag);
@@ -232,7 +234,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // ---------------- GET DECIMALS ----------------------
@@ -245,7 +247,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // ---------------- GET NAME ----------------------
@@ -258,7 +260,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // // ---------------- GET SYMBOL ----------------------
@@ -271,7 +273,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // ---------------- GET BALANCE OF CALLER ----------------------
@@ -284,7 +286,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
@@ -297,7 +299,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone(), 1.into()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // // ---------------- INCREASE ALLOWANCE OF ADDRESS 1 by 10_000 ----------------------
@@ -310,7 +312,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 10_000.into()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
@@ -324,7 +326,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone(), 1.into()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // ---------------- APPROVE ADDRESS 1 TO MAKE TRANSFERS ON BEHALF OF THE CALLER ----------------------
@@ -337,7 +339,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 5000.into()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // ---------------- TRANSFER 3 TOKENS FROM CALLER TO ADDRESS 2 ---------
@@ -350,7 +352,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into(), 3.into()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // // ---------------- GET BALANCE OF CALLER ----------------------
@@ -363,7 +365,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
@@ -376,7 +378,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // // ---------------- TRANSFER 1 TOKEN FROM CALLER TO ADDRESS 2, CALLED FROM ADDRESS 1 ----------------------
@@ -389,7 +391,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 2.into(), 1.into()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
@@ -402,7 +404,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 
     // // ---------------- GET BALANCE OF CALLER ----------------------
@@ -415,7 +417,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
-        &mut program_cache,
+        program_cache.clone(),
     );
 }
 
@@ -493,7 +495,7 @@ fn call_contract_test() {
     let calldata = [fn_selector.into()].to_vec();
 
     let native_context = NativeContext::new();
-    let mut program_cache = ProgramCache::new(&native_context);
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
 
     let result = execute(
         &mut state,
@@ -503,7 +505,7 @@ fn call_contract_test() {
         &calldata,
         EntryPointType::External,
         &caller_class_hash,
-        &mut program_cache,
+        program_cache,
     );
 
     assert_eq!(result.retdata, [Felt252::new(44)]);
@@ -582,7 +584,7 @@ fn call_echo_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let native_context = NativeContext::new();
-    let mut program_cache = ProgramCache::new(&native_context);
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
 
     let calldata = [fn_selector.into(), 99999999.into()].to_vec();
     let result = execute(
@@ -593,7 +595,7 @@ fn call_echo_contract_test() {
         &calldata,
         EntryPointType::External,
         &caller_class_hash,
-        &mut program_cache,
+        program_cache,
     );
 
     assert_eq!(result.retdata, [Felt252::new(99999999)]);
@@ -673,7 +675,7 @@ fn call_events_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let native_context = NativeContext::new();
-    let mut program_cache = ProgramCache::new(&native_context);
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
 
     let calldata = [fn_selector.into()].to_vec();
     let result = execute(
@@ -684,7 +686,7 @@ fn call_events_contract_test() {
         &calldata,
         EntryPointType::External,
         &caller_class_hash,
-        &mut program_cache,
+        program_cache,
     );
 
     let internal_call = CallInfo {
@@ -737,7 +739,7 @@ fn execute(
     calldata: &[Felt252],
     entrypoint_type: EntryPointType,
     class_hash: &ClassHash,
-    program_cache: &mut ProgramCache<'_, ClassHash>,
+    program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
 ) -> CallInfo {
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),

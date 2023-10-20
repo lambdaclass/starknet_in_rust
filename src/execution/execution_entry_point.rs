@@ -39,6 +39,8 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 #[cfg(feature = "cairo-native")]
@@ -169,7 +171,7 @@ impl ExecutionEntryPoint {
                 let mut transactional_state = state.create_transactional();
 
                 let native_context = NativeContext::new();
-                let mut program_cache = ProgramCache::new(&native_context);
+                let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
 
                 match self.native_execute(
                     &mut transactional_state,
@@ -177,7 +179,7 @@ impl ExecutionEntryPoint {
                     tx_execution_context,
                     block_context,
                     &class_hash,
-                    &mut program_cache,
+                    program_cache,
                 ) {
                     Ok(call_info) => {
                         state.apply_state_update(&StateDiff::from_cached_state(
@@ -212,7 +214,7 @@ impl ExecutionEntryPoint {
         }
     }
 
-    pub fn execute_with_native_cache<'a, T>(
+    pub fn execute_with_native_cache<T>(
         &self,
         state: &mut CachedState<T>,
         block_context: &BlockContext,
@@ -220,7 +222,7 @@ impl ExecutionEntryPoint {
         tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
         max_steps: u64,
-        program_cache: &'a mut ProgramCache<'a, ClassHash>,
+        program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
@@ -747,14 +749,14 @@ impl ExecutionEntryPoint {
 
     #[cfg(feature = "cairo-native")]
     #[inline(always)]
-    fn native_execute<'a, S: StateReader>(
+    fn native_execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
         contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
         class_hash: &[u8; 32],
-        program_cache: &'a mut ProgramCache<'a, [u8; 32]>,
+        program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
         use cairo_lang_sierra::{
             extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
@@ -787,7 +789,9 @@ impl ExecutionEntryPoint {
         let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
             ProgramRegistry::new(&sierra_program).unwrap();
 
-        let native_program = program_cache.compile_or_get(*class_hash, &sierra_program);
+        let native_program = program_cache
+            .borrow_mut()
+            .compile_or_get(*class_hash, &sierra_program);
         let mut native_program = native_program.borrow_mut();
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
@@ -804,7 +808,7 @@ impl ExecutionEntryPoint {
             entry_point_selector: self.entry_point_selector.clone(),
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
-            program_cache
+            program_cache,
         };
 
         native_program.remove_metadata::<SyscallHandlerMeta>();

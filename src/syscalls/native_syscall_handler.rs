@@ -1,8 +1,9 @@
-use std::{rc::Rc, cell::RefCell};
+use std::{cell::RefCell, rc::Rc};
 
-use cairo_native::{starknet::{
-    BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
-}, cache::ProgramCache};
+use cairo_native::{
+    cache::ProgramCache,
+    starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
+};
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
@@ -143,7 +144,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         );
 
         let ExecutionResult { call_info, .. } = exec_entry_point
-            .execute(
+            .execute_with_native_cache(
                 self.starknet_storage_state.state,
                 // TODO: This fields dont make much sense in the Cairo Native context,
                 // they are only dummy values for the `execute` method.
@@ -152,6 +153,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
                 &mut TransactionExecutionContext::default(),
                 false,
                 u64::MAX,
+                self.program_cache.clone(),
             )
             .unwrap();
 
