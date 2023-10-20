@@ -10,6 +10,8 @@ use cairo_vm::{
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
+use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -270,7 +272,7 @@ fn library_call() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 255,
+        n_steps: 247,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 259,
         n_memory_holes: 8,
@@ -278,7 +280,7 @@ fn library_call() {
     };
     let expected_execution_resources_internal_call = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 84,
+        n_steps: 80,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
         n_memory_holes: 5,
@@ -294,7 +296,7 @@ fn library_call() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
-        execution_resources: expected_execution_resources,
+        execution_resources: Some(expected_execution_resources),
         class_hash: Some(class_hash),
         internal_calls: vec![CallInfo {
             caller_address: Address(0.into()),
@@ -310,7 +312,7 @@ fn library_call() {
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![25.into()],
             retdata: [5.into()].to_vec(),
-            execution_resources: expected_execution_resources_internal_call,
+            execution_resources: Some(expected_execution_resources_internal_call),
             class_hash: Some(lib_class_hash),
             gas_consumed: 0,
             ..Default::default()
@@ -321,13 +323,13 @@ fn library_call() {
         storage_read_values: vec![],
         accessed_storage_keys: HashSet::new(),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 78650,
+        gas_consumed: 78250,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 78980,
         ..Default::default()
     };
 
-    assert_eq!(
+    assert_eq_sorted!(
         exec_entry_point
             .execute(
                 &mut state,
@@ -734,6 +736,7 @@ fn deploy_cairo1_from_cairo1() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -833,6 +836,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
+        CompiledClass::Sierra(_) => unreachable!(),
         CompiledClass::Casm(_) => unreachable!(),
     };
 
@@ -933,6 +937,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
         CompiledClass::Casm(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1033,6 +1038,7 @@ fn deploy_cairo0_and_invoke() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
         CompiledClass::Casm(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1143,8 +1149,18 @@ fn test_send_message_to_l1_syscall() {
         payload: vec![555.into(), 666.into()],
     }];
 
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_n_steps = 46;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_n_steps = 50;
+
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_gas_consumed = 9640;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_gas_consumed = 10040;
+
     let expected_execution_resources = ExecutionResources {
-        n_steps: 50,
+        n_steps: expected_n_steps,
         n_memory_holes: 0,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
     };
@@ -1157,8 +1173,8 @@ fn test_send_message_to_l1_syscall() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
-        execution_resources: expected_execution_resources,
-        gas_consumed: 10040,
+        execution_resources: Some(expected_execution_resources),
+        gas_consumed: expected_gas_consumed,
         ..Default::default()
     };
 
@@ -1237,8 +1253,18 @@ fn test_get_execution_info() {
         address.0.clone(),
     ];
 
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_n_steps = 213;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_n_steps = 268;
+
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_gas_consumed = 22980;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_gas_consumed = 28580;
+
     let expected_execution_resources = ExecutionResources {
-        n_steps: 268,
+        n_steps: expected_n_steps,
         n_memory_holes: 4,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
     };
@@ -1251,8 +1277,8 @@ fn test_get_execution_info() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
-        execution_resources: expected_execution_resources,
-        gas_consumed: 28580,
+        execution_resources: Some(expected_execution_resources),
+        gas_consumed: expected_gas_consumed,
         ..Default::default()
     };
 
