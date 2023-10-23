@@ -151,16 +151,17 @@ pub fn execute_tx_configurable(
                 .create_for_simulation(skip_validate, false, false, false)
         }
         SNTransaction::Declare(tx) => {
+            // Fetch the contract_class from the next block (as we don't have it in the previous one)
+            let next_block_state_reader =
+                RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
+            let mut next_block_state =
+                CachedState::new(Arc::new(next_block_state_reader), Default::default());
+            let contract_class = next_block_state
+                .get_contract_class(tx.class_hash().0.bytes().try_into().unwrap())
+                .unwrap();
+
             if tx.version() != TransactionVersion(2_u8.into()) {
-                // Fetch the contract_class from the next block (as we don't have it in the previous one)
-                let next_block_state_reader =
-                    RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
-                let mut next_block_state =
-                    CachedState::new(Arc::new(next_block_state_reader), Default::default());
-                let contract_class = match next_block_state
-                    .get_contract_class(tx.class_hash().0.bytes().try_into().unwrap())
-                    .unwrap()
-                {
+                let contract_class = match contract_class {
                     CompiledClass::Deprecated(cc) => cc.as_ref().clone(),
                     _ => unreachable!(),
                 };
@@ -177,11 +178,17 @@ pub fn execute_tx_configurable(
                         .collect(),
                     Felt252::from_bytes_be(tx.nonce().0.bytes()),
                     Felt252::from_bytes_be(tx_hash.0.bytes()),
-                    tx.class_hash().0.bytes().try_into().unwrap()
+                    tx.class_hash().0.bytes().try_into().unwrap(),
                 )
                 .unwrap();
                 declare.create_for_simulation(skip_validate, false, false, false)
             } else {
+                let contract_class = match contract_class {
+                    CompiledClass::Casm(cc) => cc.as_ref().clone(),
+                    _ => unreachable!(),
+                };
+
+                //let declare = DecalreV2::
                 unimplemented!()
             }
         }
