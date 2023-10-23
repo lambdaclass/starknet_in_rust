@@ -11,7 +11,6 @@ use cairo_vm::{
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -3174,7 +3173,7 @@ fn library_call_recursive_50_calls() {
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![felt_str!("1125899906842624")],
             retdata: [felt_str!("33554432")].to_vec(),
-            execution_resources: expected_execution_resources_internal_call,
+            execution_resources: Some(expected_execution_resources_internal_call),
             class_hash: Some(lib_class_hash),
             gas_consumed: 0,
             ..Default::default()
