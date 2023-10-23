@@ -96,7 +96,7 @@ pub fn deserialize_transaction_json(
                 serde_json::from_value(transaction)?,
             ))),
             x => Err(serde::de::Error::custom(format!(
-                "unimplemented invoke version: {x}"
+                "unimplemented declare version: {x}"
             ))),
         },
         x => Err(serde::de::Error::custom(format!(
