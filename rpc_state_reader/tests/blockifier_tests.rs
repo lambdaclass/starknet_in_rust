@@ -3,12 +3,13 @@ use blockifier::{
     execution::{contract_class::ContractClass, entry_point::CallInfo},
     state::{
         cached_state::{CachedState, GlobalContractCache},
-        state_api::{StateReader, StateResult}, errors::StateError,
+        errors::StateError,
+        state_api::{StateReader, StateResult},
     },
     transaction::{
         account_transaction::AccountTransaction,
         objects::TransactionExecutionInfo,
-        transactions::{DeployAccountTransaction, ExecutableTransaction, DeclareTransaction},
+        transactions::{DeclareTransaction, DeployAccountTransaction, ExecutableTransaction},
     },
 };
 use blockifier::{
@@ -93,7 +94,7 @@ impl StateReader for RpcStateReader {
                 let casm_cc = CasmContractClass::from_contract_class(sierra_cc, false).unwrap();
                 BlockifierContractClass::V1(casm_cc.try_into().unwrap())
             }
-            None => return Err(StateError::UndeclaredClassHash(*class_hash))
+            None => return Err(StateError::UndeclaredClassHash(*class_hash)),
         })
     }
 
@@ -197,9 +198,13 @@ pub fn execute_tx(
         }
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
-            let next_block_state_reader = RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
-            let mut next_block_state = CachedState::new(next_block_state_reader, Default::default());
-            let contract_class = next_block_state.get_compiled_contract_class(&tx.class_hash()).unwrap();
+            let next_block_state_reader =
+                RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
+            let mut next_block_state =
+                CachedState::new(next_block_state_reader, Default::default());
+            let contract_class = next_block_state
+                .get_compiled_contract_class(&tx.class_hash())
+                .unwrap();
 
             let declare = DeclareTransaction::new(tx, tx_hash, contract_class).unwrap();
             AccountTransaction::Declare(declare)

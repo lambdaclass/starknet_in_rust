@@ -405,7 +405,8 @@ impl RpcState {
         self.rpc_call_result(
             "starknet_getClass",
             &json!([self.block.to_value().unwrap(), class_hash.0.to_string()]),
-        ).ok()
+        )
+        .ok()
     }
 
     pub fn get_class_hash_at(&self, contract_address: &ContractAddress) -> ClassHash {
