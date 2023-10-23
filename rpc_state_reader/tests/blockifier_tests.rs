@@ -8,7 +8,7 @@ use blockifier::{
     transaction::{
         account_transaction::AccountTransaction,
         objects::TransactionExecutionInfo,
-        transactions::{DeployAccountTransaction, ExecutableTransaction},
+        transactions::{DeployAccountTransaction, ExecutableTransaction, DeclareTransaction},
     },
 };
 use blockifier::{
@@ -193,6 +193,11 @@ pub fn execute_tx(
                 tx_hash,
                 contract_address,
             })
+        }
+        SNTransaction::Declare(tx) => {
+            let contract_class = state.get_compiled_contract_class(&tx.class_hash()).unwrap();
+            let declare = DeclareTransaction::new(tx, tx_hash, contract_class).unwrap();
+            AccountTransaction::Declare(declare)
         }
         _ => unimplemented!(),
     };
