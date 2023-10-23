@@ -69,7 +69,7 @@ fn amm_init_pool_test() {
     let caller_address = Address(0000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"init_pool"));
+    let amm_entrypoint_selector = calculate_sn_keccak(b"init_pool");
     let entry_points_by_type =
         TryInto::<ContractClass>::try_into(state.get_contract_class(&class_hash).unwrap())
             .unwrap()
@@ -156,7 +156,7 @@ fn amm_add_demo_tokens_test() {
 
     let calldata_add_demo_token = [100.into(), 100.into()].to_vec();
 
-    let add_demo_token_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"add_demo_token"));
+    let add_demo_token_selector = calculate_sn_keccak(b"add_demo_token");
 
     let accessed_storage_keys_add_demo_token = get_accessed_keys(
         "account_balance",
@@ -236,8 +236,7 @@ fn amm_get_pool_token_balance() {
 
     let calldata_get_pool_token_balance = [1.into()].to_vec();
 
-    let get_pool_balance_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"get_pool_token_balance"));
+    let get_pool_balance_selector = calculate_sn_keccak(b"get_pool_token_balance");
 
     let accessed_storage_keys_get_pool_token_balance =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
@@ -331,7 +330,7 @@ fn amm_swap_test() {
     accessed_storage_keys.extend(accessed_storage_keys_pool_balance);
     accessed_storage_keys.extend(accessed_storage_keys_user_balance);
 
-    let swap_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"swap"));
+    let swap_selector = calculate_sn_keccak(b"swap");
 
     let expected_call_infoswap = CallInfo {
         caller_address: Address(0.into()),
@@ -565,8 +564,7 @@ fn amm_get_account_token_balance_test() {
     let accessed_storage_keys =
         get_accessed_keys("account_balance", vec![vec![0_u8.into(), 1_u8.into()]]);
 
-    let get_account_token_balance_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"get_account_token_balance"));
+    let get_account_token_balance_selector = calculate_sn_keccak(b"get_account_token_balance");
 
     let expected_call_info_get_account_token_balance = CallInfo {
         caller_address: Address(0.into()),

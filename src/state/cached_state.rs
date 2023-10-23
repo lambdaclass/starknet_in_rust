@@ -257,12 +257,9 @@ impl<T: StateReader> State for CachedState<T> {
 
     fn set_compiled_class_hash(
         &mut self,
-        class_hash: &Felt252,
-        compiled_class_hash: &Felt252,
+        class_hash: &ClassHash,
+        compiled_class_hash: &CompiledClassHash,
     ) -> Result<(), StateError> {
-        let class_hash = ClassHash::from(class_hash.clone());
-        let compiled_class_hash = CompiledClassHash::from(compiled_class_hash.clone());
-
         self.cache
             .class_hash_to_compiled_class_hash
             .insert(class_hash, compiled_class_hash);

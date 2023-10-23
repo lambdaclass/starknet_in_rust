@@ -30,7 +30,7 @@ pub struct CallConfig<'a> {
     pub state: &'a mut CachedState<InMemoryStateReader>,
     pub caller_address: &'a Address,
     pub address: &'a Address,
-    pub class_hash: &'a [u8; 32],
+    pub class_hash: &'a ClassHash,
     pub entry_points_by_type: &'a HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub entry_point_type: &'a EntryPointType,
     pub block_context: &'a BlockContext,
@@ -143,7 +143,7 @@ pub fn deploy(
     calldata: &[Felt252],
     block_context: &BlockContext,
     hash_value: Option<Felt252>,
-) -> Result<(Address, [u8; 32]), TransactionError> {
+) -> Result<(Address, ClassHash), TransactionError> {
     let contract_class = ContractClass::from_path(path).unwrap();
 
     let internal_deploy = match hash_value {

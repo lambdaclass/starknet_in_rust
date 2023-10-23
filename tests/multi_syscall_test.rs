@@ -90,7 +90,7 @@ fn test_multiple_syscall() {
     // Block for library_call_syscall
     {
         let entrypoint_selector =
-            Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes()));
+            calculate_sn_keccak("get_number".as_bytes()));
         let new_call_data = vec![
             Felt252::from_bytes_be(&class_hash),
             entrypoint_selector,
@@ -111,7 +111,7 @@ fn test_multiple_syscall() {
     // Block for call_contract_syscall
     {
         let entrypoint_selector =
-            Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes()));
+            calculate_sn_keccak("get_number".as_bytes()));
         let new_call_data = vec![entrypoint_selector, Felt252::from(25)];
         let call_info = test_syscall(
             "test_call_contract_syscall",
@@ -220,7 +220,7 @@ fn test_syscall(
     state: &mut CachedState<InMemoryStateReader>,
 ) -> CallInfo {
     let entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(entrypoint_selector.as_bytes()));
+        calculate_sn_keccak(entrypoint_selector.as_bytes()));
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,

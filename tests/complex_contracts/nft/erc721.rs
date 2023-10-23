@@ -11,6 +11,7 @@ use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::cached_state::CachedState;
 use starknet_in_rust::transaction::error::TransactionError;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     execution::{CallInfo, CallType, OrderedEvent},
@@ -110,7 +111,7 @@ fn erc721_balance_of_test() {
 
     call_config.entry_point_type = &entry_point_type;
 
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"balanceOf"));
+    let entrypoint_selector = calculate_sn_keccak(b"balanceOf");
 
     //expected result should be 1,0 in uint256. So in Felt252 it should be [1,0]
     let expected_read_result = vec![Felt252::from(1_u8), Felt252::from(0_u8)];
@@ -118,10 +119,12 @@ fn erc721_balance_of_test() {
     let mut accessed_storage_keys = HashSet::new();
     let mut balance = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
         .drain()
+        .map(|h| h.as_slice())
         .collect::<Vec<[u8; 32]>>()[0];
-    accessed_storage_keys.insert(balance);
+
+    accessed_storage_keys.insert(ClassHash::from(balance));
     balance[31] += 1;
-    accessed_storage_keys.insert(balance);
+    accessed_storage_keys.insert(ClassHash::from(balance));
 
     let expected_call_info = CallInfo {
         caller_address: Address(666.into()),
@@ -195,7 +198,7 @@ fn erc721_test_owner_of() {
     //tokenId to ask for owner
     let calldata = [Felt252::from(1), Felt252::from(0)].to_vec();
 
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"ownerOf"));
+    let entrypoint_selector = calculate_sn_keccak(b"ownerOf");
 
     let expected_read_result = vec![Felt252::from(666)];
 
@@ -281,7 +284,7 @@ fn erc721_test_get_approved() {
     // tokenId (uint256) to check if it is approved
     let calldata = [Felt252::from(1), Felt252::from(0)].to_vec();
 
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"getApproved"));
+    let entrypoint_selector = calculate_sn_keccak(b"getApproved");
 
     // expected result is 0 because it is not approved
     let expected_read_result = vec![Felt252::from(777)];
@@ -384,7 +387,7 @@ fn erc721_test_is_approved_for_all() {
     let operator = Felt252::from(777);
     let calldata = [owner, operator].to_vec();
 
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"isApprovedForAll"));
+    let entrypoint_selector = calculate_sn_keccak(b"isApprovedForAll");
 
     // expected result is 0 because it is not approved
     let expected_read_result = vec![Felt252::from(1)];
@@ -469,7 +472,7 @@ fn erc721_test_approve() {
     let to = Felt252::from(777);
     let calldata = [to, Felt252::from(1), Felt252::from(0)].to_vec();
 
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"approve"));
+    let entrypoint_selector = calculate_sn_keccak(b"approve");
 
     let expected_read_result = vec![];
 
@@ -485,7 +488,7 @@ fn erc721_test_approve() {
         vec![vec![1_u32.into(), 0_u32.into()]],
     ));
 
-    let event_hash = Felt252::from_bytes_be(&calculate_sn_keccak("Approval".as_bytes()));
+    let event_hash = calculate_sn_keccak("Approval".as_bytes());
     let expected_events = vec![OrderedEvent::new(
         0,
         vec![event_hash],
@@ -571,7 +574,7 @@ fn erc721_set_approval_for_all() {
     let to = Felt252::from(777);
     let calldata = [to, Felt252::from(1)].to_vec();
 
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"setApprovalForAll"));
+    let entrypoint_selector = calculate_sn_keccak(b"setApprovalForAll");
 
     // set only no return value
     let expected_read_result = vec![];
@@ -585,7 +588,7 @@ fn erc721_set_approval_for_all() {
         vec![vec![666_u32.into(), 777_u32.into()]],
     );
 
-    let event_hash = Felt252::from_bytes_be(&calculate_sn_keccak("ApprovalForAll".as_bytes()));
+    let event_hash = calculate_sn_keccak("ApprovalForAll".as_bytes());
     let expected_events = vec![OrderedEvent::new(
         0,
         vec![event_hash],
@@ -670,7 +673,7 @@ fn erc721_transfer_from_test() {
     ]
     .to_vec();
 
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transferFrom"));
+    let entrypoint_selector = calculate_sn_keccak(b"transferFrom");
 
     let mut accessed_storage_keys = get_accessed_keys(
         "ERC721_owners",
@@ -683,17 +686,19 @@ fn erc721_transfer_from_test() {
 
     let mut balance_from = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
         .drain()
+        .map(|h| h.as_slice())
         .collect::<Vec<[u8; 32]>>()[0];
-    accessed_storage_keys.insert(balance_from);
+    accessed_storage_keys.insert(ClassHash::from(balance_from));
     balance_from[31] += 1;
-    accessed_storage_keys.insert(balance_from);
+    accessed_storage_keys.insert(ClassHash::from(balance_from));
 
     let mut balance_to = get_accessed_keys("ERC721_balances", vec![vec![777_u32.into()]])
         .drain()
+        .map(|f| f.as_slice())
         .collect::<Vec<[u8; 32]>>()[0];
-    accessed_storage_keys.insert(balance_to);
+    accessed_storage_keys.insert(ClassHash::from(balance_to));
     balance_to[31] += 1;
-    accessed_storage_keys.insert(balance_to);
+    accessed_storage_keys.insert(ClassHash::from(balance_to));
 
     let expected_read_values = vec![
         666.into(),
@@ -712,7 +717,7 @@ fn erc721_transfer_from_test() {
         666.into(),
     ];
 
-    let approval_event_hash = Felt252::from_bytes_be(&calculate_sn_keccak("Approval".as_bytes()));
+    let approval_event_hash = calculate_sn_keccak("Approval".as_bytes());
     let approval_event = OrderedEvent::new(
         0,
         vec![approval_event_hash],
@@ -723,7 +728,7 @@ fn erc721_transfer_from_test() {
             Felt252::zero(),
         ],
     );
-    let transfer_event_hash = Felt252::from_bytes_be(&calculate_sn_keccak("Transfer".as_bytes()));
+    let transfer_event_hash = calculate_sn_keccak("Transfer".as_bytes());
     let transfer_event = OrderedEvent::new(
         1,
         vec![transfer_event_hash],
@@ -817,7 +822,7 @@ fn erc721_transfer_from_and_get_owner_test() {
     // Now we call ownerOf
     let calldata = [Felt252::from(1), Felt252::from(0)].to_vec();
 
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"ownerOf"));
+    let entrypoint_selector = calculate_sn_keccak(b"ownerOf");
 
     let expected_read_result = vec![Felt252::from(777)];
 

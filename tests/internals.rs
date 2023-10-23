@@ -1127,7 +1127,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt252::from(27728),
-            Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
+            calculate_sn_keccak(b"fib"),
             Felt252::from(3),
             Felt252::from(42),
             Felt252::from(0),
@@ -1147,7 +1147,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             call_type: Some(CallType::Call),
             class_hash: Some(contract_hash),
-            entry_point_selector: Some(Felt252::from_bytes_be(&calculate_sn_keccak(b"fib"))),
+            entry_point_selector: Some(calculate_sn_keccak(b"fib")),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![Felt252::from(42), Felt252::from(0), Felt252::from(0)],
             retdata: vec![Felt252::from(42)],
@@ -1212,7 +1212,7 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt252::from(27728),
-            Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
+            calculate_sn_keccak(b"fib"),
             Felt252::from(3),
             Felt252::from(42),
             Felt252::from(0),
@@ -1281,10 +1281,10 @@ fn test_invoke_tx() {
     let (block_context, state) = &mut create_account_tx_test_state().unwrap();
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
-        test_contract_address, // CONTRACT_ADDRESS
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
-        Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
-        Felt252::from(2),                                               // CONTRACT_CALLDATA
+        test_contract_address,                 // CONTRACT_ADDRESS
+        calculate_sn_keccak(b"return_result"), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(1),                      // CONTRACT_CALLDATA LEN
+        Felt252::from(2),                      // CONTRACT_CALLDATA
     ];
     let invoke_tx = invoke_tx(calldata, u128::MAX);
 
@@ -1301,10 +1301,10 @@ fn test_invoke_tx_exceeded_max_fee() {
     let (block_context, state) = &mut create_account_tx_test_state().unwrap();
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
-        test_contract_address, // CONTRACT_ADDRESS
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
-        Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
-        Felt252::from(2),                                               // CONTRACT_CALLDATA
+        test_contract_address,                 // CONTRACT_ADDRESS
+        calculate_sn_keccak(b"return_result"), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(1),                      // CONTRACT_CALLDATA LEN
+        Felt252::from(2),                      // CONTRACT_CALLDATA
     ];
     let max_fee = 3;
     let actual_fee = 2490;
@@ -1387,10 +1387,10 @@ fn test_invoke_tx_state() {
 
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
-        test_contract_address, // CONTRACT_ADDRESS
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
-        Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
-        Felt252::from(2),                                               // CONTRACT_CALLDATA
+        test_contract_address,                 // CONTRACT_ADDRESS
+        calculate_sn_keccak(b"return_result"), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(1),                      // CONTRACT_CALLDATA LEN
+        Felt252::from(2),                      // CONTRACT_CALLDATA
     ];
     let invoke_tx = invoke_tx(calldata, u128::MAX);
 
@@ -1468,12 +1468,12 @@ fn test_invoke_with_declarev2_tx() {
 
     let Address(test_contract_address) = TEST_FIB_CONTRACT_ADDRESS.clone();
     let calldata = vec![
-        test_contract_address,                                // CONTRACT ADDRESS
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")), // CONTRACT FUNCTION SELECTOR
-        Felt252::from(3),                                     // CONTRACT CALLDATA LEN
-        Felt252::from(42),                                    // a
-        Felt252::from(0),                                     // b
-        Felt252::from(0),                                     // n
+        test_contract_address,       // CONTRACT ADDRESS
+        calculate_sn_keccak(b"fib"), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(3),            // CONTRACT CALLDATA LEN
+        Felt252::from(42),           // a
+        Felt252::from(0),            // b
+        Felt252::from(0),            // n
     ];
     let invoke_tx = invoke_tx(calldata, u128::MAX);
 
@@ -2085,10 +2085,10 @@ fn test_invoke_tx_wrong_call_data() {
 
     // Calldata with missing inputs
     let calldata = vec![
-        TEST_CONTRACT_ADDRESS.clone().0, // CONTRACT_ADDRESS
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
-        Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
-                                                                        // CONTRACT_CALLDATA
+        TEST_CONTRACT_ADDRESS.clone().0,       // CONTRACT_ADDRESS
+        calculate_sn_keccak(b"return_result"), // CONTRACT FUNCTION SELECTOR
+        Felt252::from(1),                      // CONTRACT_CALLDATA LEN
+                                               // CONTRACT_CALLDATA
     ];
     let invoke_tx = invoke_tx(calldata, u128::MAX);
 
@@ -2116,14 +2116,14 @@ fn test_invoke_tx_wrong_entrypoint() {
     let invoke_tx = InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         // Entrypoiont that doesnt exits in the contract
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
+        calculate_sn_keccak(b"none_function"),
         1,
         TRANSACTION_VERSION.clone(),
         vec![
-            test_contract_address, // CONTRACT_ADDRESS
-            Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
-            Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
-            Felt252::from(2),                                               // CONTRACT_CALLDATA
+            test_contract_address,                 // CONTRACT_ADDRESS
+            calculate_sn_keccak(b"return_result"), // CONTRACT FUNCTION SELECTOR
+            Felt252::from(1),                      // CONTRACT_CALLDATA LEN
+            Felt252::from(2),                      // CONTRACT_CALLDATA
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -2237,7 +2237,7 @@ fn test_library_call_with_declare_v2() {
     // Create an execution entry point
     let calldata = vec![
         casm_contract_hash,
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
+        calculate_sn_keccak(b"fib"),
         1.into(),
         1.into(),
         10.into(),
@@ -2287,7 +2287,7 @@ fn test_library_call_with_declare_v2() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: address.clone(),
-        class_hash: Some(casm_contract_hash.to_be_bytes()),
+        class_hash: Some(casm_contract_hash),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]

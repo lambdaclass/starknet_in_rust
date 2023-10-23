@@ -167,10 +167,8 @@ fn amm_proxy_get_pool_token_balance_test() {
     let result =
         execute_entry_point("proxy_get_pool_token_balance", &calldata, &mut call_config).unwrap();
 
-    let amm_proxy_entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_get_pool_token_balance"));
-    let amm_entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"get_pool_token_balance"));
+    let amm_proxy_entrypoint_selector = calculate_sn_keccak(b"proxy_get_pool_token_balance");
+    let amm_entrypoint_selector = calculate_sn_keccak(b"get_pool_token_balance");
 
     let accessed_storage_keys = get_accessed_keys("pool_balance", vec![vec![1_u8.into()]]);
 
@@ -268,11 +266,10 @@ fn amm_proxy_add_demo_token_test() {
     execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
 
     let calldata = [contract_address.0.clone(), 55.into(), 66.into()].to_vec();
-    let amm_proxy_entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_add_demo_token"));
+    let amm_proxy_entrypoint_selector = calculate_sn_keccak(b"proxy_add_demo_token");
     let result = execute_entry_point("proxy_add_demo_token", &calldata, &mut call_config).unwrap();
 
-    let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"add_demo_token"));
+    let amm_entrypoint_selector = calculate_sn_keccak(b"add_demo_token");
 
     let mut felt_slice: [u8; 32] = [0; 32];
     felt_slice[0..32].copy_from_slice(&proxy_address.0.clone().to_bytes_be());
@@ -386,8 +383,7 @@ fn amm_proxy_get_account_token_balance() {
         2.into(),
     ]
     .to_vec();
-    let amm_proxy_entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_get_account_token_balance"));
+    let amm_proxy_entrypoint_selector = calculate_sn_keccak(b"proxy_get_account_token_balance");
     let result = execute_entry_point(
         "proxy_get_account_token_balance",
         &calldata,
@@ -395,8 +391,7 @@ fn amm_proxy_get_account_token_balance() {
     )
     .unwrap();
 
-    let amm_entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(b"get_account_token_balance"));
+    let amm_entrypoint_selector = calculate_sn_keccak(b"get_account_token_balance");
 
     let mut felt_slice: [u8; 32] = [0; 32];
     felt_slice[0..32].copy_from_slice(proxy_address.0.clone().to_bytes_be().get(0..32).unwrap());
@@ -512,9 +507,9 @@ fn amm_proxy_swap() {
     let expected_result = [90.into()].to_vec();
     let result = execute_entry_point("proxy_swap", &calldata, &mut call_config).unwrap();
 
-    let amm_proxy_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_swap"));
+    let amm_proxy_entrypoint_selector = calculate_sn_keccak(b"proxy_swap");
 
-    let amm_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"swap"));
+    let amm_entrypoint_selector = calculate_sn_keccak(b"swap");
     //checked for amm contract both tokens balances
     let accessed_storage_keys_pool_balance =
         get_accessed_keys("pool_balance", vec![vec![1_u8.into()], vec![2_u8.into()]]);

@@ -71,7 +71,7 @@ fn test_contract(
 
     let caller_address = Address(0.into());
 
-    let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
+    let entry_point_selector = calculate_sn_keccak(entry_point.as_bytes());
     let entry_point = ExecutionEntryPoint::new(
         contract_address,
         call_data,

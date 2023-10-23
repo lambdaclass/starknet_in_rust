@@ -130,7 +130,7 @@ fn test_contract<'a>(
     let calldata = arguments.into();
 
     let entry_point_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()).to_be_bytes());
+        calculate_sn_keccak(entry_point.as_bytes()).to_be_bytes());
     let entry_point = ExecutionEntryPoint::new(
         contract_address.clone(),
         calldata.clone(),
@@ -283,28 +283,28 @@ fn emit_event_syscall() {
         [
             OrderedEvent {
                 order: 0,
-                keys: vec![Felt252::from_bytes_be(&calculate_sn_keccak(
+                keys: vec![calculate_sn_keccak(
                     "test_event".as_bytes(),
                 ))],
                 data: [1, 2, 3].map(Felt252::from).to_vec(),
             },
             OrderedEvent {
                 order: 1,
-                keys: vec![Felt252::from_bytes_be(&calculate_sn_keccak(
+                keys: vec![calculate_sn_keccak(
                     "test_event".as_bytes(),
                 ))],
                 data: [2, 4, 6].map(Felt252::from).to_vec(),
             },
             OrderedEvent {
                 order: 2,
-                keys: vec![Felt252::from_bytes_be(&calculate_sn_keccak(
+                keys: vec![calculate_sn_keccak(
                     "test_event".as_bytes(),
                 ))],
                 data: [1234, 5678, 9012].map(Felt252::from).to_vec(),
             },
             OrderedEvent {
                 order: 3,
-                keys: vec![Felt252::from_bytes_be(&calculate_sn_keccak(
+                keys: vec![calculate_sn_keccak(
                     "test_event".as_bytes(),
                 ))],
                 data: [2468].map(Felt252::from).to_vec(),
@@ -1125,7 +1125,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     // Create the deploy contract class
     let contract_path = "starknet_programs/syscalls.json";
     let contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
-    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(
+    let entrypoint_selector = calculate_sn_keccak(
         "test_deploy_with_constructor".as_bytes(),
     ));
 
@@ -1230,7 +1230,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let contract_path = "starknet_programs/syscalls.json";
     let contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
     let entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak("test_deploy".as_bytes()));
+        calculate_sn_keccak("test_deploy".as_bytes()));
 
     // Create the deploy test data
     let salt = Felt252::zero();
@@ -1335,7 +1335,7 @@ fn deploy_cairo1_and_invoke() {
     let contract_path = "starknet_programs/syscalls.json";
     let contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
     let entrypoint_selector =
-        Felt252::from_bytes_be(&calculate_sn_keccak("test_deploy".as_bytes()));
+        calculate_sn_keccak("test_deploy".as_bytes()));
 
     // Create the deploy test data
     let salt = Felt252::zero();

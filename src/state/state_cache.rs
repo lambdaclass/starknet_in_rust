@@ -32,7 +32,7 @@ pub struct StateCache {
     #[get_mut = "pub"]
     pub(crate) nonce_writes: HashMap<Address, Felt252>,
     #[getset(get = "pub", get_mut = "pub")]
-    pub(crate) storage_writes: HashMap<StorageEntry, Felt252>,
+    pub(crate) storage_writes: HashMap<StorageEntry,     e >,
     #[get_mut = "pub"]
     pub(crate) class_hash_to_compiled_class_hash: HashMap<ClassHash, CompiledClassHash>,
 }

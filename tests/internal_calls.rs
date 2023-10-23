@@ -55,7 +55,7 @@ fn test_internal_calls() {
         )]),
     );
 
-    let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"a"));
+    let entry_point_selector = calculate_sn_keccak(b"a");
     let entry_point = ExecutionEntryPoint::new(
         Address(1111.into()),
         vec![],
