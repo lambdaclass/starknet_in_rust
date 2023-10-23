@@ -77,7 +77,7 @@ name = "cairo_native"
 harness = false
 
 [profile.release]
-debug = true
+#debug = true
 opt-level = 3
 lto = "fat"
 codegen-units = 1

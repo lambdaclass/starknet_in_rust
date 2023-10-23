@@ -1,6 +1,8 @@
 #![cfg(not(feature = "cairo_1_tests"))]
 
 use cairo_vm::felt::Felt252;
+use cairo_native::context::NativeContext;
+use cairo_native::cache::ProgramCache;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
@@ -16,16 +18,21 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
 
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    bench_erc20(args.get(1) == Some(&"native".to_string()))
+    bench_erc20(
+        args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+        args.get(2) == Some(&"native".to_string()),
+    )
 }
 
-fn bench_erc20(native: bool) {
+fn bench_erc20(executions: usize, native: bool) {
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
     static CASM_CLASS_HASH: ClassHash = [2; 32];
@@ -70,7 +77,7 @@ fn bench_erc20(native: bool) {
 
     // Create state from the state_reader and contract cache.
     let state_reader = Arc::new(state_reader);
-    let mut state = CachedState::new(state_reader, contract_class_cache);
+    let state = CachedState::new(state_reader, contract_class_cache);
 
     /*
         1 recipient
@@ -88,17 +95,23 @@ fn bench_erc20(native: bool) {
     ]
     .to_vec();
 
-    let result = execute(
-        &mut state.clone(),
-        &caller_address,
-        &caller_address,
-        &constructor_selector.clone(),
-        &calldata.clone(),
-        EntryPointType::Constructor,
-        &CASM_CLASS_HASH,
-    );
+    let native_ctx = NativeContext::new();
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
 
-    dbg!(result);
+    for _ in 0..executions {
+        let result = execute(
+            &mut state.clone(),
+            &caller_address,
+            &caller_address,
+            &constructor_selector.clone(),
+            &calldata.clone(),
+            EntryPointType::Constructor,
+            &CASM_CLASS_HASH,
+            program_cache.clone(),
+        );
+
+        dbg!(result);
+    }
 }
 
 fn execute(
@@ -109,6 +122,7 @@ fn execute(
     calldata: &[Felt252],
     entrypoint_type: EntryPointType,
     class_hash: &ClassHash,
+    program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
 ) -> CallInfo {
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
@@ -135,13 +149,14 @@ fn execute(
     let mut resources_manager = ExecutionResourcesManager::default();
 
     exec_entry_point
-        .execute(
+        .execute_with_native_cache(
             state,
             &block_context,
             &mut resources_manager,
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            program_cache,
         )
         .unwrap()
         .call_info
