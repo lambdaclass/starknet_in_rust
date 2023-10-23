@@ -478,12 +478,12 @@ fn test_validate_fee(hash: &str, block_number: u64, chain: RpcChain) {
     assert!(tx_info_without_fee.actual_fee < tx_info.actual_fee);
 }
 
-// #[test_case(
-//     // Declare tx
-//     "0x60506c49e65d84e2cdd0e9142dc43832a0a59cb6a9cbcce1ab4f57c20ba4afb",
-//     347899, // real block 347900
-//     RpcChain::MainNet
-// )]
+#[test_case(
+    // Declare tx
+    "0x60506c49e65d84e2cdd0e9142dc43832a0a59cb6a9cbcce1ab4f57c20ba4afb",
+    347899, // real block 347900
+    RpcChain::MainNet
+)]
 #[test_case(
     // Declare tx
     "0x1088aa18785779e1e8eef406dc495654ad42a9729b57969ad0dbf2189c40bee",
