@@ -3136,7 +3136,7 @@ fn library_call_recursive_50_calls() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources_internal_call = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 84,
+        n_steps: 80,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
         n_memory_holes: 5,
