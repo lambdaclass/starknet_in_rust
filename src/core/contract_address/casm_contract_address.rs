@@ -112,7 +112,7 @@ mod tests {
         let expected_result;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            file = File::open("starknet_programs/cairo2/contract_a.casm").unwrap();
+            file = File::open("starknet_programs/raw_contract_classes/321aadcf42b0a4ad905616598d16c42fa9b87c812dc398e49b57bf77930629f.casm").unwrap();
             expected_result = felt_str!(
                 "321aadcf42b0a4ad905616598d16c42fa9b87c812dc398e49b57bf77930629f",
                 16
@@ -144,7 +144,7 @@ mod tests {
         let expected_result;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            file = File::open("starknet_programs/cairo2/deploy.casm").unwrap();
+            file = File::open("starknet_programs/raw_contract_classes/53ad3bfb13f39cf1a9940108be4f9c6a8d9cc48a59d5f9b3c73432f877f8cf0.casm").unwrap();
             expected_result = felt_str!(
                 "53ad3bfb13f39cf1a9940108be4f9c6a8d9cc48a59d5f9b3c73432f877f8cf0",
                 16
@@ -177,7 +177,7 @@ mod tests {
         let expected_result;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            file = File::open("starknet_programs/cairo2/fibonacci.casm").unwrap();
+            file = File::open("starknet_programs/raw_contract_classes/6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89.casm").unwrap();
             expected_result = felt_str!(
                 "6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89",
                 16
@@ -210,7 +210,7 @@ mod tests {
         let expected_result;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            file = File::open("starknet_programs/cairo2/factorial.casm").unwrap();
+            file = File::open("starknet_programs/raw_contract_classes/7c48d040ceb3183837a0aff2adf33d879f790e202eb2c4b8622005c12252641.casm").unwrap();
             expected_result = felt_str!(
                 "7c48d040ceb3183837a0aff2adf33d879f790e202eb2c4b8622005c12252641",
                 16
@@ -243,7 +243,7 @@ mod tests {
         let expected_result;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            file = File::open("starknet_programs/cairo2/emit_event.casm").unwrap();
+            file = File::open("starknet_programs/raw_contract_classes/3010533bd60cb0e70ac1bf776e171713f0e5229a084989d3894c171c160ace2.casm").unwrap();
             expected_result = felt_str!(
                 "3010533bd60cb0e70ac1bf776e171713f0e5229a084989d3894c171c160ace2",
                 16
@@ -271,7 +271,7 @@ mod tests {
 
     #[test]
     fn test_declare_tx_class_hash() {
-        let file = File::open("starknet_programs/cairo2/events.casm").unwrap();
+        let file = File::open("starknet_programs/raw_contract_classes/0x472a8c75c832b112ac174abc3b46e7e79464ad52ecdad80079ddfe486ca5eef.casm").unwrap();
         let reader = BufReader::new(file);
 
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
