@@ -11,7 +11,7 @@ use starknet_api::{
     transaction::{Transaction as SNTransaction, TransactionHash, TransactionVersion},
 };
 use starknet_in_rust::{
-    core::errors::state_errors::StateError,
+    core::{contract_address::compute_casm_class_hash, errors::state_errors::StateError},
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::{
@@ -28,7 +28,7 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::{Declare, DeployAccount, InvokeFunction},
+    transaction::{Declare, DeclareV2, DeployAccount, InvokeFunction},
     utils::{Address, ClassHash},
 };
 
@@ -170,7 +170,7 @@ pub fn execute_tx_configurable(
                     contract_class,
                     Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
                     tx.max_fee().0,
-                    Felt252::new(1),
+                    Felt252::from_bytes_be(tx.version().0.bytes()),
                     tx.signature()
                         .0
                         .iter()
@@ -188,8 +188,25 @@ pub fn execute_tx_configurable(
                     _ => unreachable!(),
                 };
 
-                //let declare = DecalreV2::
-                unimplemented!()
+                let compiled_class_hash = compute_casm_class_hash(&contract_class).unwrap();
+
+                let declare = DeclareV2::new_with_tx_hash(
+                    None,
+                    Some(contract_class),
+                    compiled_class_hash,
+                    Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
+                    tx.max_fee().0,
+                    Felt252::from_bytes_be(tx.version().0.bytes()),
+                    tx.signature()
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be(f.bytes()))
+                        .collect(),
+                    Felt252::from_bytes_be(tx.nonce().0.bytes()),
+                    Felt252::from_bytes_be(tx_hash.0.bytes()),
+                )
+                .unwrap();
+                declare.create_for_simulation(skip_validate, false, false, false)
             }
         }
         _ => unimplemented!(),
