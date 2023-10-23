@@ -47,7 +47,7 @@ use std::sync::Arc;
 use {
     crate::syscalls::native_syscall_handler::NativeSyscallHandler,
     cairo_native::{
-        context::NativeContext, execution_result::NativeExecutionResult, executor::NativeExecutor,
+        context::NativeContext, execution_result::NativeExecutionResult,
         metadata::syscall_handler::SyscallHandlerMeta, utils::felt252_bigint,
     },
     serde_json::Value,
@@ -789,10 +789,15 @@ impl ExecutionEntryPoint {
         let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
             ProgramRegistry::new(&sierra_program).unwrap();
 
-        let native_program = program_cache
-            .borrow_mut()
-            .compile_or_get(*class_hash, &sierra_program);
-        let mut native_program = native_program.borrow_mut();
+        let native_executor = {
+            let mut cache = program_cache.borrow_mut();
+            if let Some(executor) = cache.get(*class_hash) {
+                executor
+            } else {
+                cache.compile_and_insert(*class_hash, &sierra_program)
+            }
+        };
+
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
@@ -808,13 +813,21 @@ impl ExecutionEntryPoint {
             entry_point_selector: self.entry_point_selector.clone(),
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
-            program_cache,
+            program_cache: program_cache.clone(),
         };
 
-        native_program.remove_metadata::<SyscallHandlerMeta>();
-        native_program.insert_metadata(SyscallHandlerMeta::new(&syscall_handler));
+        native_executor
+            .borrow_mut()
+            .get_module_mut()
+            .remove_metadata::<SyscallHandlerMeta>();
+        native_executor
+            .borrow_mut()
+            .get_module_mut()
+            .insert_metadata(SyscallHandlerMeta::new(&syscall_handler));
 
-        let syscall_addr = native_program
+        let syscall_addr = native_executor
+            .borrow()
+            .get_module()
             .get_metadata::<SyscallHandlerMeta>()
             .unwrap()
             .as_ptr()
@@ -833,7 +846,10 @@ impl ExecutionEntryPoint {
             .collect();
         let entry_point_id = &entry_point_fn.id;
 
-        let required_init_gas = native_program.get_required_init_gas(entry_point_id);
+        let required_init_gas = native_executor
+            .borrow()
+            .get_module()
+            .get_required_init_gas(entry_point_id);
 
         let calldata: Vec<_> = self
             .calldata
@@ -877,9 +893,8 @@ impl ExecutionEntryPoint {
         let mut writer: Vec<u8> = Vec::new();
         let returns = &mut serde_json::Serializer::new(&mut writer);
 
-        let native_executor = NativeExecutor::new(&native_program);
-
         native_executor
+            .borrow()
             .execute(entry_point_id, json!(params), returns, required_init_gas)
             .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
 
