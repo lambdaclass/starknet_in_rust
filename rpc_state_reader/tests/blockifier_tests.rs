@@ -3,7 +3,7 @@ use blockifier::{
     execution::{contract_class::ContractClass, entry_point::CallInfo},
     state::{
         cached_state::{CachedState, GlobalContractCache},
-        state_api::{StateReader, StateResult},
+        state_api::{StateReader, StateResult}, errors::StateError,
     },
     transaction::{
         account_transaction::AccountTransaction,
@@ -66,7 +66,7 @@ impl StateReader for RpcStateReader {
         class_hash: &ClassHash,
     ) -> StateResult<ContractClass> {
         Ok(match self.0.get_contract_class(class_hash) {
-            SNContractClass::Legacy(compressed_legacy_cc) => {
+            Some(SNContractClass::Legacy(compressed_legacy_cc)) => {
                 let as_str = utils::decode_reader(compressed_legacy_cc.program).unwrap();
                 let program = Program::from_bytes(as_str.as_bytes(), None).unwrap();
                 let entry_points_by_type = utils::map_entry_points_by_type_legacy(
@@ -78,7 +78,7 @@ impl StateReader for RpcStateReader {
                 });
                 BlockifierContractClass::V0(ContractClassV0(inner))
             }
-            SNContractClass::Sierra(flattened_sierra_cc) => {
+            Some(SNContractClass::Sierra(flattened_sierra_cc)) => {
                 let middle_sierra: utils::MiddleSierraContractClass = {
                     let v = serde_json::to_value(flattened_sierra_cc).unwrap();
                     serde_json::from_value(v).unwrap()
@@ -93,6 +93,7 @@ impl StateReader for RpcStateReader {
                 let casm_cc = CasmContractClass::from_contract_class(sierra_cc, false).unwrap();
                 BlockifierContractClass::V1(casm_cc.try_into().unwrap())
             }
+            None => return Err(StateError::UndeclaredClassHash(*class_hash))
         })
     }
 
@@ -318,11 +319,6 @@ fn blockifier_test_recent_tx() {
     885298, // real block 885299
     RpcChain::TestNet
 )]
-#[test_case(
-    "0x60506c49e65d84e2cdd0e9142dc43832a0a59cb6a9cbcce1ab4f57c20ba4afb",
-    347899, // real block 347900
-    RpcChain::MainNet
-)]
 fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
@@ -392,5 +388,40 @@ fn blockifier_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcCha
             tx_info.actual_fee.0, receipt.actual_fee,
             "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
         );
+    }
+}
+
+#[test_case(
+    // Declare tx
+    "0x60506c49e65d84e2cdd0e9142dc43832a0a59cb6a9cbcce1ab4f57c20ba4afb",
+    347899, // real block 347900
+    RpcChain::MainNet
+)]
+#[test_case(
+    // Declare tx
+    "0x1088aa18785779e1e8eef406dc495654ad42a9729b57969ad0dbf2189c40bee",
+    271887, // real block 271888
+    RpcChain::MainNet
+)]
+fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, _trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+    let TransactionExecutionInfo {
+        execute_call_info,
+        actual_fee,
+        ..
+    } = tx_info;
+
+    assert!(execute_call_info.is_none());
+
+    let actual_fee = actual_fee.0;
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+        if diff >= 5 {
+            assert_eq!(
+                actual_fee, receipt.actual_fee,
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            );
+        }
     }
 }

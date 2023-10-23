@@ -42,7 +42,7 @@ pub struct RpcStateReader(RpcState);
 impl StateReader for RpcStateReader {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         let hash = SNClassHash(StarkHash::new(*class_hash).unwrap());
-        Ok(CompiledClass::from(self.0.get_contract_class(&hash)))
+        Ok(CompiledClass::from(self.0.get_contract_class(&hash).unwrap()))
     }
 
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
