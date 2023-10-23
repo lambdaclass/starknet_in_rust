@@ -1024,7 +1024,7 @@ mod test {
 
         assert_eq!(
             estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
-            [(0, 2448), (0, 2448)]
+            [(0, 1836), (0, 2448)]
         );
     }
 

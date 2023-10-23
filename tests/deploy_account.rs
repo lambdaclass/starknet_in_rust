@@ -104,7 +104,7 @@ fn internal_deploy_account() {
                 ("n_steps", 3612),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 83),
-                ("l1_gas_usage", 3672)
+                ("l1_gas_usage", 3060)
             ]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
@@ -270,7 +270,7 @@ fn internal_deploy_account_cairo1() {
                 ("n_steps", n_steps),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 87),
-                ("l1_gas_usage", 4896)
+                ("l1_gas_usage", 4284)
             ]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
