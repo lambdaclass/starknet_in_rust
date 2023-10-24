@@ -28,7 +28,7 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::InvokeFunction,
+    transaction::{DeployAccount, InvokeFunction},
     utils::{Address, ClassHash},
 };
 
@@ -143,6 +143,11 @@ pub fn execute_tx_configurable(
         SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
+        SNTransaction::DeployAccount(tx) => {
+            DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
+                .unwrap()
+                .create_for_simulation(skip_validate, false, false, false)
+        }
         _ => unimplemented!(),
     };
 

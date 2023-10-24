@@ -6,8 +6,9 @@ use blockifier::{
         state_api::{StateReader, StateResult},
     },
     transaction::{
-        account_transaction::AccountTransaction, objects::TransactionExecutionInfo,
-        transactions::ExecutableTransaction,
+        account_transaction::AccountTransaction,
+        objects::TransactionExecutionInfo,
+        transactions::{DeployAccountTransaction, ExecutableTransaction},
     },
 };
 use blockifier::{
@@ -27,7 +28,10 @@ use starknet::core::types::ContractClass as SNContractClass;
 use starknet_api::{
     block::BlockNumber,
     contract_address,
-    core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey},
+    core::{
+        calculate_contract_address, ClassHash, CompiledClassHash, ContractAddress, Nonce,
+        PatriciaKey,
+    },
     hash::{StarkFelt, StarkHash},
     patricia_key, stark_felt,
     state::StorageKey,
@@ -175,6 +179,20 @@ pub fn execute_tx(
         SNTransaction::Invoke(tx) => {
             let invoke = InvokeTransaction { tx, tx_hash };
             AccountTransaction::Invoke(invoke)
+        }
+        SNTransaction::DeployAccount(tx) => {
+            let contract_address = calculate_contract_address(
+                tx.contract_address_salt,
+                tx.class_hash,
+                &tx.constructor_calldata,
+                ContractAddress::default(),
+            )
+            .unwrap();
+            AccountTransaction::DeployAccount(DeployAccountTransaction {
+                tx,
+                tx_hash,
+                contract_address,
+            })
         }
         _ => unimplemented!(),
     };
