@@ -130,7 +130,7 @@ impl From<StarknetRsContractClass> for CompiledClass {
                         )
                     })
                     .collect::<Vec<ContractEntryPoint>>();
-                entry_points_by_type.insert(EntryPointType::Constructor, l1_handler_entries);
+                entry_points_by_type.insert(EntryPointType::L1Handler, l1_handler_entries);
 
                 let v = serde_json::to_value(&_deprecated_contract_class.abi).unwrap();
                 let abi: Option<AbiType> = serde_json::from_value(v).unwrap();
