@@ -597,6 +597,20 @@ fn invoke_tx(calldata: Vec<Felt252>, max_fee: u128) -> InvokeFunction {
     .unwrap()
 }
 
+fn invoke_tx_with_nonce(calldata: Vec<Felt252>, max_fee: u128, nonce: Felt252) -> InvokeFunction {
+    InvokeFunction::new(
+        TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+        EXECUTE_ENTRY_POINT_SELECTOR.clone(),
+        max_fee,
+        TRANSACTION_VERSION.clone(),
+        calldata,
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(nonce),
+    )
+    .unwrap()
+}
+
 fn expected_fee_transfer_info(fee: u128) -> CallInfo {
     CallInfo {
         failure_flag: false,
@@ -695,13 +709,13 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone() - Felt252::from(1252),
+            INITIAL_BALANCE.clone() - Felt252::from(3700),
             Felt252::zero(),
-            INITIAL_BALANCE.clone() - Felt252::from(1252),
+            INITIAL_BALANCE.clone() - Felt252::from(3700),
             Felt252::zero(),
-            Felt252::from(1252),
+            Felt252::from(3700),
             Felt252::zero(),
-            Felt252::from(1252),
+            Felt252::from(3700),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
@@ -1013,7 +1027,7 @@ fn test_declarev2_tx() {
         ("n_steps".to_string(), 2715),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 1224),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1260,7 +1274,7 @@ fn expected_fib_transaction_execution_info(
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 5508),
+        ("l1_gas_usage".to_string(), 6732),
         ("pedersen_builtin".to_string(), 16),
         ("range_check_builtin".to_string(), 104),
     ]);
@@ -1475,7 +1489,7 @@ fn test_invoke_with_declarev2_tx() {
         Felt252::from(0),                                     // b
         Felt252::from(0),                                     // n
     ];
-    let invoke_tx = invoke_tx(calldata, u128::MAX);
+    let invoke_tx = invoke_tx_with_nonce(calldata, u128::MAX, Felt252::one());
 
     let expected_gas_consumed = 5551;
     let result = invoke_tx
