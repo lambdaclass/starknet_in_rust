@@ -395,7 +395,7 @@ impl DeclareV2 {
 
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
         state.set_contract_class(
-            &self.sierra_class_hash.to_be_bytes(),
+            &self.compiled_class_hash.to_be_bytes(),
             &CompiledClass::Casm(Arc::new(casm_class)),
         )?;
 
