@@ -1049,4 +1049,117 @@ mod test {
             )
         );
     }
+
+    #[test]
+    fn test_simulate_declare_v1_compare_fees() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let contract_class = ContractClass::from_path("starknet_programs/Account.json").unwrap();
+
+        // Instantiate CachedState
+        let mut contract_class_cache = HashMap::new();
+
+        //  ------------ contract data --------------------
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = hash.to_be_bytes();
+
+        contract_class_cache.insert(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address.clone(), Felt252::new(1));
+
+        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        // Insert pubkey storage var to pass validation
+        let storage_entry = &(
+            sender_address,
+            felt_str!(
+                "1672321442399497129215646424919402195095307045612040218489019266998007191460"
+            )
+            .to_be_bytes(),
+        );
+        state.set_storage_at(
+            storage_entry,
+            felt_str!(
+                "1735102664668487605176656616876767369909409133946409161569774794110049207117"
+            ),
+        );
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        // Signature & tx hash values are hand-picked for account validations to pass
+        let mut declare = Declare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            60000,
+            1.into(),
+            vec![
+                felt_str!(
+                    "3086480810278599376317923499561306189851900463386393948998357832163236918254"
+                ),
+                felt_str!(
+                    "598673427589502599949712887611119751108407514580626464031881322743364689811"
+                ),
+            ],
+            Felt252::one(),
+        )
+        .unwrap();
+        declare.hash_value = felt_str!("2718");
+
+        let mut block_context = BlockContext::default();
+        block_context.starknet_os_config_mut().gas_price = 12;
+
+        let declare_tx = Transaction::Declare(declare);
+
+        let without_validate_fee = simulate_transaction(
+            &[&declare_tx],
+            state.clone(),
+            &block_context,
+            100_000_000,
+            true,
+            false,
+            true,
+            false,
+            false,
+        )
+        .unwrap()[0]
+            .actual_fee;
+
+        let with_validate_fee = simulate_transaction(
+            &[&declare_tx],
+            state,
+            &block_context,
+            100_000_000,
+            false,
+            false,
+            true,
+            false,
+            false,
+        )
+        .unwrap()[0]
+            .actual_fee;
+
+        assert!(with_validate_fee > without_validate_fee)
+    }
 }
