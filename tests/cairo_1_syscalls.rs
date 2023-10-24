@@ -244,7 +244,7 @@ fn library_call() {
     // Create an execution entry point
     let calldata = [
         25.into(),
-        Felt252::from_bytes_be(&lib_class_hash.to_bytes_be()),
+        Felt252::from_bytes_be(lib_class_hash.to_bytes_be()),
     ]
     .to_vec();
     let caller_address = Address(0000.into());

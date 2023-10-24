@@ -5,7 +5,6 @@ use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
-use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     execution::{CallInfo, CallType},

@@ -196,7 +196,10 @@ fn internal_deploy_account_cairo1() {
                 gas_consumed: 15540,
                 #[cfg(feature="cairo_1_tests")]
                 gas_consumed: 16770,
-                class_hash: Some(ClassHash([1; 32])),
+                class_hash: Some(ClassHash([
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 1
+                ])),
                 entry_point_selector: Some(felt_str!(
                     "1554466106298962091002569854891683800203193677547440645928814916929210362005"
                 )),

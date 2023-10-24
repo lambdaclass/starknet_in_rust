@@ -262,8 +262,8 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
-        let class_hash = ClassHash(class_hash.to_bytes_be().try_into().unwrap());
-        let compiled_class_hash = ClassHash(compiled_class_hash.to_bytes_be().try_into().unwrap());
+        let class_hash = ClassHash::from(class_hash.clone());
+        let compiled_class_hash = ClassHash::from(compiled_class_hash.clone());
 
         self.cache
             .class_hash_to_compiled_class_hash
@@ -867,7 +867,7 @@ mod tests {
         cached_state
             .cache
             .class_hash_writes
-            .insert(address.clone(), [0; 32]);
+            .insert(address.clone(), ClassHash([0; 32]));
         let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &address);
         assert_eq!(cached_state.cache_misses, 1);
         assert_eq!(cached_state.cache_hits, 1);
