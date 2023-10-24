@@ -192,7 +192,7 @@ pub fn execute_tx_configurable(
 
                 let declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
                     None,
-                    Some(Felt252::from_bytes_be(tx.class_hash().0.bytes())),
+                    Felt252::from_bytes_be(tx.class_hash().0.bytes()),
                     Some(contract_class),
                     compiled_class_hash,
                     Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),

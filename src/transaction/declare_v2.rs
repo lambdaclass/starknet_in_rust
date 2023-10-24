@@ -43,7 +43,7 @@ pub struct DeclareV2 {
     pub nonce: Felt252,
     pub compiled_class_hash: Felt252,
     pub sierra_contract_class: Option<SierraContractClass>,
-    pub sierra_class_hash: Option<Felt252>,
+    pub sierra_class_hash: Felt252,
     pub hash_value: Felt252,
     pub casm_class: Option<CasmContractClass>,
     pub skip_validate: bool,
@@ -90,7 +90,7 @@ impl DeclareV2 {
 
         Self::new_with_sierra_class_hash_and_tx_hash(
             Some(sierra_contract_class.clone()),
-            Some(sierra_class_hash),
+            sierra_class_hash,
             casm_contract_class,
             compiled_class_hash,
             sender_address,
@@ -119,7 +119,7 @@ impl DeclareV2 {
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_sierra_class_hash_and_tx_hash(
         sierra_contract_class: Option<SierraContractClass>,
-        sierra_class_hash: Option<Felt252>,
+        sierra_class_hash: Felt252,
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
@@ -171,7 +171,7 @@ impl DeclareV2 {
     /// - hash_value: The transaction hash.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_tx_hash(
-        sierra_contract_class: Option<SierraContractClass>,
+        sierra_contract_class: &SierraContractClass,
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
@@ -181,13 +181,10 @@ impl DeclareV2 {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
-        let sierra_class_hash = match sierra_contract_class {
-            Some(ref scc) => Some(compute_sierra_class_hash(scc)?),
-            None => None,
-        };
+        let sierra_class_hash = compute_sierra_class_hash(sierra_contract_class)?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
-            sierra_contract_class,
+            Some(sierra_contract_class.clone()),
             sierra_class_hash,
             casm_contract_class,
             compiled_class_hash,
@@ -237,7 +234,7 @@ impl DeclareV2 {
 
         Self::new_with_sierra_class_hash_and_tx_hash(
             sierra_contract_class,
-            Some(sierra_class_hash),
+            sierra_class_hash,
             casm_contract_class,
             compiled_class_hash,
             sender_address,
@@ -392,17 +389,15 @@ impl DeclareV2 {
                 self.compiled_class_hash.to_string(),
             ));
         }
-        if let Some(ref hash) = self.sierra_class_hash {
-            state.set_compiled_class_hash(hash, &self.compiled_class_hash)?;
-            if let Some(ref class) = self.sierra_contract_class {
-                state.set_sierra_program(hash, class.sierra_program.clone())?;
-            }
-
-            state.set_contract_class(
-                &hash.to_be_bytes(),
-                &CompiledClass::Casm(Arc::new(casm_class)),
-            )?;
+        if let Some(ref class) = self.sierra_contract_class {
+            state.set_sierra_program(&self.sierra_class_hash, class.sierra_program.clone())?;
         }
+
+        state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
+        state.set_contract_class(
+            &self.sierra_class_hash.to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(casm_class)),
+        )?;
 
         Ok(())
     }
@@ -525,7 +520,7 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
-            Some(sierra_contract_class),
+            &sierra_contract_class,
             None,
             casm_class_hash,
             sender_address,
@@ -594,7 +589,7 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
-            Some(sierra_contract_class),
+            &sierra_contract_class,
             Some(casm_class),
             casm_class_hash,
             sender_address,
@@ -665,7 +660,7 @@ mod tests {
 
         let internal_declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
             Some(sierra_contract_class),
-            Some(sierra_class_hash),
+            sierra_class_hash,
             Some(casm_class),
             casm_class_hash,
             sender_address,
@@ -734,7 +729,7 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
-            Some(sierra_contract_class),
+            &sierra_contract_class,
             None,
             casm_class_hash,
             sender_address,
@@ -804,7 +799,7 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_tx_hash(
-            Some(sierra_contract_class),
+            &sierra_contract_class,
             None,
             sended_class_hash.clone(),
             sender_address,
