@@ -183,7 +183,7 @@ impl DeclareV2 {
     ) -> Result<Self, TransactionError> {
         let sierra_class_hash = match sierra_contract_class {
             Some(ref scc) => Some(compute_sierra_class_hash(scc)?),
-            None => None
+            None => None,
         };
 
         Self::new_with_sierra_class_hash_and_tx_hash(
@@ -373,10 +373,13 @@ impl DeclareV2 {
         state: &mut S,
     ) -> Result<(), TransactionError> {
         let casm_class = match &self.casm_class {
-            None => {
-                CasmContractClass::from_contract_class(self.sierra_contract_class.clone().ok_or(TransactionError::DeclareV2NoSierraOrCasm)?, true)
-                    .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
-            }
+            None => CasmContractClass::from_contract_class(
+                self.sierra_contract_class
+                    .clone()
+                    .ok_or(TransactionError::DeclareV2NoSierraOrCasm)?,
+                true,
+            )
+            .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?,
             Some(casm_contract_class) => casm_contract_class.clone(),
         };
 

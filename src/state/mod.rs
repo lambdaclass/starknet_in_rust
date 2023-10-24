@@ -6,8 +6,7 @@ pub mod state_cache;
 
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_classes::compiled_class::CompiledClass,
-    utils::{get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping},
+    utils::{get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, CompiledClassHash},
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use getset::Getters;
@@ -106,7 +105,7 @@ impl ExecutionResourcesManager {
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
-    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClassHash>,
     pub(crate) storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
 }
 
@@ -114,7 +113,7 @@ impl StateDiff {
     pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
-        class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+        class_hash_to_compiled_class: HashMap<ClassHash, CompiledClassHash>,
         storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
     ) -> Self {
         StateDiff {
