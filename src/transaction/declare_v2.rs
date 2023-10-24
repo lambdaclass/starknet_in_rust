@@ -392,18 +392,17 @@ impl DeclareV2 {
                 self.compiled_class_hash.to_string(),
             ));
         }
-        if let (Some(ref hash), Some(ref class)) = (&self.sierra_class_hash, &self.sierra_contract_class) {
-        state.set_compiled_class_hash(hash, &self.compiled_class_hash)?;
-        state.set_sierra_program(
-            hash,
-            class.sierra_program.clone(),
-        )?;
-    }
+        if let Some(ref hash) = self.sierra_class_hash {
+            state.set_compiled_class_hash(hash, &self.compiled_class_hash)?;
+            if let Some(ref class) = self.sierra_contract_class {
+                state.set_sierra_program(hash, class.sierra_program.clone())?;
+            }
 
-        state.set_contract_class(
-            &self.compiled_class_hash.to_be_bytes(),
-            &CompiledClass::Casm(Arc::new(casm_class)),
-        )?;
+            state.set_contract_class(
+                &hash.to_be_bytes(),
+                &CompiledClass::Casm(Arc::new(casm_class)),
+            )?;
+        }
 
         Ok(())
     }
