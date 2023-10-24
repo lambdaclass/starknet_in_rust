@@ -331,11 +331,13 @@ impl DeclareV2 {
             )?;
             (info, gas)
         };
+        self.compile_and_store_casm_class(state)?;
 
         let storage_changes = state.count_actual_state_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
             &self.sender_address,
         )))?;
+
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[execution_result.call_info.clone()],
@@ -355,7 +357,6 @@ impl DeclareV2 {
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
-        self.compile_and_store_casm_class(state)?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
             execution_result.call_info,
