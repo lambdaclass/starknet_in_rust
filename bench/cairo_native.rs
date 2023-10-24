@@ -26,10 +26,160 @@ use std::sync::Arc;
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    bench_erc20(
-        args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
-        args.get(2) == Some(&"native".to_string()),
-    )
+    match args.get(3).map(|s| s.as_str()) {
+        Some("fibo") => bench_fibo(
+            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(2) == Some(&"native".to_string()),
+        ),
+        Some("fact") => bench_fact(
+            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(2) == Some(&"native".to_string()),
+        ),
+        _ => bench_erc20(
+            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(2) == Some(&"native".to_string()),
+        ),
+    }
+}
+
+fn bench_fibo(executions: usize, native: bool) {
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+    static CASM_CLASS_HASH: ClassHash = [2; 32];
+
+    let (contract_class, constructor_selector) = match native {
+        true => {
+            let sierra_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
+            let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+                serde_json::from_slice(sierra_data).unwrap();
+
+            let entrypoints = sierra_contract_class.clone().entry_points_by_type;
+            let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
+
+            (CompiledClass::Sierra(Arc::new(sierra_contract_class)), constructor_selector)
+        },
+        false => {
+            let casm_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
+            let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
+
+            let entrypoints = casm_contract_class.clone().entry_points_by_type;
+            let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
+
+            (CompiledClass::Casm(Arc::new(casm_contract_class)), constructor_selector)
+        }
+    };
+
+    let caller_address = Address(123456789.into());
+
+    contract_class_cache.insert(
+        CASM_CLASS_HASH,
+        contract_class,
+    );
+    let mut state_reader = InMemoryStateReader::default();
+    let nonce = Felt252::zero();
+
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(caller_address.clone(), CASM_CLASS_HASH);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(caller_address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let state_reader = Arc::new(state_reader);
+    let state = CachedState::new(state_reader, contract_class_cache);
+
+    /* f0, f1, N */
+    let calldata = [1.into(), 1.into(), 1000000.into()].to_vec();
+
+    let native_ctx = NativeContext::new();
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
+
+    for _ in 0..executions {
+        let result = execute(
+            &mut state.clone(),
+            &caller_address,
+            &caller_address,
+            &constructor_selector.clone(),
+            &calldata.clone(),
+            EntryPointType::External,
+            &CASM_CLASS_HASH,
+            program_cache.clone(),
+        );
+
+        _ = std::hint::black_box(result);
+    }
+}
+
+fn bench_fact(executions: usize, native: bool) {
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+    static CASM_CLASS_HASH: ClassHash = [2; 32];
+
+    let (contract_class, constructor_selector) = match native {
+        true => {
+            let sierra_data = include_bytes!("../starknet_programs/cairo2/factorial_tr.sierra");
+            let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+                serde_json::from_slice(sierra_data).unwrap();
+
+            let entrypoints = sierra_contract_class.clone().entry_points_by_type;
+            let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
+
+            (CompiledClass::Sierra(Arc::new(sierra_contract_class)), constructor_selector)
+        },
+        false => {
+            let casm_data = include_bytes!("../starknet_programs/cairo2/factorial_tr.casm");
+            let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
+
+            let entrypoints = casm_contract_class.clone().entry_points_by_type;
+            let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
+
+            (CompiledClass::Casm(Arc::new(casm_contract_class)), constructor_selector)
+        }
+    };
+
+    let caller_address = Address(123456789.into());
+    // FACT 1M
+    // FIBO 2M
+
+    contract_class_cache.insert(
+        CASM_CLASS_HASH,
+        contract_class,
+    );
+    let mut state_reader = InMemoryStateReader::default();
+    let nonce = Felt252::zero();
+
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(caller_address.clone(), CASM_CLASS_HASH);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(caller_address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let state_reader = Arc::new(state_reader);
+    let state = CachedState::new(state_reader, contract_class_cache);
+
+    /* N */
+    let calldata = [1000000.into()].to_vec();
+
+    let native_ctx = NativeContext::new();
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
+
+    for _ in 0..executions {
+        let result = execute(
+            &mut state.clone(),
+            &caller_address,
+            &caller_address,
+            &constructor_selector.clone(),
+            &calldata.clone(),
+            EntryPointType::External,
+            &CASM_CLASS_HASH,
+            program_cache.clone(),
+        );
+
+        _ = std::hint::black_box(result);
+    }
 }
 
 fn bench_erc20(executions: usize, native: bool) {
@@ -60,6 +210,8 @@ fn bench_erc20(executions: usize, native: bool) {
     };
 
     let caller_address = Address(123456789.into());
+    // FACT 1M
+    // FIBO 2M
 
     contract_class_cache.insert(
         CASM_CLASS_HASH,
@@ -110,10 +262,11 @@ fn bench_erc20(executions: usize, native: bool) {
             program_cache.clone(),
         );
 
-        dbg!(result);
+        _ = std::hint::black_box(result);
     }
 }
 
+#[inline(never)]
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,
