@@ -6,7 +6,9 @@ pub mod state_cache;
 
 use crate::{
     core::errors::state_errors::StateError,
-    utils::{get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, CompiledClassHash},
+    utils::{
+        get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, CompiledClassHash,
+    },
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use getset::Getters;

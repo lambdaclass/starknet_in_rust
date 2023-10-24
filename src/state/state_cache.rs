@@ -115,7 +115,10 @@ impl StateCache {
 
     /// Get the compiled hash for a given class hash
     #[allow(dead_code)]
-    pub(crate) fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Option<&CompiledClassHash> {
+    pub(crate) fn get_compiled_class_hash(
+        &self,
+        class_hash: &ClassHash,
+    ) -> Option<&CompiledClassHash> {
         if self.compiled_class_hash_writes.contains_key(class_hash) {
             return self.compiled_class_hash_writes.get(class_hash);
         }
@@ -219,7 +222,10 @@ impl StateCache {
 #[cfg(test)]
 mod tests {
 
-    use crate::{services::api::contract_classes::deprecated_contract_class::ContractClass, core::contract_address::compute_deprecated_class_hash};
+    use crate::{
+        core::contract_address::compute_deprecated_class_hash,
+        services::api::contract_classes::deprecated_contract_class::ContractClass,
+    };
 
     use super::*;
 
@@ -230,7 +236,9 @@ mod tests {
         let contract_class =
             ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
                 .unwrap();
-        let compiled_class = compute_deprecated_class_hash(&contract_class).unwrap().to_be_bytes();
+        let compiled_class = compute_deprecated_class_hash(&contract_class)
+            .unwrap()
+            .to_be_bytes();
         let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class)]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(4.into()), [1; 32]), 18.into())]);
