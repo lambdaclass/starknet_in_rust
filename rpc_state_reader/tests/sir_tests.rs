@@ -154,9 +154,7 @@ pub fn execute_tx_configurable(
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
             let next_block_state_reader =
                 RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
-            let mut next_block_state =
-                CachedState::new(Arc::new(next_block_state_reader), Default::default());
-            let contract_class = next_block_state
+            let contract_class = next_block_state_reader
                 .get_contract_class(tx.class_hash().0.bytes().try_into().unwrap())
                 .unwrap();
 

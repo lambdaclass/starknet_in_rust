@@ -198,11 +198,9 @@ pub fn execute_tx(
         }
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
-            let next_block_state_reader =
+            let mut next_block_state_reader =
                 RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
-            let mut next_block_state =
-                CachedState::new(next_block_state_reader, Default::default());
-            let contract_class = next_block_state
+            let contract_class = next_block_state_reader
                 .get_compiled_contract_class(&tx.class_hash())
                 .unwrap();
 

@@ -203,8 +203,7 @@ impl StateCache {
         }
 
         for (k, v) in self.compiled_class_hash_writes.iter() {
-            self.compiled_class_hash_initial_values
-                .insert(*k, *v);
+            self.compiled_class_hash_initial_values.insert(*k, *v);
         }
 
         for (k, v) in self.storage_writes.iter() {
