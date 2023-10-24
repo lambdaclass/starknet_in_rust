@@ -90,18 +90,19 @@ fn bench_fibo(executions: usize, native: bool) {
     let state = CachedState::new(state_reader, contract_class_cache);
 
     /* f0, f1, N */
-    let calldata = [1.into(), 1.into(), 1000000.into()].to_vec();
+    let mut calldata = [1.into(), 1.into(), 2000000.into()];
 
     let native_ctx = NativeContext::new();
     let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
 
     for _ in 0..executions {
+        calldata[2] = &calldata[2] + 1usize;
         let result = execute(
             &mut state.clone(),
             &caller_address,
             &caller_address,
             &constructor_selector.clone(),
-            &calldata.clone(),
+            &calldata,
             EntryPointType::External,
             &CASM_CLASS_HASH,
             program_cache.clone(),
@@ -161,18 +162,19 @@ fn bench_fact(executions: usize, native: bool) {
     let state = CachedState::new(state_reader, contract_class_cache);
 
     /* N */
-    let calldata = [1000000.into()].to_vec();
+    let mut calldata = [2000000.into()];
 
     let native_ctx = NativeContext::new();
     let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
 
     for _ in 0..executions {
+        calldata[0] = &calldata[0] + 1usize;
         let result = execute(
             &mut state.clone(),
             &caller_address,
             &caller_address,
             &constructor_selector.clone(),
-            &calldata.clone(),
+            &calldata,
             EntryPointType::External,
             &CASM_CLASS_HASH,
             program_cache.clone(),
