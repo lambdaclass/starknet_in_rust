@@ -7,7 +7,7 @@ use starknet_in_rust::{
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
     transaction::{InvokeFunction, Transaction},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
     CasmContractClass,
 };
 
@@ -17,13 +17,15 @@ fn account_panic() {
     let contract_data = include_bytes!("../starknet_programs/cairo2/contract_a.casm");
 
     let account_contract_class: CasmContractClass = serde_json::from_slice(account_data).unwrap();
-    let account_class_hash = compute_casm_class_hash(&account_contract_class)
-        .unwrap()
-        .to_be_bytes();
+    let account_class_hash = ClassHash(
+        compute_casm_class_hash(&account_contract_class)
+            .unwrap()
+            .to_be_bytes(),
+    );
 
     let contract_class: CasmContractClass = serde_json::from_slice(contract_data).unwrap();
     let contract_class_hash_felt = compute_casm_class_hash(&contract_class).unwrap();
-    let contract_class_hash = contract_class_hash_felt.to_be_bytes();
+    let contract_class_hash = ClassHash::from(contract_class_hash_felt.clone());
 
     let account_address = Address(1111.into());
     let contract_address = Address(0000.into());

@@ -41,7 +41,7 @@ pub struct RpcStateReader(RpcState);
 
 impl StateReader for RpcStateReader {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        let hash = SNClassHash(StarkHash::new(*class_hash).unwrap());
+        let hash = SNClassHash(StarkHash::new((*class_hash).0).unwrap());
         Ok(CompiledClass::from(self.0.get_contract_class(&hash)))
     }
 
@@ -54,7 +54,7 @@ impl StateReader for RpcStateReader {
         );
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(self.0.get_class_hash_at(&address).0.bytes());
-        Ok(bytes)
+        Ok(ClassHash(bytes))
     }
 
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
@@ -81,7 +81,7 @@ impl StateReader for RpcStateReader {
         Ok(Felt252::from_bytes_be(value.bytes()))
     }
 
-    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
+    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         Ok(*class_hash)
     }
 }

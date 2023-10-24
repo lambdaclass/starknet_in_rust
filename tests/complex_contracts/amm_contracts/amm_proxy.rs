@@ -5,6 +5,7 @@ use num_traits::Zero;
 use starknet_crypto::FieldElement;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     execution::{CallInfo, CallType},
@@ -29,7 +30,7 @@ fn amm_proxy_init_pool_test() {
     )
     .unwrap();
     // Deploy proxy
-    let (proxy_address, proxy_class_hash) = deploy(
+    let (proxy_address, proxy_class_hash_bytes) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
@@ -37,7 +38,7 @@ fn amm_proxy_init_pool_test() {
         None,
     )
     .unwrap();
-
+    let proxy_class_hash = proxy_class_hash_bytes;
     let proxy_entry_points_by_type =
         TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
             .unwrap()

@@ -140,9 +140,10 @@ mod tests {
     fn get_class_hash_at_returns_zero_if_missing() {
         let state_reader = InMemoryStateReader::default();
         assert!(Felt252::from_bytes_be(
-            &state_reader
+            state_reader
                 .get_class_hash_at(&Address(Felt252::one()))
                 .unwrap()
+                .to_bytes_be()
         )
         .is_zero())
     }
@@ -167,7 +168,7 @@ mod tests {
         );
 
         let contract_address = Address(37810.into());
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::new(109);
         let storage_entry = (contract_address.clone(), [8; 32]);
         let storage_value = Felt252::new(800);
@@ -203,18 +204,18 @@ mod tests {
             HashMap::new(),
         );
 
-        let contract_class_key = [0; 32];
+        let contract_class_hash = ClassHash([0; 32]);
         let contract_class =
             ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
                 .unwrap();
 
         state_reader.class_hash_to_compiled_class.insert(
-            [0; 32],
+            contract_class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class.clone())),
         );
         assert_eq!(
             state_reader
-                .get_contract_class(&contract_class_key)
+                .get_contract_class(&contract_class_hash)
                 .unwrap()
                 .try_into(),
             Ok(contract_class)

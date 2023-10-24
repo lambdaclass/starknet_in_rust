@@ -24,13 +24,65 @@ use sha3::{Digest, Keccak256};
 use starknet::core::types::FromByteArrayError;
 use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
 use starknet_crypto::{pedersen_hash, FieldElement};
+use std::fmt;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
 };
 
-pub type ClassHash = [u8; 32];
-pub type CompiledClassHash = [u8; 32];
+#[derive(Clone, PartialEq, Hash, Default, Serialize, Deserialize, Copy)]
+pub struct ClassHash(pub [u8; 32]);
+
+impl ClassHash {
+    pub fn new(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+
+    pub fn to_bytes_be(&self) -> &[u8] {
+        &self.0
+    }
+
+    pub fn as_slice(&self) -> [u8; 32] {
+        self.0
+    }
+}
+
+impl fmt::Display for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for byte in self.0.iter() {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl From<Felt252> for ClassHash {
+    fn from(felt: Felt252) -> Self {
+        felt_to_hash(&felt)
+    }
+}
+
+impl From<[u8; 32]> for ClassHash {
+    fn from(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+}
+
+impl Eq for ClassHash {}
+
+impl PartialEq<[u8; 32]> for ClassHash {
+    fn eq(&self, other: &[u8; 32]) -> bool {
+        &self.0 == other
+    }
+}
+
+pub type CompiledClassHash = ClassHash;
 
 //* -------------------
 //*      Address
@@ -38,6 +90,12 @@ pub type CompiledClassHash = [u8; 32];
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt252);
+
+impl From<[u8; 32]> for Address {
+    fn from(bytes: [u8; 32]) -> Self {
+        Address(Felt252::from_bytes_be(&bytes))
+    }
+}
 
 //* -------------------
 //*  Helper Functions
@@ -114,7 +172,7 @@ pub fn felt_to_hash(value: &Felt252) -> ClassHash {
     let bytes = value.to_bytes_be();
     output[32 - bytes.len()..].copy_from_slice(&bytes);
 
-    output
+    ClassHash(output)
 }
 
 pub fn string_to_hash(class_string: &String) -> ClassHash {
@@ -270,7 +328,7 @@ pub fn to_cache_state_storage_mapping(
     let mut storage_writes = HashMap::new();
     for (address, contract_storage) in map {
         for (key, value) in contract_storage {
-            storage_writes.insert((address.clone(), felt_to_hash(key)), value.clone());
+            storage_writes.insert((address.clone(), key.to_be_bytes()), value.clone());
         }
     }
     storage_writes
@@ -378,10 +436,10 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     }
     Ok(())
 }
-pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
+pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
     let mut hasher = Keccak256::default();
     hasher.update(data);
-    let mut result: ClassHash = hasher.finalize().into();
+    let mut result: [u8; 32] = hasher.finalize().into();
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
     result
@@ -748,11 +806,11 @@ pub mod test_utils {
             {
                 let mut state_reader = InMemoryStateReader::default();
                 for (contract_address, class_hash) in address_to_class_hash {
-                    let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
+                    let storage_keys: HashMap<(Address, [u8; 32]), Felt252> = storage_view
                         .iter()
                         .filter_map(|((address, storage_key), storage_value)| {
                             (address == &contract_address).then_some((
-                                (address.clone(), felt_to_hash(storage_key)),
+                                (address.clone(), felt_to_hash(storage_key).0),
                                 storage_value.clone(),
                             ))
                         })
@@ -864,7 +922,7 @@ mod test {
 
     #[test]
     fn to_cache_state_storage_mapping_test() {
-        let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
+        let mut storage: HashMap<(Address, [u8; 32]), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());
         let key1 = [0; 32];
         let value1: Felt252 = 2.into();

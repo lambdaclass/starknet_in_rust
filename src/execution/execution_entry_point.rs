@@ -23,7 +23,7 @@ use crate::{
     transaction::error::TransactionError,
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
-        validate_contract_deployed, Address,
+        validate_contract_deployed, Address, ClassHash,
     },
 };
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
@@ -65,7 +65,7 @@ pub struct ExecutionEntryPoint {
     pub(crate) call_type: CallType,
     pub(crate) contract_address: Address,
     pub(crate) code_address: Option<Address>,
-    pub(crate) class_hash: Option<[u8; 32]>,
+    pub(crate) class_hash: Option<ClassHash>,
     pub(crate) calldata: Vec<Felt252>,
     pub(crate) caller_address: Address,
     pub(crate) entry_point_selector: Felt252,
@@ -81,7 +81,7 @@ impl ExecutionEntryPoint {
         caller_address: Address,
         entry_point_type: EntryPointType,
         call_type: Option<CallType>,
-        class_hash: Option<[u8; 32]>,
+        class_hash: Option<ClassHash>,
         initial_gas: u128,
     ) -> Self {
         ExecutionEntryPoint {
@@ -114,7 +114,7 @@ impl ExecutionEntryPoint {
         T: StateReader,
     {
         // lookup the compiled class from the state.
-        let class_hash = self.get_code_class_hash(state)?;
+        let class_hash = self.get_class_hash(state)?;
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
@@ -211,7 +211,7 @@ impl ExecutionEntryPoint {
     fn get_selected_entry_point_v0(
         &self,
         contract_class: &ContractClass,
-        _class_hash: [u8; 32],
+        _class_hash: ClassHash,
     ) -> Result<ContractEntryPoint, TransactionError> {
         let entry_points = contract_class
             .entry_points_by_type
@@ -242,7 +242,7 @@ impl ExecutionEntryPoint {
     fn get_selected_entry_point(
         &self,
         contract_class: &CasmContractClass,
-        _class_hash: [u8; 32],
+        _class_hash: ClassHash,
     ) -> Result<CasmContractEntryPoint, TransactionError> {
         let entry_points = match self.entry_point_type {
             EntryPointType::External => &contract_class.entry_points_by_type.external,
@@ -287,7 +287,7 @@ impl ExecutionEntryPoint {
             call_type: Some(self.call_type.clone()),
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
-            class_hash: Some(self.get_code_class_hash(starknet_storage_state.state)?),
+            class_hash: Some(self.get_class_hash(starknet_storage_state.state)?),
             entry_point_selector: Some(self.entry_point_selector.clone()),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
@@ -320,7 +320,7 @@ impl ExecutionEntryPoint {
             call_type: Some(self.call_type.clone()),
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
-            class_hash: Some(self.get_code_class_hash(starknet_storage_state.state)?),
+            class_hash: Some(self.get_class_hash(starknet_storage_state.state)?),
             entry_point_selector: Some(self.entry_point_selector.clone()),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
@@ -341,7 +341,7 @@ impl ExecutionEntryPoint {
     }
 
     /// Returns the hash of the executed contract class.
-    fn get_code_class_hash<S: State>(&self, state: &mut S) -> Result<[u8; 32], TransactionError> {
+    fn get_class_hash<S: State>(&self, state: &mut S) -> Result<ClassHash, TransactionError> {
         if self.class_hash.is_some() {
             match self.call_type {
                 CallType::Delegate => return Ok(self.class_hash.unwrap()),
@@ -369,7 +369,7 @@ impl ExecutionEntryPoint {
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
         contract_class: Arc<ContractClass>,
-        class_hash: [u8; 32],
+        class_hash: ClassHash,
     ) -> Result<CallInfo, TransactionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
         // fetch selected entry point
@@ -474,7 +474,7 @@ impl ExecutionEntryPoint {
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
         contract_class: Arc<CasmContractClass>,
-        class_hash: [u8; 32],
+        class_hash: ClassHash,
         support_reverted: bool,
     ) -> Result<CallInfo, TransactionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
@@ -759,9 +759,7 @@ impl ExecutionEntryPoint {
             call_type: Some(self.call_type.clone()),
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
-            class_hash: Some(
-                self.get_code_class_hash(syscall_handler.starknet_storage_state.state)?,
-            ),
+            class_hash: Some(self.get_class_hash(syscall_handler.starknet_storage_state.state)?),
             entry_point_selector: Some(self.entry_point_selector.clone()),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),

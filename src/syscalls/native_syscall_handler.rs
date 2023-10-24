@@ -172,7 +172,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         address: cairo_vm::felt::Felt252,
         _gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
-        let value = match self.starknet_storage_state.read(&address.to_be_bytes()) {
+        let value = match self.starknet_storage_state.read(Address(address.clone())) {
             Ok(value) => Ok(value),
             Err(_e @ StateError::Io(_)) => todo!(),
             Err(_) => Ok(Felt252::zero()),
@@ -189,8 +189,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         _gas: &mut u128,
     ) -> SyscallResult<()> {
         println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
-        self.starknet_storage_state
-            .write(&address.to_be_bytes(), value);
+        self.starknet_storage_state.write(Address(address), value);
         Ok(())
     }
 

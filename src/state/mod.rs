@@ -222,7 +222,7 @@ mod test {
             state_api::StateReader,
             state_cache::{StateCache, StorageEntry},
         },
-        utils::Address,
+        utils::{Address, ClassHash},
     };
     use cairo_vm::felt::Felt252;
 
@@ -231,7 +231,7 @@ mod test {
         let mut state_reader = InMemoryStateReader::default();
 
         let contract_address = Address(32123.into());
-        let class_hash = [9; 32];
+        let class_hash = ClassHash([9; 32]);
         let nonce = Felt252::new(42);
 
         state_reader
@@ -301,7 +301,7 @@ mod test {
         let mut state_reader = InMemoryStateReader::default();
 
         let contract_address = Address(32123.into());
-        let class_hash = [9; 32];
+        let class_hash = ClassHash([9; 32]);
         let nonce = Felt252::new(42);
 
         state_reader
@@ -335,7 +335,7 @@ mod test {
         let mut state_reader = InMemoryStateReader::default();
 
         let contract_address = Address(32123.into());
-        let class_hash = [9; 32];
+        let class_hash = ClassHash([9; 32]);
         let nonce = Felt252::new(42);
 
         state_reader

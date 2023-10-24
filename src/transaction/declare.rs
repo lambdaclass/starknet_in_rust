@@ -146,7 +146,7 @@ impl Declare {
     }
 
     pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(&self.class_hash);
+        let bytes = Felt252::from_bytes_be(self.class_hash.to_bytes_be());
         Vec::from([bytes])
     }
 
@@ -368,7 +368,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let class_hash = ClassHash::from(hash);
 
         contract_class_cache.insert(
             class_hash,
@@ -906,7 +906,7 @@ mod tests {
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let class_hash = ClassHash::from(hash);
 
         contract_class_cache.insert(
             class_hash,

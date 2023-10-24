@@ -33,7 +33,7 @@ fn test_internal_calls() {
     );
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [0x01; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
     let storage = Felt252::zero();
@@ -50,7 +50,7 @@ fn test_internal_calls() {
     let mut state = CachedState::new(
         Arc::new(state_reader),
         HashMap::from([(
-            [0x01; 32],
+            ClassHash([1; 32]),
             CompiledClass::Deprecated(Arc::new(contract_class)),
         )]),
     );
@@ -63,7 +63,7 @@ fn test_internal_calls() {
         Address(1111.into()),
         EntryPointType::External,
         CallType::Delegate.into(),
-        Some([0x01; 32]),
+        Some(ClassHash([1; 32])),
         0,
     );
 

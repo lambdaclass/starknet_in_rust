@@ -389,7 +389,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
-        self.starknet_storage_state.write(&key.to_be_bytes(), value)
+        self.starknet_storage_state.write(Address(key), value)
     }
 
     pub fn syscall(
@@ -591,7 +591,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        match self.starknet_storage_state.read(&key) {
+        match self.starknet_storage_state.read(Address::from(key)) {
             Ok(value) => Ok(value),
             Err(e @ StateError::Io(_)) => Err(e),
             Err(_) => Ok(Felt252::zero()),
@@ -924,6 +924,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
+        let class_hash = ClassHash::from(request.class_hash);
         let execution_entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             calldata,
@@ -931,7 +932,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            Some(request.class_hash.to_be_bytes()),
+            Some(class_hash),
             remaining_gas,
         );
 
@@ -960,7 +961,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         self.starknet_storage_state.state.set_class_hash_at(
             self.contract_address.clone(),
-            request.class_hash.to_be_bytes(),
+            ClassHash::from(request.class_hash),
         )?;
         Ok(SyscallResponse {
             gas: remaining_gas,

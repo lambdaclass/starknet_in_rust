@@ -249,12 +249,13 @@ mod test {
             "starknet_programs/account_without_validation.json",
         )
         .unwrap();
-        static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
-        static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
+        static ref CLASS_HASH_FELT: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
+        static ref CLASS_HASH: ClassHash = ClassHash::from(CLASS_HASH_FELT.clone());
+
         static ref SALT: Felt252 = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
-        static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &[], Address(0.into())).unwrap());
+        static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH_FELT.clone(), &[], Address(0.into())).unwrap());
         static ref SIGNATURE: Vec<Felt252> = vec![
             felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
             felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
@@ -304,7 +305,7 @@ mod test {
         let mut contract_class_cache = HashMap::new();
 
         let address = Address(1111.into());
-        let class_hash: ClassHash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::zero();
 
         contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -355,7 +356,7 @@ mod test {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -397,7 +398,7 @@ mod test {
         let mut contract_class_cache = HashMap::new();
 
         let address = Address(1111.into());
-        let class_hash: ClassHash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::zero();
 
         contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -463,7 +464,7 @@ mod test {
         let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
         let address = Address(1111.into());
-        let class_hash: ClassHash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::one();
 
         let mut state_reader = InMemoryStateReader::default();
@@ -592,7 +593,7 @@ mod test {
         let casm_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
         let address = Address(1111.into());
-        let class_hash: ClassHash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::one();
 
         let mut state_reader = InMemoryStateReader::default();
@@ -672,10 +673,9 @@ mod test {
     fn test_simulate_deploy() {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, HashMap::new());
-
         state
             .set_contract_class(
-                &CLASS_HASH_BYTES,
+                &CLASS_HASH,
                 &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
             )
             .unwrap();
@@ -751,10 +751,9 @@ mod test {
     fn test_simulate_invoke() {
         let state_reader = Arc::new(InMemoryStateReader::default());
         let mut state = CachedState::new(state_reader, HashMap::new());
-
         state
             .set_contract_class(
-                &CLASS_HASH_BYTES,
+                &CLASS_HASH,
                 &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
             )
             .unwrap();
@@ -818,7 +817,7 @@ mod test {
 
         state
             .set_contract_class(
-                &CLASS_HASH_BYTES,
+                &CLASS_HASH,
                 &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
             )
             .unwrap();
@@ -828,7 +827,7 @@ mod test {
         // new consumes more execution time than raw struct instantiation
         let deploy_account_tx = Transaction::DeployAccount(
             DeployAccount::new(
-                *CLASS_HASH_BYTES,
+                CLASS_HASH.to_owned(),
                 0,
                 0.into(),
                 Felt252::zero(),
@@ -924,7 +923,7 @@ mod test {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -1059,8 +1058,8 @@ mod test {
         let mut contract_class_cache = HashMap::new();
 
         //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = ClassHash::from(class_hash_felt);
 
         contract_class_cache.insert(
             class_hash,
