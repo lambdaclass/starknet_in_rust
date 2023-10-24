@@ -1260,7 +1260,7 @@ fn expected_fib_transaction_execution_info(
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 4896),
+        ("l1_gas_usage".to_string(), 5508),
         ("pedersen_builtin".to_string(), 16),
         ("range_check_builtin".to_string(), 104),
     ]);
@@ -1477,7 +1477,7 @@ fn test_invoke_with_declarev2_tx() {
     ];
     let invoke_tx = invoke_tx(calldata, u128::MAX);
 
-    let expected_gas_consumed = 4908;
+    let expected_gas_consumed = 5551;
     let result = invoke_tx
         .execute(state, block_context, expected_gas_consumed)
         .unwrap();

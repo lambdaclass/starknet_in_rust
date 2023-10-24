@@ -6,8 +6,9 @@ use blockifier::{
         state_api::{StateReader, StateResult},
     },
     transaction::{
-        account_transaction::AccountTransaction, objects::TransactionExecutionInfo,
-        transactions::ExecutableTransaction,
+        account_transaction::AccountTransaction,
+        objects::TransactionExecutionInfo,
+        transactions::{DeployAccountTransaction, ExecutableTransaction},
     },
 };
 use blockifier::{
@@ -27,7 +28,10 @@ use starknet::core::types::ContractClass as SNContractClass;
 use starknet_api::{
     block::BlockNumber,
     contract_address,
-    core::{ClassHash, CompiledClassHash, ContractAddress, Nonce, PatriciaKey},
+    core::{
+        calculate_contract_address, ClassHash, CompiledClassHash, ContractAddress, Nonce,
+        PatriciaKey,
+    },
     hash::{StarkFelt, StarkHash},
     patricia_key, stark_felt,
     state::StorageKey,
@@ -176,6 +180,20 @@ pub fn execute_tx(
             let invoke = InvokeTransaction { tx, tx_hash };
             AccountTransaction::Invoke(invoke)
         }
+        SNTransaction::DeployAccount(tx) => {
+            let contract_address = calculate_contract_address(
+                tx.contract_address_salt,
+                tx.class_hash,
+                &tx.constructor_calldata,
+                ContractAddress::default(),
+            )
+            .unwrap();
+            AccountTransaction::DeployAccount(DeployAccountTransaction {
+                tx,
+                tx_hash,
+                contract_address,
+            })
+        }
         _ => unimplemented!(),
     };
 
@@ -284,6 +302,16 @@ fn blockifier_test_recent_tx() {
 #[test_case(
     "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
     186551, // real block     186552
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x1cbc74e101a1533082a021ce53235cfd744899b0ff948d1949a64646e0f15c2",
+    885298, // real block 885299
+    RpcChain::TestNet
+)]
+#[test_case(
+    "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
+    281513, // real block 281514
     RpcChain::MainNet
 )]
 fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
