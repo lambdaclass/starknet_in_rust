@@ -16,6 +16,7 @@ use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use core::fmt;
 use num_integer::Integer;
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -24,7 +25,6 @@ use sha3::{Digest, Keccak256};
 use starknet::core::types::FromByteArrayError;
 use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
 use starknet_crypto::{pedersen_hash, FieldElement};
-use std::fmt;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -49,9 +49,9 @@ impl ClassHash {
 
 impl fmt::Display for ClassHash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for byte in self.0.iter() {
-            write!(f, "{:02x}", byte)?;
-        }
+        let hex_string = hex::encode(self.0);
+        let trimmed_hex_string = hex_string.trim_start_matches('0');
+        write!(f, "0x{}", trimmed_hex_string)?;
         Ok(())
     }
 }
@@ -88,12 +88,18 @@ pub type CompiledClassHash = ClassHash;
 //*      Address
 //* -------------------
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt252);
 
-impl From<[u8; 32]> for Address {
-    fn from(bytes: [u8; 32]) -> Self {
-        Address(Felt252::from_bytes_be(&bytes))
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "0x{}", self.0.to_str_radix(16))
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
@@ -973,5 +979,17 @@ mod test {
                 224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
             ],
         );
+    }
+
+    #[test]
+    fn test_address_display() {
+        let address = Address(Felt252::from(123456789));
+        assert_eq!(format!("{}", address), "0x75bcd15".to_string());
+    }
+
+    #[test]
+    pub fn test_class_hash_display() {
+        let class_hash = ClassHash::from(Felt252::from(123456789));
+        assert_eq!(format!("{}", class_hash), "0x75bcd15".to_string());
     }
 }

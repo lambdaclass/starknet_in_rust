@@ -591,7 +591,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        match self.starknet_storage_state.read(Address::from(key)) {
+        match self
+            .starknet_storage_state
+            .read(Address(Felt252::from_bytes_be(&key)))
+        {
             Ok(value) => Ok(value),
             Err(e @ StateError::Io(_)) => Err(e),
             Err(_) => Ok(Felt252::zero()),
