@@ -15,19 +15,22 @@ use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::{cached_state::CachedState, state_api::State},
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        state_api::State,
+    },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{error::TransactionError, Deploy},
     utils::{calculate_sn_keccak, Address},
+    ContractEntryPoint, EntryPointType,
 };
-use starknet_in_rust::{ContractEntryPoint, EntryPointType};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 
 pub struct CallConfig<'a> {
-    pub state: &'a mut CachedState<InMemoryStateReader>,
+    pub state: &'a mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     pub caller_address: &'a Address,
     pub address: &'a Address,
     pub class_hash: &'a [u8; 32],
@@ -136,7 +139,7 @@ pub fn execute_entry_point(
 }
 
 pub fn deploy(
-    state: &mut CachedState<InMemoryStateReader>,
+    state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     path: &str,
     calldata: &[Felt252],
     block_context: &BlockContext,

@@ -16,12 +16,14 @@ use starknet_in_rust::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::{
-        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
     transaction::{Declare, Deploy, InvokeFunction, Transaction},
     utils::{calculate_sn_keccak, Address},
 };
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
+
 use tracing_subscriber::EnvFilter;
 
 fn main() {
@@ -70,7 +72,10 @@ fn test_contract(
     //*             Initialize state
     //* --------------------------------------------
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     //* --------------------------------------------
     //*          Read contract from file

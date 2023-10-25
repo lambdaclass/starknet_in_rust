@@ -1,11 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use cairo_vm::felt::Felt252;
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::compiled_class::CompiledClass,
-    state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
+    state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, contract_class_cache::{PermanentContractClassCache, ContractClassCache}},
     transaction::{InvokeFunction, Transaction},
     utils::{calculate_sn_keccak, Address},
     CasmContractClass,
@@ -31,13 +31,13 @@ fn account_panic() {
 
     let block_context = BlockContext::default();
 
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         account_class_hash,
         CompiledClass::Casm(Arc::new(account_contract_class)),
     );
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         contract_class_hash,
         CompiledClass::Casm(Arc::new(contract_class.clone())),
     );
@@ -55,7 +55,7 @@ fn account_panic() {
     state_reader
         .address_to_nonce_mut()
         .insert(contract_address, 1.into());
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"__execute__"));
 

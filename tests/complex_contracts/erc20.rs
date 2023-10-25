@@ -1,5 +1,3 @@
-use std::{collections::HashMap, sync::Arc};
-
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 use starknet_in_rust::{
@@ -10,13 +8,14 @@ use starknet_in_rust::{
     },
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
-        ExecutionResourcesManager,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State, ExecutionResourcesManager,
     },
     transaction::DeployAccount,
     utils::{calculate_sn_keccak, Address, ClassHash},
     CasmContractClass, EntryPointType,
 };
+use std::sync::Arc;
 
 #[test]
 fn test_erc20_cairo2() {
@@ -32,17 +31,19 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = Arc::new(PermanentContractClassCache::default());
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.insert(
-        erc20_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class)),
-    );
+    contract_class_cache.extend([
+        (class_hash, CompiledClass::Casm(Arc::new(contract_class))),
+        (
+            erc20_class_hash,
+            CompiledClass::Casm(Arc::new(test_contract_class)),
+        ),
+    ]);
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader

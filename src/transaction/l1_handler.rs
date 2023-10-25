@@ -1,3 +1,12 @@
+use crate::{
+    execution::execution_entry_point::ExecutionResult,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    state::{cached_state::CachedState, contract_class_cache::ContractClassCache},
+};
+use cairo_vm::felt::Felt252;
+use getset::Getters;
+use num_traits::Zero;
+
 use super::Transaction;
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
@@ -6,21 +15,16 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
-        TransactionExecutionContext, TransactionExecutionInfo,
+        execution_entry_point::ExecutionEntryPoint, TransactionExecutionContext,
+        TransactionExecutionInfo,
     },
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
-        cached_state::CachedState,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
     transaction::{error::TransactionError, fee::calculate_tx_fee},
     utils::{calculate_tx_resources, Address},
 };
-use cairo_vm::felt::Felt252;
-use getset::Getters;
-use num_traits::Zero;
 
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
@@ -102,9 +106,9 @@ impl L1Handler {
         self.entry_point_selector = ?self.entry_point_selector,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
@@ -217,30 +221,28 @@ impl L1Handler {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        sync::Arc,
-    };
-
-    use crate::services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    use crate::{
+        definitions::{block_context::BlockContext, transaction_type::TransactionType},
+        execution::{CallInfo, TransactionExecutionInfo},
+        services::api::contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader, state_api::State,
+        },
+        transaction::l1_handler::L1Handler,
+        utils::Address,
     };
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{Num, Zero};
-
-    use crate::{
-        definitions::{block_context::BlockContext, transaction_type::TransactionType},
-        execution::{CallInfo, TransactionExecutionInfo},
-        services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-            state_api::State,
-        },
-        transaction::l1_handler::L1Handler,
-        utils::Address,
+    use std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
     };
 
     /// Test the correct execution of the L1Handler.
@@ -269,7 +271,7 @@ mod test {
         // Set contract_class
         let class_hash = [1; 32];
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -280,10 +282,10 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(

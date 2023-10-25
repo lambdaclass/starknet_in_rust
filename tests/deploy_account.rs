@@ -12,20 +12,18 @@ use starknet_in_rust::{
     },
     execution::{CallInfo, CallType, TransactionExecutionInfo},
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::in_memory_state_reader::InMemoryStateReader,
-    state::{cached_state::CachedState, state_api::State},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State,
+    },
     transaction::DeployAccount,
     utils::Address,
-    CasmContractClass,
+    CasmContractClass, EntryPointType,
 };
-use starknet_in_rust::{
-    services::api::contract_classes::compiled_class::CompiledClass, EntryPointType,
-};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashSet, sync::Arc};
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -34,9 +32,10 @@ lazy_static! {
 #[test]
 fn internal_deploy_account() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
-
-    state.set_contract_classes(Default::default()).unwrap();
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     let contract_class =
         ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
@@ -117,9 +116,10 @@ fn internal_deploy_account() {
 #[test]
 fn internal_deploy_account_cairo1() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::default());
-
-    state.set_contract_classes(Default::default()).unwrap();
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");

@@ -26,6 +26,7 @@ use crate::{
     },
     state::ExecutionResourcesManager,
     state::{
+        contract_class_cache::ContractClassCache,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
         BlockInfo,
@@ -49,7 +50,7 @@ use num_traits::{One, ToPrimitive, Zero};
 //* -----------------------------------
 /// Deprecated version of BusinessLogicSyscallHandler.
 #[derive(Debug)]
-pub struct DeprecatedBLSyscallHandler<'a, S: StateReader> {
+pub struct DeprecatedBLSyscallHandler<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
@@ -61,15 +62,15 @@ pub struct DeprecatedBLSyscallHandler<'a, S: StateReader> {
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) block_context: BlockContext,
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
-    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S, C> {
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -100,7 +101,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         }
     }
 
-    pub fn default_with(state: &'a mut CachedState<S>) -> Self {
+    pub fn default_with(state: &'a mut CachedState<S, C>) -> Self {
         DeprecatedBLSyscallHandler::new_for_testing(BlockInfo::default(), Default::default(), state)
     }
 
@@ -113,7 +114,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
     ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
@@ -209,7 +210,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 
         if self.constructor_entry_points_empty(contract_class)? {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorCalldataEmpty());
+                return Err(StateError::ConstructorCalldataEmpty);
             }
 
             let call_info = CallInfo::empty_constructor_call(
@@ -244,7 +245,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 false,
                 self.block_context.invoke_tx_max_n_steps,
             )
-            .map_err(|_| StateError::ExecutionEntryPoint())?;
+            .map_err(|_| StateError::ExecutionEntryPoint)?;
 
         if let Some(call_info) = call_info.call_info {
             self.internal_calls.push(call_info);
@@ -254,7 +255,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S, C> {
     pub(crate) fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -927,7 +928,10 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 mod tests {
     use crate::{
         state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{felt_to_hash, test_utils::*, Address},
     };
@@ -948,7 +952,7 @@ mod tests {
     use std::{any::Any, borrow::Cow, collections::HashMap, sync::Arc};
 
     type DeprecatedBLSyscallHandler<'a> =
-        super::DeprecatedBLSyscallHandler<'a, InMemoryStateReader>;
+        super::DeprecatedBLSyscallHandler<'a, InMemoryStateReader, PermanentContractClassCache>;
 
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
@@ -969,7 +973,7 @@ mod tests {
 
     #[test]
     fn deploy_from_zero_error() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
@@ -995,7 +999,7 @@ mod tests {
 
     #[test]
     fn can_allocate_segment() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
@@ -1011,7 +1015,7 @@ mod tests {
 
     #[test]
     fn test_get_block_number() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
@@ -1031,7 +1035,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_address_ok() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
@@ -1048,7 +1052,7 @@ mod tests {
 
     #[test]
     fn test_storage_read_empty() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
 
         assert_matches!(
@@ -1066,7 +1070,10 @@ mod tests {
             Felt252::zero(),
         );
         // Create empty-cached state
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         // Perform write
         assert!(syscall_handler

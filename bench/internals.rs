@@ -14,12 +14,15 @@ use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader,
+    },
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::Address,
 };
-use std::{collections::HashMap, hint::black_box, sync::Arc};
+use std::{hint::black_box, sync::Arc};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
@@ -63,7 +66,10 @@ fn deploy_account() {
     const RUNS: usize = 500;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
@@ -75,7 +81,7 @@ fn deploy_account() {
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let class_hash = *CLASS_HASH_BYTES;
         let signature = SIGNATURE.clone();
         scope(|| {
@@ -102,12 +108,15 @@ fn declare() {
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let state = CachedState::new(state_reader, HashMap::new());
+    let state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut cloned_state = state.clone();
+        let mut cloned_state = state.clone_for_testing();
         let class = CONTRACT_CLASS.clone();
         let address = CONTRACT_ADDRESS.clone();
         scope(|| {
@@ -134,7 +143,10 @@ fn deploy() {
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
@@ -146,7 +158,7 @@ fn deploy() {
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let salt = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
@@ -172,7 +184,10 @@ fn invoke() {
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
@@ -198,7 +213,7 @@ fn invoke() {
     let _deploy_exec_info = deploy.execute(&mut state, block_context).unwrap();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let address = CONTRACT_ADDRESS.clone();
         let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
         let signature = SIGNATURE.clone();

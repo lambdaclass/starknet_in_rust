@@ -1,10 +1,8 @@
-use super::fee::{calculate_tx_fee, charge_fee};
-use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::definitions::constants::QUERY_VERSION_BASE;
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::cached_state::CachedState;
-use crate::state::StateDiff;
+use super::{
+    fee::{calculate_tx_fee, charge_fee},
+    invoke_function::verify_no_calls_to_other_contracts,
+    Transaction,
+};
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -13,21 +11,28 @@ use crate::{
     definitions::{
         block_context::BlockContext,
         constants::{
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST, QUERY_VERSION_BASE,
             VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         },
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
     hash_utils::calculate_contract_address,
     services::api::{
-        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+        contract_class_errors::ContractClassError,
+        contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+        },
     },
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager, StateDiff,
+    },
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
@@ -161,14 +166,14 @@ impl DeployAccount {
         self.contract_address_salt = ?self.contract_address_salt,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
 
-        let mut transactional_state = state.create_transactional();
+        let mut transactional_state = state.create_transactional()?;
         let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
 
         let actual_fee = calculate_tx_fee(
@@ -190,8 +195,7 @@ impl DeployAccount {
                 .as_str(),
             );
         } else {
-            state
-                .apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
+            state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
         }
 
         let mut tx_execution_context =
@@ -227,9 +231,9 @@ impl DeployAccount {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    fn apply<S: StateReader>(
+    fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let contract_class = state.get_contract_class(&self.class_hash)?;
@@ -268,10 +272,10 @@ impl DeployAccount {
         ))
     }
 
-    pub fn handle_constructor<S: StateReader>(
+    pub fn handle_constructor<S: StateReader, C: ContractClassCache>(
         &self,
         contract_class: CompiledClass,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError> {
@@ -307,9 +311,9 @@ impl DeployAccount {
         Ok(())
     }
 
-    pub fn run_constructor_entrypoint<S: StateReader>(
+    pub fn run_constructor_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
     ) -> Result<CallInfo, TransactionError> {
@@ -354,9 +358,9 @@ impl DeployAccount {
         )
     }
 
-    pub fn run_validate_entrypoint<S: StateReader>(
+    pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
@@ -506,17 +510,16 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
     use super::*;
     use crate::{
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::block_context::StarknetChainId,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::felt_to_hash,
     };
+    use std::{path::PathBuf, sync::Arc};
 
     #[test]
     fn get_state_selector() {
@@ -527,7 +530,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut _state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut _state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -559,7 +565,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -609,7 +618,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
