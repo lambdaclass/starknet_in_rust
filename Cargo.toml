@@ -6,7 +6,7 @@ description = "A Rust implementation of Starknet execution logic"
 license = "Apache-2.0"
 
 [features]
-default = ["with_mimalloc"]
+default = ["with_mimalloc", "cairo-native"]
 with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
 metrics = []
@@ -34,7 +34,7 @@ cairo-lang-runner = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "db1c3f6b044a4a6a3de3ab33e472c2e2263d81ac", optional = true }
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "476654c0", optional = true }
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 flate2 = "1.0.25"
 getset = "0.1.2"
@@ -77,7 +77,7 @@ name = "cairo_native"
 harness = false
 
 [profile.release]
-debug = true
+#debug = true
 opt-level = 3
 lto = "fat"
 codegen-units = 1
