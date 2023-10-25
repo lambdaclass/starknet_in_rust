@@ -28,7 +28,7 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::{Declare, DeclareV2, DeployAccount, InvokeFunction},
+    transaction::{Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler},
     utils::{Address, ClassHash},
 };
 
@@ -208,6 +208,13 @@ pub fn execute_tx_configurable(
                 declare.create_for_simulation(skip_validate, false, false, false)
             }
         }
+        SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(
+            tx,
+            Felt252::from_bytes_be(tx_hash.0.bytes()),
+            Some(Felt252::from(u128::MAX)),
+        )
+        .unwrap()
+        .create_for_simulation(skip_validate, false),
         _ => unimplemented!(),
     };
 
@@ -350,6 +357,11 @@ fn test_get_gas_price() {
 #[test_case(
     "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
     281513, // real block 281514
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x26be3e906db66973de1ca5eec1ddb4f30e3087dbdce9560778937071c3d3a83",
+    351268, // real block 351269
     RpcChain::MainNet
 )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
