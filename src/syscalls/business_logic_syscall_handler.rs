@@ -59,7 +59,7 @@ use num_traits::{One, ToPrimitive, Zero};
 
 const STEP: u128 = 100;
 const SYSCALL_BASE: u128 = 100 * STEP;
-const KECCAK_ROUND_COST: u128 = 180000;
+pub(crate) const KECCAK_ROUND_COST: u128 = 180000;
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> = {
