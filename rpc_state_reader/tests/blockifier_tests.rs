@@ -338,6 +338,11 @@ fn blockifier_test_recent_tx() {
     281513, // real block 281514
     RpcChain::MainNet
 )]
+#[test_case(
+    "0x26be3e906db66973de1ca5eec1ddb4f30e3087dbdce9560778937071c3d3a83",
+    351268, // real block 351269
+    RpcChain::MainNet
+)]
 fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
