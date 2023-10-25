@@ -1,12 +1,17 @@
 #![cfg(not(feature = "cairo_1_tests"))]
 
-use cairo_vm::felt::Felt252;
-use cairo_native::context::NativeContext;
 use cairo_native::cache::ProgramCache;
+use cairo_native::context::NativeContext;
+use cairo_vm::felt::felt_str;
+use cairo_vm::felt::Felt252;
+use cairo_vm::hint_processor::builtin_hint_processor::hint_code::QUAD_BIT;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
+use starknet_in_rust::definitions::block_context::StarknetChainId;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::state::state_api::State;
+use starknet_in_rust::transaction::DeployAccount;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -28,15 +33,21 @@ pub fn main() {
 
     match args.get(3).map(|s| s.as_str()) {
         Some("fibo") => bench_fibo(
-            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(1)
+                .and_then(|x| usize::from_str_radix(x, 10).ok())
+                .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
         Some("fact") => bench_fact(
-            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(1)
+                .and_then(|x| usize::from_str_radix(x, 10).ok())
+                .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
         _ => bench_erc20(
-            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(1)
+                .and_then(|x| usize::from_str_radix(x, 10).ok())
+                .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
     }
@@ -56,8 +67,11 @@ fn bench_fibo(executions: usize, native: bool) {
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Sierra(Arc::new(sierra_contract_class)), constructor_selector)
-        },
+            (
+                CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+                constructor_selector,
+            )
+        }
         false => {
             let casm_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
             let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
@@ -65,16 +79,16 @@ fn bench_fibo(executions: usize, native: bool) {
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Casm(Arc::new(casm_contract_class)), constructor_selector)
+            (
+                CompiledClass::Casm(Arc::new(casm_contract_class)),
+                constructor_selector,
+            )
         }
     };
 
     let caller_address = Address(123456789.into());
 
-    contract_class_cache.insert(
-        CASM_CLASS_HASH,
-        contract_class,
-    );
+    contract_class_cache.insert(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     let nonce = Felt252::zero();
 
@@ -126,8 +140,11 @@ fn bench_fact(executions: usize, native: bool) {
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Sierra(Arc::new(sierra_contract_class)), constructor_selector)
-        },
+            (
+                CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+                constructor_selector,
+            )
+        }
         false => {
             let casm_data = include_bytes!("../starknet_programs/cairo2/factorial_tr.casm");
             let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
@@ -135,7 +152,10 @@ fn bench_fact(executions: usize, native: bool) {
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Casm(Arc::new(casm_contract_class)), constructor_selector)
+            (
+                CompiledClass::Casm(Arc::new(casm_contract_class)),
+                constructor_selector,
+            )
         }
     };
 
@@ -143,10 +163,7 @@ fn bench_fact(executions: usize, native: bool) {
     // FACT 1M
     // FIBO 2M
 
-    contract_class_cache.insert(
-        CASM_CLASS_HASH,
-        contract_class,
-    );
+    contract_class_cache.insert(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     let nonce = Felt252::zero();
 
@@ -185,53 +202,151 @@ fn bench_fact(executions: usize, native: bool) {
 }
 
 fn bench_erc20(executions: usize, native: bool) {
-    // Create state reader with class hash data
+    // 1. setup ERC20 contract and state.
+    // Create state reader and preload the contract classes.
     let mut contract_class_cache = HashMap::new();
-    static CASM_CLASS_HASH: ClassHash = [2; 32];
+    static ERC20_CASM_CLASS_HASH: ClassHash = [2; 32];
 
-    let (contract_class, constructor_selector) = match native {
+    let erc20_address = match native {
         true => {
-            let sierra_data = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
+            let erc20_sierra_class = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
             let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
-                serde_json::from_slice(sierra_data).unwrap();
+                serde_json::from_slice(erc20_sierra_class).unwrap();
+            let erc20_contract_class = CompiledClass::Sierra(Arc::new(sierra_contract_class));
 
-            let entrypoints = sierra_contract_class.clone().entry_points_by_type;
-            let constructor_selector = entrypoints.constructor.get(0).unwrap().selector.clone();
+            // we also need to read the contract class of the deployERC20 contract.
+            // this contract is used as a deployer of the erc20.
+            let erc20_deployer_code = include_bytes!("../starknet_programs/cairo2/deploy_erc20.casm");
+            let erc20_deployer_class: CasmContractClass = serde_json::from_slice(erc20_deployer_code).unwrap();
+            let entrypoints = erc20_deployer_class.clone().entry_points_by_type;
+            let deploy_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
-            (CompiledClass::Sierra(Arc::new(sierra_contract_class)), constructor_selector)
-        },
+
+
+            todo!()
+        }
         false => {
-            let casm_data = include_bytes!("../starknet_programs/cairo2/erc20.casm");
-            let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
+            // read the ERC20 contract class
+            let erc20_casm_class = include_bytes!("../starknet_programs/cairo2/erc20.casm");
+            let casm_contract_class: CasmContractClass = serde_json::from_slice(erc20_casm_class).unwrap();
+            let erc20_contract_class = CompiledClass::Casm(Arc::new(casm_contract_class));
 
-            let entrypoints = casm_contract_class.clone().entry_points_by_type;
-            let constructor_selector = entrypoints.constructor.get(0).unwrap().selector.clone();
+            // we also need to read the contract class of the deployERC20 contract.
+            // this contract is used as a deployer of the erc20.
+            let erc20_deployer_code = include_bytes!("../starknet_programs/cairo2/deploy_erc20.casm");
+            let erc20_deployer_class: CasmContractClass = serde_json::from_slice(erc20_deployer_code).unwrap();
+            let entrypoints = erc20_deployer_class.clone().entry_points_by_type;
+            let deploy_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
-            (CompiledClass::Casm(Arc::new(casm_contract_class)), constructor_selector)
+
         }
     };
 
-    let caller_address = Address(123456789.into());
-    // FACT 1M
-    // FIBO 2M
+    // execute the ERC20 constructor
 
-    contract_class_cache.insert(
-        CASM_CLASS_HASH,
-        contract_class,
-    );
-    let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
+    // 2. setup accounts (here we need to execute a deploy_account,
+    //    so we execute it in the vm only).
+    //    Further executions (transfers) will be executed with Native.
+    // 2a. setup for first account:
+    #[allow(non_snake_case)]
+    let ACCOUNT1_CLASS_HASH: ClassHash = [1; 32];
+    #[allow(non_snake_case)]
+    let ACCOUNT2_CLASS_HASH: ClassHash = [4; 32];
 
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(caller_address.clone(), CASM_CLASS_HASH);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(caller_address.clone(), nonce);
+    let account_casm_file = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");
+    let account_contract_class: CasmContractClass =
+        serde_json::from_slice(account_casm_file).unwrap();
 
-    // Create state from the state_reader and contract cache.
-    let state_reader = Arc::new(state_reader);
-    let state = CachedState::new(state_reader, contract_class_cache);
+    state
+        .set_contract_class(
+            &felt_str!("1").to_be_bytes(),
+            &CompiledClass::Casm(Arc::new(account_contract_class)),
+        )
+        .unwrap();
+    state
+        .set_compiled_class_hash(
+            &felt_str!("1"),
+            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH),
+        )
+        .unwrap();
+
+    let contract_address_salt =
+        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+
+    // create a transaction for deploying the first account
+    let account1_deploy_tx = DeployAccount::new(
+        ACCOUNT1_CLASS_HASH, // class hash
+        0,                   // max fee
+        1.into(),            // tx version
+        Felt252::zero(),     // nonce
+        vec![2.into()],      // constructor calldata
+        vec![
+            felt_str!(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
+            ),
+            felt_str!(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203"
+            ),
+        ], // signature
+        contract_address_salt.clone(), // salt
+        StarknetChainId::TestNet.to_felt(), // network
+    )
+    .unwrap();
+
+    // execute the deploy_account transaction.
+    // this will create the account and after that,
+    // we can extract its address.
+    let account1_address = account1_deploy_tx
+        .execute(&mut state, &Default::default())
+        .expect("failed to execute internal_deploy_account")
+        .validate_info
+        .expect("validate_info missing")
+        .contract_address;
+
+    // now we need to deploy account2
+    let account2_deploy_tx = DeployAccount::new(
+        ACCOUNT2_CLASS_HASH, // class hash
+        0,                   // max fee
+        1.into(),            // tx version
+        Felt252::zero(),     // nonce
+        vec![3.into()],      // constructor calldata
+        vec![
+            felt_str!(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
+            ),
+            felt_str!(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203"
+            ),
+        ], // signature
+        contract_address_salt, // salt
+        StarknetChainId::TestNet.to_felt(), // network
+    )
+    .unwrap();
+
+    // we can extract its address.
+    let account2_address = account2_deploy_tx
+        .execute(&mut state, &Default::default())
+        .expect("failed to execute internal_deploy_account")
+        .validate_info
+        .expect("validate_info missing")
+        .contract_address;
+
+    // 4. do transfers
+
+    // let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
+    // let calldata = vec![account_address_2.clone().0, Felt252::from(123)];
+
+    // let retdata = call_contract(
+    //     erc20_address.clone(),
+    //     entrypoint_selector,
+    //     calldata,
+    //     &mut state,
+    //     BlockContext::default(),
+    //     account_address_1.clone(),
+    // )
+    // .unwrap();
+
+    // assert!(retdata.is_empty());
 
     /*
         1 recipient
@@ -240,14 +355,7 @@ fn bench_erc20(executions: usize, native: bool) {
         4 initial_supply
         5 symbol
     */
-    let calldata = [
-        caller_address.0.clone(),
-        2.into(),
-        3.into(),
-        4.into(),
-        5.into(),
-    ]
-    .to_vec();
+
 
     let native_ctx = NativeContext::new();
     let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
@@ -260,7 +368,7 @@ fn bench_erc20(executions: usize, native: bool) {
             &constructor_selector.clone(),
             &calldata.clone(),
             EntryPointType::Constructor,
-            &CASM_CLASS_HASH,
+            &ERC20_CASM_CLASS_HASH,
             program_cache.clone(),
         );
 
