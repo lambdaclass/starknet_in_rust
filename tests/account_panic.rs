@@ -5,7 +5,11 @@ use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::compiled_class::CompiledClass,
-    state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, contract_class_cache::{PermanentContractClassCache, ContractClassCache}},
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+    },
     transaction::{InvokeFunction, Transaction},
     utils::{calculate_sn_keccak, Address},
     CasmContractClass,
