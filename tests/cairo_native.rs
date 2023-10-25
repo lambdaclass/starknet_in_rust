@@ -694,7 +694,7 @@ fn call_events_contract_test() {
 fn keccak_syscall_test() {
     let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
-            std::fs::read_to_string("starknet_programs/cairo2/native_cairo_keccak.sierra")
+            std::fs::read_to_string("starknet_programs/cairo2/test_cairo_keccak.sierra")
                 .unwrap()
                 .as_str(),
         )
@@ -730,7 +730,7 @@ fn keccak_syscall_test() {
         &caller_address,
         &caller_address,
         native_entrypoint_selector,
-        &vec![],
+        &[],
         EntryPointType::External,
         &native_class_hash,
     );
