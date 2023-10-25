@@ -99,6 +99,7 @@ pub fn deserialize_transaction_json(
                 "unimplemented declare version: {x}"
             ))),
         },
+        "L1_HANDLER" => Ok(Transaction::L1Handler(serde_json::from_value(transaction)?)),
         x => Err(serde::de::Error::custom(format!(
             "unimplemented transaction type deserialization: {x}"
         ))),
