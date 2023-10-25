@@ -9,7 +9,7 @@ use blockifier::{
     transaction::{
         account_transaction::AccountTransaction,
         objects::TransactionExecutionInfo,
-        transactions::{DeclareTransaction, DeployAccountTransaction, ExecutableTransaction},
+        transactions::{DeclareTransaction, DeployAccountTransaction, ExecutableTransaction, L1HandlerTransaction},
     },
 };
 use blockifier::{
@@ -206,6 +206,17 @@ pub fn execute_tx(
 
             let declare = DeclareTransaction::new(tx, tx_hash, contract_class).unwrap();
             AccountTransaction::Declare(declare)
+        }
+        SNTransaction::L1Handler(tx) => {
+            // As L1Hanlder is not an account transaction we execute it here and return the result
+            let blockifier_tx = L1HandlerTransaction { tx, tx_hash, paid_fee_on_l1: starknet_api::transaction::Fee(u128::MAX) };
+            return (
+                blockifier_tx
+                    .execute(&mut state, &block_context, true, true)
+                    .unwrap(),
+                trace,
+                receipt,
+            );
         }
         _ => unimplemented!(),
     };
