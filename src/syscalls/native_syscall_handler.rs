@@ -173,7 +173,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         address: cairo_vm::felt::Felt252,
         entrypoint_selector: cairo_vm::felt::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
-        _gas: &mut u128,
+        gas: &mut u128,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
         println!(
             "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from MLIR."
@@ -187,8 +187,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
             EntryPointType::External,
             Some(CallType::Call),
             None,
-            // TODO: The remaining gas must be correctly set someway
-            u128::MAX,
+            *gas,
         );
 
         let ExecutionResult { call_info, .. } = exec_entry_point
@@ -206,6 +205,9 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
         let call_info = call_info.unwrap();
 
+        let remaining_gas = gas.saturating_sub(call_info.gas_consumed);
+        *gas = remaining_gas;
+
         // update syscall handler information
         self.starknet_storage_state
             .read_values
@@ -213,6 +215,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         self.starknet_storage_state
             .accessed_keys
             .extend(call_info.accessed_storage_keys.clone());
+
         self.internal_calls.push(call_info.clone());
 
         Ok(call_info.retdata)

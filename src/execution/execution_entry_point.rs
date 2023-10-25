@@ -726,7 +726,7 @@ impl ExecutionEntryPoint {
             .map(|param| {
                 match param.ty.debug_name.as_ref().unwrap().as_str() {
                     "GasBuiltin" => {
-                        json!(self.initial_gas as u64)
+                        json!(self.initial_gas)
                     }
                     "Pedersen" | "SegmentArena" | "RangeCheck" | "Bitwise" | "Poseidon" => {
                         json!(null)

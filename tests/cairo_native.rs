@@ -706,7 +706,7 @@ fn execute(
         entrypoint_type,
         Some(CallType::Delegate),
         Some(*class_hash),
-        u64::MAX.into(), // gas is u64 in cairo-native and sierra
+        100_000_000,
     );
 
     // Execute the entrypoint
@@ -816,6 +816,8 @@ fn library_call() {
         TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
+
+    // TODO: fails with retdata: Failed to deserialize param #2
 
     // expected results
     let expected_call_info = CallInfo {
