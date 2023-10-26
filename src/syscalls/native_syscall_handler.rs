@@ -108,7 +108,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
                 calldata,
                 deployer_address,
             )
-            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE")])?,
+            .map_err(|_| vec![Felt252::from_bytes_be(b"FAILED_TO_CALCULATE_CONTRACT_ADDRESS")])?,
         );
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&class_hash);
@@ -125,7 +125,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
                 calldata.to_vec(),
                 *gas,
             )
-            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE")])?;
+            .map_err(|_| vec![Felt252::from_bytes_be(b"CONSTRUCTOR_ENTRYPOINT_FAILURE")])?;
 
         Ok((
             contract_address.0,
