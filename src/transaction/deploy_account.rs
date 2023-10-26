@@ -429,7 +429,7 @@ impl DeployAccount {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
         let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
+        let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
         let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
 
         let signature = value
