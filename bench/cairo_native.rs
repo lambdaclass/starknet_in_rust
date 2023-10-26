@@ -4,7 +4,6 @@ use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
 use cairo_vm::felt::felt_str;
 use cairo_vm::felt::Felt252;
-use cairo_vm::hint_processor::builtin_hint_processor::hint_code::QUAD_BIT;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
@@ -14,6 +13,7 @@ use starknet_in_rust::state::state_api::State;
 use starknet_in_rust::transaction::DeployAccount;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
+use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::{
     definitions::constants::TRANSACTION_VERSION,
     execution::{
@@ -204,10 +204,32 @@ fn bench_fact(executions: usize, native: bool) {
 fn bench_erc20(executions: usize, native: bool) {
     // 1. setup ERC20 contract and state.
     // Create state reader and preload the contract classes.
+    let mut state_reader = InMemoryStateReader::default();
     let mut contract_class_cache = HashMap::new();
-    static ERC20_CASM_CLASS_HASH: ClassHash = [2; 32];
+    static ERC20_CLASS_HASH: ClassHash = [2; 32];
+    static DEPLOYER_CLASS_HASH: ClassHash = [10; 32];
+    static ACCOUNT1_CLASS_HASH: ClassHash = [1; 32];
+    static ACCOUNT2_CLASS_HASH: ClassHash = [4; 32];
+    static DEPLOYER_ADDRESS: Address = Address(1111.into());
+    static ERC20_NAME: Felt252 = Felt252::from_bytes_be(b"some-token");
+    static ERC20_SYMBOL: Felt252 = Felt252::from_bytes_be(b"my-super-awesome-token");
+    static ERC20_DECIMALS: Felt252 = Felt252::from(24);
+    static ERC20_INITIAL_SUPPLY: Felt252 = Felt252::from(1_000_000);
+    static ERC20_RECIPIENT: Felt252 =
+        felt_str!("397149464972449753182583229366244826403270781177748543857889179957856017275");
+    static ERC20_SALT: Felt252 = felt_str!("1234");
+    static ERC20_DEPLOYER_CALLDATA: [Felt252; 7] = [
+        Felt252::from_bytes_be(&ERC20_CLASS_HASH),
+        ERC20_SALT,
+        ERC20_RECIPIENT,
+        ERC20_NAME,
+        ERC20_DECIMALS,
+        ERC20_INITIAL_SUPPLY,
+        ERC20_SYMBOL,
+    ];
+    static ERC20_DEPLOYMENT_CALLER_ADDRESS: Address = Address(0000.into());
 
-    let erc20_address = match native {
+    let (erc20_address, state): (Address, CachedState<InMemoryStateReader>) = match native {
         true => {
             let erc20_sierra_class = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
             let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
@@ -216,42 +238,161 @@ fn bench_erc20(executions: usize, native: bool) {
 
             // we also need to read the contract class of the deployERC20 contract.
             // this contract is used as a deployer of the erc20.
-            let erc20_deployer_code = include_bytes!("../starknet_programs/cairo2/deploy_erc20.casm");
-            let erc20_deployer_class: CasmContractClass = serde_json::from_slice(erc20_deployer_code).unwrap();
+            let erc20_deployer_code =
+                include_bytes!("../starknet_programs/cairo2/deploy_erc20.casm");
+            let erc20_deployer_class: CasmContractClass =
+                serde_json::from_slice(erc20_deployer_code).unwrap();
             let entrypoints = erc20_deployer_class.clone().entry_points_by_type;
             let deploy_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
+            // insert deployer and erc20 classes into the cache.
+            contract_class_cache.insert(
+                DEPLOYER_CLASS_HASH,
+                CompiledClass::Casm(Arc::new(erc20_deployer_class)),
+            );
+            contract_class_cache.insert(ERC20_CLASS_HASH, erc20_contract_class);
 
+            let mut state_reader = InMemoryStateReader::default();
+            // setup deployer nonce and address into the state reader
+            state_reader
+                .address_to_class_hash_mut()
+                .insert(DEPLOYER_ADDRESS, DEPLOYER_CLASS_HASH);
+            state_reader
+                .address_to_nonce_mut()
+                .insert(DEPLOYER_ADDRESS, Felt252::zero());
 
-            todo!()
+            // Create state from the state_reader and contract cache.
+            let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+            // deploy the erc20 contract by calling the deployer contract.
+
+            let exec_entry_point = ExecutionEntryPoint::new(
+                DEPLOYER_ADDRESS,
+                ERC20_DEPLOYER_CALLDATA.to_vec(),
+                Felt252::new(deploy_entrypoint_selector.clone()),
+                ERC20_DEPLOYMENT_CALLER_ADDRESS,
+                EntryPointType::External,
+                Some(CallType::Delegate),
+                Some(DEPLOYER_CLASS_HASH),
+                100_000_000_000,
+            );
+
+            // create required structures for execution
+            let block_context = BlockContext::default();
+            let mut tx_execution_context = TransactionExecutionContext::new(
+                Address(0.into()),
+                Felt252::zero(),
+                Vec::new(),
+                0,
+                10.into(),
+                block_context.invoke_tx_max_n_steps(),
+                1.into(),
+            );
+            let mut resources_manager = ExecutionResourcesManager::default();
+
+            // execute the deployment
+            let call_info = exec_entry_point
+                .execute(
+                    &mut state,
+                    &block_context,
+                    &mut resources_manager,
+                    &mut tx_execution_context,
+                    false,
+                    block_context.invoke_tx_max_n_steps(),
+                )
+                .unwrap();
+
+            // obtain the address of the deployed erc20 contract
+            let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
+
+            (Address(erc20_address), state)
         }
         false => {
             // read the ERC20 contract class
             let erc20_casm_class = include_bytes!("../starknet_programs/cairo2/erc20.casm");
-            let casm_contract_class: CasmContractClass = serde_json::from_slice(erc20_casm_class).unwrap();
+            let casm_contract_class: CasmContractClass =
+                serde_json::from_slice(erc20_casm_class).unwrap();
             let erc20_contract_class = CompiledClass::Casm(Arc::new(casm_contract_class));
 
             // we also need to read the contract class of the deployERC20 contract.
             // this contract is used as a deployer of the erc20.
-            let erc20_deployer_code = include_bytes!("../starknet_programs/cairo2/deploy_erc20.casm");
-            let erc20_deployer_class: CasmContractClass = serde_json::from_slice(erc20_deployer_code).unwrap();
+            let erc20_deployer_code =
+                include_bytes!("../starknet_programs/cairo2/deploy_erc20.casm");
+            let erc20_deployer_class: CasmContractClass =
+                serde_json::from_slice(erc20_deployer_code).unwrap();
             let entrypoints = erc20_deployer_class.clone().entry_points_by_type;
             let deploy_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
+            // insert deployer and erc20 classes into the cache.
+            contract_class_cache.insert(
+                DEPLOYER_CLASS_HASH,
+                CompiledClass::Casm(Arc::new(erc20_deployer_class)),
+            );
+            contract_class_cache.insert(ERC20_CLASS_HASH, erc20_contract_class);
 
+            let mut state_reader = InMemoryStateReader::default();
+            // setup deployer nonce and address into the state reader
+            state_reader
+                .address_to_class_hash_mut()
+                .insert(DEPLOYER_ADDRESS, DEPLOYER_CLASS_HASH);
+            state_reader
+                .address_to_nonce_mut()
+                .insert(DEPLOYER_ADDRESS, Felt252::zero());
+
+            // Create state from the state_reader and contract cache.
+            let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+            // deploy the erc20 contract by calling the deployer contract.
+
+            let exec_entry_point = ExecutionEntryPoint::new(
+                DEPLOYER_ADDRESS,
+                ERC20_DEPLOYER_CALLDATA.to_vec(),
+                Felt252::new(deploy_entrypoint_selector.clone()),
+                ERC20_DEPLOYMENT_CALLER_ADDRESS,
+                EntryPointType::External,
+                Some(CallType::Delegate),
+                Some(DEPLOYER_CLASS_HASH),
+                100_000_000_000,
+            );
+
+            // create required structures for execution
+            let block_context = BlockContext::default();
+            let mut tx_execution_context = TransactionExecutionContext::new(
+                Address(0.into()),
+                Felt252::zero(),
+                Vec::new(),
+                0,
+                10.into(),
+                block_context.invoke_tx_max_n_steps(),
+                1.into(),
+            );
+            let mut resources_manager = ExecutionResourcesManager::default();
+
+            // execute the deployment
+            let call_info = exec_entry_point
+                .execute(
+                    &mut state,
+                    &block_context,
+                    &mut resources_manager,
+                    &mut tx_execution_context,
+                    false,
+                    block_context.invoke_tx_max_n_steps(),
+                )
+                .unwrap();
+
+            // obtain the address of the deployed erc20 contract
+            let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
+
+            (Address(erc20_address), state)
         }
     };
 
-    // execute the ERC20 constructor
 
     // 2. setup accounts (here we need to execute a deploy_account,
     //    so we execute it in the vm only).
     //    Further executions (transfers) will be executed with Native.
+    //    (or the VM, depending on configuration)
     // 2a. setup for first account:
-    #[allow(non_snake_case)]
-    let ACCOUNT1_CLASS_HASH: ClassHash = [1; 32];
-    #[allow(non_snake_case)]
-    let ACCOUNT2_CLASS_HASH: ClassHash = [4; 32];
 
     let account_casm_file = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");
     let account_contract_class: CasmContractClass =
@@ -323,7 +464,7 @@ fn bench_erc20(executions: usize, native: bool) {
     )
     .unwrap();
 
-    // we can extract its address.
+    // execute the deploy_account transaction and retrieve the deployed account address.
     let account2_address = account2_deploy_tx
         .execute(&mut state, &Default::default())
         .expect("failed to execute internal_deploy_account")
@@ -331,10 +472,11 @@ fn bench_erc20(executions: usize, native: bool) {
         .expect("validate_info missing")
         .contract_address;
 
-    // 4. do transfers
+    // 4. do transfers between the accounts
 
-    // let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
-    // let calldata = vec![account_address_2.clone().0, Felt252::from(123)];
+    let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
+    // calldata for transfering 123 tokens from account1 to account2
+    let calldata = vec![account2_address.clone().0, Felt252::from(123)];
 
     // let retdata = call_contract(
     //     erc20_address.clone(),
@@ -348,15 +490,6 @@ fn bench_erc20(executions: usize, native: bool) {
 
     // assert!(retdata.is_empty());
 
-    /*
-        1 recipient
-        2 name
-        3 decimals
-        4 initial_supply
-        5 symbol
-    */
-
-
     let native_ctx = NativeContext::new();
     let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
 
@@ -368,7 +501,7 @@ fn bench_erc20(executions: usize, native: bool) {
             &constructor_selector.clone(),
             &calldata.clone(),
             EntryPointType::Constructor,
-            &ERC20_CASM_CLASS_HASH,
+            &ERC20_CLASS_HASH,
             program_cache.clone(),
         );
 
