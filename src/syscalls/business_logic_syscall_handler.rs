@@ -313,7 +313,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => todo!(),
+            CompiledClass::Sierra(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
         }
     }
 
