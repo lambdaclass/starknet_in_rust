@@ -979,5 +979,6 @@ fn deploy_syscall_address_unavailable_test() {
         "Result::unwrap failed."
     );
     assert_eq!(result.events, []);
+    assert_eq!(result.failure_flag, true);
     assert!(result.internal_calls.is_empty());
 }
