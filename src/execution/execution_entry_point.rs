@@ -763,8 +763,6 @@ impl ExecutionEntryPoint {
             .execute(entry_point_id, json!(params), returns, required_init_gas)
             .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
 
-        let values: Value = serde_json::from_reader(writer.clone().as_slice()).unwrap();
-        dbg!(values);
         let value = NativeExecutionResult::deserialize_from_ret_types(
             &mut serde_json::Deserializer::from_slice(&writer),
             &ret_types,
@@ -790,7 +788,7 @@ impl ExecutionEntryPoint {
             failure_flag: value.failure_flag,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             internal_calls: syscall_handler.internal_calls,
-            gas_consumed: value.gas_consumed,
+            gas_consumed: self.initial_gas - value.remaining_gas,
         })
     }
 }

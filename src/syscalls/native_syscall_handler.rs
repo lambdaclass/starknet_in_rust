@@ -54,12 +54,9 @@ impl<'a, S: StateReader> NativeSyscallHandler<'a, S> {
         if *gas < required_gas {
             let out_of_gas_felt = Felt252::from_bytes_be("Out of gas".as_bytes());
             println!("out of gas!: {:?} < {:?}", *gas, required_gas); // TODO: remove once all other prints are removed
-            return Err(vec![
-                out_of_gas_felt.clone(),
-                out_of_gas_felt.clone(),
-                out_of_gas_felt.clone(),
-            ]);
+            return Err(vec![out_of_gas_felt.clone()]);
         }
+
         *gas = gas.saturating_sub(required_gas);
 
         Ok(())
@@ -179,8 +176,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
             EntryPointType::External,
             Some(CallType::Call),
             None,
-            // TODO: The remaining gas must be correctly set someway
-            u128::MAX,
+            *gas,
         );
 
         let ExecutionResult { call_info, .. } = exec_entry_point
@@ -188,15 +184,17 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
                 self.starknet_storage_state.state,
                 // TODO: This fields dont make much sense in the Cairo Native context,
                 // they are only dummy values for the `execute` method.
-                &BlockContext::default(),
+                &self.block_context,
                 &mut ExecutionResourcesManager::default(),
-                &mut TransactionExecutionContext::default(),
+                &mut self.tx_execution_context,
                 false,
-                u64::MAX,
+                self.block_context.invoke_tx_max_n_steps,
             )
             .unwrap();
 
         let call_info = call_info.unwrap();
+
+        *gas = gas.saturating_sub(call_info.gas_consumed);
 
         // update syscall handler information
         self.starknet_storage_state
@@ -205,6 +203,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         self.starknet_storage_state
             .accessed_keys
             .extend(call_info.accessed_storage_keys.clone());
+
         self.internal_calls.push(call_info.clone());
 
         Ok(call_info.retdata)
