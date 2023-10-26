@@ -4,12 +4,14 @@ use crate::CallType::Call;
 use cairo_lang_starknet::casm_contract_class::CasmContractEntryPoints;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::felt::Felt252;
+use cairo_vm::vm;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::execution::{Event, OrderedEvent};
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::state::state_api::State;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType::{self, External};
 use starknet_in_rust::{
@@ -637,7 +639,7 @@ fn call_events_contract_test() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
-    let calldata = [fn_selector.into()].to_vec();
+    let calldata: Vec<Felt252> = [fn_selector.into()].to_vec();
     let result = execute(
         &mut state,
         &caller_address,
@@ -687,6 +689,131 @@ fn call_events_contract_test() {
 
     let sorted_events = result.get_sorted_events().unwrap();
     assert_eq!(sorted_events, vec![event]);
+}
+
+#[test]
+fn replace_class_contract_call() {
+    let contract_class_a: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/get_number_a.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(Felt252::from(1));
+    let class_hash_a: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(
+        class_hash_a,
+        CompiledClass::Sierra(Arc::new(contract_class_a)),
+    );
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash_a);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce.clone());
+
+    // SET GET_NUMBER_B
+
+    // Add get_number_b contract to the state (only its contract_class)
+
+    let contract_class_b: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/get_number_b.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    let class_hash_b: ClassHash = [2; 32];
+
+    contract_class_cache.insert(
+        class_hash_b,
+        CompiledClass::Sierra(Arc::new(contract_class_b)),
+    );
+
+    // SET GET_NUMBER_WRAPPER
+
+    //  Create program and entry point types for contract class
+    let wrapper_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/get_number_wrapper.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
+    let get_number_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
+    let upgrade_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    let wrapper_address = Address(Felt252::from(2));
+    let wrapper_class_hash: ClassHash = [3; 32];
+
+    contract_class_cache.insert(
+        wrapper_class_hash,
+        CompiledClass::Sierra(Arc::new(wrapper_contract_class)),
+    );
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(wrapper_address.clone(), wrapper_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(wrapper_address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+    // CALL GET_NUMBER BEFORE REPLACE_CLASS
+
+    let calldata = [].to_vec();
+    let caller_address = Address(0000.into());
+    let result = execute(
+        &mut state,
+        &caller_address,
+        &wrapper_address,
+        upgrade_entrypoint_selector,
+        &calldata,
+        External,
+        &wrapper_class_hash,
+    );
+
+    assert_eq!(result.retdata, vec![25.into()]);
+
+    // REPLACE_CLASS
+
+    let calldata = [Felt252::from_bytes_be(&class_hash_b)].to_vec();
+    execute(
+        &mut state,
+        &caller_address,
+        &address,
+        upgrade_entrypoint_selector,
+        &calldata,
+        External,
+        &wrapper_class_hash,
+    );
+
+    // CALL GET_NUMBER AFTER REPLACE_CLASS
+    let calldata = [].to_vec();
+
+    let result = execute(
+        &mut state,
+        &caller_address,
+        &address,
+        get_number_entrypoint_selector,
+        &calldata,
+        External,
+        &wrapper_class_hash,
+    );
+
+    assert_eq!(result.retdata, vec![17.into()]);
 }
 
 fn execute(
