@@ -4,6 +4,14 @@ use cairo_native::starknet::{
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
+use crate::definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR;
+use crate::execution::CallResult;
+use crate::hash_utils::calculate_contract_address;
+use crate::services::api::contract_class_errors::ContractClassError;
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use crate::state::state_api::State;
+use crate::utils::felt_to_hash;
+use crate::utils::ClassHash;
 use crate::{
     core::errors::state_errors::StateError,
     definitions::block_context::BlockContext,
@@ -85,12 +93,51 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         contract_address_salt: cairo_vm::felt::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
         deploy_from_zero: bool,
-        _gas: &mut u128,
+        gas: &mut u128,
     ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
-        println!("Called `deploy({class_hash}, {contract_address_salt}, {calldata:?}, {deploy_from_zero})` from MLIR.");
+        let deployer_address = if deploy_from_zero {
+            Address::default()
+        } else {
+            self.contract_address.clone()
+        };
+
+        let contract_address = Address(
+            calculate_contract_address(
+                &contract_address_salt,
+                &class_hash,
+                calldata,
+                deployer_address,
+            )
+            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()])?,
+        );
+        // Initialize the contract.
+        let class_hash_bytes: ClassHash = felt_to_hash(&class_hash);
+
+        if (self
+            .starknet_storage_state
+            .state
+            .deploy_contract(contract_address.clone(), class_hash_bytes))
+        .is_err()
+        {
+            return Ok((
+                contract_address.0,
+                vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()],
+            ));
+        }
+        let result = self.execute_constructor_entry_point(
+            &contract_address,
+            class_hash_bytes,
+            calldata.to_vec(),
+            *gas,
+        ).map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()])?;
+
         Ok((
-            class_hash + contract_address_salt,
-            calldata.iter().map(|x| x + &Felt252::new(1)).collect(),
+            contract_address.0,
+            result
+                .retdata
+                .iter()
+                .map(|mb| mb.get_int_ref().cloned().unwrap_or_default())
+                .collect(),
         ))
     }
 
@@ -374,5 +421,97 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn set_version(&mut self, version: cairo_vm::felt::Felt252) {
         self.tx_execution_context.version = version;
+    }
+}
+
+impl<'a, S> NativeSyscallHandler<'a, S>
+where
+    S: StateReader,
+{
+    fn execute_constructor_entry_point(
+        &mut self,
+        contract_address: &Address,
+        class_hash_bytes: ClassHash,
+        constructor_calldata: Vec<Felt252>,
+        remainig_gas: u128,
+    ) -> Result<CallResult, StateError> {
+        let compiled_class = if let Ok(compiled_class) = self
+            .starknet_storage_state
+            .state
+            .get_contract_class(&class_hash_bytes)
+        {
+            compiled_class
+        } else {
+            return Ok(CallResult {
+                gas_consumed: 0,
+                is_success: false,
+                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+            });
+        };
+
+        if self.constructor_entry_points_empty(compiled_class)? {
+            if !constructor_calldata.is_empty() {
+                return Err(StateError::ConstructorCalldataEmpty());
+            }
+
+            let call_info = CallInfo::empty_constructor_call(
+                contract_address.clone(),
+                self.contract_address.clone(),
+                Some(class_hash_bytes),
+            );
+            self.internal_calls.push(call_info.clone());
+
+            return Ok(call_info.result());
+        }
+
+        let call = ExecutionEntryPoint::new(
+            contract_address.clone(),
+            constructor_calldata,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            self.contract_address.clone(),
+            EntryPointType::Constructor,
+            Some(CallType::Call),
+            None,
+            remainig_gas,
+        );
+
+        let ExecutionResult {
+            call_info,
+            ..
+        } = call
+            .execute(
+                self.starknet_storage_state.state,
+                // TODO: This fields dont make much sense in the Cairo Native context,
+                // they are only dummy values for the `execute` method.
+                &BlockContext::default(),
+                &mut ExecutionResourcesManager::default(),
+                &mut TransactionExecutionContext::default(),
+                false,
+                u64::MAX,
+            )
+            .map_err(|_| StateError::ExecutionEntryPoint())?;
+
+        let call_info = call_info.ok_or(StateError::CustomError(
+             "Execution error".to_string(),
+        ))?;
+
+        self.internal_calls.push(call_info.clone());
+
+        Ok(call_info.result())
+    }
+
+    fn constructor_entry_points_empty(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
+        match contract_class {
+            CompiledClass::Deprecated(class) => Ok(class
+                .entry_points_by_type
+                .get(&EntryPointType::Constructor)
+                .ok_or(ContractClassError::NoneEntryPointType)?
+                .is_empty()),
+            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(_) => todo!(),
+        }
     }
 }
