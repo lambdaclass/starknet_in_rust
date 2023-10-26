@@ -166,7 +166,7 @@ impl Declare {
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
-        let changes = state.count_actual_storage_changes(Some((
+        let changes = state.count_actual_state_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
             &self.sender_address,
         )))?;

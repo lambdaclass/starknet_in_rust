@@ -418,7 +418,7 @@ impl RpcState {
                     contract_address.0.key().clone().to_string()
                 ]),
             )
-            .unwrap();
+            .unwrap_or_default();
 
         ClassHash(hash)
     }
@@ -431,7 +431,8 @@ impl RpcState {
                 contract_address.0.key().clone().to_string()
             ]),
         )
-        .unwrap()
+        // When running deploy_account transactions, the nonce doesn't exist on the previous block so we return 0
+        .unwrap_or_default()
     }
 
     pub fn get_storage_at(
@@ -450,7 +451,7 @@ impl RpcState {
                 self.block.to_value().unwrap()
             ]),
         )
-        .unwrap()
+        .unwrap_or_default()
     }
 
     /// Requests the given transaction to the Feeder Gateway API.

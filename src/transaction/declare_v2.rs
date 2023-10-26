@@ -331,7 +331,7 @@ impl DeclareV2 {
             (info, gas)
         };
 
-        let storage_changes = state.count_actual_storage_changes(Some((
+        let storage_changes = state.count_actual_state_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
             &self.sender_address,
         )))?;
