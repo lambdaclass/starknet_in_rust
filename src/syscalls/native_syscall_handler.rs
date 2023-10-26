@@ -108,23 +108,24 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
                 calldata,
                 deployer_address,
             )
-            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()])?,
+            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE")])?,
         );
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&class_hash);
 
-        self
-            .starknet_storage_state
+        self.starknet_storage_state
             .state
             .deploy_contract(contract_address.clone(), class_hash_bytes)
-            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()])?;
+            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE")])?;
 
-        let result = self.execute_constructor_entry_point(
-            &contract_address,
-            class_hash_bytes,
-            calldata.to_vec(),
-            *gas,
-        ).map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()])?;
+        let result = self
+            .execute_constructor_entry_point(
+                &contract_address,
+                class_hash_bytes,
+                calldata.to_vec(),
+                *gas,
+            )
+            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE")])?;
 
         Ok((
             contract_address.0,
@@ -470,10 +471,7 @@ where
             remainig_gas,
         );
 
-        let ExecutionResult {
-            call_info,
-            ..
-        } = call
+        let ExecutionResult { call_info, .. } = call
             .execute(
                 self.starknet_storage_state.state,
                 // TODO: This fields dont make much sense in the Cairo Native context,
@@ -486,9 +484,7 @@ where
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
-        let call_info = call_info.ok_or(StateError::CustomError(
-             "Execution error".to_string(),
-        ))?;
+        let call_info = call_info.ok_or(StateError::CustomError("Execution error".to_string()))?;
 
         self.internal_calls.push(call_info.clone());
 
