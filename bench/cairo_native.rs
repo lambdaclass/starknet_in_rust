@@ -498,8 +498,9 @@ fn bench_erc20(executions: usize, native: bool) {
             &ERC20_CLASS_HASH,
             program_cache.clone(),
         );
-
+        dbg!(&result);
         _ = std::hint::black_box(result);
+        
     }
 }
 
