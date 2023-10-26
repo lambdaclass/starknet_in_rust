@@ -113,17 +113,12 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&class_hash);
 
-        if (self
+        self
             .starknet_storage_state
             .state
-            .deploy_contract(contract_address.clone(), class_hash_bytes))
-        .is_err()
-        {
-            return Ok((
-                contract_address.0,
-                vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()],
-            ));
-        }
+            .deploy_contract(contract_address.clone(), class_hash_bytes)
+            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()])?;
+
         let result = self.execute_constructor_entry_point(
             &contract_address,
             class_hash_bytes,

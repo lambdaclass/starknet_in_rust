@@ -824,9 +824,114 @@ fn deploy_syscall_test() {
     let deployer_nonce = Felt252::zero();
 
     // Deployee contract data
-    let deployee_address = Address(1112.into());
     let deployee_class_hash: ClassHash = [0; 32];
     let deployee_nonce = Felt252::zero();
+
+    contract_class_cache.insert(
+        deployer_class_hash,
+        CompiledClass::Sierra(Arc::new(deployer_contract_class)),
+    );
+
+    contract_class_cache.insert(
+        deployee_class_hash,
+        CompiledClass::Sierra(Arc::new(deployee_contract_class)),
+    );
+
+    let mut state_reader = InMemoryStateReader::default();
+
+    // Insert deployer contract info into state reader
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(deployer_address.clone(), deployer_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(deployer_address.clone(), deployer_nonce);
+
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+    let calldata = [Felt252::from_bytes_be(&deployee_class_hash), Felt252::one()].to_vec();
+    let result = execute_deploy(
+        &mut state,
+        &deployer_address,
+        deploy_contract_selector,
+        &calldata,
+        EntryPointType::External,
+        &deployer_class_hash,
+    );
+    let expected_deployed_contract_address = Address(
+        calculate_contract_address(
+            &Felt252::one(),
+            &Felt252::from_bytes_be(&deployee_class_hash),
+            &vec![100.into()],
+            deployer_address,
+        ).unwrap()
+    );
+
+    assert_eq!(result.retdata, [expected_deployed_contract_address.0]);
+    assert_eq!(result.events, []);
+    assert!(result.internal_calls.is_empty());
+
+    let sorted_events = result.get_sorted_events().unwrap();
+    assert_eq!(sorted_events, vec![]);
+    assert_eq!(result.failure_flag, false)
+}
+
+#[test]
+#[cfg(feature = "cairo-native")]
+fn deploy_syscall_address_unavailable_test() {
+    // Deployer contract
+
+    use cairo_vm::felt::felt_str;
+    use starknet_in_rust::utils::felt_to_hash;
+    let deployer_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/deploy.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // Deployee contract
+    let deployee_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/echo.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // deployer contract entrypoints
+    let deployer_entrypoints = deployer_contract_class.clone().entry_points_by_type;
+    let deploy_contract_selector = &deployer_entrypoints.external.get(0).unwrap().selector;
+
+    // Echo contract entrypoints
+    let deployee_entrypoints = deployee_contract_class.clone().entry_points_by_type;
+    let fn_selector = &deployee_entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    // Deployer contract data
+    let deployer_address = Address(1111.into());
+    let deployer_class_hash: ClassHash = [2;32];
+    let deployer_nonce = Felt252::zero();
+
+    // Deployee contract data
+    let deployee_class_hash: ClassHash = felt_to_hash(&Felt252::one());;
+    let deployee_nonce = Felt252::zero();
+    let expected_deployed_contract_address = Address(
+        calculate_contract_address(
+            &Felt252::one(),
+            &Felt252::from_bytes_be(&deployee_class_hash),
+            &vec![100.into()],
+            deployer_address.clone(),
+        ).unwrap()
+    );
+    // Insert contract to be deployed so that its address is taken
+    let deployee_address = expected_deployed_contract_address;
+
 
     contract_class_cache.insert(
         deployer_class_hash,
@@ -868,51 +973,8 @@ fn deploy_syscall_test() {
         EntryPointType::External,
         &deployer_class_hash,
     );
-    let expected_deployed_contract_address = Address(
-        calculate_contract_address(
-            &Felt252::one(),
-            &Felt252::from_bytes_be(&deployee_class_hash),
-            &vec![100.into()],
-            deployer_address,
-        ).unwrap()
-    );
 
-    let internal_call = CallInfo {
-        caller_address: Address(1111.into()),
-        call_type: Some(Call),
-        contract_address: Address(1112.into()),
-        code_address: None,
-        class_hash: Some([
-            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-            2, 2, 2,
-        ]),
-        entry_point_selector: Some(fn_selector.into()),
-        entry_point_type: Some(External),
-        calldata: Vec::new(),
-        retdata: vec![1234.into()],
-        execution_resources: None,
-        events: vec![OrderedEvent {
-            order: 0,
-            keys: vec![110.into()],
-            data: vec![1.into()],
-        }],
-        l2_to_l1_messages: Vec::new(),
-        storage_read_values: Vec::new(),
-        accessed_storage_keys: HashSet::new(),
-        internal_calls: Vec::new(),
-        gas_consumed: 340282366920938463463374607431768211455, // TODO: fix gas consumed
-        failure_flag: false,
-    };
-
-    let event = Event {
-        from_address: Address(1112.into()),
-        keys: vec![110.into()],
-        data: vec![1.into()],
-    };
-    assert_eq!(result.retdata, [expected_deployed_contract_address.0]);
+    assert_eq!(std::str::from_utf8(&result.retdata[0].to_be_bytes()).unwrap().trim_start_matches('\0'), "Result::unwrap failed.");
     assert_eq!(result.events, []);
     assert!(result.internal_calls.is_empty());
-
-    let sorted_events = result.get_sorted_events().unwrap();
-    assert_eq!(sorted_events, vec![event]);
 }
