@@ -12,7 +12,8 @@ use crate::{
         CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     },
     state::{
-        contract_storage_state::ContractStorageState, state_api::StateReader,
+        contract_storage_state::ContractStorageState,
+        state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
     utils::Address,
@@ -100,6 +101,10 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         _gas: &mut u128,
     ) -> SyscallResult<()> {
         println!("Called `replace_class({class_hash})` from MLIR.");
+        let _ = self
+            .starknet_storage_state
+            .state
+            .set_class_hash_at(self.contract_address.clone(), class_hash.to_be_bytes());
         Ok(())
     }
 
