@@ -30,7 +30,7 @@ use std::sync::Arc;
 
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
-
+    dbg!(args.clone());
     match args.get(3).map(|s| s.as_str()) {
         Some("fibo") => bench_fibo(
             args.get(1)
@@ -44,12 +44,16 @@ pub fn main() {
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
-        _ => bench_erc20(
+        _ => {
+            println!("Executing ERC20 benchmark");
+            bench_erc20(
             args.get(1)
                 .and_then(|x| usize::from_str_radix(x, 10).ok())
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
-        ),
+        )
+        
+    },
     }
 }
 
@@ -208,7 +212,6 @@ fn bench_erc20(executions: usize, native: bool) {
     static ERC20_CLASS_HASH: ClassHash = [2; 32];
     static DEPLOYER_CLASS_HASH: ClassHash = [10; 32];
     static ACCOUNT1_CLASS_HASH: ClassHash = [1; 32];
-    static ACCOUNT2_CLASS_HASH: ClassHash = [4; 32];
     lazy_static! {
         static ref DEPLOYER_ADDRESS: Address = Address(1111.into());
         static ref ERC20_NAME: Felt252 = Felt252::from_bytes_be(b"some-token");
@@ -230,7 +233,7 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_DEPLOYMENT_CALLER_ADDRESS: Address = Address(0000.into());
     }
 
-
+    println!("Deploying ERC20");
     let (erc20_address, mut state): (Address, CachedState<InMemoryStateReader>) = match native {
         true => {
             let erc20_sierra_class = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
@@ -395,20 +398,20 @@ fn bench_erc20(executions: usize, native: bool) {
     //    Further executions (transfers) will be executed with Native.
     //    (or the VM, depending on configuration)
     // 2a. setup for first account:
-
+    println!("Deploying accounts");
     let account_casm_file = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");
     let account_contract_class: CasmContractClass =
         serde_json::from_slice(account_casm_file).unwrap();
 
     state
         .set_contract_class(
-            &felt_str!("1").to_be_bytes(),
+            &ACCOUNT1_CLASS_HASH,
             &CompiledClass::Casm(Arc::new(account_contract_class)),
         )
         .unwrap();
     state
         .set_compiled_class_hash(
-            &felt_str!("1"),
+            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH),
             &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH),
         )
         .unwrap();
@@ -441,14 +444,14 @@ fn bench_erc20(executions: usize, native: bool) {
     // we can extract its address.
     let account1_address = account1_deploy_tx
         .execute(&mut state, &Default::default())
-        .expect("failed to execute internal_deploy_account")
+        .expect("failed to execute the deployment of account 1")
         .validate_info
         .expect("validate_info missing")
         .contract_address;
 
     // now we need to deploy account2
     let account2_deploy_tx = DeployAccount::new(
-        ACCOUNT2_CLASS_HASH, // class hash
+        ACCOUNT1_CLASS_HASH, // class hash
         0,                   // max fee
         1.into(),            // tx version
         Felt252::zero(),     // nonce
@@ -469,7 +472,7 @@ fn bench_erc20(executions: usize, native: bool) {
     // execute the deploy_account transaction and retrieve the deployed account address.
     let account2_address = account2_deploy_tx
         .execute(&mut state, &Default::default())
-        .expect("failed to execute internal_deploy_account")
+        .expect("failed to execute the deployment of account 2")
         .validate_info
         .expect("validate_info missing")
         .contract_address;
@@ -480,21 +483,10 @@ fn bench_erc20(executions: usize, native: bool) {
     // calldata for transfering 123 tokens from account1 to account2
     let calldata = vec![account2_address.clone().0, Felt252::from(123)];
 
-    // let retdata = call_contract(
-    //     erc20_address.clone(),
-    //     entrypoint_selector,
-    //     calldata,
-    //     &mut state,
-    //     BlockContext::default(),
-    //     account_address_1.clone(),
-    // )
-    // .unwrap();
-
-    // assert!(retdata.is_empty());
-
     let native_ctx = NativeContext::new();
     let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
 
+    println!("Executing transfers...");
     for _ in 0..executions {
         let result = execute(
             &mut state.clone(),
