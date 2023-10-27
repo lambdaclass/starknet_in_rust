@@ -97,8 +97,8 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn replace_class(
         &mut self,
-        class_hash: cairo_vm::felt::Felt252,
-        _gas: &mut u128,
+        class_hash: Felt252,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<()> {
         println!("Called `replace_class({class_hash})` from MLIR.");
         let _ = self

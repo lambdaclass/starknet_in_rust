@@ -692,7 +692,9 @@ fn call_events_contract_test() {
 }
 
 #[test]
-fn replace_class_contract_call() {
+fn replace_class_test() {
+    // This test only checks that the contract is updated in the storage, see `replace_class_contract_call`
+    //  Create program and entry point types for contract class
     let contract_class_a: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
             std::fs::read_to_string("starknet_programs/cairo2/get_number_a.sierra")
@@ -700,11 +702,13 @@ fn replace_class_contract_call() {
                 .as_str(),
         )
         .unwrap();
+    let entrypoints_a = contract_class_a.clone().entry_points_by_type;
+    let upgrade_selector = &entrypoints_a.external.get(1).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
 
-    let address = Address(Felt252::from(1));
+    let address = Address(1111.into());
     let class_hash_a: ClassHash = [1; 32];
     let nonce = Felt252::zero();
 
@@ -718,12 +722,9 @@ fn replace_class_contract_call() {
         .insert(address.clone(), class_hash_a);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
-
-    // SET GET_NUMBER_B
+        .insert(address.clone(), nonce);
 
     // Add get_number_b contract to the state (only its contract_class)
-
     let contract_class_b: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
             std::fs::read_to_string("starknet_programs/cairo2/get_number_b.sierra")
@@ -736,84 +737,34 @@ fn replace_class_contract_call() {
 
     contract_class_cache.insert(
         class_hash_b,
-        CompiledClass::Sierra(Arc::new(contract_class_b)),
+        CompiledClass::Sierra(Arc::new(contract_class_b.clone())),
     );
-
-    // SET GET_NUMBER_WRAPPER
-
-    //  Create program and entry point types for contract class
-    let wrapper_contract_class: cairo_lang_starknet::contract_class::ContractClass =
-        serde_json::from_str(
-            std::fs::read_to_string("starknet_programs/cairo2/get_number_wrapper.sierra")
-                .unwrap()
-                .as_str(),
-        )
-        .unwrap();
-
-    let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
-    let get_number_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
-    let upgrade_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
-
-    let wrapper_address = Address(Felt252::from(2));
-    let wrapper_class_hash: ClassHash = [3; 32];
-
-    contract_class_cache.insert(
-        wrapper_class_hash,
-        CompiledClass::Sierra(Arc::new(wrapper_contract_class)),
-    );
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(wrapper_address.clone(), wrapper_class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(wrapper_address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
-    // CALL GET_NUMBER BEFORE REPLACE_CLASS
-
-    let calldata = [].to_vec();
-    let caller_address = Address(0000.into());
-    let result = execute(
-        &mut state,
-        &caller_address,
-        &wrapper_address,
-        upgrade_entrypoint_selector,
-        &calldata,
-        External,
-        &wrapper_class_hash,
-    );
-
-    assert_eq!(result.retdata, vec![25.into()]);
-
-    // REPLACE_CLASS
-
+    // Run upgrade entrypoint and check that the storage was updated with the new contract class
+    // Create an execution entry point
     let calldata = [Felt252::from_bytes_be(&class_hash_b)].to_vec();
-    execute(
-        &mut state,
-        &caller_address,
-        &address,
-        upgrade_entrypoint_selector,
-        &calldata,
-        External,
-        &wrapper_class_hash,
-    );
-
-    // CALL GET_NUMBER AFTER REPLACE_CLASS
-    let calldata = [].to_vec();
-
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
     let result = execute(
         &mut state,
         &caller_address,
         &address,
-        get_number_entrypoint_selector,
+        upgrade_selector,
         &calldata,
-        External,
-        &wrapper_class_hash,
+        entry_point_type,
+        &class_hash_a,
     );
 
-    assert_eq!(result.retdata, vec![17.into()]);
+    // Check that the class was indeed replaced in storage
+    assert_eq!(result.class_hash.unwrap(), class_hash_b);
+    // Check that the class_hash_b leads to contract_class_b for soundness
+    assert_eq!(
+        state.get_contract_class(&class_hash_b).unwrap(),
+        CompiledClass::Sierra(Arc::new(contract_class_b))
+    );
 }
 
 fn execute(
