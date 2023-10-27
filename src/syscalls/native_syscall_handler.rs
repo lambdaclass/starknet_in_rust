@@ -108,7 +108,11 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
                 calldata,
                 deployer_address,
             )
-            .map_err(|_| vec![Felt252::from_bytes_be(b"FAILED_TO_CALCULATE_CONTRACT_ADDRESS")])?,
+            .map_err(|_| {
+                vec![Felt252::from_bytes_be(
+                    b"FAILED_TO_CALCULATE_CONTRACT_ADDRESS",
+                )]
+            })?,
         );
         // Initialize the contract.
         let class_hash_bytes: ClassHash = felt_to_hash(&class_hash);
@@ -478,7 +482,7 @@ where
                 // they are only dummy values for the `execute` method.
                 &BlockContext::default(),
                 &mut ExecutionResourcesManager::default(),
-                &mut TransactionExecutionContext::default(),
+                &mut self.tx_execution_context,
                 false,
                 u64::MAX,
             )

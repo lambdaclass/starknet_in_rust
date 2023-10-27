@@ -708,7 +708,7 @@ fn execute(
         entrypoint_type,
         Some(CallType::Delegate),
         Some(*class_hash),
-        u64::MAX.into(), // gas is u64 in cairo-native and sierra
+        u64::MAX.into(),
     );
 
     // Execute the entrypoint
@@ -754,7 +754,7 @@ fn execute_deploy(
         entrypoint_type,
         Some(CallType::Delegate),
         Some(*class_hash),
-        u64::MAX.into(), // gas is u64 in cairo-native and sierra
+        u64::MAX.into(),
     );
 
     // Execute the entrypoint
