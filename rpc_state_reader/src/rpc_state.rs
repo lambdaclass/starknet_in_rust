@@ -197,7 +197,7 @@ where
     D: Deserializer<'de>,
 {
     let hex: String = Deserialize::deserialize(deserializer)?;
-    Ok(u128::from_str_radix(&hex[2..], 16).unwrap())
+    Ok(u128::from_str_radix(&hex[2..], 16).map_err(serde::de::Error::custom)?)
 }
 
 impl<'de> Deserialize<'de> for RpcCallInfo {
@@ -208,34 +208,70 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
 
         // Parse execution_resources
-        let execution_resources_value = value["execution_resources"].clone();
+        let execution_resources_value = value
+            .get("execution_resources")
+            .ok_or(serde::de::Error::custom(
+                "Missing field execution_resources",
+            ))?
+            .clone();
 
         let execution_resources = VmExecutionResources {
-            n_steps: serde_json::from_value(execution_resources_value["n_steps"].clone())
-                .map_err(serde::de::Error::custom)?,
+            n_steps: serde_json::from_value(
+                execution_resources_value
+                    .get("n_steps")
+                    .ok_or(serde::de::Error::custom(
+                        "Missing field execution_resources.n_steps",
+                    ))?
+                    .clone(),
+            )
+            .map_err(serde::de::Error::custom)?,
             n_memory_holes: serde_json::from_value(
-                execution_resources_value["n_memory_holes"].clone(),
+                execution_resources_value
+                    .get("n_memory_holes")
+                    .ok_or(serde::de::Error::custom(
+                        "Missing field execution_resources.n_memory_holes",
+                    ))?
+                    .clone(),
             )
             .map_err(serde::de::Error::custom)?,
             builtin_instance_counter: serde_json::from_value(
-                execution_resources_value["builtin_instance_counter"].clone(),
+                execution_resources_value
+                    .get("builtin_instance_counter")
+                    .ok_or(serde::de::Error::custom(
+                        "Missing field execution_resources.builtin_instance_counter",
+                    ))?
+                    .clone(),
             )
             .map_err(serde::de::Error::custom)?,
         };
 
         // Parse retdata
-        let retdata_value = value["result"].clone();
+        let retdata_value = value
+            .get("result")
+            .ok_or(serde::de::Error::custom("Missing field result"))?
+            .clone();
         let retdata = serde_json::from_value(retdata_value).unwrap();
 
         // Parse calldata
-        let calldata_value = value["calldata"].clone();
+        let calldata_value = value
+            .get("calldata")
+            .ok_or(serde::de::Error::custom("Missing field calldata"))?
+            .clone();
         let calldata = serde_json::from_value(calldata_value).unwrap();
 
         // Parse internal calls
-        let internal_calls_value = value["internal_calls"].clone();
+        let internal_calls_value = value
+            .get("internal_calls")
+            .ok_or(serde::de::Error::custom("Missing field internal_calls"))?
+            .clone();
         let mut internal_calls = vec![];
 
-        for call in internal_calls_value.as_array().unwrap() {
+        for call in internal_calls_value
+            .as_array()
+            .ok_or(serde::de::Error::custom(
+                "Wrong type for field internal_calls",
+            ))?
+        {
             internal_calls
                 .push(serde_json::from_value(call.clone()).map_err(serde::de::Error::custom)?);
         }
