@@ -646,6 +646,8 @@ impl ExecutionEntryPoint {
         };
         use serde_json::json;
 
+        use crate::syscalls::business_logic_syscall_handler::SYSCALL_BASE;
+
         let entry_point = match self.entry_point_type {
             EntryPointType::External => contract_class
                 .entry_points_by_type
@@ -678,16 +680,15 @@ impl ExecutionEntryPoint {
 
         let syscall_handler = NativeSyscallHandler {
             starknet_storage_state: contract_storage_state,
-            n_emitted_events: 0,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
-            n_sent_messages: 0,
             contract_address: self.contract_address.clone(),
             internal_calls: Vec::new(),
             caller_address: self.caller_address.clone(),
             entry_point_selector: self.entry_point_selector.clone(),
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
+            resources_manager: Default::default(),
         };
 
         native_program
@@ -788,7 +789,10 @@ impl ExecutionEntryPoint {
             failure_flag: value.failure_flag,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             internal_calls: syscall_handler.internal_calls,
-            gas_consumed: self.initial_gas - value.remaining_gas,
+            gas_consumed: self
+                .initial_gas
+                .saturating_sub(SYSCALL_BASE)
+                .saturating_sub(value.remaining_gas),
         })
     }
 }

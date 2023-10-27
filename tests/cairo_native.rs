@@ -143,7 +143,6 @@ fn integration_test_erc20() {
     assert_eq!(native_result.retdata, [].to_vec());
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(NATIVE_CLASS_HASH));
-    // assert_eq!(native_result.gas_consumed, 196270);
 
     assert_eq!(vm_result.events, native_result.events);
     assert_eq!(
@@ -153,7 +152,7 @@ fn integration_test_erc20() {
     assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
     // TODO: Make these asserts work
     // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
-    // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
+    assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
 
     #[allow(clippy::too_many_arguments)]
     fn compare_results(
@@ -164,7 +163,7 @@ fn integration_test_erc20() {
         casm_entrypoints: &CasmContractEntryPoints,
         calldata: &[Felt252],
         caller_address: &Address,
-        _debug_name: &str,
+        debug_name: &str,
     ) {
         let native_selector = &native_entrypoints
             .external
@@ -207,10 +206,10 @@ fn integration_test_erc20() {
         assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
 
         // TODO: Make these asserts work
-        // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed, "gas consumed mismatch for {debug_name}",);
-
-        // This assert is probably impossible to make work because native doesn't track resources.
-        // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
+        assert_eq!(
+            vm_result.gas_consumed, native_result.gas_consumed,
+            "gas consumed mismatch for {debug_name}",
+        );
     }
 
     // --------------- GET TOTAL SUPPLY -----------------
@@ -579,6 +578,7 @@ fn call_echo_contract_test() {
     );
 
     assert_eq!(result.retdata, [Felt252::new(99999999)]);
+    assert_eq!(result.gas_consumed, 89110);
 }
 
 #[test]
@@ -688,7 +688,7 @@ fn call_events_contract_test() {
         storage_read_values: Vec::new(),
         accessed_storage_keys: HashSet::new(),
         internal_calls: Vec::new(),
-        gas_consumed: 19640,
+        gas_consumed: 9640,
         failure_flag: false,
     };
 
