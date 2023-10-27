@@ -15,7 +15,7 @@ use starknet_in_rust::definitions::block_context::StarknetChainId;
 use std::{collections::HashMap, env, fmt::Display};
 use thiserror::Error;
 
-use crate::utils;
+use crate::{utils, rpc_state_errors::RpcStateError};
 
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
@@ -295,21 +295,21 @@ impl RpcState {
         }
     }
 
-    pub fn new_infura(chain: RpcChain, block: BlockValue) -> Self {
+    pub fn new_infura(chain: RpcChain, block: BlockValue) -> Result<Self, RpcStateError> {
         if env::var("INFURA_API_KEY").is_err() {
-            dotenv().expect("Missing .env file");
+            dotenv().map_err(|_| RpcStateError::MissingEnvFile)?;
         }
 
         let rpc_endpoint = format!(
             "https://{}.infura.io/v3/{}",
             chain,
-            env::var("INFURA_API_KEY").expect("missing infura api key")
+            env::var("INFURA_API_KEY").map_err(|_| RpcStateError::MissingInfuraApiKey)?
         );
 
         let chain_id: ChainId = chain.into();
         let feeder_url = format!("https://{}.starknet.io/feeder_gateway", chain_id);
 
-        Self::new(chain, block, &rpc_endpoint, &feeder_url)
+        Ok(Self::new(chain, block, &rpc_endpoint, &feeder_url))
     }
 
     fn rpc_call_result<T: for<'a> Deserialize<'a>>(
