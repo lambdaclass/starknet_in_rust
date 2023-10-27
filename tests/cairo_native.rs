@@ -870,7 +870,7 @@ fn deploy_syscall_test() {
 
     assert_eq!(result.retdata, [expected_deployed_contract_address.0]);
     assert_eq!(result.events, []);
-    assert!(result.internal_calls.is_empty());
+    assert_eq!(result.internal_calls.len(), 1);
 
     let sorted_events = result.get_sorted_events().unwrap();
     assert_eq!(sorted_events, vec![]);
