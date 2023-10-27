@@ -266,7 +266,7 @@ impl<T: StateReader> State for CachedState<T> {
         let compiled_class_hash = compiled_class_hash.to_be_bytes();
 
         self.cache
-            .class_hash_to_compiled_class_hash
+            .compiled_class_hash_writes
             .insert(class_hash, compiled_class_hash);
         Ok(())
     }
