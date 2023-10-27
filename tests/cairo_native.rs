@@ -823,7 +823,7 @@ fn deploy_syscall_test() {
     let deployer_nonce = Felt252::zero();
 
     // Deployee contract data
-    let deployee_class_hash: ClassHash = [0; 32];
+    let deployee_class_hash: ClassHash = Felt252::one().to_be_bytes();
     let _deployee_nonce = Felt252::zero();
 
     contract_class_cache.insert(
