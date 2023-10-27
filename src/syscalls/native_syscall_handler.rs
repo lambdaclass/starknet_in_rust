@@ -429,7 +429,7 @@ where
         contract_address: &Address,
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
-        remainig_gas: u128,
+        remaining_gas: u128,
     ) -> Result<CallResult, StateError> {
         let compiled_class = if let Ok(compiled_class) = self
             .starknet_storage_state
@@ -468,7 +468,7 @@ where
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
-            remainig_gas,
+            remaining_gas,
         );
 
         let ExecutionResult { call_info, .. } = call
