@@ -57,9 +57,10 @@ use lazy_static::lazy_static;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use num_traits::{One, ToPrimitive, Zero};
 
-const STEP: u128 = 100;
-const SYSCALL_BASE: u128 = 100 * STEP;
-const KECCAK_ROUND_COST: u128 = 180000;
+pub(crate) const STEP: u128 = 100;
+pub(crate) const SYSCALL_BASE: u128 = 100 * STEP;
+pub(crate) const KECCAK_ROUND_COST: u128 = 180000;
+
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> = {
@@ -91,7 +92,7 @@ lazy_static! {
     // Taken from starkware/starknet/constants.py in cairo-lang
     // See further documentation on cairo_programs/constants.cairo
     /// Maps syscall name to gas costs
-    static ref SYSCALL_GAS_COST: HashMap<&'static str, u128> = {
+    pub(crate) static ref SYSCALL_GAS_COST: HashMap<&'static str, u128> = {
         let mut map = HashMap::new();
 
         map.insert("initial", 100_000_000 * STEP);

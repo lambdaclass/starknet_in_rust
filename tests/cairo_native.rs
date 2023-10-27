@@ -145,7 +145,6 @@ fn integration_test_erc20() {
     assert_eq!(native_result.retdata, [].to_vec());
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(NATIVE_CLASS_HASH));
-    assert_eq!(native_result.gas_consumed, 18446744073709551615); // (u64::MAX)
 
     assert_eq!(vm_result.events, native_result.events);
     assert_eq!(
@@ -153,10 +152,9 @@ fn integration_test_erc20() {
         native_result.accessed_storage_keys
     );
     assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
-    // TODO: Make these asserts work
-    // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
-    // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
+    assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
 
+    #[allow(clippy::too_many_arguments)]
     fn compare_results(
         state_vm: &mut CachedState<InMemoryStateReader>,
         state_native: &mut CachedState<InMemoryStateReader>,
@@ -165,6 +163,7 @@ fn integration_test_erc20() {
         casm_entrypoints: &CasmContractEntryPoints,
         calldata: &[Felt252],
         caller_address: &Address,
+        debug_name: &str,
     ) {
         let native_selector = &native_entrypoints
             .external
@@ -206,11 +205,10 @@ fn integration_test_erc20() {
         );
         assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
 
-        // TODO: Make these asserts work
-        // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
-
-        // This assert is probably impossible to make work because native doesn't track resources.
-        // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
+        assert_eq!(
+            vm_result.gas_consumed, native_result.gas_consumed,
+            "gas consumed mismatch for {debug_name}",
+        );
     }
 
     // --------------- GET TOTAL SUPPLY -----------------
@@ -223,6 +221,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
+        "get total supply 1",
     );
 
     // ---------------- GET DECIMALS ----------------------
@@ -235,6 +234,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
+        "get decimals 1",
     );
 
     // ---------------- GET NAME ----------------------
@@ -247,6 +247,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
+        "get name",
     );
 
     // // ---------------- GET SYMBOL ----------------------
@@ -259,6 +260,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
+        "get symbol",
     );
 
     // ---------------- GET BALANCE OF CALLER ----------------------
@@ -271,6 +273,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
+        "get balance of caller",
     );
 
     // // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
@@ -283,6 +286,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone(), 1.into()],
         &caller_address,
+        "get allowance of address 1",
     );
 
     // // ---------------- INCREASE ALLOWANCE OF ADDRESS 1 by 10_000 ----------------------
@@ -295,6 +299,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 10_000.into()],
         &caller_address,
+        "increase allowance of address 1 by 10000",
     );
 
     // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
@@ -308,6 +313,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone(), 1.into()],
         &caller_address,
+        "allowance of address 1 part 2",
     );
 
     // ---------------- APPROVE ADDRESS 1 TO MAKE TRANSFERS ON BEHALF OF THE CALLER ----------------------
@@ -320,6 +326,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 5000.into()],
         &caller_address,
+        "approve address 1 to make transfers",
     );
 
     // ---------------- TRANSFER 3 TOKENS FROM CALLER TO ADDRESS 2 ---------
@@ -332,6 +339,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into(), 3.into()],
         &caller_address,
+        "transfer 3 tokens",
     );
 
     // // ---------------- GET BALANCE OF CALLER ----------------------
@@ -344,6 +352,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
+        "GET BALANCE OF CALLER",
     );
 
     // // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
@@ -356,6 +365,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into()],
         &caller_address,
+        "GET BALANCE OF ADDRESS 2",
     );
 
     // // ---------------- TRANSFER 1 TOKEN FROM CALLER TO ADDRESS 2, CALLED FROM ADDRESS 1 ----------------------
@@ -368,6 +378,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 2.into(), 1.into()],
         &caller_address,
+        "TRANSFER 1 TOKEN FROM CALLER TO ADDRESS 2, CALLED FROM ADDRESS 1",
     );
 
     // // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
@@ -380,6 +391,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into()],
         &caller_address,
+        "GET BALANCE OF ADDRESS 2 part 2",
     );
 
     // // ---------------- GET BALANCE OF CALLER ----------------------
@@ -392,6 +404,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
+        "GET BALANCE OF CALLER last",
     );
 }
 
@@ -564,6 +577,7 @@ fn call_echo_contract_test() {
     );
 
     assert_eq!(result.retdata, [Felt252::new(99999999)]);
+    assert_eq!(result.gas_consumed, 89110);
 }
 
 #[test]
@@ -673,7 +687,7 @@ fn call_events_contract_test() {
         storage_read_values: Vec::new(),
         accessed_storage_keys: HashSet::new(),
         internal_calls: Vec::new(),
-        gas_consumed: 340282366920938463463374607431768211455, // TODO: fix gas consumed
+        gas_consumed: 9640,
         failure_flag: false,
     };
 
@@ -784,7 +798,7 @@ fn execute(
         entrypoint_type,
         Some(CallType::Delegate),
         Some(*class_hash),
-        u64::MAX.into(), // gas is u64 in cairo-native and sierra
+        u64::MAX.into(),
     );
 
     // Execute the entrypoint
