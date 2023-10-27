@@ -339,6 +339,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         };
 
         if self.constructor_entry_points_empty(compiled_class)? {
+            dbg!("Executing empty constructor");
             if !constructor_calldata.is_empty() {
                 return Err(StateError::ConstructorCalldataEmpty());
             }

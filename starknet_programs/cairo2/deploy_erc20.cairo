@@ -29,7 +29,14 @@ mod DeployTest {
             calldata.append(decimals);
             calldata.append(initial_supply);
             calldata.append(symbol);
-            deploy_syscall(class_hash, contract_address_salt, calldata.span(), false).unwrap()
+
+
+            match deploy_syscall(class_hash, contract_address_salt, calldata.span(), false) {
+                Result::Ok(res) => res,
+                Result::Err(err) => {
+                    panic_with_felt252(*err.at(0))
+                },
+            }
         }
     }
 }

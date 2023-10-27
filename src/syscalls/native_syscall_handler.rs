@@ -49,7 +49,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         block_number: u64,
         _gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
-        println!("Called `get_block_hash({block_number})` from MLIR.");
+        tracing::debug!("Called `get_block_hash({block_number})` from MLIR.");
         Ok(Felt252::from_bytes_be(b"get_block_hash ok"))
     }
 
@@ -57,7 +57,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         &mut self,
         _gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::ExecutionInfo> {
-        println!("Called `get_execution_info()` from MLIR.");
+        tracing::debug!("Called `get_execution_info()` from MLIR.");
         Ok(ExecutionInfo {
             block_info: BlockInfo {
                 block_number: self.block_context.block_info.block_number,
@@ -91,7 +91,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         deploy_from_zero: bool,
         _gas: &mut u128,
     ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
-        println!("Called `deploy({class_hash}, {contract_address_salt}, {calldata:?}, {deploy_from_zero})` from MLIR.");
+        tracing::debug!("Called `deploy({class_hash}, {contract_address_salt}, {calldata:?}, {deploy_from_zero})` from MLIR.");
         Ok((
             class_hash + contract_address_salt,
             calldata.iter().map(|x| x + &Felt252::new(1)).collect(),
@@ -114,7 +114,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         calldata: &[cairo_vm::felt::Felt252],
         _gas: &mut u128,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
-        println!(
+        tracing::debug!(
             "Called `library_call({class_hash}, {function_selector}, {calldata:?})` from MLIR."
         );
         Ok(calldata.iter().map(|x| x * &Felt252::new(3)).collect())
@@ -127,7 +127,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         calldata: &[cairo_vm::felt::Felt252],
         _gas: &mut u128,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
-        println!(
+        tracing::debug!(
             "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from MLIR."
         );
         let address = Address(address);
@@ -182,7 +182,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
             Err(_e @ StateError::Io(_)) => todo!(),
             Err(_) => Ok(Felt252::zero()),
         };
-        println!("Called `storage_read({address_domain}, {address}) = {value:?}` from MLIR.");
+        tracing::debug!("Called `storage_read({address_domain}, {address}) = {value:?}` from MLIR.");
         value
     }
 
@@ -193,7 +193,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         value: cairo_vm::felt::Felt252,
         _gas: &mut u128,
     ) -> SyscallResult<()> {
-        println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
+        tracing::debug!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
         self.starknet_storage_state
             .write(&address.to_be_bytes(), value);
         Ok(())
@@ -206,7 +206,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         _gas: &mut u128,
     ) -> SyscallResult<()> {
         let order = self.n_emitted_events;
-        println!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from MLIR.");
+        tracing::debug!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from MLIR.");
         self.events
             .push(OrderedEvent::new(order, keys.to_vec(), data.to_vec()));
         self.n_emitted_events += 1;
@@ -233,11 +233,11 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
     }
 
     fn keccak(
-        &self,
+        &mut self,
         input: &[u64],
         _gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::U256> {
-        println!("Called `keccak({input:?})` from MLIR.");
+        tracing::debug!("Called `keccak({input:?})` from MLIR.");
         Ok(U256(Felt252::from(1234567890).to_le_bytes()))
     }
 

@@ -923,7 +923,7 @@ impl ExecutionEntryPoint {
             failure_flag: value.failure_flag,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             internal_calls: syscall_handler.internal_calls,
-            gas_consumed: value.gas_consumed,
+            gas_consumed: value.remaining_gas,
         })
     }
 }

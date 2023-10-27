@@ -30,7 +30,7 @@ use std::sync::Arc;
 
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
-    dbg!(args.clone());
+    // dbg!(args.clone());
     match args.get(3).map(|s| s.as_str()) {
         Some("fibo") => bench_fibo(
             args.get(1)
@@ -45,7 +45,6 @@ pub fn main() {
             args.get(2) == Some(&"native".to_string()),
         ),
         _ => {
-            println!("Executing ERC20 benchmark");
             bench_erc20(
             args.get(1)
                 .and_then(|x| usize::from_str_radix(x, 10).ok())
@@ -209,20 +208,21 @@ fn bench_erc20(executions: usize, native: bool) {
     // 1. setup ERC20 contract and state.
     // Create state reader and preload the contract classes.
     let mut contract_class_cache = HashMap::new();
-    static ERC20_CLASS_HASH: ClassHash = [2; 32];
-    static DEPLOYER_CLASS_HASH: ClassHash = [10; 32];
-    static ACCOUNT1_CLASS_HASH: ClassHash = [1; 32];
+
     lazy_static! {
+        static ref ERC20_CLASS_HASH: ClassHash = felt_str!("2").to_be_bytes();
+        static ref DEPLOYER_CLASS_HASH: ClassHash = felt_str!("10").to_be_bytes();
+        static ref ACCOUNT1_CLASS_HASH: ClassHash = felt_str!("1").to_be_bytes();
         static ref DEPLOYER_ADDRESS: Address = Address(1111.into());
-        static ref ERC20_NAME: Felt252 = Felt252::from_bytes_be(b"some-token");
-        static ref ERC20_SYMBOL: Felt252 = Felt252::from_bytes_be(b"my-super-awesome-token");
+        static ref ERC20_NAME: Felt252 = Felt252::from_bytes_be(b"be");
+        static ref ERC20_SYMBOL: Felt252 = Felt252::from_bytes_be(b"be");
         static ref ERC20_DECIMALS: Felt252 = Felt252::from(24);
         static ref ERC20_INITIAL_SUPPLY: Felt252 = Felt252::from(1_000_000);
         static ref ERC20_RECIPIENT: Felt252 =
-            felt_str!("397149464972449753182583229366244826403270781177748543857889179957856017275");
+            felt_str!("111");
         static ref ERC20_SALT: Felt252 = felt_str!("1234");
         static ref ERC20_DEPLOYER_CALLDATA: [Felt252; 7] = [
-            Felt252::from_bytes_be(&ERC20_CLASS_HASH),
+            Felt252::from_bytes_be(&ERC20_CLASS_HASH.clone()),
             ERC20_SALT.clone(),
             ERC20_RECIPIENT.clone(),
             ERC20_NAME.clone(),
@@ -233,7 +233,6 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_DEPLOYMENT_CALLER_ADDRESS: Address = Address(0000.into());
     }
 
-    println!("Deploying ERC20");
     let (erc20_address, mut state): (Address, CachedState<InMemoryStateReader>) = match native {
         true => {
             let erc20_sierra_class = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
@@ -252,16 +251,17 @@ fn bench_erc20(executions: usize, native: bool) {
 
             // insert deployer and erc20 classes into the cache.
             contract_class_cache.insert(
-                DEPLOYER_CLASS_HASH,
+                DEPLOYER_CLASS_HASH.clone(),
                 CompiledClass::Casm(Arc::new(erc20_deployer_class)),
             );
-            contract_class_cache.insert(ERC20_CLASS_HASH, erc20_contract_class);
+            contract_class_cache.insert(ERC20_CLASS_HASH.clone(), erc20_contract_class);
 
             let mut state_reader = InMemoryStateReader::default();
             // setup deployer nonce and address into the state reader
             state_reader
                 .address_to_class_hash_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), DEPLOYER_CLASS_HASH);
+                .insert(DEPLOYER_ADDRESS.clone(), DEPLOYER_CLASS_HASH.clone()
+            );
             state_reader
                 .address_to_nonce_mut()
                 .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
@@ -278,7 +278,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
-                Some(DEPLOYER_CLASS_HASH),
+                Some(DEPLOYER_CLASS_HASH.clone()),
                 100_000_000_000,
             );
 
@@ -309,7 +309,7 @@ fn bench_erc20(executions: usize, native: bool) {
 
             // obtain the address of the deployed erc20 contract
             let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
-
+            // dbg!(&erc20_address);
             (Address(erc20_address), state)
         }
         false => {
@@ -330,16 +330,16 @@ fn bench_erc20(executions: usize, native: bool) {
 
             // insert deployer and erc20 classes into the cache.
             contract_class_cache.insert(
-                DEPLOYER_CLASS_HASH,
+                DEPLOYER_CLASS_HASH.clone(),
                 CompiledClass::Casm(Arc::new(erc20_deployer_class)),
             );
-            contract_class_cache.insert(ERC20_CLASS_HASH, erc20_contract_class);
+            contract_class_cache.insert(ERC20_CLASS_HASH.clone(), erc20_contract_class);
 
             let mut state_reader = InMemoryStateReader::default();
             // setup deployer nonce and address into the state reader
             state_reader
                 .address_to_class_hash_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), DEPLOYER_CLASS_HASH);
+                .insert(DEPLOYER_ADDRESS.clone(), DEPLOYER_CLASS_HASH.clone());
             state_reader
                 .address_to_nonce_mut()
                 .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
@@ -356,7 +356,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
-                Some(DEPLOYER_CLASS_HASH),
+                Some(DEPLOYER_CLASS_HASH.clone()),
                 100_000_000_000,
             );
 
@@ -398,7 +398,6 @@ fn bench_erc20(executions: usize, native: bool) {
     //    Further executions (transfers) will be executed with Native.
     //    (or the VM, depending on configuration)
     // 2a. setup for first account:
-    println!("Deploying accounts");
     let account_casm_file = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");
     let account_contract_class: CasmContractClass =
         serde_json::from_slice(account_casm_file).unwrap();
@@ -411,8 +410,8 @@ fn bench_erc20(executions: usize, native: bool) {
         .unwrap();
     state
         .set_compiled_class_hash(
-            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH),
-            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH),
+            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH.clone()),
+            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH.clone()),
         )
         .unwrap();
 
@@ -421,7 +420,7 @@ fn bench_erc20(executions: usize, native: bool) {
 
     // create a transaction for deploying the first account
     let account1_deploy_tx = DeployAccount::new(
-        ACCOUNT1_CLASS_HASH, // class hash
+        ACCOUNT1_CLASS_HASH.clone(), // class hash
         0,                   // max fee
         1.into(),            // tx version
         Felt252::zero(),     // nonce
@@ -451,7 +450,7 @@ fn bench_erc20(executions: usize, native: bool) {
 
     // now we need to deploy account2
     let account2_deploy_tx = DeployAccount::new(
-        ACCOUNT1_CLASS_HASH, // class hash
+        ACCOUNT1_CLASS_HASH.clone(), // class hash
         0,                   // max fee
         1.into(),            // tx version
         Felt252::zero(),     // nonce
@@ -477,16 +476,16 @@ fn bench_erc20(executions: usize, native: bool) {
         .expect("validate_info missing")
         .contract_address;
 
+        // dbg!(account2_address.clone());
     // 4. do transfers between the accounts
 
     let transfer_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
     // calldata for transfering 123 tokens from account1 to account2
-    let calldata = vec![account2_address.clone().0, Felt252::from(123)];
+    let calldata = vec![Felt252::from(12), Felt252::from(123)];
 
     let native_ctx = NativeContext::new();
     let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
 
-    println!("Executing transfers...");
     for _ in 0..executions {
         let result = execute(
             &mut state.clone(),
@@ -498,7 +497,7 @@ fn bench_erc20(executions: usize, native: bool) {
             &ERC20_CLASS_HASH,
             program_cache.clone(),
         );
-        dbg!(&result);
+        // dbg!(&result);
         _ = std::hint::black_box(result);
         
     }
