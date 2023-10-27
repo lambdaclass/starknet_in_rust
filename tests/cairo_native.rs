@@ -150,8 +150,6 @@ fn integration_test_erc20() {
         native_result.accessed_storage_keys
     );
     assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
-    // TODO: Make these asserts work
-    // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
     assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
 
     #[allow(clippy::too_many_arguments)]
@@ -205,7 +203,6 @@ fn integration_test_erc20() {
         );
         assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
 
-        // TODO: Make these asserts work
         assert_eq!(
             vm_result.gas_consumed, native_result.gas_consumed,
             "gas consumed mismatch for {debug_name}",
