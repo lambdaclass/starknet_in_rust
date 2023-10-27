@@ -4,7 +4,6 @@ use crate::CallType::Call;
 use cairo_lang_starknet::casm_contract_class::CasmContractEntryPoints;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::felt::Felt252;
-use cairo_vm::vm;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
@@ -717,7 +716,7 @@ fn replace_class_test() {
         )
         .unwrap();
     let entrypoints_a = contract_class_a.clone().entry_points_by_type;
-    let upgrade_selector = &entrypoints_a.external.get(1).unwrap().selector;
+    let upgrade_selector = &entrypoints_a.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
@@ -748,7 +747,6 @@ fn replace_class_test() {
         .unwrap();
 
     let class_hash_b: ClassHash = [2; 32];
-
     contract_class_cache.insert(
         class_hash_b,
         CompiledClass::Sierra(Arc::new(contract_class_b.clone())),
@@ -773,7 +771,7 @@ fn replace_class_test() {
     );
 
     // Check that the class was indeed replaced in storage
-    assert_eq!(result.class_hash.unwrap(), class_hash_b);
+    assert_eq!(state.get_class_hash_at(&address).unwrap(), class_hash_b);
     // Check that the class_hash_b leads to contract_class_b for soundness
     assert_eq!(
         state.get_contract_class(&class_hash_b).unwrap(),
