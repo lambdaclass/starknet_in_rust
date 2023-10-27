@@ -42,7 +42,7 @@ pub struct DeclareV2 {
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
     pub compiled_class_hash: Felt252,
-    pub sierra_contract_class: SierraContractClass,
+    pub sierra_contract_class: Option<SierraContractClass>,
     pub sierra_class_hash: Felt252,
     pub hash_value: Felt252,
     pub casm_class: Option<CasmContractClass>,
@@ -89,7 +89,7 @@ impl DeclareV2 {
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
-            sierra_contract_class,
+            Some(sierra_contract_class.clone()),
             sierra_class_hash,
             casm_contract_class,
             compiled_class_hash,
@@ -118,7 +118,7 @@ impl DeclareV2 {
     /// may not hold.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_sierra_class_hash_and_tx_hash(
-        sierra_contract_class: &SierraContractClass,
+        sierra_contract_class: Option<SierraContractClass>,
         sierra_class_hash: Felt252,
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
@@ -184,7 +184,7 @@ impl DeclareV2 {
         let sierra_class_hash = compute_sierra_class_hash(sierra_contract_class)?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
-            sierra_contract_class,
+            Some(sierra_contract_class.clone()),
             sierra_class_hash,
             casm_contract_class,
             compiled_class_hash,
@@ -211,7 +211,7 @@ impl DeclareV2 {
     /// - nonce: The nonce of the contract.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_sierra_class_hash(
-        sierra_contract_class: &SierraContractClass,
+        sierra_contract_class: Option<SierraContractClass>,
         sierra_class_hash: Felt252,
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
@@ -310,6 +310,7 @@ impl DeclareV2 {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        self.handle_nonce(state)?;
         verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
 
         let initial_gas = INITIAL_GAS_COST;
@@ -327,11 +328,13 @@ impl DeclareV2 {
             )?;
             (info, gas)
         };
+        self.compile_and_store_casm_class(state)?;
 
-        let storage_changes = state.count_actual_storage_changes(Some((
+        let storage_changes = state.count_actual_state_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
             &self.sender_address,
         )))?;
+
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[execution_result.call_info.clone()],
@@ -351,7 +354,6 @@ impl DeclareV2 {
             &mut tx_execution_context,
             self.skip_fee_transfer,
         )?;
-        self.compile_and_store_casm_class(state)?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
             execution_result.call_info,
@@ -370,10 +372,13 @@ impl DeclareV2 {
         state: &mut S,
     ) -> Result<(), TransactionError> {
         let casm_class = match &self.casm_class {
-            None => {
-                CasmContractClass::from_contract_class(self.sierra_contract_class.clone(), true)
-                    .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?
-            }
+            None => CasmContractClass::from_contract_class(
+                self.sierra_contract_class
+                    .clone()
+                    .ok_or(TransactionError::DeclareV2NoSierraOrCasm)?,
+                true,
+            )
+            .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?,
             Some(casm_contract_class) => casm_contract_class.clone(),
         };
 
@@ -384,8 +389,11 @@ impl DeclareV2 {
                 self.compiled_class_hash.to_string(),
             ));
         }
-        state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
+        if let Some(ref class) = self.sierra_contract_class {
+            state.set_sierra_program(&self.sierra_class_hash, class.sierra_program.clone())?;
+        }
 
+        state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
         state.set_contract_class(
             &self.compiled_class_hash.to_be_bytes(),
             &CompiledClass::Casm(Arc::new(casm_class)),
@@ -442,7 +450,7 @@ impl DeclareV2 {
     // ---------------
     //   Simulation
     // ---------------
-    pub(crate) fn create_for_simulation(
+    pub fn create_for_simulation(
         &self,
         skip_validate: bool,
         skip_execute: bool,
@@ -536,7 +544,7 @@ mod tests {
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.clone(),
+            internal_declare.sierra_contract_class.unwrap().clone(),
             true,
         )
         .unwrap();
@@ -605,7 +613,7 @@ mod tests {
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.clone(),
+            internal_declare.sierra_contract_class.unwrap(),
             true,
         )
         .unwrap();
@@ -628,13 +636,13 @@ mod tests {
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = &2.into() | &QUERY_VERSION_BASE.clone();
+            version = &Into::<Felt252>::into(2) | &QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = &1.into() | &QUERY_VERSION_BASE.clone();
+            version = &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone();
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 
@@ -651,7 +659,7 @@ mod tests {
         // create internal declare v2
 
         let internal_declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
-            &sierra_contract_class,
+            Some(sierra_contract_class),
             sierra_class_hash,
             Some(casm_class),
             casm_class_hash,
@@ -676,7 +684,7 @@ mod tests {
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.clone(),
+            internal_declare.sierra_contract_class.unwrap(),
             true,
         )
         .unwrap();
@@ -745,7 +753,7 @@ mod tests {
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.clone(),
+            internal_declare.sierra_contract_class.unwrap().clone(),
             true,
         )
         .unwrap();

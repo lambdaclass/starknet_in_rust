@@ -11,7 +11,7 @@ use starknet_api::{
     core::EntryPointSelector,
     deprecated_contract_class::{EntryPoint, EntryPointOffset, EntryPointType},
     hash::{StarkFelt, StarkHash},
-    transaction::{InvokeTransaction, Transaction},
+    transaction::{DeclareTransaction, InvokeTransaction, Transaction},
 };
 
 #[derive(Debug, Deserialize)]
@@ -80,6 +80,23 @@ pub fn deserialize_transaction_json(
             ))),
             x => Err(serde::de::Error::custom(format!(
                 "unimplemented invoke version: {x}"
+            ))),
+        },
+        "DEPLOY_ACCOUNT" => Ok(Transaction::DeployAccount(serde_json::from_value(
+            transaction,
+        )?)),
+        "DECLARE" => match tx_version.as_str() {
+            "0x0" => Ok(Transaction::Declare(DeclareTransaction::V0(
+                serde_json::from_value(transaction)?,
+            ))),
+            "0x1" => Ok(Transaction::Declare(DeclareTransaction::V1(
+                serde_json::from_value(transaction)?,
+            ))),
+            "0x2" => Ok(Transaction::Declare(DeclareTransaction::V2(
+                serde_json::from_value(transaction)?,
+            ))),
+            x => Err(serde::de::Error::custom(format!(
+                "unimplemented declare version: {x}"
             ))),
         },
         x => Err(serde::de::Error::custom(format!(
