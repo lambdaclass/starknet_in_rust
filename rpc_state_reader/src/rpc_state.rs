@@ -365,10 +365,8 @@ impl RpcState {
             .call()
             .map_err(|e| RpcStateError::Request(e.to_string()))?;
 
-        Ok(
-            serde_json::from_value(response.into_json().map_err(RpcStateError::Io)?)
-                .map_err(|e| RpcStateError::Request(e.to_string()))?,
-        )
+        serde_json::from_value(response.into_json().map_err(RpcStateError::Io)?)
+            .map_err(|e| RpcStateError::Request(e.to_string()))
     }
 
     /// Requests the given transaction to the Feeder Gateway API.
