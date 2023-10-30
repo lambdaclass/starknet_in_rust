@@ -14,10 +14,7 @@ use starknet_api::{
 use starknet_in_rust::definitions::block_context::StarknetChainId;
 use std::{collections::HashMap, env, fmt::Display};
 
-use crate::{
-    rpc_state_errors::RpcStateError,
-    utils,
-};
+use crate::{rpc_state_errors::RpcStateError, utils};
 
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
@@ -376,10 +373,15 @@ impl RpcState {
 
     /// Requests the given transaction to the Feeder Gateway API.
     pub fn get_transaction(&self, hash: &TransactionHash) -> Result<SNTransaction, RpcStateError> {
-        let result = self.rpc_call::<serde_json::Value>(
-            "starknet_getTransactionByHash",
-            &json!([hash.to_string()]),
-        )?["result"]
+        let result = self
+            .rpc_call::<serde_json::Value>(
+                "starknet_getTransactionByHash",
+                &json!([hash.to_string()]),
+            )?
+            .get("result")
+            .ok_or(RpcStateError::RpcCall(
+                "Response has no field result".into(),
+            ))?
             .clone();
         utils::deserialize_transaction_json(result).map_err(RpcStateError::SerdeJson)
     }
@@ -426,11 +428,12 @@ impl RpcState {
         let transactions: Vec<_> = block_info
             .get("result")
             .and_then(|result| result.get("transactions"))
-            .and_then(|txs| txs.as_array()).map(|arr| arr.iter()
-                        .filter_map(|result| {
-                            utils::deserialize_transaction_json(result.clone()).ok()
-                        })
-                        .collect())
+            .and_then(|txs| txs.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|result| utils::deserialize_transaction_json(result.clone()).ok())
+                    .collect()
+            })
             .ok_or_else(|| {
                 RpcStateError::RpcObjectHasNoField("block_info".into(), "transactions".into())
             })?;
