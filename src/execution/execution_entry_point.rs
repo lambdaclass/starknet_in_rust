@@ -671,10 +671,10 @@ impl ExecutionEntryPoint {
         };
 
         let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
-            ProgramRegistry::new(&sierra_program).unwrap();
+            ProgramRegistry::new(sierra_program).unwrap();
 
         let native_context = NativeContext::new();
-        let mut native_program = native_context.compile(&sierra_program).unwrap();
+        let mut native_program = native_context.compile(sierra_program).unwrap();
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
