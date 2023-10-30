@@ -111,9 +111,9 @@ impl<T: StateReader, C: ContractClassCache> CachedState<T, C> {
                 self.contract_class_cache_private.read().unwrap().clone(),
             ),
             #[cfg(feature = "metrics")]
-            cache_hits: self.cache_hits.clone(),
+            cache_hits: self.cache_hits,
             #[cfg(feature = "metrics")]
-            cache_misses: self.cache_misses.clone(),
+            cache_misses: self.cache_misses,
         }
     }
 
