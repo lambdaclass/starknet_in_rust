@@ -13,9 +13,11 @@ use starknet_api::{
 };
 use starknet_in_rust::definitions::block_context::StarknetChainId;
 use std::{collections::HashMap, env, fmt::Display};
-use thiserror::Error;
 
-use crate::{utils, rpc_state_errors::RpcStateError};
+use crate::{
+    rpc_state_errors::{RpcError, RpcStateError},
+    utils,
+};
 
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
@@ -70,14 +72,6 @@ pub struct RpcState {
     feeder_url: String,
     /// Struct that holds information on the block where we are going to use to read the state.
     pub block: BlockValue,
-}
-
-#[derive(Error, Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
-enum RpcError {
-    #[error("RPC call failed with error: {0}")]
-    RpcCall(String),
-    #[error("Request failed with error: {0}")]
-    Request(String),
 }
 
 /// Represents the tag of a block value.
@@ -331,7 +325,7 @@ impl RpcState {
             "params": params,
             "id": 1
         });
-        let response = self.rpc_call_no_deserialize(&payload)?.into_json().unwrap();
+        let response = self.rpc_call_no_deserialize(&payload)?.into_json()?;
         Self::deserialize_call(response)
     }
 
@@ -363,38 +357,50 @@ impl RpcState {
     /// - actual fee
     /// - events
     /// - return data
-    pub fn get_transaction_trace(&self, hash: &TransactionHash) -> TransactionTrace {
+    pub fn get_transaction_trace(
+        &self,
+        hash: &TransactionHash,
+    ) -> Result<TransactionTrace, RpcStateError> {
         let response = ureq::get(&self.get_feeder_endpoint("get_transaction_trace"))
             .query("transactionHash", &hash.0.to_string())
             .call()
-            .unwrap();
+            .map_err(|e| RpcError::Request(e.to_string()))?;
 
-        serde_json::from_value(response.into_json().unwrap()).unwrap()
+        Ok(
+            serde_json::from_value(response.into_json().map_err(RpcError::Io)?)
+                .map_err(|e| RpcError::Request(e.to_string()))?,
+        )
     }
 
     /// Requests the given transaction to the Feeder Gateway API.
-    pub fn get_transaction(&self, hash: &TransactionHash) -> SNTransaction {
-        let result = self
-            .rpc_call::<serde_json::Value>(
-                "starknet_getTransactionByHash",
-                &json!([hash.to_string()]),
-            )
-            .unwrap()["result"]
+    pub fn get_transaction(&self, hash: &TransactionHash) -> Result<SNTransaction, RpcStateError> {
+        let result = self.rpc_call::<serde_json::Value>(
+            "starknet_getTransactionByHash",
+            &json!([hash.to_string()]),
+        )?["result"]
             .clone();
-        utils::deserialize_transaction_json(result).unwrap()
+        utils::deserialize_transaction_json(result).map_err(RpcStateError::SerdeJson)
     }
 
     /// Gets the gas price of a given block.
-    pub fn get_gas_price(&self, block_number: u64) -> serde_json::Result<u128> {
+    pub fn get_gas_price(&self, block_number: u64) -> Result<u128, RpcStateError> {
         let response = ureq::get(&self.get_feeder_endpoint("get_block"))
             .query("blockNumber", &block_number.to_string())
             .call()
-            .unwrap();
+            .map_err(|e| RpcError::Request(e.to_string()))?;
 
-        let res: serde_json::Value = response.into_json().expect("should be json");
+        let res: serde_json::Value = response.into_json().map_err(RpcError::Io)?;
 
-        let gas_price_hex = res["gas_price"].as_str().unwrap();
-        let gas_price = u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).unwrap();
+        let gas_price_hex =
+            res.get("gas_price")
+                .and_then(|gp| gp.as_str())
+                .ok_or(RpcError::Request(
+                    "Response has no field gas_price".to_string(),
+                ))?;
+        let gas_price =
+            u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).map_err(|_| {
+                RpcError::Request("Response field gas_price has wrong type".to_string())
+            })?;
         Ok(gas_price)
     }
 
@@ -402,39 +408,68 @@ impl RpcState {
         self.chain.into()
     }
 
-    pub fn get_block_info(&self) -> RpcBlockInfo {
+    pub fn get_block_info(&self) -> Result<RpcBlockInfo, RpcStateError> {
         let block_info: serde_json::Value = self
             .rpc_call(
                 "starknet_getBlockWithTxs",
                 &json!([self.block.to_value().unwrap()]),
             )
-            .unwrap();
-        let sequencer_address: StarkFelt =
-            serde_json::from_value(block_info["result"]["sequencer_address"].clone()).unwrap();
+            .map_err(|e| RpcError::RpcCall(e.to_string()))?;
 
-        let transactions: Vec<_> = block_info["result"]["transactions"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter_map(|result| utils::deserialize_transaction_json(result.clone()).ok())
-            .collect();
+        let sequencer_address: StarkFelt = block_info
+            .get("result")
+            .and_then(|result| result.get("sequencer_address"))
+            .and_then(|sa| serde_json::from_value(sa.clone()).ok())
+            .ok_or_else(|| {
+                RpcStateError::RpcObjectHasNoField("block_info".into(), "sequencer_address".into())
+            })?;
 
-        RpcBlockInfo {
+        let transactions: Vec<_> = block_info
+            .get("result")
+            .and_then(|result| result.get("transactions"))
+            .and_then(|txs| txs.as_array())
+            .and_then(|arr| {
+                Some(
+                    arr.iter()
+                        .filter_map(|result| {
+                            utils::deserialize_transaction_json(result.clone()).ok()
+                        })
+                        .collect(),
+                )
+            })
+            .ok_or_else(|| {
+                RpcStateError::RpcObjectHasNoField("block_info".into(), "transactions".into())
+            })?;
+
+        Ok(RpcBlockInfo {
             block_number: BlockNumber(
-                block_info["result"]["block_number"]
-                    .to_string()
-                    .parse::<u64>()
-                    .unwrap(),
+                block_info
+                    .get("result")
+                    .and_then(|result| result.get("block_number"))
+                    .and_then(|v| v.to_string().parse::<u64>().ok())
+                    .ok_or_else(|| {
+                        RpcStateError::RpcObjectHasNoField(
+                            "block_info".into(),
+                            "block_number".into(),
+                        )
+                    })?,
             ),
             block_timestamp: BlockTimestamp(
-                block_info["result"]["timestamp"]
-                    .to_string()
-                    .parse::<u64>()
-                    .unwrap(),
+                block_info
+                    .get("result")
+                    .and_then(|result| result.get("timestamp"))
+                    .and_then(|v| v.to_string().parse::<u64>().ok())
+                    .ok_or_else(|| {
+                        RpcStateError::RpcObjectHasNoField("block_info".into(), "timestamp".into())
+                    })?,
             ),
-            sequencer_address: ContractAddress(sequencer_address.try_into().unwrap()),
+            sequencer_address: ContractAddress(
+                sequencer_address
+                    .try_into()
+                    .map_err(|_| RpcStateError::StarkFeltToParticiaKeyConversion)?,
+            ),
             transactions,
-        }
+        })
     }
 
     pub fn get_contract_class(&self, class_hash: &ClassHash) -> Option<SNContractClass> {

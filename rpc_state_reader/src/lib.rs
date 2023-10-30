@@ -1,6 +1,6 @@
 pub mod rpc_state;
-pub mod utils;
 pub mod rpc_state_errors;
+pub mod utils;
 
 #[cfg(test)]
 mod tests {
