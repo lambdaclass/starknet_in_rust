@@ -191,7 +191,7 @@ where
     D: Deserializer<'de>,
 {
     let hex: String = Deserialize::deserialize(deserializer)?;
-    Ok(u128::from_str_radix(&hex[2..], 16).map_err(serde::de::Error::custom)?)
+    u128::from_str_radix(&hex[2..], 16).map_err(serde::de::Error::custom)
 }
 
 impl<'de> Deserialize<'de> for RpcCallInfo {
@@ -426,16 +426,11 @@ impl RpcState {
         let transactions: Vec<_> = block_info
             .get("result")
             .and_then(|result| result.get("transactions"))
-            .and_then(|txs| txs.as_array())
-            .and_then(|arr| {
-                Some(
-                    arr.iter()
+            .and_then(|txs| txs.as_array()).map(|arr| arr.iter()
                         .filter_map(|result| {
                             utils::deserialize_transaction_json(result.clone()).ok()
                         })
-                        .collect(),
-                )
-            })
+                        .collect())
             .ok_or_else(|| {
                 RpcStateError::RpcObjectHasNoField("block_info".into(), "transactions".into())
             })?;
