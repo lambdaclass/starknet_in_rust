@@ -706,7 +706,6 @@ fn call_events_contract_test() {
 
 #[test]
 fn replace_class_test() {
-    // This test only checks that the contract is updated in the storage, see `replace_class_contract_call`
     //  Create program and entry point types for contract class
     let contract_class_a: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
@@ -715,24 +714,41 @@ fn replace_class_test() {
                 .as_str(),
         )
         .unwrap();
+    let casm_data = include_bytes!("../starknet_programs/cairo2/get_number_a.casm");
+    let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
+
     let entrypoints_a = contract_class_a.clone().entry_points_by_type;
-    let upgrade_selector = &entrypoints_a.external.get(0).unwrap().selector;
+    let replace_selector = &entrypoints_a.external.get(0).unwrap().selector;
+
+    let casm_entrypoints = casm_contract_class.clone().entry_points_by_type;
+    let casm_replace_selector = &casm_entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash_a: ClassHash = [1; 32];
+    let casm_address = Address(2222.into());
+
+    static CLASS_HASH_A: ClassHash = [1; 32];
+    static CASM_CLASS_HASH_A: ClassHash = [2; 32];
+
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
-        class_hash_a,
+        CLASS_HASH_A,
         CompiledClass::Sierra(Arc::new(contract_class_a)),
+    );
+    contract_class_cache.insert(
+        CASM_CLASS_HASH_A,
+        CompiledClass::Casm(Arc::new(casm_contract_class)),
     );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash_a);
+        .insert(address.clone(), CLASS_HASH_A);
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(casm_address.clone(), CASM_CLASS_HASH_A);
     state_reader
         .address_to_nonce_mut()
         .insert(address.clone(), nonce);
@@ -745,38 +761,91 @@ fn replace_class_test() {
                 .as_str(),
         )
         .unwrap();
+    let casm_data = include_bytes!("../starknet_programs/cairo2/get_number_b.casm");
+    let casm_contract_class_b: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
 
-    let class_hash_b: ClassHash = [2; 32];
+    static CLASS_HASH_B: ClassHash = [3; 32];
+    static CASM_CLASS_HASH_B: ClassHash = [4; 32];
     contract_class_cache.insert(
-        class_hash_b,
+        CLASS_HASH_B,
         CompiledClass::Sierra(Arc::new(contract_class_b.clone())),
+    );
+    contract_class_cache.insert(
+        CASM_CLASS_HASH_B,
+        CompiledClass::Casm(Arc::new(casm_contract_class_b.clone())),
     );
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader.clone()), contract_class_cache.clone());
+    let mut vm_state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     // Run upgrade entrypoint and check that the storage was updated with the new contract class
     // Create an execution entry point
-    let calldata = [Felt252::from_bytes_be(&class_hash_b)].to_vec();
+    let calldata = [Felt252::from_bytes_be(&CLASS_HASH_B)].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
-    let result = execute(
+    let native_result = execute(
         &mut state,
         &caller_address,
         &address,
-        upgrade_selector,
+        replace_selector,
         &calldata,
         entry_point_type,
-        &class_hash_a,
+        &CLASS_HASH_A,
+    );
+    let calldata = [Felt252::from_bytes_be(&CASM_CLASS_HASH_B)].to_vec();
+    let vm_result = execute(
+        &mut vm_state,
+        &caller_address,
+        &casm_address,
+        casm_replace_selector,
+        &calldata,
+        entry_point_type,
+        &CASM_CLASS_HASH_A,
     );
 
     // Check that the class was indeed replaced in storage
-    assert_eq!(state.get_class_hash_at(&address).unwrap(), class_hash_b);
+    assert_eq!(state.get_class_hash_at(&address).unwrap(), CLASS_HASH_B);
     // Check that the class_hash_b leads to contract_class_b for soundness
     assert_eq!(
-        state.get_contract_class(&class_hash_b).unwrap(),
+        state.get_contract_class(&CLASS_HASH_B).unwrap(),
         CompiledClass::Sierra(Arc::new(contract_class_b))
     );
+
+    // Check that the class was indeed replaced in storage
+    assert_eq!(
+        vm_state.get_class_hash_at(&casm_address).unwrap(),
+        CASM_CLASS_HASH_B
+    );
+    // Check that the class_hash_b leads to contract_class_b for soundness
+    assert_eq!(
+        vm_state.get_contract_class(&CASM_CLASS_HASH_B).unwrap(),
+        CompiledClass::Casm(Arc::new(casm_contract_class_b))
+    );
+
+    assert_eq!(native_result.retdata, vm_result.retdata);
+    assert_eq!(native_result.events, vm_result.events);
+    assert_eq!(
+        native_result.accessed_storage_keys,
+        vm_result.accessed_storage_keys
+    );
+    assert_eq!(native_result.l2_to_l1_messages, vm_result.l2_to_l1_messages);
+    assert_eq!(native_result.gas_consumed, vm_result.gas_consumed);
+    assert_eq!(native_result.failure_flag, vm_result.failure_flag);
+    assert_eq!(native_result.internal_calls, vm_result.internal_calls);
+    assert_eq!(native_result.class_hash.unwrap(), CLASS_HASH_A);
+    assert_eq!(vm_result.class_hash.unwrap(), CASM_CLASS_HASH_A);
+    assert_eq!(native_result.caller_address, caller_address);
+    assert_eq!(vm_result.caller_address, caller_address);
+    assert_eq!(native_result.call_type, vm_result.call_type);
+    assert_eq!(native_result.contract_address, address);
+    assert_eq!(vm_result.contract_address, casm_address);
+    assert_eq!(native_result.code_address, vm_result.code_address);
+    assert_eq!(
+        native_result.entry_point_selector,
+        vm_result.entry_point_selector
+    );
+    assert_eq!(native_result.entry_point_type, vm_result.entry_point_type);
 }
 
 fn execute(
