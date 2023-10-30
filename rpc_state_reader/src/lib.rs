@@ -91,7 +91,7 @@ mod tests {
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        rpc_state.get_transaction(&tx_hash);
+        assert!(rpc_state.get_transaction(&tx_hash).is_ok());
     }
 
     #[test]
@@ -101,7 +101,7 @@ mod tests {
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        let tx = rpc_state.get_transaction(&tx_hash);
+        let tx = rpc_state.get_transaction(&tx_hash).unwrap();
         match tx {
             SNTransaction::Invoke(tx) => {
                 InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet)
@@ -115,7 +115,7 @@ mod tests {
     fn test_get_block_info() {
         let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
-        rpc_state.get_block_info();
+        assert!(rpc_state.get_block_info().is_ok());
     }
 
     // Tested with the following query to the Feeder Gateway API:
@@ -128,7 +128,7 @@ mod tests {
             "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc"
         ));
 
-        let tx_trace = rpc_state.get_transaction_trace(&tx_hash);
+        let tx_trace = rpc_state.get_transaction_trace(&tx_hash).unwrap();
 
         assert_eq!(
             tx_trace.signature,
@@ -276,6 +276,6 @@ mod tests {
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        rpc_state.get_transaction_receipt(&tx_hash);
+        assert!(rpc_state.get_transaction_receipt(&tx_hash).is_ok());
     }
 }
