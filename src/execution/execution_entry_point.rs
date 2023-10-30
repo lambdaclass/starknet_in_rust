@@ -774,7 +774,7 @@ impl ExecutionEntryPoint {
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             internal_calls: syscall_handler.internal_calls,
             // TODO: check it's correct
-            gas_consumed: self.initial_gas - u128::from(value.gas_builtin.unwrap_or(0)),
+            gas_consumed: self.initial_gas - value.remaining_gas,
         })
     }
 }
