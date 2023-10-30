@@ -9,7 +9,10 @@ use blockifier::{
     transaction::{
         account_transaction::AccountTransaction,
         objects::TransactionExecutionInfo,
-        transactions::{DeclareTransaction, DeployAccountTransaction, ExecutableTransaction},
+        transactions::{
+            DeclareTransaction, DeployAccountTransaction, ExecutableTransaction,
+            L1HandlerTransaction,
+        },
     },
 };
 use blockifier::{
@@ -208,6 +211,21 @@ pub fn execute_tx(
             let declare = DeclareTransaction::new(tx, tx_hash, contract_class).unwrap();
             AccountTransaction::Declare(declare)
         }
+        SNTransaction::L1Handler(tx) => {
+            // As L1Hanlder is not an account transaction we execute it here and return the result
+            let blockifier_tx = L1HandlerTransaction {
+                tx,
+                tx_hash,
+                paid_fee_on_l1: starknet_api::transaction::Fee(u128::MAX),
+            };
+            return (
+                blockifier_tx
+                    .execute(&mut state, &block_context, true, true)
+                    .unwrap(),
+                trace,
+                receipt,
+            );
+        }
         _ => unimplemented!(),
     };
 
@@ -326,6 +344,16 @@ fn blockifier_test_recent_tx() {
 #[test_case(
     "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
     281513, // real block 281514
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x26be3e906db66973de1ca5eec1ddb4f30e3087dbdce9560778937071c3d3a83",
+    351268, // real block 351269
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x4f552c9430bd21ad300db56c8f4cae45d554a18fac20bf1703f180fac587d7e",
+    351225, // real block 351226
     RpcChain::MainNet
 )]
 // DeployAccount for different account providers (as of October 2023):
