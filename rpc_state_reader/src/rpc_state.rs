@@ -15,7 +15,7 @@ use starknet_in_rust::definitions::block_context::StarknetChainId;
 use std::{collections::HashMap, env, fmt::Display};
 
 use crate::{
-    rpc_state_errors::{RpcError, RpcStateError},
+    rpc_state_errors::RpcStateError,
     utils,
 };
 
@@ -312,7 +312,7 @@ impl RpcState {
         &self,
         method: &str,
         params: &serde_json::Value,
-    ) -> Result<T, RpcError> {
+    ) -> Result<T, RpcStateError> {
         Ok(self.rpc_call::<RpcResponse<T>>(method, params)?.result)
     }
 
@@ -320,7 +320,7 @@ impl RpcState {
         &self,
         method: &str,
         params: &serde_json::Value,
-    ) -> Result<T, RpcError> {
+    ) -> Result<T, RpcStateError> {
         let payload = serde_json::json!({
             "jsonrpc": "2.0",
             "method": method,
@@ -334,18 +334,18 @@ impl RpcState {
     fn rpc_call_no_deserialize(
         &self,
         params: &serde_json::Value,
-    ) -> Result<ureq::Response, RpcError> {
+    ) -> Result<ureq::Response, RpcStateError> {
         ureq::post(&self.rpc_endpoint)
             .set("Content-Type", "application/json")
             .set("accept", "application/json")
             .send_json(params)
-            .map_err(|err| RpcError::Request(err.to_string()))
+            .map_err(|err| RpcStateError::Request(err.to_string()))
     }
 
     fn deserialize_call<T: for<'a> Deserialize<'a>>(
         response: serde_json::Value,
-    ) -> Result<T, RpcError> {
-        serde_json::from_value(response).map_err(|err| RpcError::RpcCall(err.to_string()))
+    ) -> Result<T, RpcStateError> {
+        serde_json::from_value(response).map_err(|err| RpcStateError::RpcCall(err.to_string()))
     }
 
     /// Gets the url of the feeder endpoint
@@ -366,11 +366,11 @@ impl RpcState {
         let response = ureq::get(&self.get_feeder_endpoint("get_transaction_trace"))
             .query("transactionHash", &hash.0.to_string())
             .call()
-            .map_err(|e| RpcError::Request(e.to_string()))?;
+            .map_err(|e| RpcStateError::Request(e.to_string()))?;
 
         Ok(
-            serde_json::from_value(response.into_json().map_err(RpcError::Io)?)
-                .map_err(|e| RpcError::Request(e.to_string()))?,
+            serde_json::from_value(response.into_json().map_err(RpcStateError::Io)?)
+                .map_err(|e| RpcStateError::Request(e.to_string()))?,
         )
     }
 
@@ -389,19 +389,19 @@ impl RpcState {
         let response = ureq::get(&self.get_feeder_endpoint("get_block"))
             .query("blockNumber", &block_number.to_string())
             .call()
-            .map_err(|e| RpcError::Request(e.to_string()))?;
+            .map_err(|e| RpcStateError::Request(e.to_string()))?;
 
-        let res: serde_json::Value = response.into_json().map_err(RpcError::Io)?;
+        let res: serde_json::Value = response.into_json().map_err(RpcStateError::Io)?;
 
         let gas_price_hex =
             res.get("gas_price")
                 .and_then(|gp| gp.as_str())
-                .ok_or(RpcError::Request(
+                .ok_or(RpcStateError::Request(
                     "Response has no field gas_price".to_string(),
                 ))?;
         let gas_price =
             u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).map_err(|_| {
-                RpcError::Request("Response field gas_price has wrong type".to_string())
+                RpcStateError::Request("Response field gas_price has wrong type".to_string())
             })?;
         Ok(gas_price)
     }
@@ -413,7 +413,7 @@ impl RpcState {
     pub fn get_block_info(&self) -> Result<RpcBlockInfo, RpcStateError> {
         let block_info: serde_json::Value = self
             .rpc_call("starknet_getBlockWithTxs", &json!([self.block.to_value()?]))
-            .map_err(|e| RpcError::RpcCall(e.to_string()))?;
+            .map_err(|e| RpcStateError::RpcCall(e.to_string()))?;
 
         let sequencer_address: StarkFelt = block_info
             .get("result")
@@ -534,6 +534,6 @@ impl RpcState {
         hash: &TransactionHash,
     ) -> Result<RpcTransactionReceipt, RpcStateError> {
         self.rpc_call_result("starknet_getTransactionReceipt", &json!([hash.to_string()]))
-            .map_err(|e| RpcStateError::Rpc(RpcError::RpcCall(e.to_string())))
+            .map_err(|e| RpcStateError::RpcCall(e.to_string()))
     }
 }
