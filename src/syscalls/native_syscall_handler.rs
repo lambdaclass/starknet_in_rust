@@ -28,7 +28,6 @@ use crate::{
     EntryPointType,
 };
 
-
 #[derive(Debug)]
 pub struct NativeSyscallHandler<'a, S>
 where
@@ -285,7 +284,9 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         value: cairo_vm::felt::Felt252,
         gas: &mut u128,
     ) -> SyscallResult<()> {
-        tracing::debug!("Called `storage_write({address_domain}, {address}, {value})` from Cairo Native");
+        tracing::debug!(
+            "Called `storage_write({address_domain}, {address}, {value})` from Cairo Native"
+        );
 
         self.handle_syscall_request(gas, "storage_write")?;
 
