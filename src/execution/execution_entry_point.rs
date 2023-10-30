@@ -635,9 +635,9 @@ impl ExecutionEntryPoint {
 
     #[cfg(feature = "cairo-native")]
     #[inline(always)]
-    fn native_execute<S: StateReader>(
+    fn native_execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,

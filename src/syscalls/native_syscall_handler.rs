@@ -1,3 +1,4 @@
+use crate::ContractClassCache;
 use cairo_native::starknet::{
     BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
 };
@@ -20,11 +21,12 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct NativeSyscallHandler<'a, S>
+pub struct NativeSyscallHandler<'a, S, C>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
-    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     pub(crate) contract_address: Address,
     pub(crate) caller_address: Address,
     pub(crate) entry_point_selector: Felt252,
@@ -39,7 +41,9 @@ where
     pub(crate) internal_calls: Vec<CallInfo>,
 }
 
-impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
+    for NativeSyscallHandler<'a, S, C>
+{
     fn get_block_hash(
         &mut self,
         block_number: u64,
