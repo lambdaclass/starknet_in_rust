@@ -4,6 +4,14 @@ use cairo_native::starknet::{
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 
+use crate::definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR;
+use crate::execution::CallResult;
+use crate::hash_utils::calculate_contract_address;
+use crate::services::api::contract_class_errors::ContractClassError;
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use crate::state::state_api::State;
+use crate::utils::felt_to_hash;
+use crate::utils::ClassHash;
 use crate::{
     core::errors::state_errors::StateError,
     definitions::block_context::BlockContext,
@@ -12,8 +20,7 @@ use crate::{
         CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
     },
     state::{
-        contract_storage_state::ContractStorageState,
-        state_api::{State, StateReader},
+        contract_storage_state::ContractStorageState, state_api::StateReader,
         ExecutionResourcesManager,
     },
     syscalls::business_logic_syscall_handler::{SYSCALL_BASE, SYSCALL_GAS_COST},
@@ -115,13 +122,53 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         deploy_from_zero: bool,
         gas: &mut u128,
     ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
-        println!("Called `deploy({class_hash}, {contract_address_salt}, {calldata:?}, {deploy_from_zero})` from MLIR.");
-
         self.handle_syscall_request(gas, "deploy")?;
 
+        let deployer_address = if deploy_from_zero {
+            Address::default()
+        } else {
+            self.contract_address.clone()
+        };
+
+        let contract_address = Address(
+            calculate_contract_address(
+                &contract_address_salt,
+                &class_hash,
+                calldata,
+                deployer_address,
+            )
+            .map_err(|_| {
+                vec![Felt252::from_bytes_be(
+                    b"FAILED_TO_CALCULATE_CONTRACT_ADDRESS",
+                )]
+            })?,
+        );
+        // Initialize the contract.
+        let class_hash_bytes: ClassHash = felt_to_hash(&class_hash);
+
+        self.starknet_storage_state
+            .state
+            .deploy_contract(contract_address.clone(), class_hash_bytes)
+            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE")])?;
+
+        let result = self
+            .execute_constructor_entry_point(
+                &contract_address,
+                class_hash_bytes,
+                calldata.to_vec(),
+                *gas,
+            )
+            .map_err(|_| vec![Felt252::from_bytes_be(b"CONSTRUCTOR_ENTRYPOINT_FAILURE")])?;
+
+        *gas = gas.saturating_sub(result.gas_consumed);
+
         Ok((
-            class_hash + contract_address_salt,
-            calldata.iter().map(|x| x + &Felt252::new(1)).collect(),
+            contract_address.0,
+            result
+                .retdata
+                .iter()
+                .map(|mb| mb.get_int_ref().cloned().unwrap_or_default())
+                .collect(),
         ))
     }
 
@@ -440,5 +487,90 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn set_version(&mut self, version: cairo_vm::felt::Felt252) {
         self.tx_execution_context.version = version;
+    }
+}
+
+impl<'a, S> NativeSyscallHandler<'a, S>
+where
+    S: StateReader,
+{
+    fn execute_constructor_entry_point(
+        &mut self,
+        contract_address: &Address,
+        class_hash_bytes: ClassHash,
+        constructor_calldata: Vec<Felt252>,
+        remaining_gas: u128,
+    ) -> Result<CallResult, StateError> {
+        let compiled_class = if let Ok(compiled_class) = self
+            .starknet_storage_state
+            .state
+            .get_contract_class(&class_hash_bytes)
+        {
+            compiled_class
+        } else {
+            return Ok(CallResult {
+                gas_consumed: 0,
+                is_success: false,
+                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+            });
+        };
+
+        if self.constructor_entry_points_empty(compiled_class)? {
+            if !constructor_calldata.is_empty() {
+                return Err(StateError::ConstructorCalldataEmpty());
+            }
+
+            let call_info = CallInfo::empty_constructor_call(
+                contract_address.clone(),
+                self.contract_address.clone(),
+                Some(class_hash_bytes),
+            );
+            self.internal_calls.push(call_info.clone());
+
+            return Ok(call_info.result());
+        }
+
+        let call = ExecutionEntryPoint::new(
+            contract_address.clone(),
+            constructor_calldata,
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            self.contract_address.clone(),
+            EntryPointType::Constructor,
+            Some(CallType::Call),
+            None,
+            remaining_gas,
+        );
+
+        let ExecutionResult { call_info, .. } = call
+            .execute(
+                self.starknet_storage_state.state,
+                &self.block_context,
+                &mut self.resources_manager,
+                &mut self.tx_execution_context,
+                false,
+                u64::MAX,
+            )
+            .map_err(|_| StateError::ExecutionEntryPoint())?;
+
+        let call_info = call_info.ok_or(StateError::CustomError("Execution error".to_string()))?;
+
+        self.internal_calls.push(call_info.clone());
+
+        Ok(call_info.result())
+    }
+
+    fn constructor_entry_points_empty(
+        &self,
+        contract_class: CompiledClass,
+    ) -> Result<bool, StateError> {
+        match contract_class {
+            CompiledClass::Deprecated(class) => Ok(class
+                .entry_points_by_type
+                .get(&EntryPointType::Constructor)
+                .ok_or(ContractClassError::NoneEntryPointType)?
+                .is_empty()),
+            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+        }
     }
 }
