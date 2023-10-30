@@ -158,9 +158,9 @@ pub struct RpcResponse<T> {
 
 #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
 pub struct TransactionTrace {
-    pub validate_invocation: RpcCallInfo,
+    pub validate_invocation: Option<RpcCallInfo>,
     pub function_invocation: Option<RpcCallInfo>,
-    pub fee_transfer_invocation: RpcCallInfo,
+    pub fee_transfer_invocation: Option<RpcCallInfo>,
     pub signature: Vec<StarkFelt>,
     pub revert_error: Option<String>,
 }
@@ -401,12 +401,12 @@ impl RpcState {
         }
     }
 
-    pub fn get_contract_class(&self, class_hash: &ClassHash) -> SNContractClass {
+    pub fn get_contract_class(&self, class_hash: &ClassHash) -> Option<SNContractClass> {
         self.rpc_call_result(
             "starknet_getClass",
             &json!([self.block.to_value().unwrap(), class_hash.0.to_string()]),
         )
-        .unwrap()
+        .ok()
     }
 
     pub fn get_class_hash_at(&self, contract_address: &ContractAddress) -> ClassHash {
