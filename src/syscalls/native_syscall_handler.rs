@@ -539,10 +539,8 @@ where
         let ExecutionResult { call_info, .. } = call
             .execute(
                 self.starknet_storage_state.state,
-                // TODO: This fields dont make much sense in the Cairo Native context,
-                // they are only dummy values for the `execute` method.
-                &BlockContext::default(),
-                &mut ExecutionResourcesManager::default(),
+                &self.block_context,
+                &mut self.resources_manager,
                 &mut self.tx_execution_context,
                 false,
                 u64::MAX,
