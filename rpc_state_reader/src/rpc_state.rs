@@ -244,14 +244,16 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
             .get("result")
             .ok_or(serde::de::Error::custom("Missing field result"))?
             .clone();
-        let retdata = serde_json::from_value(retdata_value).unwrap();
+        let retdata = serde_json::from_value(retdata_value)
+            .map_err(|e| serde::de::Error::custom(e.to_string()))?;
 
         // Parse calldata
         let calldata_value = value
             .get("calldata")
             .ok_or(serde::de::Error::custom("Missing field calldata"))?
             .clone();
-        let calldata = serde_json::from_value(calldata_value).unwrap();
+        let calldata = serde_json::from_value(calldata_value)
+            .map_err(|e| serde::de::Error::custom(e.to_string()))?;
 
         // Parse internal calls
         let internal_calls_value = value
@@ -410,10 +412,7 @@ impl RpcState {
 
     pub fn get_block_info(&self) -> Result<RpcBlockInfo, RpcStateError> {
         let block_info: serde_json::Value = self
-            .rpc_call(
-                "starknet_getBlockWithTxs",
-                &json!([self.block.to_value().unwrap()]),
-            )
+            .rpc_call("starknet_getBlockWithTxs", &json!([self.block.to_value()?]))
             .map_err(|e| RpcError::RpcCall(e.to_string()))?;
 
         let sequencer_address: StarkFelt = block_info
@@ -473,37 +472,45 @@ impl RpcState {
     }
 
     pub fn get_contract_class(&self, class_hash: &ClassHash) -> Option<SNContractClass> {
-        self.rpc_call_result(
-            "starknet_getClass",
-            &json!([self.block.to_value().unwrap(), class_hash.0.to_string()]),
-        )
-        .ok()
+        self.block.to_value().ok().and_then(|block| {
+            self.rpc_call_result(
+                "starknet_getClass",
+                &json!([block, class_hash.0.to_string()]),
+            )
+            .ok()
+        })
     }
 
     pub fn get_class_hash_at(&self, contract_address: &ContractAddress) -> ClassHash {
         let hash = self
-            .rpc_call_result(
-                "starknet_getClassHashAt",
-                &json!([
-                    self.block.to_value().unwrap(),
-                    contract_address.0.key().clone().to_string()
-                ]),
-            )
+            .block
+            .to_value()
+            .ok()
+            .and_then(|block| {
+                self.rpc_call_result(
+                    "starknet_getClassHashAt",
+                    &json!([block, contract_address.0.key().clone().to_string()]),
+                )
+                .ok()
+            })
             .unwrap_or_default();
 
         ClassHash(hash)
     }
 
     pub fn get_nonce_at(&self, contract_address: &ContractAddress) -> StarkFelt {
-        self.rpc_call_result(
-            "starknet_getNonce",
-            &json!([
-                self.block.to_value().unwrap(),
-                contract_address.0.key().clone().to_string()
-            ]),
-        )
-        // When running deploy_account transactions, the nonce doesn't exist on the previous block so we return 0
-        .unwrap_or_default()
+        self.block
+            .to_value()
+            .ok()
+            .and_then(|block| {
+                self.rpc_call_result(
+                    "starknet_getNonce",
+                    &json!([block, contract_address.0.key().clone().to_string()]),
+                )
+                .ok()
+            })
+            // When running deploy_account transactions, the nonce doesn't exist on the previous block so we return 0
+            .unwrap_or_default()
     }
 
     pub fn get_storage_at(
@@ -513,21 +520,25 @@ impl RpcState {
     ) -> StarkFelt {
         let contract_address = contract_address.0.key();
         let key = key.0.key();
-
-        self.rpc_call_result(
-            "starknet_getStorageAt",
-            &json!([
-                contract_address.to_string(),
-                key.to_string(),
-                self.block.to_value().unwrap()
-            ]),
-        )
-        .unwrap_or_default()
+        self.block
+            .to_value()
+            .ok()
+            .and_then(|block| {
+                self.rpc_call_result(
+                    "starknet_getStorageAt",
+                    &json!([contract_address.to_string(), key.to_string(), block]),
+                )
+                .ok()
+            })
+            .unwrap_or_default()
     }
 
     /// Requests the given transaction to the Feeder Gateway API.
-    pub fn get_transaction_receipt(&self, hash: &TransactionHash) -> RpcTransactionReceipt {
+    pub fn get_transaction_receipt(
+        &self,
+        hash: &TransactionHash,
+    ) -> Result<RpcTransactionReceipt, RpcStateError> {
         self.rpc_call_result("starknet_getTransactionReceipt", &json!([hash.to_string()]))
-            .unwrap()
+            .map_err(|e| RpcStateError::Rpc(RpcError::RpcCall(e.to_string())))
     }
 }
