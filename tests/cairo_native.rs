@@ -5,10 +5,12 @@ use cairo_lang_starknet::casm_contract_class::CasmContractEntryPoints;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
+use num_traits::One;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::execution::{Event, OrderedEvent};
+use starknet_in_rust::hash_utils::calculate_contract_address;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::state::contract_class_cache::ContractClassCache;
 use starknet_in_rust::state::contract_class_cache::PermanentContractClassCache;
@@ -146,7 +148,6 @@ fn integration_test_erc20() {
     assert_eq!(native_result.retdata, [].to_vec());
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(NATIVE_CLASS_HASH));
-    assert_eq!(native_result.gas_consumed, 18446744073709551615); // (u64::MAX)
 
     assert_eq!(vm_result.events, native_result.events);
     assert_eq!(
@@ -154,10 +155,9 @@ fn integration_test_erc20() {
         native_result.accessed_storage_keys
     );
     assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
-    // TODO: Make these asserts work
-    // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
-    // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
+    assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
 
+    #[allow(clippy::too_many_arguments)]
     fn compare_results(
         state_vm: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
         state_native: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
@@ -166,6 +166,7 @@ fn integration_test_erc20() {
         casm_entrypoints: &CasmContractEntryPoints,
         calldata: &[Felt252],
         caller_address: &Address,
+        debug_name: &str,
     ) {
         let native_selector = &native_entrypoints
             .external
@@ -207,11 +208,10 @@ fn integration_test_erc20() {
         );
         assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
 
-        // TODO: Make these asserts work
-        // assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
-
-        // This assert is probably impossible to make work because native doesn't track resources.
-        // assert_eq!(vm_result.execution_resources, native_result.execution_resources);
+        assert_eq!(
+            vm_result.gas_consumed, native_result.gas_consumed,
+            "gas consumed mismatch for {debug_name}",
+        );
     }
 
     // --------------- GET TOTAL SUPPLY -----------------
@@ -224,6 +224,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
+        "get total supply 1",
     );
 
     // ---------------- GET DECIMALS ----------------------
@@ -236,6 +237,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
+        "get decimals 1",
     );
 
     // ---------------- GET NAME ----------------------
@@ -248,6 +250,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
+        "get name",
     );
 
     // // ---------------- GET SYMBOL ----------------------
@@ -260,6 +263,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[],
         &caller_address,
+        "get symbol",
     );
 
     // ---------------- GET BALANCE OF CALLER ----------------------
@@ -272,6 +276,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
+        "get balance of caller",
     );
 
     // // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
@@ -284,6 +289,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone(), 1.into()],
         &caller_address,
+        "get allowance of address 1",
     );
 
     // // ---------------- INCREASE ALLOWANCE OF ADDRESS 1 by 10_000 ----------------------
@@ -296,6 +302,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 10_000.into()],
         &caller_address,
+        "increase allowance of address 1 by 10000",
     );
 
     // ---------------- ALLOWANCE OF ADDRESS 1 ----------------------
@@ -309,6 +316,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone(), 1.into()],
         &caller_address,
+        "allowance of address 1 part 2",
     );
 
     // ---------------- APPROVE ADDRESS 1 TO MAKE TRANSFERS ON BEHALF OF THE CALLER ----------------------
@@ -321,6 +329,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 5000.into()],
         &caller_address,
+        "approve address 1 to make transfers",
     );
 
     // ---------------- TRANSFER 3 TOKENS FROM CALLER TO ADDRESS 2 ---------
@@ -333,6 +342,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into(), 3.into()],
         &caller_address,
+        "transfer 3 tokens",
     );
 
     // // ---------------- GET BALANCE OF CALLER ----------------------
@@ -345,6 +355,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
+        "GET BALANCE OF CALLER",
     );
 
     // // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
@@ -357,6 +368,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into()],
         &caller_address,
+        "GET BALANCE OF ADDRESS 2",
     );
 
     // // ---------------- TRANSFER 1 TOKEN FROM CALLER TO ADDRESS 2, CALLED FROM ADDRESS 1 ----------------------
@@ -369,6 +381,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[1.into(), 2.into(), 1.into()],
         &caller_address,
+        "TRANSFER 1 TOKEN FROM CALLER TO ADDRESS 2, CALLED FROM ADDRESS 1",
     );
 
     // // ---------------- GET BALANCE OF ADDRESS 2 ----------------------
@@ -381,6 +394,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[2.into()],
         &caller_address,
+        "GET BALANCE OF ADDRESS 2 part 2",
     );
 
     // // ---------------- GET BALANCE OF CALLER ----------------------
@@ -393,6 +407,7 @@ fn integration_test_erc20() {
         &casm_entrypoints,
         &[caller_address.0.clone()],
         &caller_address,
+        "GET BALANCE OF CALLER last",
     );
 }
 
@@ -565,6 +580,7 @@ fn call_echo_contract_test() {
     );
 
     assert_eq!(result.retdata, [Felt252::new(99999999)]);
+    assert_eq!(result.gas_consumed, 89110);
 }
 
 #[test]
@@ -674,7 +690,7 @@ fn call_events_contract_test() {
         storage_read_values: Vec::new(),
         accessed_storage_keys: HashSet::new(),
         internal_calls: Vec::new(),
-        gas_consumed: 340282366920938463463374607431768211455, // TODO: fix gas consumed
+        gas_consumed: 9640,
         failure_flag: false,
     };
 
@@ -709,7 +725,7 @@ fn execute(
         entrypoint_type,
         Some(CallType::Delegate),
         Some(*class_hash),
-        u64::MAX.into(), // gas is u64 in cairo-native and sierra
+        u64::MAX.into(),
     );
 
     // Execute the entrypoint
@@ -737,4 +753,249 @@ fn execute(
         .unwrap()
         .call_info
         .unwrap()
+}
+
+fn execute_deploy(
+    state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
+    caller_address: &Address,
+    selector: &BigUint,
+    calldata: &[Felt252],
+    entrypoint_type: EntryPointType,
+    class_hash: &ClassHash,
+) -> CallInfo {
+    let exec_entry_point = ExecutionEntryPoint::new(
+        (*caller_address).clone(),
+        calldata.to_vec(),
+        Felt252::new(selector),
+        (*caller_address).clone(),
+        entrypoint_type,
+        Some(CallType::Delegate),
+        Some(*class_hash),
+        u64::MAX.into(),
+    );
+
+    // Execute the entrypoint
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    exec_entry_point
+        .execute(
+            state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps(),
+        )
+        .unwrap()
+        .call_info
+        .unwrap()
+}
+
+#[test]
+#[cfg(feature = "cairo-native")]
+fn deploy_syscall_test() {
+    // Deployer contract
+
+    let deployer_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/deploy.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // Deployee contract
+    let deployee_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/echo.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // deployer contract entrypoints
+    let deployer_entrypoints = deployer_contract_class.clone().entry_points_by_type;
+    let deploy_contract_selector = &deployer_entrypoints.external.get(0).unwrap().selector;
+
+    // Echo contract entrypoints
+    let deployee_entrypoints = deployee_contract_class.clone().entry_points_by_type;
+    let _fn_selector = &deployee_entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let contract_class_cache = PermanentContractClassCache::default();
+
+    // Deployer contract data
+    let deployer_address = Address(1111.into());
+    let deployer_class_hash: ClassHash = [1; 32];
+    let deployer_nonce = Felt252::zero();
+
+    // Deployee contract data
+    let deployee_class_hash: ClassHash = Felt252::one().to_be_bytes();
+    let _deployee_nonce = Felt252::zero();
+
+    contract_class_cache.set_contract_class(
+        deployer_class_hash,
+        CompiledClass::Sierra(Arc::new(deployer_contract_class)),
+    );
+
+    contract_class_cache.set_contract_class(
+        deployee_class_hash,
+        CompiledClass::Sierra(Arc::new(deployee_contract_class)),
+    );
+
+    let mut state_reader = InMemoryStateReader::default();
+
+    // Insert deployer contract info into state reader
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(deployer_address.clone(), deployer_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(deployer_address.clone(), deployer_nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+
+    let calldata = [Felt252::from_bytes_be(&deployee_class_hash), Felt252::one()].to_vec();
+    let result = execute_deploy(
+        &mut state,
+        &deployer_address,
+        deploy_contract_selector,
+        &calldata,
+        EntryPointType::External,
+        &deployer_class_hash,
+    );
+    let expected_deployed_contract_address = Address(
+        calculate_contract_address(
+            &Felt252::one(),
+            &Felt252::from_bytes_be(&deployee_class_hash),
+            &[100.into()],
+            deployer_address,
+        )
+        .unwrap(),
+    );
+
+    assert_eq!(result.retdata, [expected_deployed_contract_address.0]);
+    assert_eq!(result.events, []);
+    assert_eq!(result.internal_calls.len(), 1);
+
+    let sorted_events = result.get_sorted_events().unwrap();
+    assert_eq!(sorted_events, vec![]);
+    assert_eq!(result.failure_flag, false)
+}
+
+#[test]
+#[cfg(feature = "cairo-native")]
+fn deploy_syscall_address_unavailable_test() {
+    // Deployer contract
+
+    use starknet_in_rust::utils::felt_to_hash;
+    let deployer_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/deploy.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // Deployee contract
+    let deployee_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/echo.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // deployer contract entrypoints
+    let deployer_entrypoints = deployer_contract_class.clone().entry_points_by_type;
+    let deploy_contract_selector = &deployer_entrypoints.external.get(0).unwrap().selector;
+
+    // Echo contract entrypoints
+    let deployee_entrypoints = deployee_contract_class.clone().entry_points_by_type;
+    let _fn_selector = &deployee_entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let contract_class_cache = PermanentContractClassCache::default();
+
+    // Deployer contract data
+    let deployer_address = Address(1111.into());
+    let deployer_class_hash: ClassHash = [2; 32];
+    let deployer_nonce = Felt252::zero();
+
+    // Deployee contract data
+    let deployee_class_hash: ClassHash = felt_to_hash(&Felt252::one());
+    let deployee_nonce = Felt252::zero();
+    let expected_deployed_contract_address = Address(
+        calculate_contract_address(
+            &Felt252::one(),
+            &Felt252::from_bytes_be(&deployee_class_hash),
+            &[100.into()],
+            deployer_address.clone(),
+        )
+        .unwrap(),
+    );
+    // Insert contract to be deployed so that its address is taken
+    let deployee_address = expected_deployed_contract_address;
+
+    contract_class_cache.set_contract_class(
+        deployer_class_hash,
+        CompiledClass::Sierra(Arc::new(deployer_contract_class)),
+    );
+
+    contract_class_cache.set_contract_class(
+        deployee_class_hash,
+        CompiledClass::Sierra(Arc::new(deployee_contract_class)),
+    );
+
+    let mut state_reader = InMemoryStateReader::default();
+
+    // Insert deployer contract info into state reader
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(deployer_address.clone(), deployer_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(deployer_address.clone(), deployer_nonce);
+
+    // Insert deployee contract info into state reader
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(deployee_address.clone(), deployee_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(deployee_address.clone(), deployee_nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+
+    let calldata = [Felt252::from_bytes_be(&deployee_class_hash), Felt252::one()].to_vec();
+    let result = execute_deploy(
+        &mut state,
+        &deployer_address,
+        deploy_contract_selector,
+        &calldata,
+        EntryPointType::External,
+        &deployer_class_hash,
+    );
+
+    assert_eq!(
+        std::str::from_utf8(&result.retdata[0].to_be_bytes())
+            .unwrap()
+            .trim_start_matches('\0'),
+        "Result::unwrap failed."
+    );
+    assert_eq!(result.events, []);
+    assert_eq!(result.failure_flag, true);
+    assert!(result.internal_calls.is_empty());
 }

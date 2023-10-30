@@ -148,6 +148,44 @@ impl Declare {
         Ok(internal_declare)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tx_and_class_hash(
+        contract_class: ContractClass,
+        sender_address: Address,
+        max_fee: u128,
+        version: Felt252,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
+        hash_value: Felt252,
+        class_hash: ClassHash,
+    ) -> Result<Self, TransactionError> {
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+
+        let internal_declare = Declare {
+            class_hash,
+            sender_address,
+            validate_entry_point_selector,
+            version,
+            max_fee,
+            signature,
+            nonce,
+            hash_value,
+            contract_class,
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
+        };
+
+        verify_version(
+            &internal_declare.version,
+            internal_declare.max_fee,
+            &internal_declare.nonce,
+            &internal_declare.signature,
+        )?;
+
+        Ok(internal_declare)
+    }
+
     pub fn get_calldata(&self) -> Vec<Felt252> {
         let bytes = Felt252::from_bytes_be(&self.class_hash);
         Vec::from([bytes])
@@ -305,7 +343,7 @@ impl Declare {
         Ok(tx_exec_info)
     }
 
-    pub(crate) fn create_for_simulation(
+    pub fn create_for_simulation(
         &self,
         skip_validate: bool,
         skip_execute: bool,

@@ -56,6 +56,8 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 
 ### Installation
 
+If you run `make` on it's own it will print out the main targets and their description.
+
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 
 #### Linux (x86-64)
