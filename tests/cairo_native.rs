@@ -91,13 +91,10 @@ fn get_block_hash_test() {
             (Address(1.into()), felt_to_hash(&Felt252::from(10))),
             Felt252::from_bytes_be(StarkHash::new([5; 32]).unwrap().bytes()),
         );
-    /*
-        1 recipient
-    */
 
+    // block number
     let calldata = [10.into()].to_vec();
 
-    println!("Native execution");
     let native_result = execute(
         &mut state_native,
         &caller_address,
@@ -108,7 +105,6 @@ fn get_block_hash_test() {
         &native_class_hash,
     );
 
-    println!("VM execution");
     let vm_result = execute(
         &mut state_vm,
         &caller_address,
@@ -160,8 +156,7 @@ fn get_block_hash_test() {
     );
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(native_class_hash));
-    // Fix when gas consumed is implemented for native
-    //assert_eq!(native_result.gas_consumed, 0);
+    assert_eq!(native_result.gas_consumed, vm_result.gas_consumed);
 
     assert_eq!(vm_result.events, native_result.events);
     assert_eq!(
