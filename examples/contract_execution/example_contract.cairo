@@ -1,32 +1,32 @@
-// Declare this file as a StarkNet contract.
-%lang starknet
-
-from starkware.cairo.common.cairo_builtins import HashBuiltin
-
-// Define a storage variable.
-@storage_var
-func balance() -> (res: felt) {
+#[starknet::interface]
+trait IExampleContract<TContractState> {
+   fn get_balance(ref self: TContractState) -> u128;
+   fn increase_balance(ref self: TContractState, amount: u128);
 }
 
-// Increases the balance by the given amount.
-@external
-func increase_balance{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr,
-}(amount: felt) {
-    let (res) = balance.read();
-    balance.write(res + amount);
-    return ();
-}
+#[starknet::contract]
+mod ExampleContract {
+    use traits::Into;
+    use starknet::info::get_contract_address;
 
-// Returns the current balance.
-@view
-func get_balance{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr,
-}() -> (res: felt) {
-    let (res) = balance.read();
-    return (res=res);
+    #[storage]
+    struct Storage {
+        balance: u128,
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState) {
+    }
+
+    #[external(v0)]
+    impl ExampleContract of super::IExampleContract<ContractState> {
+        fn get_balance(ref self: ContractState) -> u128 {
+            self.balance.read()
+        }
+
+        fn increase_balance(ref self: ContractState, amount: u128) {
+            let balance = self.balance.read();
+            self.balance.write(balance + amount);
+        }
+    }
 }
