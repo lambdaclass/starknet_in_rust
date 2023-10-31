@@ -2,6 +2,7 @@
 
 use crate::CallType::Call;
 use cairo_lang_starknet::casm_contract_class::CasmContractEntryPoints;
+use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
@@ -28,6 +29,19 @@ use starknet_in_rust::{
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+
+fn insert_sierra_class_into_cache(
+    contract_class_cache: &mut HashMap<ClassHash, CompiledClass>,
+    class_hash: ClassHash,
+    sierra_class: ContractClass,
+) {
+    let sierra_program = sierra_class.extract_sierra_program().unwrap();
+    let entry_points = sierra_class.entry_points_by_type;
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Sierra(Arc::new((sierra_program, entry_points))),
+    );
+}
 
 #[test]
 #[cfg(feature = "cairo-native")]
@@ -195,9 +209,10 @@ fn integration_test_erc20() {
 
     let caller_address = Address(123456789.into());
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         NATIVE_CLASS_HASH,
-        CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+        sierra_contract_class,
     );
     contract_class_cache.insert(
         CASM_CLASS_HASH,
@@ -590,13 +605,16 @@ fn call_contract_test() {
     let callee_class_hash: ClassHash = [2; 32];
     let callee_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         caller_class_hash,
-        CompiledClass::Sierra(Arc::new(caller_contract_class)),
+        caller_contract_class,
     );
-    contract_class_cache.insert(
+
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         callee_class_hash,
-        CompiledClass::Sierra(Arc::new(callee_contract_class)),
+        callee_contract_class,
     );
 
     let mut state_reader = InMemoryStateReader::default();
@@ -675,14 +693,16 @@ fn call_echo_contract_test() {
     let callee_class_hash: ClassHash = [2; 32];
     let callee_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         caller_class_hash,
-        CompiledClass::Sierra(Arc::new(caller_contract_class)),
+        caller_contract_class,
     );
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         callee_class_hash,
-        CompiledClass::Sierra(Arc::new(callee_contract_class)),
+        callee_contract_class,
     );
 
     let mut state_reader = InMemoryStateReader::default();
@@ -763,14 +783,16 @@ fn call_events_contract_test() {
     let callee_class_hash: ClassHash = [2; 32];
     let callee_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         caller_class_hash,
-        CompiledClass::Sierra(Arc::new(caller_contract_class)),
+        caller_contract_class,
     );
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         callee_class_hash,
-        CompiledClass::Sierra(Arc::new(callee_contract_class)),
+        callee_contract_class,
     );
 
     let mut state_reader = InMemoryStateReader::default();
@@ -984,14 +1006,16 @@ fn deploy_syscall_test() {
     let deployee_class_hash: ClassHash = Felt252::one().to_be_bytes();
     let _deployee_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         deployer_class_hash,
-        CompiledClass::Sierra(Arc::new(deployer_contract_class)),
+        deployer_contract_class,
     );
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         deployee_class_hash,
-        CompiledClass::Sierra(Arc::new(deployee_contract_class)),
+        deployee_contract_class,
     );
 
     let mut state_reader = InMemoryStateReader::default();
@@ -1089,14 +1113,16 @@ fn deploy_syscall_address_unavailable_test() {
     // Insert contract to be deployed so that its address is taken
     let deployee_address = expected_deployed_contract_address;
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         deployer_class_hash,
-        CompiledClass::Sierra(Arc::new(deployer_contract_class)),
+        deployer_contract_class,
     );
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         deployee_class_hash,
-        CompiledClass::Sierra(Arc::new(deployee_contract_class)),
+        deployee_contract_class,
     );
 
     let mut state_reader = InMemoryStateReader::default();
