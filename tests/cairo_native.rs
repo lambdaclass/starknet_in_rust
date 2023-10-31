@@ -747,9 +747,10 @@ fn keccak_syscall_test() {
 
     let caller_address = Address(123456789.into());
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         native_class_hash,
-        CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+        sierra_contract_class,
     );
 
     let mut state_reader = InMemoryStateReader::default();
@@ -773,6 +774,7 @@ fn keccak_syscall_test() {
     );
 
     assert!(!native_result.failure_flag);
+    assert_eq!(native_result.gas_consumed, 545370);
 }
 
 fn execute(

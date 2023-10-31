@@ -3041,9 +3041,10 @@ fn keccak_syscall() {
         )
         .unwrap();
 
-    let retdata = call_info.call_info.unwrap().retdata;
+    let call_info = call_info.call_info.unwrap();
 
-    assert_eq!(retdata[0], Felt252::one());
+    assert_eq!(call_info.retdata[0], Felt252::one());
+    assert_eq!(call_info.gas_consumed, 545370);
 }
 
 #[test]

@@ -34,7 +34,7 @@ cairo-lang-runner = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "113be0b800bf381fef512652f84e85a494b736c4", optional = true }
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "3117831e7c44853095f6c669322cecf3d8d4b28b", optional = true }
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 flate2 = "1.0.25"
 getset = "0.1.2"
