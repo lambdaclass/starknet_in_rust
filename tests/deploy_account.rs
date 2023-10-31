@@ -103,7 +103,7 @@ fn internal_deploy_account() {
                 ("n_steps", 3612),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 83),
-                ("l1_gas_usage", 3672)
+                ("l1_gas_usage", 3060)
             ]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
@@ -177,11 +177,11 @@ fn internal_deploy_account_cairo1() {
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3948;
+        n_steps = 3921;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3952;
+        n_steps = 3937;
     }
 
     assert_eq!(
@@ -195,7 +195,7 @@ fn internal_deploy_account_cairo1() {
                 )),
                 code_address: None,
                 #[cfg(not(feature="cairo_1_tests"))]
-                gas_consumed: 16440,
+                gas_consumed: 15540,
                 #[cfg(feature="cairo_1_tests")]
                 gas_consumed: 16770,
                 class_hash: Some([
@@ -212,12 +212,12 @@ fn internal_deploy_account_cairo1() {
                     2.into()
                 ],
                 retdata: vec![felt_str!("370462705988")],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     #[cfg(not(feature="cairo_1_tests"))]
-                    n_steps: 152,
+                    n_steps: 144,
                     #[cfg(feature="cairo_1_tests")]
                     n_steps: 155,
-                    n_memory_holes: 17,
+                    n_memory_holes: 2,
                     builtin_instance_counter:
                     [
                     ("range_check_builtin", 2),
@@ -225,7 +225,7 @@ fn internal_deploy_account_cairo1() {
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect(),
-            },
+            }),
 
                 ..Default::default() }),
 
@@ -242,14 +242,14 @@ fn internal_deploy_account_cairo1() {
                 entry_point_selector: Some(felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556")),
                 entry_point_type: Some(EntryPointType::Constructor),
                 #[cfg(not(feature="cairo_1_tests"))]
-                gas_consumed: 14240,
+                gas_consumed: 13840,
                 #[cfg(feature="cairo_1_tests")]
                 gas_consumed: 14350,
                 calldata: vec![2.into()],
                 accessed_storage_keys: keys,
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     #[cfg(not(feature="cairo_1_tests"))]
-                    n_steps: 92,
+                    n_steps: 88,
                     #[cfg(feature="cairo_1_tests")]
                     n_steps: 93,
                     n_memory_holes: 0,
@@ -260,7 +260,7 @@ fn internal_deploy_account_cairo1() {
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect(),
-            },
+            }),
                 ..Default::default()
             }),
             None,
@@ -270,7 +270,7 @@ fn internal_deploy_account_cairo1() {
                 ("n_steps", n_steps),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 87),
-                ("l1_gas_usage", 4896)
+                ("l1_gas_usage", 5508)
             ]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))

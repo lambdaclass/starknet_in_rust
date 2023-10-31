@@ -193,6 +193,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(_) => todo!(),
         }
     }
 
@@ -596,7 +597,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
 
     pub(crate) fn storage_write(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request =
@@ -887,7 +888,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
 
     pub(crate) fn replace_class(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("replace_class", vm, syscall_ptr)

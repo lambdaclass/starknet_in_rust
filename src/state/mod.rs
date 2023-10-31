@@ -3,10 +3,10 @@ use self::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_classes::compiled_class::CompiledClass,
     transaction::error::TransactionError,
     utils::{
-        get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, Address, ClassHash,
+        get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, Address,
+        ClassHash, CompiledClassHash,
     },
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
@@ -106,7 +106,7 @@ impl ExecutionResourcesManager {
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
-    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClassHash>,
     pub(crate) storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
 }
 
@@ -114,7 +114,7 @@ impl StateDiff {
     pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
-        class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+        class_hash_to_compiled_class: HashMap<ClassHash, CompiledClassHash>,
         storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
     ) -> Self {
         StateDiff {
@@ -133,7 +133,7 @@ impl StateDiff {
         let state_cache = cached_state.cache().to_owned();
 
         let substracted_maps = state_cache.storage_writes;
-        let storage_updates = to_state_diff_storage_mapping(substracted_maps);
+        let storage_updates = to_state_diff_storage_mapping(&substracted_maps);
 
         let address_to_nonce = state_cache.nonce_writes;
         let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes;
@@ -330,7 +330,7 @@ mod test {
             Arc::new(PermanentContractClassCache::default()),
         );
 
-        let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
+        let diff = StateDiff::from_cached_state(cached_state_original.clone_for_testing()).unwrap();
 
         let cached_state = diff
             .to_cached_state::<_, PermanentContractClassCache>(

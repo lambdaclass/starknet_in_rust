@@ -1,6 +1,6 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::state_api::State;
+use crate::state::state_api::{State, StateChangesCount};
 use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
@@ -16,6 +16,7 @@ use cairo_vm::{
     felt::Felt252, serde::deserialize_program::BuiltinName, vm::runners::builtin_runner,
 };
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use core::fmt;
 use num_integer::Integer;
 use num_traits::{Num, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -36,8 +37,20 @@ pub type CompiledClassHash = [u8; 32];
 //*      Address
 //* -------------------
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt252);
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "0x{}", self.0.to_str_radix(16))
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
 
 //* -------------------
 //*  Helper Functions
@@ -135,17 +148,17 @@ pub fn string_to_hash(class_string: &String) -> ClassHash {
 
 /// Converts CachedState storage mapping to StateDiff storage mapping.
 pub fn to_state_diff_storage_mapping(
-    storage_writes: HashMap<StorageEntry, Felt252>,
+    storage_writes: &HashMap<StorageEntry, Felt252>,
 ) -> HashMap<Address, HashMap<Felt252, Felt252>> {
     let mut storage_updates: HashMap<Address, HashMap<Felt252, Felt252>> = HashMap::new();
-    for ((address, key), value) in storage_writes.into_iter() {
+    for ((address, key), value) in storage_writes.iter() {
         storage_updates
-            .entry(address)
+            .entry(address.clone())
             .and_modify(|updates_for_address: &mut HashMap<Felt252, Felt252>| {
-                let key_fe = Felt252::from_bytes_be(&key);
+                let key_fe = Felt252::from_bytes_be(key);
                 updates_for_address.insert(key_fe, value.clone());
             })
-            .or_insert_with(|| HashMap::from([(Felt252::from_bytes_be(&key), value)]));
+            .or_insert_with(|| HashMap::from([(Felt252::from_bytes_be(key), value.clone())]));
     }
     storage_updates
 }
@@ -169,14 +182,11 @@ pub fn calculate_tx_resources(
     resources_manager: ExecutionResourcesManager,
     call_info: &[Option<CallInfo>],
     tx_type: TransactionType,
-    storage_changes: (usize, usize),
+    state_changes: StateChangesCount,
     l1_handler_payload_size: Option<usize>,
     n_reverted_steps: usize,
 ) -> Result<HashMap<String, usize>, TransactionError> {
-    let (n_modified_contracts, n_storage_changes) = storage_changes;
-
     let non_optional_calls: Vec<CallInfo> = call_info.iter().flatten().cloned().collect();
-    let n_deployments = non_optional_calls.iter().map(get_call_n_deployments).sum();
 
     let mut l2_to_l1_messages = Vec::new();
 
@@ -184,13 +194,8 @@ pub fn calculate_tx_resources(
         l2_to_l1_messages.extend(call_info.get_sorted_l2_to_l1_messages()?)
     }
 
-    let l1_gas_usage = calculate_tx_gas_usage(
-        l2_to_l1_messages,
-        n_modified_contracts,
-        n_storage_changes,
-        l1_handler_payload_size,
-        n_deployments,
-    );
+    let l1_gas_usage =
+        calculate_tx_gas_usage(l2_to_l1_messages, &state_changes, l1_handler_payload_size);
 
     let cairo_usage = resources_manager.cairo_usage.clone();
     let tx_syscall_counter = resources_manager.syscall_counter;
@@ -301,7 +306,7 @@ pub fn get_storage_var_address(
 
     let args = args
         .iter()
-        .map(|felt| felt_to_field_element(felt))
+        .map(felt_to_field_element)
         .collect::<Result<Vec<_>, _>>()?;
 
     let storage_var_name_hash =
@@ -488,6 +493,7 @@ pub mod test_utils {
     macro_rules! ids_data {
         ( $( $name: expr ),* ) => {
             {
+                #[allow(clippy::useless_vec)]
                 let ids_names = vec![$( $name ),*];
                 let references = $crate::utils::test_utils::references!(ids_names.len() as i32);
                 let mut ids_data = HashMap::<String, cairo_vm::hint_processor::hint_processor_definition::HintReference>::new();
@@ -810,7 +816,7 @@ mod test {
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
 
-        let map = to_state_diff_storage_mapping(storage);
+        let map = to_state_diff_storage_mapping(&storage);
 
         let key1_fe = Felt252::from_bytes_be(key1.as_slice());
         let key2_fe = Felt252::from_bytes_be(key2.as_slice());
@@ -881,7 +887,7 @@ mod test {
         storage.insert((address1.clone(), key1), value1.clone());
         storage.insert((address2.clone(), key2), value2.clone());
 
-        let state_dff = to_state_diff_storage_mapping(storage);
+        let state_dff = to_state_diff_storage_mapping(&storage);
         let cache_storage = to_cache_state_storage_mapping(&state_dff);
 
         let mut expected_res = HashMap::new();
@@ -919,5 +925,11 @@ mod test {
                 224, 80, 72, 144, 143, 109, 237, 203, 41, 241, 37, 226, 218
             ],
         );
+    }
+
+    #[test]
+    fn test_address_display() {
+        let address = Address(Felt252::from(123456789));
+        assert_eq!(format!("{}", address), "0x75bcd15".to_string());
     }
 }

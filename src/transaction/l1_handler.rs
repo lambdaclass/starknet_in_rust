@@ -7,6 +7,7 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
+use super::Transaction;
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -25,10 +26,9 @@ use crate::{
     utils::{calculate_tx_resources, Address},
 };
 
-use super::Transaction;
-
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
+/// Represents an L1Handler transaction in the StarkNet network.
 pub struct L1Handler {
     #[getset(get = "pub")]
     hash_value: Felt252,
@@ -43,6 +43,7 @@ pub struct L1Handler {
 }
 
 impl L1Handler {
+    /// Constructor creates a new [L1Handler] instance.
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt252,
@@ -71,7 +72,12 @@ impl L1Handler {
             hash_value,
         )
     }
-
+    /// Creates a new [L1Handler] instance with a specified transaction hash.
+    ///
+    /// # Safety
+    ///
+    /// `tx_hash` will be assumed to be the same as would result from calling
+    /// `calculate_transaction_hash_common`. Non-compliance will result in silent misbehavior.
     pub fn new_with_tx_hash(
         contract_address: Address,
         entry_point_selector: Felt252,
@@ -93,6 +99,13 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::L1Handler,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.entry_point_selector = ?self.entry_point_selector,
+        self.nonce = ?self.nonce,
+    ))]
     pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
@@ -128,7 +141,7 @@ impl L1Handler {
             )?
         };
 
-        let changes = state.count_actual_storage_changes(None)?;
+        let changes = state.count_actual_state_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
@@ -189,11 +202,9 @@ impl L1Handler {
             L1_HANDLER_VERSION.into(),
         ))
     }
-    pub(crate) fn create_for_simulation(
-        &self,
-        skip_validate: bool,
-        skip_execute: bool,
-    ) -> Transaction {
+
+    /// Creates a L1Handler for simulation purposes.
+    pub fn create_for_simulation(&self, skip_validate: bool, skip_execute: bool) -> Transaction {
         let tx = L1Handler {
             skip_validate,
             skip_execute,
@@ -201,6 +212,27 @@ impl L1Handler {
         };
 
         Transaction::L1Handler(tx)
+    }
+
+    /// Creates a `L1Handler` from a starknet api `L1HandlerTransaction`.
+    pub fn from_sn_api_tx(
+        tx: starknet_api::transaction::L1HandlerTransaction,
+        tx_hash: Felt252,
+        paid_fee_on_l1: Option<Felt252>,
+    ) -> Result<Self, TransactionError> {
+        L1Handler::new_with_tx_hash(
+            Address(Felt252::from_bytes_be(tx.contract_address.0.key().bytes())),
+            Felt252::from_bytes_be(tx.entry_point_selector.0.bytes()),
+            tx.calldata
+                .0
+                .as_ref()
+                .iter()
+                .map(|f| Felt252::from_bytes_be(f.bytes()))
+                .collect(),
+            Felt252::from_bytes_be(tx.nonce.0.bytes()),
+            paid_fee_on_l1,
+            tx_hash,
+        )
     }
 }
 
@@ -230,6 +262,7 @@ mod test {
         sync::Arc,
     };
 
+    /// Test the correct execution of the L1Handler.
     #[test]
     fn test_execute_l1_handler() {
         let l1_handler = L1Handler::new(
@@ -289,6 +322,8 @@ mod test {
         assert_eq!(tx_exec, expected_tx_exec)
     }
 
+    /// Helper function to construct the expected transaction execution info.
+    /// Expected output of the L1Handler's execution.
     fn expected_tx_exec_info() -> TransactionExecutionInfo {
         TransactionExecutionInfo {
             validate_info: None,
@@ -311,14 +346,14 @@ mod test {
                     10.into(),
                 ],
                 retdata: vec![],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 141,
                     n_memory_holes: 20,
                     builtin_instance_counter: HashMap::from([
                         ("range_check_builtin".to_string(), 6),
                         ("pedersen_builtin".to_string(), 2),
                     ]),
-                },
+                }),
                 events: vec![],
                 l2_to_l1_messages: vec![],
                 storage_read_values: vec![0.into(), 0.into()],

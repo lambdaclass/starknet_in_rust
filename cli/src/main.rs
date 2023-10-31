@@ -202,7 +202,7 @@ fn invoke_parser(
         Some(Felt252::zero()),
         transaction_hash.unwrap(),
     )?;
-    let mut transactional_state = cached_state.create_transactional();
+    let mut transactional_state = cached_state.create_transactional()?;
     let _tx_info = internal_invoke.apply(&mut transactional_state, &BlockContext::default(), 0)?;
     cached_state.apply_state_update(&StateDiff::from_cached_state(transactional_state)?)?;
 
