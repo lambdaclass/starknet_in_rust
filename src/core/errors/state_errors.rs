@@ -48,6 +48,4 @@ pub enum StateError {
     CustomError(String),
     #[error(transparent)]
     ByteArray(#[from] FromByteArrayError),
-    #[error("Failed to read contract class cache")]
-    FailedToReadContractClassCache,
 }

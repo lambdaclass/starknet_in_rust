@@ -1,8 +1,6 @@
-use starknet::class_hash::ClassHash;
-
 #[starknet::interface]
 trait IDeployTest<TContractState> {
-    fn deploy_test(self: @TContractState, class_hash: ClassHash, contract_address_salt: felt252) -> starknet::contract_address::ContractAddress;
+    fn deploy_test(self: @TContractState, class_hash: felt252, contract_address_salt: felt252) -> starknet::contract_address::ContractAddress;
 }
 
 #[starknet::contract]
@@ -23,10 +21,10 @@ mod DeployTest {
 
     #[external(v0)]
     impl DeployTest of super::IDeployTest<ContractState> {
-        fn deploy_test(self: @ContractState, class_hash: ClassHash, contract_address_salt: felt252) -> ContractAddress {
+        fn deploy_test(self: @ContractState, class_hash: felt252, contract_address_salt: felt252) -> ContractAddress {
             let mut calldata = ArrayTrait::new();
             calldata.append(100);
-            let (address0, _) = deploy_syscall(class_hash, contract_address_salt, calldata.span(), false).unwrap();
+            let (address0, _) = deploy_syscall(class_hash.try_into().unwrap(), contract_address_salt, calldata.span(), false).unwrap();
             address0
         }
     }

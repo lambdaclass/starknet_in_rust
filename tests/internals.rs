@@ -406,10 +406,10 @@ fn expected_validate_call_info(
         // Entries **not** in blockifier.
         class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
         call_type: Some(CallType::Call),
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             n_steps: 13,
             ..Default::default()
-        }),
+        },
 
         ..Default::default()
     }
@@ -476,14 +476,14 @@ fn expected_fee_transfer_call_info(
             Felt252::zero(),
             Felt252::zero(),
         ],
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             n_steps: 529,
             n_memory_holes: 57,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
                 (HASH_BUILTIN_NAME.to_string(), 4),
             ]),
-        }),
+        },
         ..Default::default()
     }
 }
@@ -610,20 +610,6 @@ fn invoke_tx(calldata: Vec<Felt252>, max_fee: u128) -> InvokeFunction {
     .unwrap()
 }
 
-fn invoke_tx_with_nonce(calldata: Vec<Felt252>, max_fee: u128, nonce: Felt252) -> InvokeFunction {
-    InvokeFunction::new(
-        TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        EXECUTE_ENTRY_POINT_SELECTOR.clone(),
-        max_fee,
-        TRANSACTION_VERSION.clone(),
-        calldata,
-        vec![],
-        StarknetChainId::TestNet.to_felt(),
-        Some(nonce),
-    )
-    .unwrap()
-}
-
 fn expected_fee_transfer_info(fee: u128) -> CallInfo {
     CallInfo {
         failure_flag: false,
@@ -637,14 +623,14 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::zero()],
         retdata: vec![Felt252::from(1)],
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
                 (HASH_BUILTIN_NAME.to_string(), 4),
             ]),
-        }),
+        },
         l2_to_l1_messages: vec![],
         internal_calls: vec![],
         events: vec![OrderedEvent {
@@ -701,14 +687,14 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::zero()],
         retdata: vec![Felt252::from(1)],
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
             builtin_instance_counter: HashMap::from([
                 ("range_check_builtin".to_string(), 21),
                 ("pedersen_builtin".to_string(), 4),
             ]),
-        }),
+        },
         l2_to_l1_messages: vec![],
         internal_calls: vec![],
         events: vec![OrderedEvent {
@@ -722,13 +708,13 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone() - Felt252::from(3700),
+            INITIAL_BALANCE.clone() - Felt252::from(1252),
             Felt252::zero(),
-            INITIAL_BALANCE.clone() - Felt252::from(3700),
+            INITIAL_BALANCE.clone() - Felt252::from(1252),
             Felt252::zero(),
-            Felt252::from(3700),
+            Felt252::from(1252),
             Felt252::zero(),
-            Felt252::from(3700),
+            Felt252::from(1252),
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
@@ -771,7 +757,7 @@ fn declare_tx() -> Declare {
 
 fn declarev2_tx() -> DeclareV2 {
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/raw_contract_classes/fibonacci.sierra");
+    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
     #[cfg(feature = "cairo_1_tests")]
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
@@ -789,7 +775,7 @@ fn declarev2_tx() -> DeclareV2 {
         nonce: 0.into(),
         hash_value: 0.into(),
         compiled_class_hash: casm_class_hash,
-        sierra_contract_class: Some(sierra_contract_class),
+        sierra_contract_class,
         sierra_class_hash,
         casm_class: casm_class.into(),
         skip_execute: false,
@@ -885,14 +871,14 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         ]),
 
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             n_steps: 525,
             n_memory_holes: 59,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 21),
                 (HASH_BUILTIN_NAME.to_string(), 4),
             ]),
-        }),
+        },
         ..Default::default()
     }
 }
@@ -968,10 +954,10 @@ fn test_declare_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()],
-            execution_resources: Some(ExecutionResources {
+            execution_resources: ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
-            }),
+            },
             ..Default::default()
         }),
         None,
@@ -1048,7 +1034,7 @@ fn test_declarev2_tx() {
         ("n_steps".to_string(), 2715),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 3672),
+        ("l1_gas_usage".to_string(), 1224),
     ]);
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
@@ -1069,10 +1055,10 @@ fn test_declarev2_tx() {
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![contract_hash],
-            execution_resources: Some(ExecutionResources {
+            execution_resources: ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
-            }),
+            },
             ..Default::default()
         }),
         None,
@@ -1126,18 +1112,18 @@ fn expected_execute_call_info() -> CallInfo {
             internal_calls: vec![],
             contract_address: TEST_CONTRACT_ADDRESS.clone(),
             code_address: None,
-            execution_resources: Some(ExecutionResources {
+            execution_resources: ExecutionResources {
                 n_steps: 22,
                 ..Default::default()
-            }),
+            },
             ..Default::default()
         }],
         events: vec![],
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             n_steps: 61,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
-        }),
+        },
         ..Default::default()
     }
 }
@@ -1169,14 +1155,14 @@ fn expected_fib_execute_call_info() -> CallInfo {
             Felt252::from(0),
         ],
         retdata: vec![Felt252::from(42)],
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 153,
+            n_steps: 157,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 160,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 4)]),
-        }),
+        },
         l2_to_l1_messages: vec![],
         internal_calls: vec![CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -1192,17 +1178,17 @@ fn expected_fib_execute_call_info() -> CallInfo {
             contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
             code_address: None,
             #[cfg(not(feature = "cairo_1_tests"))]
-            gas_consumed: 3980,
+            gas_consumed: 4380,
             #[cfg(feature = "cairo_1_tests")]
             gas_consumed: 4710,
-            execution_resources: Some(ExecutionResources {
+            execution_resources: ExecutionResources {
                 #[cfg(not(feature = "cairo_1_tests"))]
-                n_steps: 114,
+                n_steps: 118,
                 #[cfg(feature = "cairo_1_tests")]
                 n_steps: 121,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 3)]),
-            }),
+            },
             ..Default::default()
         }],
         events: vec![],
@@ -1228,11 +1214,11 @@ fn expected_validate_call_info_2() -> CallInfo {
             Felt252::from(1),
             Felt252::from(2),
         ],
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             n_steps: 21,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 1)]),
-        }),
+        },
         ..Default::default()
     }
 }
@@ -1253,11 +1239,11 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
             Felt252::from(0),
             Felt252::from(0),
         ],
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             n_steps: 21,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 1)]),
-        }),
+        },
         ..Default::default()
     }
 }
@@ -1287,7 +1273,7 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 4227;
+        n_steps = 4231;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
@@ -1295,7 +1281,7 @@ fn expected_fib_transaction_execution_info(
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 6732),
+        ("l1_gas_usage".to_string(), 4896),
         ("pedersen_builtin".to_string(), 16),
         ("range_check_builtin".to_string(), 104),
     ]);
@@ -1518,9 +1504,9 @@ fn test_invoke_with_declarev2_tx() {
         Felt252::from(0),                                     // b
         Felt252::from(0),                                     // n
     ];
-    let invoke_tx = invoke_tx_with_nonce(calldata, u128::MAX, Felt252::one());
+    let invoke_tx = invoke_tx(calldata, u128::MAX);
 
-    let expected_gas_consumed = 5551;
+    let expected_gas_consumed = 4908;
     let result = invoke_tx
         .execute(state, block_context, expected_gas_consumed)
         .unwrap();
@@ -1533,7 +1519,7 @@ fn test_invoke_with_declarev2_tx() {
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let expected_fee = 3097;
+    let expected_fee = 3709;
 
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
@@ -1611,7 +1597,7 @@ fn test_deploy_account() {
         ("n_steps".to_string(), 3625),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 3060),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
@@ -1758,12 +1744,12 @@ fn test_deploy_account_revert() {
         ("n_steps".to_string(), 3625),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 3060),
+        ("l1_gas_usage".to_string(), 3672),
     ]);
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 3097);
+    assert_eq!(fee, 3709);
 
     let mut expected_execution_info = TransactionExecutionInfo::new(
         None,
@@ -1801,7 +1787,7 @@ fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader, PermanentContractClassCache>,
     CachedState<InMemoryStateReader, PermanentContractClassCache>,
 ) {
-    let fee = Felt252::from(3097);
+    let fee = Felt252::from(3709);
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([
@@ -1852,7 +1838,7 @@ fn expected_deploy_account_states() -> (
         INITIAL_BALANCE.clone(),
     );
 
-    let mut state_after = state_before.clone_for_testing();
+    let mut state_after = state_before.clone();
 
     // Make the contract cache independent (otherwise tests will fail because the initial state's
     // cache will not be empty anymore).
@@ -2349,19 +2335,19 @@ fn test_library_call_with_declare_v2() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 29680,
+        gas_consumed: 30080,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 30410,
         calldata: vec![1.into(), 1.into(), 10.into()],
         retdata: vec![89.into()], // fib(10)
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 364,
+            n_steps: 368,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 371,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 13)]),
-        }),
+        },
         ..Default::default()
     };
 
@@ -2373,19 +2359,19 @@ fn test_library_call_with_declare_v2() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 111690,
+        gas_consumed: 112490,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 113480,
         calldata,
         retdata: vec![89.into()], // fib(10)
-        execution_resources: Some(ExecutionResources {
+        execution_resources: ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 570,
+            n_steps: 578,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 587,
             n_memory_holes: 1,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 16)]),
-        }),
+        },
         internal_calls: vec![expected_internal_call_info],
         ..Default::default()
     };

@@ -73,9 +73,11 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
     call_info.ok_or(TransactionError::CallInfoIsNone)
 }
 
+// ----------------------------------------------------------------------------------------
 /// Calculates the fee of a transaction given its execution resources.
 /// We add the l1_gas_usage (which may include, for example, the direct cost of L2-to-L1
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
+
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
     gas_price: u128,
@@ -92,9 +94,11 @@ pub fn calculate_tx_fee(
     Ok(total_l1_gas_usage.ceil() as u128 * gas_price)
 }
 
+// ----------------------------------------------------------------------------------------
 /// Calculates the L1 gas consumed when submitting the underlying Cairo program to SHARP.
 /// I.e., returns the heaviest Cairo resource weight (in terms of L1 gas), as the size of
 /// a proof is determined similarly - by the (normalized) largest segment.
+
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
     block_context: &BlockContext,
     cairo_resource_usage: &HashMap<String, usize>,
@@ -113,7 +117,6 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     ))
 }
 
-/// Calculates the maximum weighted value from a given resource usage mapping.
 fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64>) -> f64 {
     let mut max = 0.0_f64;
     for (k, v) in weights {
@@ -133,11 +136,6 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 /// - `tx_execution_context`: The transaction's execution context.
 /// - `skip_fee_transfer`: Whether to skip the fee transfer.
 ///
-/// # Errors
-/// - [TransactionError::ActualFeeExceedsMaxFee] - If the actual fee is bigger than the maximal fee.
-///
-/// # Returns
-/// The [FeeInfo] with the given actual fee.
 pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     state: &mut CachedState<S, C>,
     resources: &HashMap<String, usize>,
@@ -197,8 +195,6 @@ mod tests {
     };
     use std::{collections::HashMap, sync::Arc};
 
-    /// Tests the behavior of the charge_fee function when the actual fee exceeds the maximum fee
-    /// for version 0. It expects to return an ActualFeeExceedsMaxFee error.
     #[test]
     fn charge_fee_v0_max_fee_exceeded_should_charge_nothing() {
         let mut state = CachedState::new(
@@ -228,8 +224,6 @@ mod tests {
         assert_eq!(result.1, 0);
     }
 
-    /// Tests the behavior of the charge_fee function when the actual fee exceeds the maximum fee
-    /// for version 1. It expects the function to return the maximum fee.
     #[test]
     fn charge_fee_v1_max_fee_exceeded_should_charge_max_fee() {
         let mut state = CachedState::new(
