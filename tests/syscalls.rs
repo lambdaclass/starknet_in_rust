@@ -173,7 +173,7 @@ fn test_contract<'a>(
     assert_eq!(result.calldata, calldata);
     assert_eq_sorted!(result.retdata, return_data.into());
     assert_eq_sorted!(result.internal_calls, internal_calls.into());
-    assert_eq!(result.execution_resources, execution_resources);
+    assert_eq!(result.execution_resources, Some(execution_resources));
 
     assert_eq!(result.gas_consumed, 0);
     assert!(!result.failure_flag);
@@ -215,10 +215,10 @@ fn call_contract_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![21.into(), 2.into()],
                 retdata: vec![42.into()],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 24,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             },
             CallInfo {
@@ -237,10 +237,10 @@ fn call_contract_syscall() {
                 ]]
                 .into_iter()
                 .collect(),
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 63,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             },
             CallInfo {
@@ -254,10 +254,10 @@ fn call_contract_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
                 retdata: vec![2222.into()],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 26,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             },
         ],
@@ -707,11 +707,11 @@ fn library_call_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![21.into(), 2.into()],
                 retdata: vec![42.into()],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 24,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::default(),
-                },
+                }),
                 ..Default::default()
             },
             CallInfo {
@@ -730,11 +730,11 @@ fn library_call_syscall() {
                 ]]
                 .into_iter()
                 .collect(),
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 63,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::default(),
-                },
+                }),
                 ..Default::default()
             },
             CallInfo {
@@ -748,11 +748,11 @@ fn library_call_syscall() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
                 retdata: vec![1111.into()],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 26,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::default(),
-                },
+                }),
                 ..Default::default()
             },
         ],
@@ -802,10 +802,10 @@ fn library_call_l1_handler_syscall() {
             .into_iter()
             .collect(),
             storage_read_values: vec![0.into()],
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 40,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         }],
         [],
@@ -947,11 +947,11 @@ fn deploy_with_constructor_syscall() {
             entry_point_selector: Some(entry_point_selector),
             entry_point_type: Some(EntryPointType::Constructor),
             calldata: [550.into()].to_vec(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 40,
                 n_memory_holes: 0,
                 ..Default::default()
-            },
+            }),
             accessed_storage_keys: HashSet::<[u8; 32]>::from([[
                 2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27,
                 162, 147, 169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
@@ -1028,10 +1028,10 @@ fn test_deploy_and_call_contract_syscall() {
                 retdata: vec![],
                 storage_read_values: vec![0.into()],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 40,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             },
             // Invoke storage_var_and_constructor.cairo mult_constant function
@@ -1053,10 +1053,10 @@ fn test_deploy_and_call_contract_syscall() {
                 retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
                 storage_read_values: vec![constructor_constant.clone()],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 52,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             },
             // Invoke storage_var_and_constructor.cairo set_constant function
@@ -1078,10 +1078,10 @@ fn test_deploy_and_call_contract_syscall() {
                 retdata: vec![],
                 storage_read_values: vec![constructor_constant],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 40,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             },
             // Invoke storage_var_and_constructor.cairo get_constant function
@@ -1103,10 +1103,10 @@ fn test_deploy_and_call_contract_syscall() {
                 retdata: vec![new_constant.clone()],
                 storage_read_values: vec![new_constant.clone()],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 46,
                     ..Default::default()
-                },
+                }),
                 ..Default::default()
             }
         ],
@@ -1217,6 +1217,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1321,6 +1322,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1423,6 +1425,7 @@ fn deploy_cairo1_and_invoke() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
+        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);

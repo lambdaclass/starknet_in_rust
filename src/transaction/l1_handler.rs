@@ -137,7 +137,7 @@ impl L1Handler {
             )?
         };
 
-        let changes = state.count_actual_storage_changes(None)?;
+        let changes = state.count_actual_state_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
@@ -200,11 +200,7 @@ impl L1Handler {
     }
 
     /// Creates a L1Handler for simulation purposes.
-    pub(crate) fn create_for_simulation(
-        &self,
-        skip_validate: bool,
-        skip_execute: bool,
-    ) -> Transaction {
+    pub fn create_for_simulation(&self, skip_validate: bool, skip_execute: bool) -> Transaction {
         let tx = L1Handler {
             skip_validate,
             skip_execute,
@@ -212,6 +208,27 @@ impl L1Handler {
         };
 
         Transaction::L1Handler(tx)
+    }
+
+    /// Creates a `L1Handler` from a starknet api `L1HandlerTransaction`.
+    pub fn from_sn_api_tx(
+        tx: starknet_api::transaction::L1HandlerTransaction,
+        tx_hash: Felt252,
+        paid_fee_on_l1: Option<Felt252>,
+    ) -> Result<Self, TransactionError> {
+        L1Handler::new_with_tx_hash(
+            Address(Felt252::from_bytes_be(tx.contract_address.0.key().bytes())),
+            Felt252::from_bytes_be(tx.entry_point_selector.0.bytes()),
+            tx.calldata
+                .0
+                .as_ref()
+                .iter()
+                .map(|f| Felt252::from_bytes_be(f.bytes()))
+                .collect(),
+            Felt252::from_bytes_be(tx.nonce.0.bytes()),
+            paid_fee_on_l1,
+            tx_hash,
+        )
     }
 }
 
@@ -327,14 +344,14 @@ mod test {
                     10.into(),
                 ],
                 retdata: vec![],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 141,
                     n_memory_holes: 20,
                     builtin_instance_counter: HashMap::from([
                         ("range_check_builtin".to_string(), 6),
                         ("pedersen_builtin".to_string(), 2),
                     ]),
-                },
+                }),
                 events: vec![],
                 l2_to_l1_messages: vec![],
                 storage_read_values: vec![0.into(), 0.into()],

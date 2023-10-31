@@ -142,7 +142,7 @@ impl<'a, S: StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, S> {
 // TODO: These four functions were copied from cairo-rs in
 // hint_processor/cairo-1-hint-processor/hint_processor_utils.rs as these functions are private.
 // They will became public soon and then we have to remove this ones and use the ones in cairo-rs instead
-fn as_relocatable(vm: &mut VirtualMachine, value: &ResOperand) -> Result<Relocatable, HintError> {
+fn as_relocatable(vm: &VirtualMachine, value: &ResOperand) -> Result<Relocatable, HintError> {
     let (base, offset) = extract_buffer(value)?;
     get_ptr(vm, base, &offset).map_err(HintError::from)
 }

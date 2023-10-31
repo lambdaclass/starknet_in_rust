@@ -265,7 +265,7 @@ impl InvokeFunction {
                 remaining_gas,
             )?
         };
-        let changes = state.count_actual_storage_changes(Some((
+        let changes = state.count_actual_state_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
             &self.contract_address,
         )))?;
@@ -1301,7 +1301,7 @@ mod tests {
             )
             .unwrap(),
             None,
-            &1.into() | &QUERY_VERSION_BASE.clone(),
+            &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone(),
         );
         assert!(expected_error.is_err());
     }

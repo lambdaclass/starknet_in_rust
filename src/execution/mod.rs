@@ -43,7 +43,7 @@ pub struct CallInfo {
     pub entry_point_type: Option<EntryPointType>,
     pub calldata: Vec<Felt252>,
     pub retdata: Vec<Felt252>,
-    pub execution_resources: ExecutionResources,
+    pub execution_resources: Option<ExecutionResources>,
     pub events: Vec<OrderedEvent>,
     pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub storage_read_values: Vec<Felt252>,
@@ -73,11 +73,11 @@ impl CallInfo {
             entry_point_type,
             calldata: Vec::new(),
             retdata: Vec::new(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 0,
                 builtin_instance_counter: HashMap::new(),
                 n_memory_holes: 0,
-            },
+            }),
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
             storage_read_values: Vec::new(),
@@ -238,11 +238,11 @@ impl Default for CallInfo {
             l2_to_l1_messages: Vec::new(),
             accessed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 0,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::new(),
-            },
+            }),
             events: Vec::new(),
             gas_consumed: 0,
             failure_flag: false,
@@ -291,7 +291,7 @@ impl<'de> Deserialize<'de> for CallInfo {
         }
 
         Ok(CallInfo {
-            execution_resources,
+            execution_resources: Some(execution_resources),
             retdata,
             calldata,
             internal_calls,
@@ -370,6 +370,7 @@ pub struct TransactionExecutionContext {
     pub(crate) nonce: Felt252,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
+    // pub(crate) use_cairo_native: bool,
 }
 
 impl TransactionExecutionContext {
