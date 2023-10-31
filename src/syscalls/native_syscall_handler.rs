@@ -390,6 +390,8 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     ) -> SyscallResult<cairo_native::starknet::U256> {
         println!("Called `keccak({input:?})` from MLIR.");
 
+        self.handle_syscall_request(gas, "keccak")?;
+
         let length = input.len();
 
         if length % 17 != 0 {
