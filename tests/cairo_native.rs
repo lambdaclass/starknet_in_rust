@@ -727,6 +727,269 @@ fn call_events_contract_test() {
     assert_eq!(sorted_events, vec![event]);
 }
 
+#[test]
+fn replace_class_contract_call() {
+    // Same execution than cairo_1_syscalls.rs test but comparing results to native execution.
+
+    // SET GET_NUMBER_A
+    // Add get_number_a.cairo to storage
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_a.casm");
+    let contract_class_a: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+
+    let sierra_class_a: cairo_lang_starknet::contract_class::ContractClass = serde_json::from_str(
+        std::fs::read_to_string("starknet_programs/cairo2/get_number_a.sierra")
+            .unwrap()
+            .as_str(),
+    )
+    .unwrap();
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(Felt252::one());
+    let native_address = Address(Felt252::from(2));
+    static CLASS_HASH_A: ClassHash = [1; 32];
+    static NATIVE_CLASS_HASH_A: ClassHash = [2; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(
+        CLASS_HASH_A,
+        CompiledClass::Casm(Arc::new(contract_class_a)),
+    );
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
+        NATIVE_CLASS_HASH_A,
+        sierra_class_a,
+    );
+
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), CLASS_HASH_A);
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(native_address.clone(), NATIVE_CLASS_HASH_A);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce.clone());
+
+    // SET GET_NUMBER_B
+
+    // Add get_number_b contract to the state (only its contract_class)
+
+    let sierra_class_b: cairo_lang_starknet::contract_class::ContractClass = serde_json::from_str(
+        std::fs::read_to_string("starknet_programs/cairo2/get_number_b.sierra")
+            .unwrap()
+            .as_str(),
+    )
+    .unwrap();
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_b.casm");
+    let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+
+    static CLASS_HASH_B: ClassHash = [3; 32];
+    static NATIVE_CLASH_HASH_B: ClassHash = [4; 32];
+
+    contract_class_cache.insert(
+        CLASS_HASH_B,
+        CompiledClass::Casm(Arc::new(contract_class_b)),
+    );
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
+        NATIVE_CLASH_HASH_B,
+        sierra_class_b,
+    );
+
+    // SET GET_NUMBER_WRAPPER
+
+    //  Create program and entry point types for contract class
+    let sierra_class_wrapper: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/get_number_wrapper.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_number_wrapper.casm");
+    let contract_class_wrapper: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+
+    let entrypoints = contract_class_wrapper.clone().entry_points_by_type;
+    let get_number_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
+    let upgrade_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    let native_entrypoints = sierra_class_wrapper.clone().entry_points_by_type;
+    let native_get_number_entrypoint_selector =
+        &native_entrypoints.external.get(1).unwrap().selector;
+    let native_upgrade_entrypoint_selector = &native_entrypoints.external.get(0).unwrap().selector;
+
+    let wrapper_address = Address(Felt252::from(2));
+    let native_wrapper_address = Address(Felt252::from(3));
+
+    static WRAPPER_CLASS_HASH: ClassHash = [5; 32];
+    static NATIVE_WRAPPER_CLASS_HASH: ClassHash = [6; 32];
+
+    contract_class_cache.insert(
+        WRAPPER_CLASS_HASH,
+        CompiledClass::Casm(Arc::new(contract_class_wrapper)),
+    );
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
+        NATIVE_WRAPPER_CLASS_HASH,
+        sierra_class_wrapper,
+    );
+
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(wrapper_address.clone(), WRAPPER_CLASS_HASH);
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(native_wrapper_address.clone(), NATIVE_WRAPPER_CLASS_HASH);
+
+    state_reader
+        .address_to_nonce_mut()
+        .insert(wrapper_address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader.clone()), contract_class_cache.clone());
+    let mut native_state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+    // CALL GET_NUMBER BEFORE REPLACE_CLASS
+
+    let calldata = [].to_vec();
+    let caller_address = Address(0000.into());
+    let entrypoint_type = EntryPointType::External;
+
+    let native_result = execute(
+        &mut native_state,
+        &caller_address,
+        &address,
+        native_upgrade_entrypoint_selector,
+        &calldata,
+        entrypoint_type,
+        &NATIVE_WRAPPER_CLASS_HASH,
+    );
+
+    let vm_result = execute(
+        &mut state,
+        &caller_address,
+        &address,
+        upgrade_entrypoint_selector,
+        &calldata,
+        entrypoint_type,
+        &WRAPPER_CLASS_HASH,
+    );
+
+    assert_eq!(vm_result.retdata, native_result.retdata);
+    assert_eq!(vm_result.events, native_result.events);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
+    assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
+    assert_eq!(vm_result.failure_flag, false);
+    assert_eq!(native_result.failure_flag, false);
+    assert_eq!(vm_result.internal_calls, native_result.internal_calls);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(
+        vm_result.storage_read_values,
+        native_result.storage_read_values
+    );
+    assert_eq!(vm_result.class_hash, native_result.class_hash);
+
+    // REPLACE_CLASS
+
+    let calldata = [Felt252::from_bytes_be(&CLASS_HASH_B)].to_vec();
+
+    let native_result = execute(
+        &mut state,
+        &caller_address,
+        &address,
+        native_upgrade_entrypoint_selector,
+        &calldata,
+        entrypoint_type,
+        &NATIVE_WRAPPER_CLASS_HASH,
+    );
+
+    let vm_result = execute(
+        &mut state,
+        &caller_address,
+        &wrapper_address,
+        upgrade_entrypoint_selector,
+        &calldata,
+        entrypoint_type,
+        &WRAPPER_CLASS_HASH,
+    );
+
+    assert_eq!(vm_result.retdata, native_result.retdata);
+    assert_eq!(vm_result.events, native_result.events);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
+    assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
+    assert_eq!(vm_result.failure_flag, false);
+    assert_eq!(native_result.failure_flag, false);
+    assert_eq!(vm_result.internal_calls, native_result.internal_calls);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(
+        vm_result.storage_read_values,
+        native_result.storage_read_values
+    );
+    assert_eq!(vm_result.class_hash, native_result.class_hash);
+
+    // CALL GET_NUMBER AFTER REPLACE_CLASS
+
+    let calldata = [].to_vec();
+
+    let native_result = execute(
+        &mut state,
+        &caller_address,
+        &address,
+        native_get_number_entrypoint_selector,
+        &calldata,
+        entrypoint_type,
+        &NATIVE_WRAPPER_CLASS_HASH,
+    );
+
+    let vm_result = execute(
+        &mut state,
+        &caller_address,
+        &address,
+        get_number_entrypoint_selector,
+        &calldata,
+        entrypoint_type,
+        &WRAPPER_CLASS_HASH,
+    );
+
+    assert_eq!(vm_result.retdata, native_result.retdata);
+    assert_eq!(vm_result.events, native_result.events);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(vm_result.l2_to_l1_messages, native_result.l2_to_l1_messages);
+    assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
+    assert_eq!(vm_result.failure_flag, false);
+    assert_eq!(native_result.failure_flag, false);
+    assert_eq!(vm_result.internal_calls, native_result.internal_calls);
+    assert_eq!(
+        vm_result.accessed_storage_keys,
+        native_result.accessed_storage_keys
+    );
+    assert_eq!(
+        vm_result.storage_read_values,
+        native_result.storage_read_values
+    );
+    assert_eq!(vm_result.class_hash, native_result.class_hash);
+}
+
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,
