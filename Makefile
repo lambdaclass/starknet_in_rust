@@ -123,10 +123,6 @@ $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 5b9db9c6885d3cb12db9e45a70f58b8ae336892e
 CAIRO_2_VERSION=2.2.0
 
 cairo-repo-2-dir = cairo2

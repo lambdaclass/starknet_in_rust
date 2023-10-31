@@ -400,7 +400,11 @@ impl DeclareV2 {
         )?;
         state.set_sierra_program(
             &self.sierra_class_hash,
-            self.sierra_contract_class.sierra_program.clone(),
+            self.sierra_contract_class
+                .clone()
+                .unwrap()
+                .sierra_program
+                .clone(),
         )?;
 
         Ok(())
