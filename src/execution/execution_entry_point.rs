@@ -26,7 +26,9 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
+use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
+use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -164,12 +166,12 @@ impl ExecutionEntryPoint {
                     }
                 }
             }
-            CompiledClass::Sierra(sierra_contract_class) => {
+            CompiledClass::Sierra(sierra_program_and_entrypoints) => {
                 let mut transactional_state = state.create_transactional();
 
                 match self.native_execute(
                     &mut transactional_state,
-                    sierra_contract_class,
+                    sierra_program_and_entrypoints,
                     tx_execution_context,
                     block_context,
                 ) {
@@ -622,7 +624,7 @@ impl ExecutionEntryPoint {
     fn native_execute<S: StateReader>(
         &self,
         _state: &mut CachedState<S>,
-        _contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        _sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         _tx_execution_context: &mut TransactionExecutionContext,
         _block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
@@ -636,7 +638,7 @@ impl ExecutionEntryPoint {
     fn native_execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
-        contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
@@ -647,34 +649,32 @@ impl ExecutionEntryPoint {
         use serde_json::json;
 
         use crate::syscalls::business_logic_syscall_handler::SYSCALL_BASE;
+        let sierra_program = &sierra_program_and_entrypoints.0;
+        let contract_entrypoints = &sierra_program_and_entrypoints.1;
 
         let entry_point = match self.entry_point_type {
-            EntryPointType::External => contract_class
-                .entry_points_by_type
+            EntryPointType::External => contract_entrypoints
                 .external
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
-            EntryPointType::Constructor => contract_class
-                .entry_points_by_type
+            EntryPointType::Constructor => contract_entrypoints
                 .constructor
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
-            EntryPointType::L1Handler => contract_class
-                .entry_points_by_type
+            EntryPointType::L1Handler => contract_entrypoints
                 .l1_handler
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
         };
 
-        let sierra_program = contract_class.extract_sierra_program().unwrap();
         let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
-            ProgramRegistry::new(&sierra_program).unwrap();
+            ProgramRegistry::new(sierra_program).unwrap();
 
         let native_context = NativeContext::new();
-        let mut native_program = native_context.compile(&sierra_program).unwrap();
+        let mut native_program = native_context.compile(sierra_program).unwrap();
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
