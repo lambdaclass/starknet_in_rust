@@ -1036,7 +1036,7 @@ fn test_declarev2_tx() {
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone();
+        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1;
     }
     let expected_execution_info = TransactionExecutionInfo::new(
         Some(CallInfo {
@@ -2251,7 +2251,7 @@ fn test_library_call_with_declare_v2() {
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone()
+        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
     }
     // Create an execution entry point
     let calldata = vec![
@@ -2299,7 +2299,7 @@ fn test_library_call_with_declare_v2() {
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone()
+        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
     }
 
     let expected_internal_call_info = CallInfo {
