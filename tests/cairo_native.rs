@@ -887,7 +887,7 @@ fn replace_class_contract_call() {
         assert_eq!(vm_result.gas_consumed, native_result.gas_consumed);
         assert_eq!(vm_result.failure_flag, false);
         assert_eq!(native_result.failure_flag, false);
-        assert_eq!(vm_result.internal_calls, native_result.internal_calls);
+        assert_eq_sorted!(vm_result.internal_calls, native_result.internal_calls);
         assert_eq!(
             vm_result.accessed_storage_keys,
             native_result.accessed_storage_keys
@@ -914,11 +914,10 @@ fn replace_class_contract_call() {
 
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
+    let mut native_contract_class_cache = HashMap::new();
 
     let address = Address(Felt252::one());
-    let native_address = Address(Felt252::from(10));
     let class_hash_a: ClassHash = [1; 32];
-    let native_class_hash_a: ClassHash = [10; 32];
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -926,8 +925,8 @@ fn replace_class_contract_call() {
         CompiledClass::Casm(Arc::new(casm_contract_class_a)),
     );
     insert_sierra_class_into_cache(
-        &mut contract_class_cache,
-        native_class_hash_a,
+        &mut native_contract_class_cache,
+        class_hash_a,
         sierra_class_a,
     );
 
@@ -936,11 +935,13 @@ fn replace_class_contract_call() {
         .address_to_class_hash_mut()
         .insert(address.clone(), class_hash_a);
     state_reader
-        .address_to_class_hash_mut()
-        .insert(native_address.clone(), native_class_hash_a);
-    state_reader
         .address_to_nonce_mut()
         .insert(address.clone(), nonce.clone());
+
+    let mut native_state_reader = InMemoryStateReader::default();
+    native_state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash_a);
 
     // SET GET_NUMBER_B
 
@@ -956,15 +957,14 @@ fn replace_class_contract_call() {
     )
     .unwrap();
     let class_hash_b: ClassHash = [2; 32];
-    let native_class_hash_b: ClassHash = [20; 32];
 
     contract_class_cache.insert(
         class_hash_b,
         CompiledClass::Casm(Arc::new(contract_class_b)),
     );
     insert_sierra_class_into_cache(
-        &mut contract_class_cache,
-        native_class_hash_b,
+        &mut native_contract_class_cache,
+        class_hash_b,
         sierra_class_b,
     );
 
@@ -992,17 +992,15 @@ fn replace_class_contract_call() {
         &native_entrypoints.external.get(0).unwrap().selector;
 
     let wrapper_address = Address(Felt252::from(2));
-    let native_wrapper_address = Address(Felt252::from(20));
     let wrapper_class_hash: ClassHash = [3; 32];
-    let native_wrapper_class_hash: ClassHash = [30; 32];
 
     contract_class_cache.insert(
         wrapper_class_hash,
         CompiledClass::Casm(Arc::new(wrapper_contract_class)),
     );
     insert_sierra_class_into_cache(
-        &mut contract_class_cache,
-        native_wrapper_class_hash,
+        &mut native_contract_class_cache,
+        wrapper_class_hash,
         wrapper_sierra_class,
     );
 
@@ -1010,11 +1008,12 @@ fn replace_class_contract_call() {
         .address_to_class_hash_mut()
         .insert(wrapper_address.clone(), wrapper_class_hash);
     state_reader
-        .address_to_class_hash_mut()
-        .insert(native_wrapper_address.clone(), native_wrapper_class_hash);
-    state_reader
         .address_to_nonce_mut()
-        .insert(wrapper_address, nonce);
+        .insert(wrapper_address.clone(), nonce);
+
+    native_state_reader
+        .address_to_class_hash_mut()
+        .insert(wrapper_address, wrapper_class_hash);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader.clone()), contract_class_cache.clone());
@@ -1038,11 +1037,11 @@ fn replace_class_contract_call() {
     let native_result = execute(
         &mut native_state,
         &caller_address,
-        &native_address,
+        &address,
         native_get_number_entrypoint_selector,
         &calldata,
         entry_point_type,
-        &native_wrapper_class_hash,
+        &wrapper_class_hash,
     );
     compare_results(native_result, vm_result);
 
@@ -1063,13 +1062,13 @@ fn replace_class_contract_call() {
     let native_result = execute(
         &mut native_state,
         &caller_address,
-        &native_address,
+        &address,
         native_upgrade_entrypoint_selector,
         &calldata,
         entry_point_type,
-        &native_wrapper_class_hash,
+        &wrapper_class_hash,
     );
-    //compare_results(native_result, vm_result);
+    compare_results(native_result, vm_result);
     // CALL GET_NUMBER AFTER REPLACE_CLASS
 
     let calldata = [].to_vec();
@@ -1087,13 +1086,13 @@ fn replace_class_contract_call() {
     let native_result = execute(
         &mut native_state,
         &caller_address,
-        &native_address,
+        &address,
         native_get_number_entrypoint_selector,
         &calldata,
         entry_point_type,
-        &native_wrapper_class_hash,
+        &wrapper_class_hash,
     );
-    //compare_results(native_result, vm_result);
+    compare_results(native_result, vm_result);
 }
 
 fn execute(
