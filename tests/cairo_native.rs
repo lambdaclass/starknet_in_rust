@@ -817,13 +817,12 @@ fn library_call() {
     let lib_class_hash: ClassHash = [2; 32];
     let lib_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         lib_class_hash,
-        CompiledClass::Sierra(Arc::new((
-            lib_contract_class.extract_sierra_program().unwrap(),
-            lib_contract_class.entry_points_by_type,
-        ))),
+        lib_contract_class,
     );
+
     state_reader
         .address_to_class_hash_mut()
         .insert(lib_address.clone(), lib_class_hash);
