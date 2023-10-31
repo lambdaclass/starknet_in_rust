@@ -250,7 +250,7 @@ impl DeployAccount {
             resources_manager,
             &[Some(constructor_call_info.clone()), validate_info.clone()],
             TransactionType::DeployAccount,
-            state.count_actual_storage_changes(Some((
+            state.count_actual_state_changes(Some((
                 &block_context.starknet_os_config.fee_token_address,
                 &self.contract_address,
             )))?,
@@ -400,7 +400,7 @@ impl DeployAccount {
         Ok(call_info)
     }
 
-    pub(crate) fn create_for_simulation(
+    pub fn create_for_simulation(
         &self,
         skip_validate: bool,
         skip_execute: bool,
@@ -420,6 +420,42 @@ impl DeployAccount {
         };
 
         Transaction::DeployAccount(tx)
+    }
+
+    pub fn from_sn_api_transaction(
+        value: starknet_api::transaction::DeployAccountTransaction,
+        chain_id: Felt252,
+    ) -> Result<Self, SyscallHandlerError> {
+        let max_fee = value.max_fee.0;
+        let version = Felt252::from_bytes_be(value.version.0.bytes());
+        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
+        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
+
+        let signature = value
+            .signature
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect();
+        let constructor_calldata = value
+            .constructor_calldata
+            .0
+            .as_ref()
+            .iter()
+            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .collect();
+
+        DeployAccount::new(
+            class_hash,
+            max_fee,
+            version,
+            nonce,
+            constructor_calldata,
+            signature,
+            contract_address_salt,
+            chain_id,
+        )
     }
 }
 

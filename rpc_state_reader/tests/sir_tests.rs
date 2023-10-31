@@ -8,10 +8,10 @@ use starknet_api::{
     hash::{StarkFelt, StarkHash},
     stark_felt,
     state::StorageKey,
-    transaction::{Transaction as SNTransaction, TransactionHash},
+    transaction::{Transaction as SNTransaction, TransactionHash, TransactionVersion},
 };
 use starknet_in_rust::{
-    core::errors::state_errors::StateError,
+    core::{contract_address::compute_casm_class_hash, errors::state_errors::StateError},
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
         constants::{
@@ -28,7 +28,7 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::InvokeFunction,
+    transaction::{Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler},
     utils::{Address, ClassHash},
 };
 
@@ -42,7 +42,9 @@ pub struct RpcStateReader(RpcState);
 impl StateReader for RpcStateReader {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         let hash = SNClassHash(StarkHash::new(*class_hash).unwrap());
-        Ok(CompiledClass::from(self.0.get_contract_class(&hash)))
+        Ok(CompiledClass::from(
+            self.0.get_contract_class(&hash).unwrap(),
+        ))
     }
 
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
@@ -143,6 +145,76 @@ pub fn execute_tx_configurable(
         SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
+        SNTransaction::DeployAccount(tx) => {
+            DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
+                .unwrap()
+                .create_for_simulation(skip_validate, false, false, false)
+        }
+        SNTransaction::Declare(tx) => {
+            // Fetch the contract_class from the next block (as we don't have it in the previous one)
+            let next_block_state_reader =
+                RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
+            let contract_class = next_block_state_reader
+                .get_contract_class(tx.class_hash().0.bytes().try_into().unwrap())
+                .unwrap();
+
+            if tx.version() != TransactionVersion(2_u8.into()) {
+                let contract_class = match contract_class {
+                    CompiledClass::Deprecated(cc) => cc.as_ref().clone(),
+                    _ => unreachable!(),
+                };
+
+                let declare = Declare::new_with_tx_and_class_hash(
+                    contract_class,
+                    Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
+                    tx.max_fee().0,
+                    Felt252::from_bytes_be(tx.version().0.bytes()),
+                    tx.signature()
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be(f.bytes()))
+                        .collect(),
+                    Felt252::from_bytes_be(tx.nonce().0.bytes()),
+                    Felt252::from_bytes_be(tx_hash.0.bytes()),
+                    tx.class_hash().0.bytes().try_into().unwrap(),
+                )
+                .unwrap();
+                declare.create_for_simulation(skip_validate, false, false, false)
+            } else {
+                let contract_class = match contract_class {
+                    CompiledClass::Casm(cc) => cc.as_ref().clone(),
+                    _ => unreachable!(),
+                };
+
+                let compiled_class_hash = compute_casm_class_hash(&contract_class).unwrap();
+
+                let declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
+                    None,
+                    Felt252::from_bytes_be(tx.class_hash().0.bytes()),
+                    Some(contract_class),
+                    compiled_class_hash,
+                    Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
+                    tx.max_fee().0,
+                    Felt252::from_bytes_be(tx.version().0.bytes()),
+                    tx.signature()
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be(f.bytes()))
+                        .collect(),
+                    Felt252::from_bytes_be(tx.nonce().0.bytes()),
+                    Felt252::from_bytes_be(tx_hash.0.bytes()),
+                )
+                .unwrap();
+                declare.create_for_simulation(skip_validate, false, false, false)
+            }
+        }
+        SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(
+            tx,
+            Felt252::from_bytes_be(tx_hash.0.bytes()),
+            Some(Felt252::from(u128::MAX)),
+        )
+        .unwrap()
+        .create_for_simulation(skip_validate, false),
         _ => unimplemented!(),
     };
 
@@ -272,6 +344,51 @@ fn test_get_gas_price() {
         186551, // real block     186552
         RpcChain::MainNet
     )]
+#[test_case(
+    "0x176a92e8df0128d47f24eebc17174363457a956fa233cc6a7f8561bfbd5023a",
+    317092, // real block 317093
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x1cbc74e101a1533082a021ce53235cfd744899b0ff948d1949a64646e0f15c2",
+    885298, // real block 885299
+    RpcChain::TestNet
+)]
+#[test_case(
+    "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
+    281513, // real block 281514
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x26be3e906db66973de1ca5eec1ddb4f30e3087dbdce9560778937071c3d3a83",
+    351268, // real block 351269
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x4f552c9430bd21ad300db56c8f4cae45d554a18fac20bf1703f180fac587d7e",
+    351225, // real block 351226
+    RpcChain::MainNet
+)]
+// DeployAccount for different account providers (as of October 2023):
+// All of them were deployed on testnet using starkli
+// OpenZeppelin (v0.7.0)
+#[test_case(
+    "0x0012696c03a0f0301af190288d9824583be813b71882308e4c5d686bf5967ec5",
+    889866, // real block 889867
+    RpcChain::TestNet
+)]
+// Braavos (v3.21.10)
+#[test_case(
+    "0x04dc838fd4ed265ab2ea5fbab08e67b398e3caaedf75c548113c6b2f995fc9db",
+    889858, // real block 889859
+    RpcChain::TestNet
+)]
+// Argent X (v5.7.0)
+#[test_case(
+    "0x01583c47a929f81f6a8c74d31708a7f161603893435d51b6897017fdcdaafee4",
+    889897, // real block 889898
+    RpcChain::TestNet
+)]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
@@ -400,4 +517,39 @@ fn test_validate_fee(hash: &str, block_number: u64, chain: RpcChain) {
 
     assert_eq!(tx_info.actual_fee, receipt.actual_fee);
     assert!(tx_info_without_fee.actual_fee < tx_info.actual_fee);
+}
+
+#[test_case(
+    // Declare tx
+    "0x60506c49e65d84e2cdd0e9142dc43832a0a59cb6a9cbcce1ab4f57c20ba4afb",
+    347899, // real block 347900
+    RpcChain::MainNet
+)]
+#[test_case(
+    // Declare tx
+    "0x1088aa18785779e1e8eef406dc495654ad42a9729b57969ad0dbf2189c40bee",
+    271887, // real block 271888
+    RpcChain::MainNet
+)]
+fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, _trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+    let TransactionExecutionInfo {
+        call_info,
+        actual_fee,
+        ..
+    } = tx_info;
+
+    assert!(call_info.is_none());
+
+    let actual_fee = actual_fee;
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+        if diff >= 5 {
+            assert_eq!(
+                actual_fee, receipt.actual_fee,
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            );
+        }
+    }
 }

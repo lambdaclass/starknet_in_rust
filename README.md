@@ -56,6 +56,8 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 
 ### Installation
 
+If you run `make` on it's own it will print out the main targets and their description.
+
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 
 #### Linux (x86-64)
@@ -102,14 +104,11 @@ export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/li
 
 Starknet in Rust can be integrated with [Cairo Native](https://github.com/lambdaclass/cairo_native), which makes the execution of sierra programs possible through native machine code. To use it, the following needs to be setup:
 
-- Rust needs to be switched to its `nightly` version by running
+- LLVM `17` needs to be installed and the `MLIR_SYS_170_PREFIX` and `TABLEGEN_170_PREFIX` environment variable needs to point to said installation. In macOS, run
   ```
-  rustup default nightly
-  ```
-- LLVM `16` needs to be installed and the `MLIR_SYS_160_PREFIX` environment variable needs to point to said installation. In macOS, run
-  ```
-  brew install llvm@16
-  export MLIR_SYS_160_PREFIX=/opt/homebrew/opt/llvm@16
+  brew install llvm@17
+  export MLIR_SYS_170_PREFIX=/opt/homebrew/opt/llvm@17
+  export TABLEGEN_170_PREFIX=/opt/homebrew/opt/llvm@17
   ```
   and you're set.
 

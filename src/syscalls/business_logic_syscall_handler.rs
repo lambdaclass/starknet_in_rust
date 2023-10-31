@@ -57,9 +57,10 @@ use lazy_static::lazy_static;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use num_traits::{One, ToPrimitive, Zero};
 
-const STEP: u128 = 100;
-const SYSCALL_BASE: u128 = 100 * STEP;
-const KECCAK_ROUND_COST: u128 = 180000;
+pub(crate) const STEP: u128 = 100;
+pub(crate) const SYSCALL_BASE: u128 = 100 * STEP;
+pub(crate) const KECCAK_ROUND_COST: u128 = 180000;
+
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> = {
@@ -91,7 +92,7 @@ lazy_static! {
     // Taken from starkware/starknet/constants.py in cairo-lang
     // See further documentation on cairo_programs/constants.cairo
     /// Maps syscall name to gas costs
-    static ref SYSCALL_GAS_COST: HashMap<&'static str, u128> = {
+    pub(crate) static ref SYSCALL_GAS_COST: HashMap<&'static str, u128> = {
         let mut map = HashMap::new();
 
         map.insert("initial", 100_000_000 * STEP);
@@ -133,6 +134,7 @@ pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
     pub(crate) support_reverted: bool,
     pub(crate) entry_point_selector: Felt252,
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
+    pub(crate) execution_info_ptr: Option<Relocatable>,
 }
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
@@ -171,6 +173,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             support_reverted,
             entry_point_selector,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
+            execution_info_ptr: None,
         }
     }
     pub fn default_with_state(state: &'a mut CachedState<S>) -> Self {
@@ -227,6 +230,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             support_reverted: false,
             entry_point_selector,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
+            execution_info_ptr: None,
         }
     }
 
@@ -319,7 +323,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         contract_address: &Address,
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
-        remainig_gas: u128,
+        remaining_gas: u128,
     ) -> Result<CallResult, StateError> {
         let compiled_class = if let Ok(compiled_class) = self
             .starknet_storage_state
@@ -358,7 +362,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
-            remainig_gas,
+            remaining_gas,
         );
 
         let ExecutionResult {
@@ -533,10 +537,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     /// them as accessed.
     pub(crate) fn validate_read_only_segments(
         &self,
-        runner: &mut VirtualMachine,
+        vm: &mut VirtualMachine,
     ) -> Result<(), TransactionError> {
         for (segment_ptr, segment_size) in self.read_only_segments.clone() {
-            let used_size = runner
+            let used_size = vm
                 .get_segment_used_size(segment_ptr.segment_index as usize)
                 .ok_or(TransactionError::InvalidSegmentSize)?;
 
@@ -548,7 +552,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             if seg_size != used_size.into() {
                 return Err(TransactionError::OutOfBound);
             }
-            runner.mark_address_range_as_accessed(segment_ptr, used_size)?;
+            vm.mark_address_range_as_accessed(segment_ptr, used_size)?;
         }
         Ok(())
     }
@@ -625,63 +629,69 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
+    // Returns the pointer to the segment with the execution info if it was already written.
+    // If it wasn't, it writes the execution info into memory and returns its start address.
+    fn get_or_allocate_execution_info(
+        &mut self,
+        vm: &mut VirtualMachine,
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        if let Some(ptr) = self.execution_info_ptr {
+            return Ok(ptr);
+        }
+
+        // Allocate block_info
+        let block_info = &self.block_context.block_info;
+        let block_info_data = vec![
+            MaybeRelocatable::from(Felt252::from(block_info.block_number)),
+            MaybeRelocatable::from(Felt252::from(block_info.block_timestamp)),
+            MaybeRelocatable::from(&block_info.sequencer_address.0),
+        ];
+        let block_info_ptr = self.allocate_segment(vm, block_info_data)?;
+
+        // Allocate signature
+        let signature: Vec<MaybeRelocatable> = self
+            .tx_execution_context
+            .signature
+            .iter()
+            .map(MaybeRelocatable::from)
+            .collect();
+        let signature_start_ptr = self.allocate_segment(vm, signature)?;
+        let signature_end_ptr = (signature_start_ptr + self.tx_execution_context.signature.len())?;
+
+        // Allocate tx info
+        let tx_info = &self.tx_execution_context;
+        let tx_info_data = vec![
+            MaybeRelocatable::from(&tx_info.version),
+            MaybeRelocatable::from(&tx_info.account_contract_address.0),
+            MaybeRelocatable::from(Felt252::from(tx_info.max_fee)),
+            signature_start_ptr.into(),
+            signature_end_ptr.into(),
+            MaybeRelocatable::from(&tx_info.transaction_hash),
+            MaybeRelocatable::from(&self.block_context.starknet_os_config.chain_id),
+            MaybeRelocatable::from(&tx_info.nonce),
+        ];
+        let tx_info_ptr = self.allocate_segment(vm, tx_info_data)?;
+
+        // Allocate execution_info
+        let execution_info = vec![
+            block_info_ptr.into(),
+            tx_info_ptr.into(),
+            MaybeRelocatable::from(&self.caller_address.0),
+            MaybeRelocatable::from(&self.contract_address.0),
+            MaybeRelocatable::from(&self.entry_point_selector),
+        ];
+        let execution_info_ptr = self.allocate_segment(vm, execution_info)?;
+
+        self.execution_info_ptr = Some(execution_info_ptr);
+        Ok(execution_info_ptr)
+    }
+
     fn get_execution_info(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let tx_info = &self.tx_execution_context;
-        let block_info = &self.block_context.block_info;
-
-        let mut res_segment = vm.add_memory_segment();
-
-        let signature_start = res_segment;
-        for s in tx_info.signature.iter() {
-            vm.insert_value(res_segment, s)?;
-            res_segment = (res_segment + 1)?;
-        }
-        let signature_end = res_segment;
-
-        let tx_info_ptr = res_segment;
-        vm.insert_value::<Felt252>(res_segment, tx_info.version.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, tx_info.account_contract_address.0.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, tx_info.max_fee.into())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, signature_start)?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, signature_end)?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, tx_info.transaction_hash.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(
-            res_segment,
-            self.block_context.starknet_os_config.chain_id.clone(),
-        )?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, tx_info.nonce.clone())?;
-        res_segment = (res_segment + 1)?;
-
-        let block_info_ptr = res_segment;
-        vm.insert_value::<Felt252>(res_segment, block_info.block_number.into())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, block_info.block_timestamp.into())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, block_info.sequencer_address.0.clone())?;
-        res_segment = (res_segment + 1)?;
-
-        let exec_info_ptr = res_segment;
-        vm.insert_value(res_segment, block_info_ptr)?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, tx_info_ptr)?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, self.caller_address.0.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, self.contract_address.0.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, self.entry_point_selector.clone())?;
-
+        let exec_info_ptr = self.get_or_allocate_execution_info(vm)?;
         Ok(SyscallResponse {
             gas: remaining_gas,
             body: Some(ResponseBody::GetExecutionInfo { exec_info_ptr }),
