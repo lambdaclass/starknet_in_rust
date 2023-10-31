@@ -17,18 +17,3 @@ mod GetBlockHashBasic {
         }
     }
 }
-
-// use core::debug::PrintTrait;
-
-// fn main() {
-//     match core::starknet::get_block_hash_syscall(0) {
-//         Result::Ok(x) => {
-//             'Ok'.print();
-//             x.print();
-//         },
-//         Result::Err(e) => {
-//             'Err'.print();
-//             e.print()
-//         },
-//     }
-// }
