@@ -6,8 +6,7 @@ use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
-use num_traits::One;
-use num_traits::Zero;
+use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 #[cfg(feature = "cairo-native")]
 use starknet_api::hash::StarkHash;
@@ -920,6 +919,151 @@ fn execute(
         .unwrap()
 }
 
+#[test]
+fn library_call() {
+    //  Create program and entry point types for contract class
+    let contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_slice(include_bytes!(
+            "../starknet_programs/cairo2/square_root.sierra"
+        ))
+        .unwrap();
+
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    contract_class_cache.insert(
+        class_hash,
+        CompiledClass::Sierra(Arc::new((
+            contract_class.extract_sierra_program().unwrap(),
+            entrypoints.clone(),
+        ))),
+    );
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Add lib contract to the state
+
+    let lib_program_data = include_bytes!("../starknet_programs/cairo2/math_lib.sierra");
+
+    let lib_contract_class: ContractClass = serde_json::from_slice(lib_program_data).unwrap();
+
+    let lib_address = Address(1112.into());
+    let lib_class_hash: ClassHash = [2; 32];
+    let lib_nonce = Felt252::zero();
+
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
+        lib_class_hash,
+        lib_contract_class,
+    );
+
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(lib_address.clone(), lib_class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(lib_address, lib_nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+    // Create an execution entry point
+    let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash)].to_vec();
+    let caller_address = Address(0000.into());
+    let entry_point_type = EntryPointType::External;
+
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address,
+        calldata.clone(),
+        Felt252::new(entrypoint_selector.clone()),
+        caller_address,
+        entry_point_type,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        100000,
+    );
+
+    // Execute the entrypoint
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        Vec::new(),
+        0,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    // expected results
+    let expected_call_info = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: Address(1111.into()),
+        entry_point_selector: Some(Felt252::new(entrypoint_selector)),
+        entry_point_type: Some(EntryPointType::External),
+        calldata,
+        retdata: [5.into()].to_vec(),
+        execution_resources: None,
+        class_hash: Some(class_hash),
+        internal_calls: vec![CallInfo {
+            caller_address: Address(0.into()),
+            call_type: Some(CallType::Delegate),
+            contract_address: Address(1111.into()),
+            entry_point_selector: Some(
+                Felt252::from_str_radix(
+                    "544923964202674311881044083303061611121949089655923191939299897061511784662",
+                    10,
+                )
+                .unwrap(),
+            ),
+            entry_point_type: Some(EntryPointType::External),
+            calldata: vec![25.into()],
+            retdata: [5.into()].to_vec(),
+            execution_resources: None,
+            class_hash: Some(lib_class_hash),
+            gas_consumed: 0,
+            ..Default::default()
+        }],
+        code_address: None,
+        events: vec![],
+        l2_to_l1_messages: vec![],
+        storage_read_values: vec![],
+        accessed_storage_keys: HashSet::new(),
+        gas_consumed: 78250,
+        ..Default::default()
+    };
+
+    assert_eq_sorted!(
+        exec_entry_point
+            .execute(
+                &mut state,
+                &block_context,
+                &mut resources_manager,
+                &mut tx_execution_context,
+                false,
+                block_context.invoke_tx_max_n_steps()
+            )
+            .unwrap()
+            .call_info
+            .unwrap(),
+        expected_call_info
+    );
+}
+
 fn execute_deploy(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,
@@ -1167,4 +1311,112 @@ fn deploy_syscall_address_unavailable_test() {
     assert_eq!(result.events, []);
     assert_eq!(result.failure_flag, true);
     assert!(result.internal_calls.is_empty());
+}
+
+#[test]
+#[cfg(feature = "cairo-native")]
+fn get_execution_info_test() {
+    // Same test as test_get_execution_info in the cairo_1_syscalls.rs but in native
+
+    let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/get_execution_info.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    // Contract entrypoints
+    let entrypoints = sierra_contract_class.clone().entry_points_by_type;
+    let selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let mut contract_class_cache = HashMap::new();
+
+    // Contract data
+    let address = Address(1111.into());
+    let class_hash: ClassHash = [1; 32];
+    let nonce = Felt252::zero();
+
+    insert_sierra_class_into_cache(&mut contract_class_cache, class_hash, sierra_contract_class);
+
+    let mut state_reader = InMemoryStateReader::default();
+
+    // Insert caller contract info into state reader
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+    let calldata = [].to_vec();
+
+    // Create the entrypoint
+    let exec_entry_point = ExecutionEntryPoint::new(
+        address.clone(),
+        calldata.to_vec(),
+        Felt252::new(selector),
+        Address(0.into()),
+        EntryPointType::External,
+        Some(CallType::Delegate),
+        Some(class_hash),
+        u128::MAX,
+    );
+
+    // Create default BlockContext
+    let block_context = BlockContext::default();
+
+    // Create TransactionExecutionContext
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::zero(),
+        vec![22.into(), 33.into()],
+        0,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        TRANSACTION_VERSION.clone(),
+    );
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    // Execute the entrypoint
+    let call_info = exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps(),
+        )
+        .unwrap()
+        .call_info
+        .unwrap();
+
+    let expected_ret_data = vec![
+        block_context.block_info().sequencer_address.0.clone(),
+        0.into(),
+        0.into(),
+        address.0.clone(),
+    ];
+
+    let expected_gas_consumed = 22980;
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: address,
+        class_hash: Some(class_hash),
+        entry_point_selector: Some(selector.into()),
+        entry_point_type: Some(EntryPointType::External),
+        retdata: expected_ret_data,
+        execution_resources: None,
+        gas_consumed: expected_gas_consumed,
+        ..Default::default()
+    };
+
+    assert_eq!(call_info, expected_call_info);
 }

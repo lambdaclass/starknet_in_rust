@@ -3,6 +3,7 @@ use cairo_native::starknet::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use starknet::core::utils::cairo_short_string_to_felt;
 
 use crate::definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR;
 use crate::execution::CallResult;
@@ -24,6 +25,8 @@ use crate::{
         ExecutionResourcesManager,
     },
     syscalls::business_logic_syscall_handler::{SYSCALL_BASE, SYSCALL_GAS_COST},
+    syscalls::syscall_handler_errors::SyscallHandlerError,
+    transaction::error::TransactionError,
     utils::Address,
     EntryPointType,
 };
@@ -39,10 +42,10 @@ where
     pub(crate) entry_point_selector: Felt252,
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    pub(crate) resources_manager: ExecutionResourcesManager,
     pub(crate) tx_execution_context: TransactionExecutionContext,
     pub(crate) block_context: BlockContext,
     pub(crate) internal_calls: Vec<CallInfo>,
-    pub(crate) resources_manager: ExecutionResourcesManager,
 }
 
 impl<'a, S: StateReader> NativeSyscallHandler<'a, S> {
@@ -206,7 +209,54 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
         self.handle_syscall_request(gas, "library_call")?;
 
-        Ok(calldata.iter().map(|x| x * &Felt252::new(3)).collect())
+        let execution_entry_point = ExecutionEntryPoint::new(
+            self.contract_address.clone(),
+            calldata.to_vec(),
+            function_selector,
+            self.caller_address.clone(),
+            EntryPointType::External,
+            Some(CallType::Delegate),
+            Some(class_hash.to_be_bytes()),
+            *gas,
+        );
+
+        let ExecutionResult {
+            call_info,
+            revert_error,
+            ..
+        } = execution_entry_point.execute(
+            self.starknet_storage_state.state,
+            &self.block_context,
+            &mut self.resources_manager,
+            &mut self.tx_execution_context,
+            false,
+            self.block_context.invoke_tx_max_n_steps,
+        )?;
+
+        let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
+            revert_error.unwrap_or_else(|| "Execution error".to_string()),
+        ))?;
+
+        let remaining_gas = gas.saturating_sub(call_info.gas_consumed);
+        *gas = remaining_gas;
+
+        let failure_flag = call_info.failure_flag;
+        let retdata = call_info.retdata.clone();
+
+        self.starknet_storage_state
+            .read_values
+            .extend(call_info.storage_read_values.clone());
+        self.starknet_storage_state
+            .accessed_keys
+            .extend(call_info.accessed_storage_keys.clone());
+
+        self.internal_calls.push(call_info);
+
+        if failure_flag {
+            Err(retdata)
+        } else {
+            Ok(retdata)
+        }
     }
 
     fn call_contract(
@@ -578,6 +628,78 @@ where
             CompiledClass::Sierra(sierra_program_and_entrypoints) => {
                 Ok(sierra_program_and_entrypoints.1.constructor.is_empty())
             }
+        }
+    }
+}
+
+impl From<TransactionError> for Vec<Felt252> {
+    fn from(value: TransactionError) -> Self {
+        #[inline]
+        fn str_to_felt(x: &str) -> Felt252 {
+            let felt = cairo_short_string_to_felt(x).expect("shouldnt fail");
+            Felt252::from_bytes_be(&felt.to_bytes_be())
+        }
+
+        let value = value.to_string();
+
+        if value.len() < 32 {
+            vec![str_to_felt(&value)]
+        } else {
+            let mut felts = vec![];
+            let mut buffer = Vec::with_capacity(31);
+
+            for c in value.chars() {
+                buffer.push(c);
+
+                if buffer.len() == 31 {
+                    let value: String = buffer.iter().collect();
+                    felts.push(str_to_felt(&value));
+                    buffer.clear();
+                }
+            }
+
+            if !buffer.is_empty() {
+                let value: String = buffer.iter().collect();
+                felts.push(str_to_felt(&value));
+            }
+
+            felts
+        }
+    }
+}
+
+impl From<SyscallHandlerError> for Vec<Felt252> {
+    fn from(value: SyscallHandlerError) -> Self {
+        #[inline]
+        fn str_to_felt(x: &str) -> Felt252 {
+            let felt = cairo_short_string_to_felt(x).expect("shouldnt fail");
+            Felt252::from_bytes_be(&felt.to_bytes_be())
+        }
+
+        let value = value.to_string();
+
+        if value.len() < 32 {
+            vec![str_to_felt(&value)]
+        } else {
+            let mut felts = vec![];
+            let mut buffer = Vec::with_capacity(31);
+
+            for c in value.chars() {
+                buffer.push(c);
+
+                if buffer.len() == 31 {
+                    let value: String = buffer.iter().collect();
+                    felts.push(str_to_felt(&value));
+                    buffer.clear();
+                }
+            }
+
+            if !buffer.is_empty() {
+                let value: String = buffer.iter().collect();
+                felts.push(str_to_felt(&value));
+            }
+
+            felts
         }
     }
 }
