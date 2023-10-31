@@ -12,6 +12,7 @@ use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::execution::{Event, OrderedEvent};
 use starknet_in_rust::hash_utils::calculate_contract_address;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType::{self, External};
 use starknet_in_rust::{
     definitions::constants::TRANSACTION_VERSION,
@@ -22,7 +23,6 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
-use starknet_in_rust::{CasmContractClass, ContractClass};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
