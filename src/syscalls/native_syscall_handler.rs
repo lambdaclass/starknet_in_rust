@@ -81,7 +81,17 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
         self.handle_syscall_request(gas, "get_block_hash")?;
 
-        Ok(Felt252::from_bytes_be(b"get_block_hash ok"))
+        let key: Felt252 = block_number.into();
+        let block_hash_address = Address(1.into());
+
+        match self
+            .starknet_storage_state
+            .state
+            .get_storage_at(&(block_hash_address, key.to_be_bytes()))
+        {
+            Ok(value) => Ok(value),
+            Err(_) => Ok(Felt252::zero()),
+        }
     }
 
     fn get_execution_info(
