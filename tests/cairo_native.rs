@@ -796,7 +796,7 @@ fn library_call() {
         class_hash,
         CompiledClass::Sierra(Arc::new((
             contract_class.extract_sierra_program().unwrap(),
-            entrypoints,
+            entrypoints.clone(),
         ))),
     );
     let mut state_reader = InMemoryStateReader::default();
