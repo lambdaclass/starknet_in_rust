@@ -20,8 +20,6 @@ use std::{
     sync::Arc,
 };
 
-pub type SierraProgramCache =
-    HashMap<ClassHash, cairo_lang_starknet::contract_class::ContractClass>;
 pub type ContractClassCache = HashMap<ClassHash, CompiledClass>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
