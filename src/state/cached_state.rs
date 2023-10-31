@@ -20,8 +20,6 @@ use std::{
     sync::Arc,
 };
 
-pub type SierraProgramCache =
-    HashMap<ClassHash, cairo_lang_starknet::contract_class::ContractClass>;
 pub type ContractClassCache = HashMap<ClassHash, CompiledClass>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
@@ -266,7 +264,7 @@ impl<T: StateReader> State for CachedState<T> {
         let compiled_class_hash = compiled_class_hash.to_be_bytes();
 
         self.cache
-            .class_hash_to_compiled_class_hash
+            .compiled_class_hash_writes
             .insert(class_hash, compiled_class_hash);
         Ok(())
     }

@@ -8,6 +8,7 @@ use crate::services::api::contract_classes::deprecated_contract_class::AbiType;
 use crate::{ContractEntryPoint, EntryPointType};
 
 use super::deprecated_contract_class::ContractClass;
+use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::abi::Contract;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::{
@@ -24,7 +25,7 @@ use starknet::core::types::ContractClass::{Legacy, Sierra};
 pub enum CompiledClass {
     Deprecated(Arc<ContractClass>),
     Casm(Arc<CasmContractClass>),
-    Sierra(Arc<SierraContractClass>),
+    Sierra(Arc<(SierraProgram, ContractEntryPoints)>),
 }
 
 impl TryInto<CasmContractClass> for CompiledClass {

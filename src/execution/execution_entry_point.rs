@@ -26,7 +26,9 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
+use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
+use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -164,12 +166,12 @@ impl ExecutionEntryPoint {
                     }
                 }
             }
-            CompiledClass::Sierra(sierra_contract_class) => {
+            CompiledClass::Sierra(sierra_program_and_entrypoints) => {
                 let mut transactional_state = state.create_transactional();
 
                 match self.native_execute(
                     &mut transactional_state,
-                    sierra_contract_class,
+                    sierra_program_and_entrypoints,
                     tx_execution_context,
                     block_context,
                 ) {
@@ -622,7 +624,7 @@ impl ExecutionEntryPoint {
     fn native_execute<S: StateReader>(
         &self,
         _state: &mut CachedState<S>,
-        _contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        _sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         _tx_execution_context: &mut TransactionExecutionContext,
         _block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
@@ -636,52 +638,57 @@ impl ExecutionEntryPoint {
     fn native_execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
-        contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
+        use cairo_lang_sierra::{
+            extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
+            program_registry::ProgramRegistry,
+        };
         use serde_json::json;
 
+        use crate::syscalls::business_logic_syscall_handler::SYSCALL_BASE;
+        let sierra_program = &sierra_program_and_entrypoints.0;
+        let contract_entrypoints = &sierra_program_and_entrypoints.1;
+
         let entry_point = match self.entry_point_type {
-            EntryPointType::External => contract_class
-                .entry_points_by_type
+            EntryPointType::External => contract_entrypoints
                 .external
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
-            EntryPointType::Constructor => contract_class
-                .entry_points_by_type
+            EntryPointType::Constructor => contract_entrypoints
                 .constructor
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
-            EntryPointType::L1Handler => contract_class
-                .entry_points_by_type
+            EntryPointType::L1Handler => contract_entrypoints
                 .l1_handler
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
         };
 
-        let sierra_program = contract_class.extract_sierra_program().unwrap();
+        let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
+            ProgramRegistry::new(sierra_program).unwrap();
 
         let native_context = NativeContext::new();
-        let mut native_program = native_context.compile(&sierra_program).unwrap();
+        let mut native_program = native_context.compile(sierra_program).unwrap();
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
         let syscall_handler = NativeSyscallHandler {
             starknet_storage_state: contract_storage_state,
-            n_emitted_events: 0,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
-            n_sent_messages: 0,
             contract_address: self.contract_address.clone(),
             internal_calls: Vec::new(),
             caller_address: self.caller_address.clone(),
             entry_point_selector: self.entry_point_selector.clone(),
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
+            resources_manager: Default::default(),
         };
 
         native_program
@@ -694,14 +701,20 @@ impl ExecutionEntryPoint {
             .as_ptr()
             .as_ptr() as *const () as usize;
 
-        let fn_id = &sierra_program
+        let entry_point_fn = &sierra_program
             .funcs
             .iter()
             .find(|x| x.id.id == (entry_point.function_idx as u64))
-            .unwrap()
-            .id;
+            .unwrap();
+        let ret_types: Vec<&CoreTypeConcrete> = entry_point_fn
+            .signature
+            .ret_types
+            .iter()
+            .map(|x| program_registry.get_type(x).unwrap())
+            .collect();
+        let entry_point_id = &entry_point_fn.id;
 
-        let required_init_gas = native_program.get_required_init_gas(fn_id);
+        let required_init_gas = native_program.get_required_init_gas(entry_point_id);
 
         let calldata: Vec<_> = self
             .calldata
@@ -719,13 +732,13 @@ impl ExecutionEntryPoint {
         */
 
         let wrapped_calldata = vec![calldata];
-        let params: Vec<Value> = sierra_program.funcs[fn_id.id as usize]
+        let params: Vec<Value> = sierra_program.funcs[entry_point_id.id as usize]
             .params
             .iter()
             .map(|param| {
                 match param.ty.debug_name.as_ref().unwrap().as_str() {
                     "GasBuiltin" => {
-                        json!(self.initial_gas as u64)
+                        json!(self.initial_gas)
                     }
                     "Pedersen" | "SegmentArena" | "RangeCheck" | "Bitwise" | "Poseidon" => {
                         json!(null)
@@ -748,11 +761,14 @@ impl ExecutionEntryPoint {
         let native_executor = NativeExecutor::new(native_program);
 
         native_executor
-            .execute(fn_id, json!(params), returns, required_init_gas)
+            .execute(entry_point_id, json!(params), returns, required_init_gas)
             .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
 
-        let result: String = String::from_utf8(writer).unwrap();
-        let value = serde_json::from_str::<NativeExecutionResult>(&result).unwrap();
+        let value = NativeExecutionResult::deserialize_from_ret_types(
+            &mut serde_json::Deserializer::from_slice(&writer),
+            &ret_types,
+        )
+        .expect("failed to serialize starknet execution result");
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
@@ -773,8 +789,10 @@ impl ExecutionEntryPoint {
             failure_flag: value.failure_flag,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             internal_calls: syscall_handler.internal_calls,
-            // TODO: check it's correct
-            gas_consumed: self.initial_gas - u128::from(value.gas_builtin.unwrap_or(0)),
+            gas_consumed: self
+                .initial_gas
+                .saturating_sub(SYSCALL_BASE)
+                .saturating_sub(value.remaining_gas),
         })
     }
 }
