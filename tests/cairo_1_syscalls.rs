@@ -1556,7 +1556,8 @@ fn replace_class_contract_call() {
             block_context.invoke_tx_max_n_steps(),
         )
         .unwrap();
-    assert_eq!(result.call_info.unwrap().retdata, vec![17.into()]);
+    assert_eq!(result.call_info.clone().unwrap().retdata, vec![17.into()]);
+    assert_eq!(result.call_info.unwrap().failure_flag, false);
 }
 
 #[test]
