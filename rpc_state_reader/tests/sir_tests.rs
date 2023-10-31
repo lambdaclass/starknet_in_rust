@@ -398,7 +398,6 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         actual_fee,
         ..
     } = tx_info;
-
     let CallInfo {
         execution_resources,
         internal_calls,
