@@ -175,15 +175,20 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         ))
     }
 
-    fn replace_class(
-        &mut self,
-        class_hash: cairo_vm::felt::Felt252,
-        gas: &mut u128,
-    ) -> SyscallResult<()> {
+    fn replace_class(&mut self, class_hash: Felt252, gas: &mut u128) -> SyscallResult<()> {
         println!("Called `replace_class({class_hash})` from MLIR.");
-
         self.handle_syscall_request(gas, "replace_class")?;
-        Ok(())
+        match self
+            .starknet_storage_state
+            .state
+            .set_class_hash_at(self.contract_address.clone(), class_hash.to_be_bytes())
+        {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let replace_class_felt = Felt252::from_bytes_be(e.to_string().as_bytes());
+                Err(vec![replace_class_felt.clone()])
+            }
+        }
     }
 
     fn library_call(
