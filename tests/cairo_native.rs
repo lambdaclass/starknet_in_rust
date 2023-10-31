@@ -1028,9 +1028,6 @@ fn deploy_syscall_address_unavailable_test() {
 fn get_execution_info_test() {
     // Same test as test_get_execution_info in the cairo_1_syscalls.rs but in native
 
-    use cairo_vm::vm::runners::{
-        builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources,
-    };
     let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
             std::fs::read_to_string("starknet_programs/cairo2/get_execution_info.sierra")
