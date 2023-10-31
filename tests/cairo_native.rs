@@ -72,10 +72,12 @@ fn get_block_hash_test() {
     let casm_class_hash: ClassHash = [2; 32];
     let caller_address = Address(1.into());
 
-    contract_class_cache.insert(
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         native_class_hash,
-        CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+        sierra_contract_class,
     );
+
     contract_class_cache.insert(
         casm_class_hash,
         CompiledClass::Casm(Arc::new(casm_contract_class)),
