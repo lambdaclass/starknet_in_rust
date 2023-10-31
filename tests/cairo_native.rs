@@ -758,10 +758,8 @@ fn replace_class_test() {
 
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
-        CLASS_HASH_A,
-        CompiledClass::Sierra(Arc::new(contract_class_a)),
-    );
+    insert_sierra_class_into_cache(&mut contract_class_cache, CLASS_HASH_A, contract_class_a);
+
     contract_class_cache.insert(
         CASM_CLASS_HASH_A,
         CompiledClass::Casm(Arc::new(casm_contract_class)),
@@ -790,10 +788,13 @@ fn replace_class_test() {
 
     static CLASS_HASH_B: ClassHash = [3; 32];
     static CASM_CLASS_HASH_B: ClassHash = [4; 32];
-    contract_class_cache.insert(
+
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
         CLASS_HASH_B,
-        CompiledClass::Sierra(Arc::new(contract_class_b.clone())),
+        contract_class_b.clone(),
     );
+
     contract_class_cache.insert(
         CASM_CLASS_HASH_B,
         CompiledClass::Casm(Arc::new(casm_contract_class_b.clone())),
@@ -831,9 +832,11 @@ fn replace_class_test() {
     // Check that the class was indeed replaced in storage
     assert_eq!(state.get_class_hash_at(&address).unwrap(), CLASS_HASH_B);
     // Check that the class_hash_b leads to contract_class_b for soundness
+    let sierra_program = contract_class_b.extract_sierra_program().unwrap();
+    let entry_points = contract_class_b.entry_points_by_type;
     assert_eq!(
         state.get_contract_class(&CLASS_HASH_B).unwrap(),
-        CompiledClass::Sierra(Arc::new(contract_class_b))
+        CompiledClass::Sierra(Arc::new((sierra_program, entry_points))),
     );
 
     // Check that the class was indeed replaced in storage
