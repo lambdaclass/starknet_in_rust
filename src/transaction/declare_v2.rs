@@ -398,14 +398,6 @@ impl DeclareV2 {
             &self.compiled_class_hash.to_be_bytes(),
             &CompiledClass::Casm(Arc::new(casm_class)),
         )?;
-        state.set_sierra_program(
-            &self.sierra_class_hash,
-            self.sierra_contract_class
-                .clone()
-                .unwrap()
-                .sierra_program
-                .clone(),
-        )?;
 
         Ok(())
     }
