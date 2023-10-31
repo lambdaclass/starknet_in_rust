@@ -863,8 +863,6 @@ fn library_call() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    // TODO: fails with retdata: Failed to deserialize param #2
-
     // expected results
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),
