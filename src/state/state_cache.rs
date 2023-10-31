@@ -1,5 +1,6 @@
 use crate::{
     core::errors::state_errors::StateError,
+    services::api::contract_classes::compiled_class::CompiledClass,
     utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_vm::felt::Felt252;
@@ -17,7 +18,7 @@ pub struct StateCache {
     #[get_mut = "pub"]
     pub(crate) class_hash_initial_values: HashMap<Address, ClassHash>,
     #[get_mut = "pub"]
-    pub(crate) compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClassHash>,
+    pub(crate) compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) nonce_initial_values: HashMap<Address, Felt252>,
     #[getset(get = "pub", get_mut = "pub")]
@@ -27,7 +28,7 @@ pub struct StateCache {
     #[get_mut = "pub"]
     pub(crate) class_hash_writes: HashMap<Address, ClassHash>,
     #[get_mut = "pub"]
-    pub(crate) compiled_class_hash_writes: HashMap<ClassHash, CompiledClassHash>,
+    pub(crate) compiled_class_hash_writes: HashMap<ClassHash, CompiledClass>,
     #[get_mut = "pub"]
     pub(crate) nonce_writes: HashMap<Address, Felt252>,
     #[getset(get = "pub", get_mut = "pub")]
@@ -42,11 +43,11 @@ impl StateCache {
     /// Create a new StateCache with given initial and written values for testing
     pub const fn new(
         class_hash_initial_values: HashMap<Address, ClassHash>,
-        compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClassHash>,
+        compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
         nonce_initial_values: HashMap<Address, Felt252>,
         storage_initial_values: HashMap<StorageEntry, Felt252>,
         class_hash_writes: HashMap<Address, ClassHash>,
-        compiled_class_hash_writes: HashMap<ClassHash, CompiledClassHash>,
+        compiled_class_hash_writes: HashMap<ClassHash, CompiledClass>,
         nonce_writes: HashMap<Address, Felt252>,
         storage_writes: HashMap<StorageEntry, Felt252>,
         class_hash_to_compiled_class_hash: HashMap<ClassHash, ClassHash>,
@@ -83,11 +84,11 @@ impl StateCache {
     #[allow(clippy::too_many_arguments)]
     pub const fn new_for_testing(
         class_hash_initial_values: HashMap<Address, [u8; 32]>,
-        compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClassHash>,
+        compiled_class_hash_initial_values: HashMap<ClassHash, CompiledClass>,
         nonce_initial_values: HashMap<Address, Felt252>,
         storage_initial_values: HashMap<StorageEntry, Felt252>,
         class_hash_writes: HashMap<Address, [u8; 32]>,
-        compiled_class_hash_writes: HashMap<ClassHash, CompiledClassHash>,
+        compiled_class_hash_writes: HashMap<ClassHash, CompiledClass>,
         nonce_writes: HashMap<Address, Felt252>,
         storage_writes: HashMap<(Address, [u8; 32]), Felt252>,
         class_hash_to_compiled_class_hash: HashMap<ClassHash, ClassHash>,
@@ -115,10 +116,7 @@ impl StateCache {
 
     /// Get the compiled hash for a given class hash
     #[allow(dead_code)]
-    pub(crate) fn get_compiled_class_hash(
-        &self,
-        class_hash: &ClassHash,
-    ) -> Option<&CompiledClassHash> {
+    pub(crate) fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Option<&CompiledClass> {
         if self.compiled_class_hash_writes.contains_key(class_hash) {
             return self.compiled_class_hash_writes.get(class_hash);
         }
@@ -145,7 +143,7 @@ impl StateCache {
     pub(crate) fn update_writes(
         &mut self,
         address_to_class_hash: &HashMap<Address, ClassHash>,
-        class_hash_to_compiled_class_hash: &HashMap<ClassHash, CompiledClassHash>,
+        class_hash_to_compiled_class_hash: &HashMap<ClassHash, CompiledClass>,
         address_to_nonce: &HashMap<Address, Felt252>,
         storage_updates: &HashMap<StorageEntry, Felt252>,
     ) {
@@ -160,7 +158,7 @@ impl StateCache {
     pub fn set_initial_values(
         &mut self,
         address_to_class_hash: &HashMap<Address, ClassHash>,
-        class_hash_to_compiled_class: &HashMap<ClassHash, CompiledClassHash>,
+        class_hash_to_compiled_class: &HashMap<ClassHash, CompiledClass>,
         address_to_nonce: &HashMap<Address, Felt252>,
         storage_updates: &HashMap<StorageEntry, Felt252>,
     ) -> Result<(), StateError> {
@@ -203,7 +201,8 @@ impl StateCache {
         }
 
         for (k, v) in self.compiled_class_hash_writes.iter() {
-            self.compiled_class_hash_initial_values.insert(*k, *v);
+            self.compiled_class_hash_initial_values
+                .insert(*k, v.clone());
         }
 
         for (k, v) in self.storage_writes.iter() {
@@ -220,11 +219,9 @@ impl StateCache {
 /// Unit tests for StateCache
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
 
-    use crate::{
-        core::contract_address::compute_deprecated_class_hash,
-        services::api::contract_classes::deprecated_contract_class::ContractClass,
-    };
+    use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
 
     use super::*;
 
@@ -235,9 +232,7 @@ mod tests {
         let contract_class =
             ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
                 .unwrap();
-        let compiled_class = compute_deprecated_class_hash(&contract_class)
-            .unwrap()
-            .to_be_bytes();
+        let compiled_class = CompiledClass::Deprecated(Arc::new(contract_class));
         let class_hash_to_compiled_class_hash = HashMap::from([([8; 32], compiled_class)]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);
         let storage_updates = HashMap::from([((Address(4.into()), [1; 32]), 18.into())]);

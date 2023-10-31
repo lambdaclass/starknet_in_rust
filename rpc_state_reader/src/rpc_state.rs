@@ -11,7 +11,6 @@ use starknet_api::{
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
-use starknet_in_rust::definitions::block_context::StarknetChainId;
 use std::{collections::HashMap, env, fmt::Display};
 use thiserror::Error;
 
@@ -23,16 +22,6 @@ pub enum RpcChain {
     MainNet,
     TestNet,
     TestNet2,
-}
-
-impl From<RpcChain> for StarknetChainId {
-    fn from(network: RpcChain) -> StarknetChainId {
-        match network {
-            RpcChain::MainNet => StarknetChainId::MainNet,
-            RpcChain::TestNet => StarknetChainId::TestNet,
-            RpcChain::TestNet2 => StarknetChainId::TestNet2,
-        }
-    }
 }
 
 impl fmt::Display for RpcChain {
@@ -158,9 +147,9 @@ pub struct RpcResponse<T> {
 
 #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
 pub struct TransactionTrace {
-    pub validate_invocation: Option<RpcCallInfo>,
+    pub validate_invocation: RpcCallInfo,
     pub function_invocation: Option<RpcCallInfo>,
-    pub fee_transfer_invocation: Option<RpcCallInfo>,
+    pub fee_transfer_invocation: RpcCallInfo,
     pub signature: Vec<StarkFelt>,
     pub revert_error: Option<String>,
 }
@@ -401,12 +390,12 @@ impl RpcState {
         }
     }
 
-    pub fn get_contract_class(&self, class_hash: &ClassHash) -> Option<SNContractClass> {
+    pub fn get_contract_class(&self, class_hash: &ClassHash) -> SNContractClass {
         self.rpc_call_result(
             "starknet_getClass",
             &json!([self.block.to_value().unwrap(), class_hash.0.to_string()]),
         )
-        .ok()
+        .unwrap()
     }
 
     pub fn get_class_hash_at(&self, contract_address: &ContractAddress) -> ClassHash {
@@ -418,7 +407,7 @@ impl RpcState {
                     contract_address.0.key().clone().to_string()
                 ]),
             )
-            .unwrap_or_default();
+            .unwrap();
 
         ClassHash(hash)
     }
@@ -431,8 +420,7 @@ impl RpcState {
                 contract_address.0.key().clone().to_string()
             ]),
         )
-        // When running deploy_account transactions, the nonce doesn't exist on the previous block so we return 0
-        .unwrap_or_default()
+        .unwrap()
     }
 
     pub fn get_storage_at(
@@ -451,7 +439,7 @@ impl RpcState {
                 self.block.to_value().unwrap()
             ]),
         )
-        .unwrap_or_default()
+        .unwrap()
     }
 
     /// Requests the given transaction to the Feeder Gateway API.

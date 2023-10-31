@@ -82,7 +82,6 @@ impl Transaction {
             Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
         }
     }
-
     /// It creates a new transaction structure modificating the skip flags. It is meant to be used only to run a simulation
     ///## Parameters:
     ///- skip_validate: the transaction will not be verified.

@@ -40,7 +40,6 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
@@ -157,15 +156,6 @@ impl DeployAccount {
         }
     }
 
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
-        tx_type = ?TransactionType::DeployAccount,
-        self.version = ?self.version,
-        self.class_hash = ?self.class_hash,
-        self.hash_value = ?self.hash_value,
-        self.contract_address = ?self.contract_address,
-        self.contract_address_salt = ?self.contract_address_salt,
-        self.nonce = ?self.nonce,
-    ))]
     pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
@@ -173,7 +163,7 @@ impl DeployAccount {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
 
-        let mut transactional_state = state.create_transactional()?;
+        let mut transactional_state = state.create_transactional();
         let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
 
         let actual_fee = calculate_tx_fee(
@@ -225,7 +215,6 @@ impl DeployAccount {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => todo!(),
         }
     }
 
@@ -254,7 +243,7 @@ impl DeployAccount {
             resources_manager,
             &[Some(constructor_call_info.clone()), validate_info.clone()],
             TransactionType::DeployAccount,
-            state.count_actual_state_changes(Some((
+            state.count_actual_storage_changes(Some((
                 &block_context.starknet_os_config.fee_token_address,
                 &self.contract_address,
             )))?,
@@ -404,7 +393,7 @@ impl DeployAccount {
         Ok(call_info)
     }
 
-    pub fn create_for_simulation(
+    pub(crate) fn create_for_simulation(
         &self,
         skip_validate: bool,
         skip_execute: bool,
@@ -424,42 +413,6 @@ impl DeployAccount {
         };
 
         Transaction::DeployAccount(tx)
-    }
-
-    pub fn from_sn_api_transaction(
-        value: starknet_api::transaction::DeployAccountTransaction,
-        chain_id: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
-        let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
-        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
-
-        let signature = value
-            .signature
-            .0
-            .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
-            .collect();
-        let constructor_calldata = value
-            .constructor_calldata
-            .0
-            .as_ref()
-            .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
-            .collect();
-
-        DeployAccount::new(
-            class_hash,
-            max_fee,
-            version,
-            nonce,
-            constructor_calldata,
-            signature,
-            contract_address_salt,
-            chain_id,
-        )
     }
 }
 

@@ -108,7 +108,7 @@ mod Account {
             // Call the target contract
             starknet::call_contract_syscall(
                 address: to, entry_point_selector: selector, calldata: calldata.span()
-            ).unwrap()
+            ).unwrap_syscall()
         }
     }
 }

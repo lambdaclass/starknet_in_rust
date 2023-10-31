@@ -147,6 +147,4 @@ pub enum TransactionError {
     InvalidCompiledClassHash(String, String),
     #[error(transparent)]
     FromByteArrayError(#[from] FromByteArrayError),
-    #[error("DeclareV2 transaction has neither Sierra nor Casm contract class set")]
-    DeclareV2NoSierraOrCasm,
 }

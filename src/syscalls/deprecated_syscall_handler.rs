@@ -1214,7 +1214,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut transactional = state.create_transactional().unwrap();
+        let mut transactional = state.create_transactional();
         // Invoke result
         let result = internal_invoke_function
             .apply(&mut transactional, &BlockContext::default(), 0)

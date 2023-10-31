@@ -5,7 +5,6 @@ use crate::{
     state::StateDiff,
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::felt::Felt252;
 
 pub trait StateReader {
@@ -24,14 +23,6 @@ pub trait StateReader {
         &self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError>;
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StateChangesCount {
-    pub n_storage_updates: usize,
-    pub n_class_hash_updates: usize,
-    pub n_compiled_class_hash_updates: usize,
-    pub n_modified_contracts: usize,
 }
 
 pub trait State {
@@ -62,20 +53,13 @@ pub trait State {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError>;
-
-    fn set_sierra_program(
-        &mut self,
-        compiled_class_hash: &Felt252,
-        sierra_program: Vec<BigUintAsHex>,
-    ) -> Result<(), StateError>;
-
     fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
 
-    /// Counts the amount of state changes
-    fn count_actual_state_changes(
+    /// Counts the amount of modified contracts and the updates to the storage
+    fn count_actual_storage_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<StateChangesCount, StateError>;
+    ) -> Result<(usize, usize), StateError>;
 
     /// Returns the class hash of the contract class at the given address.
     /// Returns zero by default if the value is not present
@@ -91,9 +75,4 @@ pub trait State {
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError>;
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError>;
-
-    fn get_sierra_program(
-        &mut self,
-        class_hash: &ClassHash,
-    ) -> Result<Vec<BigUintAsHex>, StateError>;
 }

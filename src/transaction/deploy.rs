@@ -34,8 +34,6 @@ use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use std::sync::Arc;
 
-use std::fmt::Debug;
-
 /// Represents a Deploy Transaction in the starknet network
 #[derive(Debug, Clone)]
 pub struct Deploy {
@@ -140,7 +138,6 @@ impl Deploy {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => todo!(),
         }
     }
     /// Deploys the contract in the starknet network and calls its constructor if it has one.
@@ -152,13 +149,7 @@ impl Deploy {
         state: &mut CachedState<S, C>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        match self.contract_class {
-            CompiledClass::Sierra(_) => todo!(),
-            _ => {
-                state.set_contract_class(&self.contract_hash, &self.contract_class)?;
-            }
-        }
-
+        state.set_contract_class(&self.contract_hash, &self.contract_class)?;
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
 
         if self.constructor_entry_points_empty(self.contract_class.clone())? {
@@ -189,7 +180,7 @@ impl Deploy {
 
         let resources_manager = ExecutionResourcesManager::default();
 
-        let changes = state.count_actual_state_changes(None)?;
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
@@ -252,7 +243,7 @@ impl Deploy {
             block_context.validate_max_n_steps,
         )?;
 
-        let changes = state.count_actual_state_changes(None)?;
+        let changes = state.count_actual_storage_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
@@ -276,14 +267,6 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
-        tx_type = ?TransactionType::Deploy,
-        self.version = ?self.version,
-        self.contract_hash = ?self.contract_hash,
-        self.hash_value = ?self.hash_value,
-        self.contract_address = ?self.contract_address,
-        self.contract_address_salt = ?self.contract_address_salt,
-    ))]
     pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,

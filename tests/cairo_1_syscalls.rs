@@ -5,8 +5,6 @@ use cairo_vm::{
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
-use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -278,7 +276,7 @@ fn library_call() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 247,
+        n_steps: 255,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 259,
         n_memory_holes: 8,
@@ -286,7 +284,7 @@ fn library_call() {
     };
     let expected_execution_resources_internal_call = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 80,
+        n_steps: 84,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
         n_memory_holes: 5,
@@ -302,7 +300,7 @@ fn library_call() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
-        execution_resources: Some(expected_execution_resources),
+        execution_resources: expected_execution_resources,
         class_hash: Some(class_hash),
         internal_calls: vec![CallInfo {
             caller_address: Address(0.into()),
@@ -318,7 +316,7 @@ fn library_call() {
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![25.into()],
             retdata: [5.into()].to_vec(),
-            execution_resources: Some(expected_execution_resources_internal_call),
+            execution_resources: expected_execution_resources_internal_call,
             class_hash: Some(lib_class_hash),
             gas_consumed: 0,
             ..Default::default()
@@ -329,13 +327,13 @@ fn library_call() {
         storage_read_values: vec![],
         accessed_storage_keys: HashSet::new(),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 78250,
+        gas_consumed: 78650,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 78980,
         ..Default::default()
     };
 
-    assert_eq_sorted!(
+    assert_eq!(
         exec_entry_point
             .execute(
                 &mut state,
@@ -361,10 +359,9 @@ fn call_contract_storage_write_read() {
     let program_data = include_bytes!("../starknet_programs/cairo1/wallet_wrapper.casm");
 
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let get_balance_entrypoint_selector =
-        &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
-    let increase_balance_entrypoint_selector =
-        &BigUint::from_bytes_be(&calculate_sn_keccak("increase_balance".as_bytes()));
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
+    let increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -745,7 +742,6 @@ fn deploy_cairo1_from_cairo1() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Casm(class) => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -846,7 +842,6 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
-        CompiledClass::Sierra(_) => unreachable!(),
         CompiledClass::Casm(_) => unreachable!(),
     };
 
@@ -948,7 +943,6 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
         CompiledClass::Casm(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1051,7 +1045,6 @@ fn deploy_cairo0_and_invoke() {
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
         CompiledClass::Casm(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1163,18 +1156,8 @@ fn test_send_message_to_l1_syscall() {
         payload: vec![555.into(), 666.into()],
     }];
 
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_n_steps = 46;
-    #[cfg(feature = "cairo_1_tests")]
-    let expected_n_steps = 50;
-
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_gas_consumed = 9640;
-    #[cfg(feature = "cairo_1_tests")]
-    let expected_gas_consumed = 10040;
-
     let expected_execution_resources = ExecutionResources {
-        n_steps: expected_n_steps,
+        n_steps: 50,
         n_memory_holes: 0,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
     };
@@ -1187,8 +1170,8 @@ fn test_send_message_to_l1_syscall() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
-        execution_resources: Some(expected_execution_resources),
-        gas_consumed: expected_gas_consumed,
+        execution_resources: expected_execution_resources,
+        gas_consumed: 10040,
         ..Default::default()
     };
 
@@ -1268,18 +1251,8 @@ fn test_get_execution_info() {
         address.0.clone(),
     ];
 
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_n_steps = 213;
-    #[cfg(feature = "cairo_1_tests")]
-    let expected_n_steps = 268;
-
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_gas_consumed = 22980;
-    #[cfg(feature = "cairo_1_tests")]
-    let expected_gas_consumed = 28580;
-
     let expected_execution_resources = ExecutionResources {
-        n_steps: expected_n_steps,
+        n_steps: 268,
         n_memory_holes: 4,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
     };
@@ -1292,8 +1265,8 @@ fn test_get_execution_info() {
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
-        execution_resources: Some(expected_execution_resources),
-        gas_consumed: expected_gas_consumed,
+        execution_resources: expected_execution_resources,
+        gas_consumed: 28580,
         ..Default::default()
     };
 
@@ -3070,540 +3043,4 @@ fn keccak_syscall() {
     let retdata = call_info.call_info.unwrap().retdata;
 
     assert_eq!(retdata[0], Felt252::one());
-}
-
-#[test]
-fn library_call_recursive_50_calls() {
-    //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/square_root_recursive.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/square_root_recursive.casm");
-
-    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
-
-    // Create state reader with class hash data
-    let contract_class_cache = PermanentContractClassCache::default();
-
-    let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
-
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address.clone(), nonce);
-
-    // Add lib contract to the state
-
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let lib_program_data = include_bytes!("../starknet_programs/cairo2/math_lib.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let lib_program_data = include_bytes!("../starknet_programs/cairo1/math_lib.casm");
-
-    let lib_contract_class: CasmContractClass = serde_json::from_slice(lib_program_data).unwrap();
-
-    let lib_address = Address(1112.into());
-    let lib_class_hash: ClassHash = [2; 32];
-    let lib_nonce = Felt252::zero();
-
-    contract_class_cache.set_contract_class(
-        lib_class_hash,
-        CompiledClass::Casm(Arc::new(lib_contract_class)),
-    );
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(lib_address.clone(), lib_class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(lib_address, lib_nonce);
-
-    // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-
-    // Create an execution entry point
-    let calldata = [
-        felt_str!("1125899906842624"),
-        Felt252::from_bytes_be(&lib_class_hash),
-        Felt252::from(50),
-    ]
-    .to_vec();
-    let caller_address = Address(0000.into());
-    let entry_point_type = EntryPointType::External;
-
-    let exec_entry_point = ExecutionEntryPoint::new(
-        address,
-        calldata,
-        Felt252::new(entrypoint_selector.clone()),
-        caller_address,
-        entry_point_type,
-        Some(CallType::Delegate),
-        Some(class_hash),
-        u128::MAX,
-    );
-
-    // Execute the entrypoint
-    let block_context = BlockContext::default();
-    let mut tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
-    );
-    let mut resources_manager = ExecutionResourcesManager::default();
-    let expected_execution_resources_internal_call = ExecutionResources {
-        #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 80,
-        #[cfg(feature = "cairo_1_tests")]
-        n_steps: 85,
-        n_memory_holes: 5,
-        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 7)]),
-    };
-
-    let call_info = exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap()
-        .call_info
-        .unwrap();
-
-    assert_eq!(call_info.internal_calls.len(), 50);
-    assert_eq!(
-        call_info.internal_calls[0],
-        CallInfo {
-            caller_address: Address(0.into()),
-            call_type: Some(CallType::Delegate),
-            contract_address: Address(1111.into()),
-            entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "544923964202674311881044083303061611121949089655923191939299897061511784662",
-                    10,
-                )
-                .unwrap(),
-            ),
-            entry_point_type: Some(EntryPointType::External),
-            calldata: vec![felt_str!("1125899906842624")],
-            retdata: [felt_str!("33554432")].to_vec(),
-            execution_resources: Some(expected_execution_resources_internal_call),
-            class_hash: Some(lib_class_hash),
-            gas_consumed: 0,
-            ..Default::default()
-        }
-    );
-    assert_eq!(call_info.retdata, [1.into()].to_vec());
-    assert!(!call_info.failure_flag);
-}
-
-#[test]
-fn call_contract_storage_write_read_recursive_50_calls() {
-    //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/wallet_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/wallet_wrapper.casm");
-
-    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let get_balance_entrypoint_selector =
-        &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
-    let increase_balance_entrypoint_selector = &BigUint::from_bytes_be(&calculate_sn_keccak(
-        "increase_balance_recursive".as_bytes(),
-    ));
-
-    // Create state reader with class hash data
-    let contract_class_cache = PermanentContractClassCache::default();
-
-    let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
-
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address.clone(), nonce);
-
-    // Add simple_wallet contract to the state
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let simple_wallet_program_data =
-        include_bytes!("../starknet_programs/cairo2/simple_wallet.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let simple_wallet_program_data =
-        include_bytes!("../starknet_programs/cairo1/simple_wallet.casm");
-
-    let simple_wallet_contract_class: CasmContractClass =
-        serde_json::from_slice(simple_wallet_program_data).unwrap();
-    let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
-        .entry_points_by_type
-        .constructor
-        .get(0)
-        .unwrap()
-        .selector
-        .clone();
-
-    let simple_wallet_address = Address(1112.into());
-    let simple_wallet_class_hash: ClassHash = [2; 32];
-    let simple_wallet_nonce = Felt252::zero();
-
-    contract_class_cache.set_contract_class(
-        simple_wallet_class_hash,
-        CompiledClass::Casm(Arc::new(simple_wallet_contract_class)),
-    );
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(simple_wallet_address.clone(), simple_wallet_class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(simple_wallet_address.clone(), simple_wallet_nonce);
-
-    // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-
-    let block_context = BlockContext::default();
-    let mut tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
-    );
-
-    let mut resources_manager = ExecutionResourcesManager::default();
-
-    let create_execute_extrypoint = |selector: &BigUint,
-                                     calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType,
-                                     class_hash: [u8; 32],
-                                     address: Address|
-     -> ExecutionEntryPoint {
-        ExecutionEntryPoint::new(
-            address,
-            calldata,
-            Felt252::new(selector.clone()),
-            Address(0000.into()),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            u64::MAX.into(),
-        )
-    };
-
-    // RUN SIMPLE_WALLET CONSTRUCTOR
-    // Create an execution entry point
-    let calldata = [25.into()].to_vec();
-    let constructor_exec_entry_point = create_execute_extrypoint(
-        &simple_wallet_constructor_entrypoint_selector,
-        calldata,
-        EntryPointType::Constructor,
-        simple_wallet_class_hash,
-        simple_wallet_address.clone(),
-    );
-
-    // Run constructor entrypoint
-    constructor_exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap();
-
-    // RUN GET_BALANCE
-    // Create an execution entry point
-    let calldata = [simple_wallet_address.0.clone()].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
-        get_balance_entrypoint_selector,
-        calldata,
-        EntryPointType::External,
-        class_hash,
-        address.clone(),
-    );
-
-    // Run get_balance entrypoint
-    let call_info = get_balance_exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap();
-    assert_eq!(call_info.call_info.unwrap().retdata, [25.into()]);
-
-    // RUN INCREASE_BALANCE
-    // Create an execution entry point
-    let calldata = [50.into(), simple_wallet_address.0.clone()].to_vec();
-    let increase_balance_entry_point = create_execute_extrypoint(
-        increase_balance_entrypoint_selector,
-        calldata,
-        EntryPointType::External,
-        class_hash,
-        address.clone(),
-    );
-
-    // Run increase_balance entrypoint
-    let call_info = increase_balance_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap()
-        .call_info
-        .unwrap();
-    // Check that the recursive function did in fact call the simple_wallet contract 50 times
-    assert_eq!(call_info.internal_calls.len(), 50);
-    assert!(!call_info.failure_flag);
-
-    // RUN GET_BALANCE
-    // Create an execution entry point
-    let calldata = [simple_wallet_address.0].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
-        get_balance_entrypoint_selector,
-        calldata,
-        EntryPointType::External,
-        class_hash,
-        address,
-    );
-
-    // Run get_balance entrypoint
-    let call_info = get_balance_exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap();
-    assert_eq!(call_info.call_info.unwrap().retdata, [75.into()])
-}
-
-#[test]
-fn call_contract_storage_write_read_recursive_100_calls() {
-    //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/wallet_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/wallet_wrapper.casm");
-
-    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
-    let get_balance_entrypoint_selector =
-        &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
-    let increase_balance_entrypoint_selector = &BigUint::from_bytes_be(&calculate_sn_keccak(
-        "increase_balance_recursive".as_bytes(),
-    ));
-
-    // Create state reader with class hash data
-    let contract_class_cache = PermanentContractClassCache::default();
-
-    let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
-
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    let mut state_reader = InMemoryStateReader::default();
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address.clone(), nonce);
-
-    // Add simple_wallet contract to the state
-    #[cfg(not(feature = "cairo_1_tests"))]
-    let simple_wallet_program_data =
-        include_bytes!("../starknet_programs/cairo2/simple_wallet.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let simple_wallet_program_data =
-        include_bytes!("../starknet_programs/cairo1/simple_wallet.casm");
-
-    let simple_wallet_contract_class: CasmContractClass =
-        serde_json::from_slice(simple_wallet_program_data).unwrap();
-    let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
-        .entry_points_by_type
-        .constructor
-        .get(0)
-        .unwrap()
-        .selector
-        .clone();
-
-    let simple_wallet_address = Address(1112.into());
-    let simple_wallet_class_hash: ClassHash = [2; 32];
-    let simple_wallet_nonce = Felt252::zero();
-
-    contract_class_cache.set_contract_class(
-        simple_wallet_class_hash,
-        CompiledClass::Casm(Arc::new(simple_wallet_contract_class)),
-    );
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(simple_wallet_address.clone(), simple_wallet_class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(simple_wallet_address.clone(), simple_wallet_nonce);
-
-    // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-
-    let block_context = BlockContext::default();
-    let mut tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::zero(),
-        Vec::new(),
-        0,
-        10.into(),
-        block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
-    );
-
-    let mut resources_manager = ExecutionResourcesManager::default();
-
-    let create_execute_extrypoint = |selector: &BigUint,
-                                     calldata: Vec<Felt252>,
-                                     entry_point_type: EntryPointType,
-                                     class_hash: [u8; 32],
-                                     address: Address|
-     -> ExecutionEntryPoint {
-        ExecutionEntryPoint::new(
-            address,
-            calldata,
-            Felt252::new(selector.clone()),
-            Address(0000.into()),
-            entry_point_type,
-            Some(CallType::Delegate),
-            Some(class_hash),
-            u64::MAX.into(),
-        )
-    };
-
-    // RUN SIMPLE_WALLET CONSTRUCTOR
-    // Create an execution entry point
-    let calldata = [25.into()].to_vec();
-    let constructor_exec_entry_point = create_execute_extrypoint(
-        &simple_wallet_constructor_entrypoint_selector,
-        calldata,
-        EntryPointType::Constructor,
-        simple_wallet_class_hash,
-        simple_wallet_address.clone(),
-    );
-
-    // Run constructor entrypoint
-    constructor_exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap();
-
-    // RUN GET_BALANCE
-    // Create an execution entry point
-    let calldata = [simple_wallet_address.0.clone()].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
-        get_balance_entrypoint_selector,
-        calldata,
-        EntryPointType::External,
-        class_hash,
-        address.clone(),
-    );
-
-    // Run get_balance entrypoint
-    let call_info = get_balance_exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap();
-    assert_eq!(call_info.call_info.unwrap().retdata, [25.into()]);
-
-    // RUN INCREASE_BALANCE
-    // Create an execution entry point
-    let calldata = [100.into(), simple_wallet_address.0.clone()].to_vec();
-    let increase_balance_entry_point = create_execute_extrypoint(
-        increase_balance_entrypoint_selector,
-        calldata,
-        EntryPointType::External,
-        class_hash,
-        address.clone(),
-    );
-
-    // Run increase_balance entrypoint
-    let call_info = increase_balance_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap()
-        .call_info
-        .unwrap();
-    // Check that the recursive function did in fact call the simple_wallet contract 50 times
-    assert_eq!(call_info.internal_calls.len(), 100);
-    assert!(!call_info.failure_flag);
-
-    // RUN GET_BALANCE
-    // Create an execution entry point
-    let calldata = [simple_wallet_address.0].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
-        get_balance_entrypoint_selector,
-        calldata,
-        EntryPointType::External,
-        class_hash,
-        address,
-    );
-
-    // Run get_balance entrypoint
-    let call_info = get_balance_exec_entry_point
-        .execute(
-            &mut state,
-            &block_context,
-            &mut resources_manager,
-            &mut tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps(),
-        )
-        .unwrap();
-    assert_eq!(call_info.call_info.unwrap().retdata, [125.into()])
 }

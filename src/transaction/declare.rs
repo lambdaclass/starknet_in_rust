@@ -32,8 +32,6 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-
-use std::fmt::Debug;
 use std::sync::Arc;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -148,44 +146,6 @@ impl Declare {
         Ok(internal_declare)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_with_tx_and_class_hash(
-        contract_class: ContractClass,
-        sender_address: Address,
-        max_fee: u128,
-        version: Felt252,
-        signature: Vec<Felt252>,
-        nonce: Felt252,
-        hash_value: Felt252,
-        class_hash: ClassHash,
-    ) -> Result<Self, TransactionError> {
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
-
-        let internal_declare = Declare {
-            class_hash,
-            sender_address,
-            validate_entry_point_selector,
-            version,
-            max_fee,
-            signature,
-            nonce,
-            hash_value,
-            contract_class,
-            skip_execute: false,
-            skip_validate: false,
-            skip_fee_transfer: false,
-        };
-
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
-
-        Ok(internal_declare)
-    }
-
     pub fn get_calldata(&self) -> Vec<Felt252> {
         let bytes = Felt252::from_bytes_be(&self.class_hash);
         Vec::from([bytes])
@@ -207,7 +167,7 @@ impl Declare {
         } else {
             self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
         };
-        let changes = state.count_actual_state_changes(Some((
+        let changes = state.count_actual_storage_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
             &self.sender_address,
         )))?;
@@ -306,14 +266,6 @@ impl Declare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
-        tx_type = ?TransactionType::Declare,
-        self.version = ?self.version,
-        self.class_hash = ?self.class_hash,
-        self.hash_value = ?self.hash_value,
-        self.sender_address = ?self.sender_address,
-        self.nonce = ?self.nonce,
-    ))]
     pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
@@ -343,7 +295,7 @@ impl Declare {
         Ok(tx_exec_info)
     }
 
-    pub fn create_for_simulation(
+    pub(crate) fn create_for_simulation(
         &self,
         skip_validate: bool,
         skip_execute: bool,
@@ -474,10 +426,10 @@ mod tests {
             entry_point_type: Some(EntryPointType::External),
             calldata,
             class_hash: Some(expected_class_hash),
-            execution_resources: Some(ExecutionResources {
+            execution_resources: ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
-            }),
+            },
             ..Default::default()
         });
 
@@ -934,106 +886,6 @@ mod tests {
         assert_matches!(
             internal_declare.execute(&mut state, &BlockContext::default()),
             Err(TransactionError::FeeTransferError(_))
-        );
-    }
-
-    #[test]
-    fn declare_v1_with_validation_fee_higher_than_no_validation() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let contract_class = ContractClass::from_path("starknet_programs/Account.json").unwrap();
-
-        // Instantiate CachedState
-        let contract_class_cache = PermanentContractClassCache::default();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
-
-        contract_class_cache.set_contract_class(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address.clone(), Felt252::new(1));
-
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-        // Insert pubkey storage var to pass validation
-        let storage_entry = &(
-            sender_address,
-            felt_str!(
-                "1672321442399497129215646424919402195095307045612040218489019266998007191460"
-            )
-            .to_be_bytes(),
-        );
-        state.set_storage_at(
-            storage_entry,
-            felt_str!(
-                "1735102664668487605176656616876767369909409133946409161569774794110049207117"
-            ),
-        );
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
-        // declare tx
-        // Signature & tx hash values are hand-picked for account validations to pass
-        let mut declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::one()),
-            60000,
-            1.into(),
-            vec![
-                felt_str!(
-                    "3086480810278599376317923499561306189851900463386393948998357832163236918254"
-                ),
-                felt_str!(
-                    "598673427589502599949712887611119751108407514580626464031881322743364689811"
-                ),
-            ],
-            Felt252::one(),
-        )
-        .unwrap();
-        declare.skip_fee_transfer = true;
-        declare.hash_value = felt_str!("2718");
-
-        let simulate_declare = declare
-            .clone()
-            .create_for_simulation(true, false, true, false);
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        let mut state_copy = state.clone_for_testing();
-        let mut bock_context = BlockContext::default();
-        bock_context.starknet_os_config.gas_price = 12;
-        assert!(
-            declare
-                .execute(&mut state, &bock_context)
-                .unwrap()
-                .actual_fee
-                > simulate_declare
-                    .execute(&mut state_copy, &bock_context, 0)
-                    .unwrap()
-                    .actual_fee,
         );
     }
 }
