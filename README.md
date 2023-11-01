@@ -56,7 +56,7 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 
 ### Installation
 
-If you run `make` on it's own it will print out the main targets and their description.
+If you run `make` on its own it will print out the main targets and their description.
 
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 
@@ -121,7 +121,7 @@ Afterwards, compiling with the feature flag `cairo-native` will enable native ex
 You can find a tutorial on running contracts [here](/examples/contract_execution/README.md).
 
 ### Using the CLI
-You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
+You can find an example of how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
 ### Customization
 
