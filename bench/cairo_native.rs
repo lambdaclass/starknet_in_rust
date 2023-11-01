@@ -28,15 +28,15 @@ pub fn main() {
 
     match args.get(3).map(|s| s.as_str()) {
         Some("fibo") => bench_fibo(
-            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(1).and_then(|x| x.parse::<usize>().ok()).unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
         Some("fact") => bench_fact(
-            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(1).and_then(|x| x.parse::<usize>().ok()).unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
         _ => bench_erc20(
-            args.get(1).and_then(|x| usize::from_str_radix(x, 10).ok()).unwrap_or(1),
+            args.get(1).and_then(|x| x.parse::<usize>().ok()).unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
     }
@@ -269,6 +269,7 @@ fn bench_erc20(executions: usize, native: bool) {
 }
 
 #[inline(never)]
+#[allow(clippy::too_many_arguments)]
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,
