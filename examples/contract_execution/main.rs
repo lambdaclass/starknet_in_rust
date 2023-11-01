@@ -22,18 +22,10 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, Address},
 };
 use std::{collections::HashMap, path::Path, sync::Arc};
-use tracing_subscriber::EnvFilter;
 
 fn main() {
-    tracing::subscriber::set_global_default(
-        tracing_subscriber::FmtSubscriber::builder()
-            .with_env_filter(EnvFilter::from_default_env())
-            .finish(),
-    )
-    .unwrap();
-
     // replace this with the path to your compiled contract
-    let contract_path = "starknet_programs/fibonacci.json";
+    let contract_path = "../../starknet_programs/fibonacci.json";
 
     // replace this with the name of your entrypoint
     let entry_point: &str = "fib";
@@ -151,22 +143,38 @@ fn test_contract(
         .retdata
 }
 
-#[test]
-fn test_fibonacci() {
-    let retdata = test_contract(
-        "starknet_programs/fibonacci.json",
-        "fib",
-        [1.into(), 1.into(), 10.into()].to_vec(),
-    );
-    assert_eq!(retdata, vec![144.into()]);
-}
+#[cfg(test)]
+mod tests {
+    use crate::test_contract;
 
-#[test]
-fn test_factorial() {
-    let retdata = test_contract(
-        "starknet_programs/factorial.json",
-        "factorial",
-        [10.into()].to_vec(),
-    );
-    assert_eq!(retdata, vec![3628800.into()]);
+
+    #[test]
+    fn test_example_contract() {
+        let retdata = test_contract(
+            "./example_contract.json",
+            "fib",
+            [1.into(), 1.into(), 10.into()].to_vec(),
+        );
+        assert_eq!(retdata, vec![144.into()]);
+    }
+
+    #[test]
+    fn test_fibonacci() {
+        let retdata = test_contract(
+            "starknet_programs/fibonacci.json",
+            "fib",
+            [1.into(), 1.into(), 10.into()].to_vec(),
+        );
+        assert_eq!(retdata, vec![144.into()]);
+    }
+
+    #[test]
+    fn test_factorial() {
+        let retdata = test_contract(
+            "starknet_programs/factorial.json",
+            "factorial",
+            [10.into()].to_vec(),
+        );
+        assert_eq!(retdata, vec![3628800.into()]);
+    }
 }

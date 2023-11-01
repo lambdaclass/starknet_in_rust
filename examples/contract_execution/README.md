@@ -18,4 +18,4 @@ As declare and deploy transactions are currently WIP, we encapsulate all the fun
     - Your compiled contract path
     - The entrypoint you are wanting to execute
     - The parameters needed in order to call that entrypoint
-    - The expected returned value     
+    - The expected returned value
