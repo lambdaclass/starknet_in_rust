@@ -7,7 +7,7 @@ Please refer to the user guide section in this [repository](https://github.com/l
 ## 2. Run the fuzzer 
 
 1. Start the container as explained in last section.
-2. Clone the proyect in the container with `git clone -b main --single-branch --depth 1 https://github.com/lambdaclass/starknet_in_rust.git`.
+2. Clone the project in the container with `git clone -b main --single-branch --depth 1 https://github.com/lambdaclass/starknet_in_rust.git`.
 3. Install dependencies with `apt-get install -y libgmp-dev python3-venv python3-dev`.
 4. Run `make deps` and `source starknet-venv/bin/activate` to have a working environment.
 5. Run the command `HFUZZ_RUN_ARGS="-n 1" cargo hfuzz run fuzzer` within the _fuzzer_ folder.
