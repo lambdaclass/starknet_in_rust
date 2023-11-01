@@ -1,8 +1,8 @@
 #![cfg(not(feature = "cairo_1_tests"))]
 
-use cairo_vm::felt::Felt252;
-use cairo_native::context::NativeContext;
 use cairo_native::cache::ProgramCache;
+use cairo_native::context::NativeContext;
+use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
@@ -28,15 +28,21 @@ pub fn main() {
 
     match args.get(3).map(|s| s.as_str()) {
         Some("fibo") => bench_fibo(
-            args.get(1).and_then(|x| x.parse::<usize>().ok()).unwrap_or(1),
+            args.get(1)
+                .and_then(|x| x.parse::<usize>().ok())
+                .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
         Some("fact") => bench_fact(
-            args.get(1).and_then(|x| x.parse::<usize>().ok()).unwrap_or(1),
+            args.get(1)
+                .and_then(|x| x.parse::<usize>().ok())
+                .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
         _ => bench_erc20(
-            args.get(1).and_then(|x| x.parse::<usize>().ok()).unwrap_or(1),
+            args.get(1)
+                .and_then(|x| x.parse::<usize>().ok())
+                .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
     }
@@ -56,8 +62,11 @@ fn bench_fibo(executions: usize, native: bool) {
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Sierra(Arc::new(sierra_contract_class)), constructor_selector)
-        },
+            (
+                CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+                constructor_selector,
+            )
+        }
         false => {
             let casm_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
             let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
@@ -65,16 +74,16 @@ fn bench_fibo(executions: usize, native: bool) {
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Casm(Arc::new(casm_contract_class)), constructor_selector)
+            (
+                CompiledClass::Casm(Arc::new(casm_contract_class)),
+                constructor_selector,
+            )
         }
     };
 
     let caller_address = Address(123456789.into());
 
-    contract_class_cache.insert(
-        CASM_CLASS_HASH,
-        contract_class,
-    );
+    contract_class_cache.insert(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     let nonce = Felt252::zero();
 
@@ -126,8 +135,11 @@ fn bench_fact(executions: usize, native: bool) {
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Sierra(Arc::new(sierra_contract_class)), constructor_selector)
-        },
+            (
+                CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+                constructor_selector,
+            )
+        }
         false => {
             let casm_data = include_bytes!("../starknet_programs/cairo2/factorial_tr.casm");
             let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
@@ -135,7 +147,10 @@ fn bench_fact(executions: usize, native: bool) {
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Casm(Arc::new(casm_contract_class)), constructor_selector)
+            (
+                CompiledClass::Casm(Arc::new(casm_contract_class)),
+                constructor_selector,
+            )
         }
     };
 
@@ -143,10 +158,7 @@ fn bench_fact(executions: usize, native: bool) {
     // FACT 1M
     // FIBO 2M
 
-    contract_class_cache.insert(
-        CASM_CLASS_HASH,
-        contract_class,
-    );
+    contract_class_cache.insert(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     let nonce = Felt252::zero();
 
@@ -198,8 +210,11 @@ fn bench_erc20(executions: usize, native: bool) {
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.constructor.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Sierra(Arc::new(sierra_contract_class)), constructor_selector)
-        },
+            (
+                CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+                constructor_selector,
+            )
+        }
         false => {
             let casm_data = include_bytes!("../starknet_programs/cairo2/erc20.casm");
             let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
@@ -207,7 +222,10 @@ fn bench_erc20(executions: usize, native: bool) {
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.constructor.get(0).unwrap().selector.clone();
 
-            (CompiledClass::Casm(Arc::new(casm_contract_class)), constructor_selector)
+            (
+                CompiledClass::Casm(Arc::new(casm_contract_class)),
+                constructor_selector,
+            )
         }
     };
 
@@ -215,10 +233,7 @@ fn bench_erc20(executions: usize, native: bool) {
     // FACT 1M
     // FIBO 2M
 
-    contract_class_cache.insert(
-        CASM_CLASS_HASH,
-        contract_class,
-    );
+    contract_class_cache.insert(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     let nonce = Felt252::zero();
 
