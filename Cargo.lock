@@ -1578,6 +1578,7 @@ name = "contract_execution"
 version = "0.1.0"
 dependencies = [
  "cairo-vm",
+ "serde_json",
  "starknet_in_rust",
 ]
 

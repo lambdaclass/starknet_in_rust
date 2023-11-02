@@ -9,29 +9,31 @@
 //! It also includes some small tests that assert the data returned by
 //! running some pre-compiled contracts is as expected.
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::felt::{felt_str, Felt252};
 use starknet_in_rust::{
-    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
+    core::contract_address::{compute_casm_class_hash, compute_deprecated_class_hash},
+    definitions::block_context::{BlockContext, StarknetChainId},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::{
         cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
-    transaction::{Declare, Deploy, InvokeFunction, Transaction},
-    utils::{calculate_sn_keccak, Address},
+    transaction::{DeclareV2, DeployAccount, InvokeFunction},
+    utils::{calculate_sn_keccak, felt_to_hash, Address},
+    CasmContractClass, SierraContractClass,
 };
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{collections::HashMap, fs::File, io::BufReader, path::Path, sync::Arc};
 
 fn main() {
     // replace this with the path to your compiled contract
-    let contract_path = "../../starknet_programs/fibonacci.json";
+    let contract_path = "../../starknet_programs/cairo2/fibonacci.sierra";
 
     // replace this with the name of your entrypoint
     let entry_point: &str = "fib";
 
     // replace this with the arguments for the entrypoint
-    let calldata: Vec<Felt252> = [10.into()].to_vec();
+    let calldata: Vec<Felt252> = [1.into(), 1.into(), 10.into()].to_vec();
 
     let retdata = test_contract(contract_path, entry_point, calldata);
 
@@ -42,6 +44,7 @@ fn main() {
 }
 
 /// This function:
+///  - deploys an account
 ///  - declares a new contract class
 ///  - deploys a new contract
 ///  - executes the given entry point in the deployed contract
@@ -55,8 +58,11 @@ fn test_contract(
     //* --------------------------------------------
     let block_context = BlockContext::default();
     let chain_id = block_context.starknet_os_config().chain_id().clone();
-    let sender_address = Address(1.into());
-    let signature = vec![];
+    // Values hardcoded to pass signature validation
+    let signature = vec![
+        felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
+        felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
+    ];
 
     //* --------------------------------------------
     //*             Initialize state
@@ -65,73 +71,154 @@ fn test_contract(
     let mut state = CachedState::new(state_reader, HashMap::new());
 
     //* --------------------------------------------
+    //*             Deploy deployer contract
+    //* --------------------------------------------
+
+    let deployer_contract =
+        ContractClass::from_path("../../starknet_programs/deployer.json").unwrap();
+    let deployer_contract_address = Address(Felt252::from(17));
+    let deployer_contract_class_hash =
+        felt_to_hash(&compute_deprecated_class_hash(&deployer_contract).unwrap());
+    state
+        .set_contract_class(
+            &deployer_contract_class_hash,
+            &CompiledClass::Deprecated(Arc::new(deployer_contract)),
+        )
+        .unwrap();
+    state
+        .deploy_contract(
+            deployer_contract_address.clone(),
+            deployer_contract_class_hash,
+        )
+        .expect("Failed to deploy deployer contract");
+
+    //* --------------------------------------------
+    //*             Deploy Account contract
+    //* --------------------------------------------
+    let account_contract =
+        ContractClass::from_path("../../starknet_programs/Account.json").unwrap();
+    let account_contract_class_hash = felt_to_hash(&Felt252::from(1));
+    state
+        .set_contract_class(
+            &account_contract_class_hash,
+            &CompiledClass::Deprecated(Arc::new(account_contract)),
+        )
+        .unwrap();
+
+    let internal_deploy = DeployAccount::new(
+        account_contract_class_hash,
+        0,
+        0.into(),
+        0.into(),
+        // Values hardcoded to pass signature validation
+        vec![2.into()],
+        signature.clone(),
+        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
+        StarknetChainId::TestNet2.to_felt(),
+    )
+    .unwrap();
+
+    let account_contract_address = internal_deploy
+        .execute(&mut state, &block_context)
+        .expect("Account Deploy Failed")
+        .call_info
+        .unwrap()
+        .contract_address
+        .clone();
+
+    //* --------------------------------------------
     //*          Read contract from file
     //* --------------------------------------------
-    let contract_class =
-        ContractClass::from_path(contract_path).expect("Could not load contract from JSON");
-
+    let file = File::open(contract_path).unwrap();
+    let reader = BufReader::new(file);
+    let sierra_contract_class: SierraContractClass =
+        serde_json::from_reader(reader).expect("Could not load contract from JSON");
+    let casm_class =
+        CasmContractClass::from_contract_class(sierra_contract_class.clone(), false).unwrap();
+    let compiled_class_hash =
+        compute_casm_class_hash(&casm_class).expect("Error computing sierra class hash");
     //* --------------------------------------------
     //*        Declare new contract class
     //* --------------------------------------------
-    let declare_tx = Declare::new(
-        contract_class.clone(),
+    let mut declare_tx = DeclareV2::new(
+        &sierra_contract_class,
+        Some(casm_class),
+        compiled_class_hash.clone(),
         chain_id.clone(),
-        sender_address,
+        account_contract_address.clone(),
         0, // max fee
-        0.into(),
+        1.into(),
         signature.clone(),
         0.into(), // nonce
     )
-    .expect("couldn't create declare transaction");
+    //.expect("couldn't create declare transaction");
+    .unwrap();
+    declare_tx.skip_validate = true;
 
-    declare_tx
-        .execute(&mut state, &block_context)
-        .expect("could not declare the contract class");
+    declare_tx.execute(&mut state, &block_context).unwrap();
+    //.expect("could not declare the contract class");
 
-    //* --------------------------------------------
-    //*     Deploy new contract class instance
-    //* --------------------------------------------
+    //* ----------------------------------------------------------
+    //*     Deploy new contract class instance through the deployer
+    //* -----------------------------------------------------------
 
-    let deploy = Deploy::new(
-        Default::default(), // salt
-        contract_class.clone(),
-        vec![], // call data
+    let deploy = InvokeFunction::new(
+        deployer_contract_address,
+        Felt252::from_bytes_be(&calculate_sn_keccak("deploy_contract".as_bytes())),
+        0,
+        0.into(),
+        vec![compiled_class_hash, 3.into(), 0.into()], // call data
+        signature.clone(),
         block_context.starknet_os_config().chain_id().clone(),
-        TRANSACTION_VERSION.clone(),
+        None,
     )
     .unwrap();
 
-    state
-        .set_contract_class(
-            &deploy.contract_hash,
-            &CompiledClass::Deprecated(Arc::new(contract_class)),
-        )
-        .unwrap();
-    let contract_address = deploy.contract_address.clone();
+    let contract_address = deploy
+        .execute(&mut state, &block_context, 0)
+        .expect("could not deploy contract")
+        .call_info
+        .unwrap()
+        .retdata[0]
+        .clone();
 
-    let tx = Transaction::Deploy(deploy);
-
-    tx.execute(&mut state, &block_context, 0)
-        .expect("could not deploy contract");
-
-    //* --------------------------------------------
-    //*        Execute contract entrypoint
-    //* --------------------------------------------
+    //* ---------------------------------------------------------
+    //*        Execute contract entrypoint through the account
+    //* ---------------------------------------------------------
     let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_bytes()));
-
-    let invoke_tx = InvokeFunction::new(
+    let mut account_execute_calldata = vec![
+        // call_array_len: felt
+        1.into(),
+        // call_array: CallArray*
+        // struct CallArray {
+        //     to: felt,
         contract_address,
+        //     selector: felt,
         entry_point_selector,
+        //     data_offset: felt,
+        0.into(),
+        //     data_len: felt,
+        call_data.len().into(),
+        // }
+        // calldata_len: felt
+        call_data.len().into(),
+    ];
+    // calldata: felt*
+    account_execute_calldata.extend(call_data.into_iter());
+    let invoke_tx = InvokeFunction::new(
+        account_contract_address,
+        Felt252::from_bytes_be(&calculate_sn_keccak("__execute__".as_bytes())),
         0,
-        TRANSACTION_VERSION.clone(),
-        call_data,
+        1.into(),
+        account_execute_calldata,
         signature,
         chain_id,
-        Some(0.into()),
+        Some(1.into()),
     )
-    .unwrap();
+    .unwrap()
+    .create_for_simulation(true, false, false, false, false);
 
-    let tx = Transaction::InvokeFunction(invoke_tx);
+    let tx = invoke_tx;
     let tx_exec_info = tx.execute(&mut state, &block_context, 0).unwrap();
 
     //* --------------------------------------------
@@ -147,31 +234,30 @@ fn test_contract(
 mod tests {
     use crate::test_contract;
 
-
     #[test]
     fn test_example_contract() {
         let retdata = test_contract(
-            "./example_contract.json",
-            "fib",
-            [1.into(), 1.into(), 10.into()].to_vec(),
+            "../../starknet_programs/cairo2/example_contract.sierra",
+            "get_balance",
+            [].to_vec(),
         );
-        assert_eq!(retdata, vec![144.into()]);
+        assert_eq!(retdata, vec![0.into()]);
     }
 
     #[test]
     fn test_fibonacci() {
         let retdata = test_contract(
-            "starknet_programs/fibonacci.json",
+            "../../starknet_programs/cairo2/fibonacci.sierra",
             "fib",
             [1.into(), 1.into(), 10.into()].to_vec(),
         );
-        assert_eq!(retdata, vec![144.into()]);
+        assert_eq!(retdata, vec![89.into()]);
     }
 
     #[test]
     fn test_factorial() {
         let retdata = test_contract(
-            "starknet_programs/factorial.json",
+            "../../starknet_programs/cairo2/factorial.sierra",
             "factorial",
             [10.into()].to_vec(),
         );
