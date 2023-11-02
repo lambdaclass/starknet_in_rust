@@ -1238,6 +1238,54 @@ fn replace_class_contract_call() {
     compare_results(native_result, vm_result);
 }
 
+#[test]
+#[cfg(feature = "cairo-native")]
+fn keccak_syscall_test() {
+    let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+        serde_json::from_str(
+            std::fs::read_to_string("starknet_programs/cairo2/test_cairo_keccak.sierra")
+                .unwrap()
+                .as_str(),
+        )
+        .unwrap();
+
+    let native_entrypoints = sierra_contract_class.clone().entry_points_by_type;
+    let native_entrypoint_selector = &native_entrypoints.external.get(0).unwrap().selector;
+
+    let native_class_hash: ClassHash = [1; 32];
+
+    let caller_address = Address(123456789.into());
+    let mut contract_class_cache = HashMap::new();
+
+    insert_sierra_class_into_cache(
+        &mut contract_class_cache,
+        native_class_hash,
+        sierra_contract_class,
+    );
+
+    let mut state_reader = InMemoryStateReader::default();
+    let nonce = Felt252::zero();
+
+    state_reader
+        .address_to_nonce_mut()
+        .insert(caller_address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+
+    let native_result = execute(
+        &mut state,
+        &caller_address,
+        &caller_address,
+        native_entrypoint_selector,
+        &[],
+        EntryPointType::External,
+        &native_class_hash,
+    );
+
+    assert!(!native_result.failure_flag);
+    assert_eq!(native_result.gas_consumed, 545370);
+}
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,

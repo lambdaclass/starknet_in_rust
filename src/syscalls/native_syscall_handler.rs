@@ -11,6 +11,7 @@ use crate::hash_utils::calculate_contract_address;
 use crate::services::api::contract_class_errors::ContractClassError;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::state_api::State;
+use crate::syscalls::business_logic_syscall_handler::KECCAK_ROUND_COST;
 use crate::utils::felt_to_hash;
 use crate::utils::ClassHash;
 use crate::{
@@ -58,7 +59,7 @@ impl<'a, S: StateReader> NativeSyscallHandler<'a, S> {
 
         if *gas < required_gas {
             let out_of_gas_felt = Felt252::from_bytes_be("Out of gas".as_bytes());
-            println!("out of gas!: {:?} < {:?}", *gas, required_gas); // TODO: remove once all other prints are removed
+            tracing::debug!("out of gas!: {:?} < {:?}", *gas, required_gas);
             return Err(vec![out_of_gas_felt.clone()]);
         }
 
@@ -77,7 +78,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         block_number: u64,
         gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
-        println!("Called `get_block_hash({block_number})` from MLIR.");
+        tracing::debug!("Called `get_block_hash({block_number})` from Cairo Native");
 
         self.handle_syscall_request(gas, "get_block_hash")?;
 
@@ -98,7 +99,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &mut self,
         gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::ExecutionInfo> {
-        println!("Called `get_execution_info()` from MLIR.");
+        tracing::debug!("Called `get_execution_info()` from Cairo Native");
 
         self.handle_syscall_request(gas, "get_execution_info")?;
 
@@ -135,6 +136,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         deploy_from_zero: bool,
         gas: &mut u128,
     ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
+        tracing::debug!("Called `deploy({class_hash}, {calldata:?})` from Cairo Native");
         self.handle_syscall_request(gas, "deploy")?;
 
         let deployer_address = if deploy_from_zero {
@@ -186,7 +188,8 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     }
 
     fn replace_class(&mut self, class_hash: Felt252, gas: &mut u128) -> SyscallResult<()> {
-        println!("Called `replace_class({class_hash})` from MLIR.");
+        tracing::debug!("Called `replace_class({class_hash})` from Cairo Native");
+
         self.handle_syscall_request(gas, "replace_class")?;
         match self
             .starknet_storage_state
@@ -208,8 +211,8 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         calldata: &[cairo_vm::felt::Felt252],
         gas: &mut u128,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
-        println!(
-            "Called `library_call({class_hash}, {function_selector}, {calldata:?})` from MLIR."
+        tracing::debug!(
+            "Called `library_call({class_hash}, {function_selector}, {calldata:?})` from Cairo Native"
         );
 
         self.handle_syscall_request(gas, "library_call")?;
@@ -271,8 +274,8 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         calldata: &[cairo_vm::felt::Felt252],
         gas: &mut u128,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
-        println!(
-            "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from MLIR."
+        tracing::debug!(
+            "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from Cairo Native"
         );
 
         self.handle_syscall_request(gas, "call_contract")?;
@@ -326,7 +329,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         address: cairo_vm::felt::Felt252,
         gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
-        println!("Called `storage_read({address_domain}, {address})` from MLIR.");
+        tracing::debug!("Called `storage_read({address_domain}, {address})` from Cairo Native");
 
         self.handle_syscall_request(gas, "storage_read")?;
 
@@ -336,7 +339,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
             Err(_) => Ok(Felt252::zero()),
         };
 
-        println!(" = {value:?}` from MLIR.");
+        tracing::debug!(" = {value:?}` from Cairo Native");
 
         value
     }
@@ -348,7 +351,9 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         value: cairo_vm::felt::Felt252,
         gas: &mut u128,
     ) -> SyscallResult<()> {
-        println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
+        tracing::debug!(
+            "Called `storage_write({address_domain}, {address}, {value})` from Cairo Native"
+        );
 
         self.handle_syscall_request(gas, "storage_write")?;
 
@@ -364,7 +369,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         gas: &mut u128,
     ) -> SyscallResult<()> {
         let order = self.tx_execution_context.n_emitted_events;
-        println!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from MLIR.");
+        tracing::debug!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from Cairo Native");
 
         self.handle_syscall_request(gas, "emit_event")?;
 
@@ -380,7 +385,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         payload: &[cairo_vm::felt::Felt252],
         gas: &mut u128,
     ) -> SyscallResult<()> {
-        println!("Called `send_message_to_l1({to_address}, {payload:?})` from MLIR.");
+        tracing::debug!("Called `send_message_to_l1({to_address}, {payload:?})` from Cairo Native");
 
         self.handle_syscall_request(gas, "send_message_to_l1")?;
 
@@ -402,11 +407,45 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         input: &[u64],
         gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::U256> {
-        println!("Called `keccak({input:?})` from MLIR.");
+        tracing::debug!("Called `keccak({input:?})` from Cairo Native");
 
         self.handle_syscall_request(gas, "keccak")?;
 
-        Ok(U256(Felt252::from(1234567890).to_le_bytes()))
+        let length = input.len();
+
+        if length % 17 != 0 {
+            let error_msg = b"Invalid keccak input size";
+            let felt_error = Felt252::from_bytes_be(error_msg);
+            return Err(vec![felt_error]);
+        }
+
+        let n_chunks = length / 17;
+        let mut state = [0u64; 25];
+
+        for i in 0..n_chunks {
+            if *gas < KECCAK_ROUND_COST {
+                let error_msg = b"Syscall out of gas";
+                let felt_error = Felt252::from_bytes_be(error_msg);
+                return Err(vec![felt_error]);
+            }
+            *gas -= KECCAK_ROUND_COST;
+            let chunk = &input[i * 17..(i + 1) * 17]; //(request.input_start + i * 17)?;
+            for (i, val) in chunk.iter().enumerate() {
+                state[i] ^= val;
+            }
+            keccak::f1600(&mut state)
+        }
+        // state[0] and state[1] conform the hash_low (u128)
+        // state[2] and state[3] conform the hash_high (u128)
+        let hash = [
+            state[0].to_le_bytes(),
+            state[1].to_le_bytes(),
+            state[2].to_le_bytes(),
+            state[3].to_le_bytes(),
+        ]
+        .concat();
+
+        SyscallResult::Ok(U256(hash[0..32].try_into().unwrap()))
     }
 
     fn secp256k1_add(
