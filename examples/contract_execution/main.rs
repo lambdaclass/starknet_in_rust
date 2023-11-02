@@ -60,8 +60,8 @@ fn test_contract(
     let chain_id = block_context.starknet_os_config().chain_id().clone();
     // Values hardcoded to pass signature validation
     let signature = vec![
-        felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
-        felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
+        felt_str!("3086480810278599376317923499561306189851900463386393948998357832163236918254"),
+        felt_str!("598673427589502599949712887611119751108407514580626464031881322743364689811"),
     ];
 
     //* --------------------------------------------
@@ -111,7 +111,7 @@ fn test_contract(
         0.into(),
         0.into(),
         // Values hardcoded to pass signature validation
-        vec![2.into()],
+        vec![felt_str!("1735102664668487605176656616876767369909409133946409161569774794110049207117")],
         signature.clone(),
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
         chain_id.clone(),
@@ -204,18 +204,18 @@ fn test_contract(
     ];
     // calldata: felt*
     account_execute_calldata.extend(call_data.into_iter());
-    let invoke_tx = InvokeFunction::new(
+    let invoke_tx = InvokeFunction::new_with_tx_hash(
         account_contract_address,
         Felt252::from_bytes_be(&calculate_sn_keccak("__execute__".as_bytes())),
         0,
         1.into(),
         account_execute_calldata,
         signature,
-        chain_id,
         Some(1.into()),
+        2718.into(),
     )
     .unwrap()
-    .create_for_simulation(true, false, false, false, false);
+    .create_for_simulation(false, false, false, false, false);
 
     let tx = invoke_tx;
     let tx_exec_info = tx.execute(&mut state, &block_context, 0).unwrap();
