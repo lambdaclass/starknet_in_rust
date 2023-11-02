@@ -214,11 +214,9 @@ fn test_contract(
         Some(1.into()),
         2718.into(),
     )
-    .unwrap()
-    .create_for_simulation(false, false, false, false, false);
+    .unwrap();
 
-    let tx = invoke_tx;
-    let tx_exec_info = tx.execute(&mut state, &block_context, 0).unwrap();
+    let tx_exec_info = invoke_tx.execute(&mut state, &block_context, 0).unwrap();
 
     //* --------------------------------------------
     //*          Extract return values
