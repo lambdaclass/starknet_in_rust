@@ -111,7 +111,9 @@ fn test_contract(
         0.into(),
         0.into(),
         // Values hardcoded to pass signature validation
-        vec![felt_str!("1735102664668487605176656616876767369909409133946409161569774794110049207117")],
+        vec![felt_str!(
+            "1735102664668487605176656616876767369909409133946409161569774794110049207117"
+        )],
         signature.clone(),
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
         chain_id.clone(),
@@ -154,8 +156,9 @@ fn test_contract(
     )
     .expect("couldn't create declare transaction");
 
-    declare_tx.execute(&mut state, &block_context)
-    .expect("could not declare the contract class");
+    declare_tx
+        .execute(&mut state, &block_context)
+        .expect("could not declare the contract class");
 
     //* ----------------------------------------------------------
     //*     Deploy new contract class instance through the deployer
@@ -203,7 +206,7 @@ fn test_contract(
         call_data.len().into(),
     ];
     // calldata: felt*
-    account_execute_calldata.extend(call_data.into_iter());
+    account_execute_calldata.extend(call_data);
     let invoke_tx = InvokeFunction::new_with_tx_hash(
         account_contract_address,
         Felt252::from_bytes_be(&calculate_sn_keccak("__execute__".as_bytes())),
