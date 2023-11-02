@@ -27,7 +27,7 @@ use std::{collections::HashMap, fs::File, io::BufReader, path::Path, sync::Arc, 
 
 fn main() {
     // replace this with the path to your compiled contract
-    let contract_path = "starknet_programs/cairo2/fibonacci.sierra";
+    let contract_path = "../../starknet_programs/cairo2/fibonacci.sierra";
 
     // replace this with the name of your entrypoint
     let entry_point: &str = "fib";
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn test_example_contract() {
         let retdata = test_contract(
-            "starknet_programs/cairo2/example_contract.sierra",
+            "../../starknet_programs/cairo2/example_contract.sierra",
             "get_balance",
             [].to_vec(),
         );
@@ -247,7 +247,7 @@ mod tests {
     #[test]
     fn test_fibonacci() {
         let retdata = test_contract(
-            "starknet_programs/cairo2/fibonacci.sierra",
+            "../../starknet_programs/cairo2/fibonacci.sierra",
             "fib",
             [1.into(), 1.into(), 10.into()].to_vec(),
         );
@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn test_factorial() {
         let retdata = test_contract(
-            "starknet_programs/cairo2/factorial.sierra",
+            "../../starknet_programs/cairo2/factorial.sierra",
             "factorial",
             [10.into()].to_vec(),
         );
