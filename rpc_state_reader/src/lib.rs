@@ -1,4 +1,5 @@
 pub mod rpc_state;
+pub mod rpc_state_errors;
 pub mod utils;
 
 #[cfg(test)]
@@ -31,7 +32,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_class_cairo1() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         let class_hash =
             class_hash!("0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216");
@@ -44,7 +45,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_class_cairo0() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         let class_hash =
             class_hash!("025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
@@ -53,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_get_class_hash_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let address =
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
 
@@ -65,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_get_nonce_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::TestNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::TestNet, BlockTag::Latest.into()).unwrap();
         // Contract deployed by xqft which will not be used again, so nonce changes will not break
         // this test.
         let address =
@@ -75,7 +76,7 @@ mod tests {
 
     #[test]
     fn test_get_storage_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let address =
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
         let key = StorageKey(patricia_key!(0u128));
@@ -85,22 +86,22 @@ mod tests {
 
     #[test]
     fn test_get_transaction() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        rpc_state.get_transaction(&tx_hash);
+        assert!(rpc_state.get_transaction(&tx_hash).is_ok());
     }
 
     #[test]
     fn test_try_from_invoke() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        let tx = rpc_state.get_transaction(&tx_hash);
+        let tx = rpc_state.get_transaction(&tx_hash).unwrap();
         match tx {
             SNTransaction::Invoke(tx) => {
                 InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet)
@@ -112,22 +113,22 @@ mod tests {
 
     #[test]
     fn test_get_block_info() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
-        rpc_state.get_block_info();
+        assert!(rpc_state.get_block_info().is_ok());
     }
 
     // Tested with the following query to the Feeder Gateway API:
     // https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
     #[test]
     fn test_get_transaction_trace() {
-        let rpc_state = RpcState::new_infura(RpcChain::TestNet2, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::TestNet2, BlockTag::Latest.into()).unwrap();
 
         let tx_hash = TransactionHash(stark_felt!(
             "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc"
         ));
 
-        let tx_trace = rpc_state.get_transaction_trace(&tx_hash);
+        let tx_trace = rpc_state.get_transaction_trace(&tx_hash).unwrap();
 
         assert_eq!(
             tx_trace.signature,
@@ -138,7 +139,7 @@ mod tests {
         );
 
         assert_eq!(
-            tx_trace.validate_invocation.calldata,
+            tx_trace.validate_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("1"),
                 stark_felt!("690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232"),
@@ -157,9 +158,16 @@ mod tests {
                 stark_felt!("38bd34c31a0a5c"),
             ])
         );
-        assert_eq!(tx_trace.validate_invocation.retdata, Some(vec![]));
+        assert_eq!(
+            tx_trace.validate_invocation.as_ref().unwrap().retdata,
+            Some(vec![])
+        );
         assert_eq_sorted!(
-            tx_trace.validate_invocation.execution_resources,
+            tx_trace
+                .validate_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources,
             ExecutionResources {
                 n_steps: 790,
                 n_memory_holes: 51,
@@ -170,7 +178,15 @@ mod tests {
                 ]),
             }
         );
-        assert_eq!(tx_trace.validate_invocation.internal_calls.len(), 1);
+        assert_eq!(
+            tx_trace
+                .validate_invocation
+                .as_ref()
+                .unwrap()
+                .internal_calls
+                .len(),
+            1
+        );
 
         assert_eq!(
             tx_trace.function_invocation.as_ref().unwrap().calldata,
@@ -243,7 +259,7 @@ mod tests {
         );
 
         assert_eq!(
-            tx_trace.fee_transfer_invocation.calldata,
+            tx_trace.fee_transfer_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8"),
                 stark_felt!("2b0322a23ba4"),
@@ -251,11 +267,15 @@ mod tests {
             ])
         );
         assert_eq!(
-            tx_trace.fee_transfer_invocation.retdata,
+            tx_trace.fee_transfer_invocation.as_ref().unwrap().retdata,
             Some(vec![1u128.into()])
         );
         assert_eq_sorted!(
-            tx_trace.fee_transfer_invocation.execution_resources,
+            tx_trace
+                .fee_transfer_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources,
             ExecutionResources {
                 n_steps: 586,
                 n_memory_holes: 42,
@@ -265,16 +285,24 @@ mod tests {
                 ]),
             }
         );
-        assert_eq!(tx_trace.fee_transfer_invocation.internal_calls.len(), 1);
+        assert_eq!(
+            tx_trace
+                .fee_transfer_invocation
+                .as_ref()
+                .unwrap()
+                .internal_calls
+                .len(),
+            1
+        );
     }
 
     #[test]
     fn test_get_transaction_receipt() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        rpc_state.get_transaction_receipt(&tx_hash);
+        assert!(rpc_state.get_transaction_receipt(&tx_hash).is_ok());
     }
 }

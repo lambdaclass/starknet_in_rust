@@ -26,6 +26,7 @@ use crate::{
         validate_contract_deployed, Address, ClassHash,
     },
 };
+use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_native::cache::ProgramCache;
 use cairo_vm::{
@@ -42,6 +43,8 @@ use cairo_vm::{
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use cairo_lang_starknet::contract_class::ContractEntryPoints;
+
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -167,7 +170,7 @@ impl ExecutionEntryPoint {
                     }
                 }
             }
-            CompiledClass::Sierra(sierra_contract_class) => {
+            CompiledClass::Sierra(sierra_program_and_entrypoints) => {
                 let mut transactional_state = state.create_transactional();
 
                 let native_context = NativeContext::new();
@@ -175,7 +178,7 @@ impl ExecutionEntryPoint {
 
                 match self.native_execute(
                     &mut transactional_state,
-                    sierra_contract_class,
+                    sierra_program_and_entrypoints,
                     tx_execution_context,
                     block_context,
                     &class_hash,
@@ -738,7 +741,7 @@ impl ExecutionEntryPoint {
     fn native_execute<S: StateReader>(
         &self,
         _state: &mut CachedState<S>,
-        _contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        _sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         _tx_execution_context: &mut TransactionExecutionContext,
         _block_context: &BlockContext,
     ) -> Result<CallInfo, TransactionError> {
@@ -752,7 +755,7 @@ impl ExecutionEntryPoint {
     fn native_execute<S: StateReader>(
         &self,
         state: &mut CachedState<S>,
-        contract_class: Arc<cairo_lang_starknet::contract_class::ContractClass>,
+        sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
         class_hash: &[u8; 32],
@@ -764,28 +767,28 @@ impl ExecutionEntryPoint {
         };
         use serde_json::json;
 
+        use crate::syscalls::business_logic_syscall_handler::SYSCALL_BASE;
+        let sierra_program = &sierra_program_and_entrypoints.0;
+        let contract_entrypoints = &sierra_program_and_entrypoints.1;
+
         let entry_point = match self.entry_point_type {
-            EntryPointType::External => contract_class
-                .entry_points_by_type
+            EntryPointType::External => contract_entrypoints
                 .external
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
-            EntryPointType::Constructor => contract_class
-                .entry_points_by_type
+            EntryPointType::Constructor => contract_entrypoints
                 .constructor
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
-            EntryPointType::L1Handler => contract_class
-                .entry_points_by_type
+            EntryPointType::L1Handler => contract_entrypoints
                 .l1_handler
                 .iter()
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
         };
 
-        let sierra_program = contract_class.extract_sierra_program().unwrap();
         let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
             ProgramRegistry::new(&sierra_program).unwrap();
 
@@ -803,10 +806,8 @@ impl ExecutionEntryPoint {
 
         let syscall_handler = NativeSyscallHandler {
             starknet_storage_state: contract_storage_state,
-            n_emitted_events: 0,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
-            n_sent_messages: 0,
             contract_address: self.contract_address.clone(),
             internal_calls: Vec::new(),
             caller_address: self.caller_address.clone(),
@@ -814,6 +815,7 @@ impl ExecutionEntryPoint {
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
             program_cache: program_cache.clone(),
+            resources_manager: Default::default(),
         };
 
         native_executor
@@ -923,7 +925,10 @@ impl ExecutionEntryPoint {
             failure_flag: value.failure_flag,
             l2_to_l1_messages: syscall_handler.l2_to_l1_messages,
             internal_calls: syscall_handler.internal_calls,
-            gas_consumed: value.gas_consumed,
+            gas_consumed: self
+                .initial_gas
+                .saturating_sub(SYSCALL_BASE)
+                .saturating_sub(value.remaining_gas),
         })
     }
 }

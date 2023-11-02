@@ -1,5 +1,5 @@
 use super::{
-    state_api::{State, StateReader},
+    state_api::{State, StateChangesCount, StateReader},
     state_cache::{StateCache, StorageEntry},
 };
 use crate::{
@@ -20,8 +20,6 @@ use std::{
     sync::Arc,
 };
 
-pub type SierraProgramCache =
-    HashMap<ClassHash, cairo_lang_starknet::contract_class::ContractClass>;
 pub type ContractClassCache = HashMap<ClassHash, CompiledClass>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
@@ -266,7 +264,7 @@ impl<T: StateReader> State for CachedState<T> {
         let compiled_class_hash = compiled_class_hash.to_be_bytes();
 
         self.cache
-            .class_hash_to_compiled_class_hash
+            .compiled_class_hash_writes
             .insert(class_hash, compiled_class_hash);
         Ok(())
     }
@@ -283,10 +281,10 @@ impl<T: StateReader> State for CachedState<T> {
         Ok(())
     }
 
-    fn count_actual_storage_changes(
+    fn count_actual_state_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<(usize, usize), StateError> {
+    ) -> Result<StateChangesCount, StateError> {
         self.update_initial_values_of_write_only_accesses()?;
 
         let mut storage_updates = subtract_mappings(
@@ -296,9 +294,16 @@ impl<T: StateReader> State for CachedState<T> {
 
         let storage_unique_updates = storage_updates.keys().map(|k| k.0.clone());
 
-        let class_hash_updates = subtract_mappings_keys(
+        let class_hash_updates: Vec<&Address> = subtract_mappings_keys(
             &self.cache.class_hash_writes,
             &self.cache.class_hash_initial_values,
+        )
+        .collect();
+        let n_class_hash_updates = class_hash_updates.len();
+
+        let compiled_class_hash_updates = subtract_mappings_keys(
+            &self.cache.compiled_class_hash_writes,
+            &self.cache.compiled_class_hash_initial_values,
         );
 
         let nonce_updates =
@@ -306,7 +311,7 @@ impl<T: StateReader> State for CachedState<T> {
 
         let mut modified_contracts: HashSet<Address> = HashSet::new();
         modified_contracts.extend(storage_unique_updates);
-        modified_contracts.extend(class_hash_updates.cloned());
+        modified_contracts.extend(class_hash_updates.into_iter().cloned());
         modified_contracts.extend(nonce_updates.cloned());
 
         // Add fee transfer storage update before actually charging it, as it needs to be included in the
@@ -320,7 +325,12 @@ impl<T: StateReader> State for CachedState<T> {
             modified_contracts.remove(fee_token_address);
         }
 
-        Ok((modified_contracts.len(), storage_updates.len()))
+        Ok(StateChangesCount {
+            n_storage_updates: storage_updates.len(),
+            n_class_hash_updates,
+            n_compiled_class_hash_updates: compiled_class_hash_updates.count(),
+            n_modified_contracts: modified_contracts.len(),
+        })
     }
 
     /// Returns the class hash for a given contract address.
@@ -800,7 +810,7 @@ mod tests {
 
     /// This test calculate the number of actual storage changes.
     #[test]
-    fn count_actual_storage_changes_test() {
+    fn count_actual_state_changes_test() {
         let state_reader = InMemoryStateReader::default();
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
@@ -822,14 +832,15 @@ mod tests {
         let fee_token_address = Address(123.into());
         let sender_address = Address(321.into());
 
-        let expected_changes = {
-            let n_storage_updates = 3 + 1; // + 1 fee transfer balance update
-            let n_modified_contracts = 2;
-
-            (n_modified_contracts, n_storage_updates)
+        let expected_changes = StateChangesCount {
+            n_storage_updates: 3 + 1, // + 1 fee transfer balance update,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 2,
         };
+
         let changes = cached_state
-            .count_actual_storage_changes(Some((&fee_token_address, &sender_address)))
+            .count_actual_state_changes(Some((&fee_token_address, &sender_address)))
             .unwrap();
 
         assert_eq!(changes, expected_changes);
