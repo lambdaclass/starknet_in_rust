@@ -140,19 +140,18 @@ fn test_contract(
     //* --------------------------------------------
     //*        Declare new contract class
     //* --------------------------------------------
-    let mut declare_tx = DeclareV2::new(
+    let declare_tx = DeclareV2::new_with_tx_hash(
         &sierra_contract_class,
         Some(casm_class),
         compiled_class_hash.clone(),
-        chain_id.clone(),
         account_contract_address.clone(),
         0, // max fee
         1.into(),
         signature.clone(),
         0.into(), // nonce
+        2718.into(),
     )
     .expect("couldn't create declare transaction");
-    declare_tx.skip_validate = true;
 
     declare_tx.execute(&mut state, &block_context)
     .expect("could not declare the contract class");
