@@ -11,6 +11,7 @@ use crate::hash_utils::calculate_contract_address;
 use crate::services::api::contract_class_errors::ContractClassError;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::state_api::State;
+use crate::syscalls::business_logic_syscall_handler::KECCAK_ROUND_COST;
 use crate::utils::felt_to_hash;
 use crate::utils::ClassHash;
 use crate::{
@@ -410,7 +411,41 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
         self.handle_syscall_request(gas, "keccak")?;
 
-        Ok(U256(Felt252::from(1234567890).to_le_bytes()))
+        let length = input.len();
+
+        if length % 17 != 0 {
+            let error_msg = b"Invalid keccak input size";
+            let felt_error = Felt252::from_bytes_be(error_msg);
+            return Err(vec![felt_error]);
+        }
+
+        let n_chunks = length / 17;
+        let mut state = [0u64; 25];
+
+        for i in 0..n_chunks {
+            if *gas < KECCAK_ROUND_COST {
+                let error_msg = b"Syscall out of gas";
+                let felt_error = Felt252::from_bytes_be(error_msg);
+                return Err(vec![felt_error]);
+            }
+            *gas -= KECCAK_ROUND_COST;
+            let chunk = &input[i * 17..(i + 1) * 17]; //(request.input_start + i * 17)?;
+            for (i, val) in chunk.iter().enumerate() {
+                state[i] ^= val;
+            }
+            keccak::f1600(&mut state)
+        }
+        // state[0] and state[1] conform the hash_low (u128)
+        // state[2] and state[3] conform the hash_high (u128)
+        let hash = [
+            state[0].to_le_bytes(),
+            state[1].to_le_bytes(),
+            state[2].to_le_bytes(),
+            state[3].to_le_bytes(),
+        ]
+        .concat();
+
+        SyscallResult::Ok(U256(hash[0..32].try_into().unwrap()))
     }
 
     fn secp256k1_add(
