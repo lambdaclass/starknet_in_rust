@@ -23,7 +23,7 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, felt_to_hash, Address},
     CasmContractClass, SierraContractClass,
 };
-use std::{collections::HashMap, fs::File, io::BufReader, path::Path, sync::Arc, str::FromStr};
+use std::{collections::HashMap, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc};
 
 fn main() {
     // replace this with the path to your compiled contract
