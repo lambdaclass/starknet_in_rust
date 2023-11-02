@@ -74,7 +74,7 @@ fn test_contract(
     //*             Deploy deployer contract
     //* --------------------------------------------
     let deployer_contract =
-        ContractClass::from_str(include_str!("../../starknet_programs/deployer.json")).unwrap();
+        ContractClass::from_str(include_str!("../../../starknet_programs/deployer.json")).unwrap();
     let deployer_contract_address = Address(Felt252::from(17));
     let deployer_contract_class_hash =
         felt_to_hash(&compute_deprecated_class_hash(&deployer_contract).unwrap());
@@ -95,7 +95,7 @@ fn test_contract(
     //*             Deploy Account contract
     //* --------------------------------------------
     let account_contract =
-        ContractClass::from_str(include_str!("../../starknet_programs/Account.json")).unwrap();
+        ContractClass::from_str(include_str!("../../../starknet_programs/Account.json")).unwrap();
     let account_contract_class_hash = felt_to_hash(&Felt252::from(1));
     state
         .set_contract_class(
