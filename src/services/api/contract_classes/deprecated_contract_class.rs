@@ -1,6 +1,6 @@
 use crate::core::contract_address::compute_hinted_class_hash;
 use crate::services::api::contract_class_errors::ContractClassError;
-use cairo_vm::felt::{Felt252, PRIME_STR};
+use cairo_vm::Felt252;
 use cairo_vm::serde::deserialize_program::{
     deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
     ReferenceManager,
@@ -217,7 +217,7 @@ pub(crate) fn convert_entry_points(
         let contracts_entry_points = entry_points
             .into_iter()
             .map(|e| {
-                let selector = Felt252::from_bytes_be(e.selector.0.bytes());
+                let selector = Felt252::from_bytes_be(e.selector.0.bytes()).unwrap();
                 let offset = e.offset.0;
                 ContractEntryPoint::new(selector, offset)
             })
@@ -234,9 +234,11 @@ pub(crate) fn to_cairo_runner_program(
 ) -> Result<Program, ProgramError> {
     let identifiers = serde_json::from_value::<HashMap<String, Identifier>>(program.identifiers)?;
 
+    /* FIXME: wasn't this removed?
     if program.prime != *PRIME_STR {
         return Err(ProgramError::PrimeDiffers(program.prime.to_string()));
     };
+    */
 
     let mut error_message_attributes =
         serde_json::from_value::<Vec<Attribute>>(program.attributes).unwrap_or_default();

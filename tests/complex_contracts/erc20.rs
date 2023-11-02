@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use cairo_vm::felt::{felt_str, Felt252};
-use num_traits::Zero;
+use cairo_vm::Felt252;
 use starknet_in_rust::{
     call_contract,
     definitions::block_context::{BlockContext, StarknetChainId},
@@ -14,7 +13,7 @@ use starknet_in_rust::{
         ExecutionResourcesManager,
     },
     transaction::DeployAccount,
-    utils::{calculate_sn_keccak, Address, ClassHash},
+    utils::{calculate_sn_keccak, felt_str, Address, ClassHash},
     CasmContractClass, EntryPointType,
 };
 
@@ -36,7 +35,7 @@ fn test_erc20_cairo2() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     contract_class_cache.insert(
@@ -60,8 +59,8 @@ fn test_erc20_cairo2() {
     let decimals_ = Felt252::from(24);
     let initial_supply = Felt252::from(1000);
     let recipient =
-        felt_str!("397149464972449753182583229366244826403270781177748543857889179957856017275");
-    let erc20_salt = felt_str!("1234");
+        felt_str("397149464972449753182583229366244826403270781177748543857889179957856017275");
+    let erc20_salt = felt_str("1234");
     // arguments of deploy contract
     let calldata = vec![
         Felt252::from_bytes_be(&erc20_class_hash),
@@ -92,7 +91,7 @@ fn test_erc20_cairo2() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -121,28 +120,28 @@ fn test_erc20_cairo2() {
 
     state
         .set_contract_class(
-            &felt_str!("1").to_be_bytes(),
+            &felt_str("1").to_be_bytes(),
             &CompiledClass::Casm(Arc::new(contract_class_account)),
         )
         .unwrap();
     state
-        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash))
+        .set_compiled_class_hash(&felt_str("1"), &Felt252::from_bytes_be(&class_hash))
         .unwrap();
 
     let contract_address_salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+        felt_str("2669425616857739096022668060305620640217901643963991674344872184515580705509");
 
     let internal_deploy_account = DeployAccount::new(
-        felt_str!("1").to_be_bytes(),
+        felt_str("1").to_be_bytes(),
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![2.into()],
         vec![
-            felt_str!(
+            felt_str(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
             ),
-            felt_str!(
+            felt_str(
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ],
@@ -166,27 +165,27 @@ fn test_erc20_cairo2() {
 
     state
         .set_contract_class(
-            &felt_str!("1").to_be_bytes(),
+            &felt_str("1").to_be_bytes(),
             &CompiledClass::Casm(Arc::new(contract_class_account)),
         )
         .unwrap();
     state
-        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash))
+        .set_compiled_class_hash(&felt_str("1"), &Felt252::from_bytes_be(&class_hash))
         .unwrap();
 
-    let contract_address_salt = felt_str!("123123123123123");
+    let contract_address_salt = felt_str("123123123123123");
 
     let internal_deploy_account = DeployAccount::new(
-        felt_str!("1").to_be_bytes(),
+        felt_str("1").to_be_bytes(),
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![2.into()],
         vec![
-            felt_str!(
+            felt_str(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
             ),
-            felt_str!(
+            felt_str(
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ],

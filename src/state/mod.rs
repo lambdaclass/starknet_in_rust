@@ -9,7 +9,7 @@ use crate::{
     services::api::contract_classes::compiled_class::CompiledClass,
     utils::{get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping},
 };
-use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
+use cairo_vm::{Felt252, vm::runners::cairo_runner::ExecutionResources};
 use getset::Getters;
 use std::{collections::HashMap, sync::Arc};
 
@@ -224,7 +224,7 @@ mod test {
         },
         utils::Address,
     };
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
 
     #[test]
     fn test_from_cached_state_without_updates() {

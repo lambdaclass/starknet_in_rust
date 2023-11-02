@@ -24,7 +24,7 @@ use crate::{
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 use std::fmt::Debug;
@@ -464,30 +464,30 @@ fn convert_invoke_v0(
 ) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(
         value.contract_address.0.key().bytes(),
-    ));
+    ).unwrap());
     let max_fee = value.max_fee.0;
-    let entry_point_selector = Felt252::from_bytes_be(value.entry_point_selector.0.bytes());
+    let entry_point_selector = Felt252::from_bytes_be(value.entry_point_selector.0.bytes()).unwrap();
     let nonce = None;
 
     let signature = value
         .signature
         .0
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be(f.bytes()).unwrap())
         .collect();
     let calldata = value
         .calldata
         .0
         .as_ref()
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be(f.bytes()).unwrap())
         .collect();
 
     InvokeFunction::new(
         contract_address,
         entry_point_selector,
         max_fee,
-        Felt252::new(0),
+        Felt252::ZERO,
         calldata,
         signature,
         chain_id.to_felt(),
@@ -499,30 +499,30 @@ fn convert_invoke_v1(
     value: starknet_api::transaction::InvokeTransactionV1,
     chain_id: StarknetChainId,
 ) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
+    let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()).unwrap());
     let max_fee = value.max_fee.0;
-    let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+    let nonce = Felt252::from_bytes_be(value.nonce.0.bytes()).unwrap();
     let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
 
     let signature = value
         .signature
         .0
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be(f.bytes()).unwrap())
         .collect();
     let calldata = value
         .calldata
         .0
         .as_ref()
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be(f.bytes()).unwrap())
         .collect();
 
     InvokeFunction::new(
         contract_address,
         entry_point_selector,
         max_fee,
-        Felt252::new(1),
+        Felt252::ONE,
         calldata,
         signature,
         chain_id.to_felt(),

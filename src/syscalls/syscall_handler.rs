@@ -5,19 +5,20 @@ use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
-use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
-    felt::Felt252,
+    Felt252,
     hint_processor::{
         cairo_1_hint_processor::hint_processor::Cairo1HintProcessor,
         hint_processor_definition::{HintProcessorLogic, HintReference},
     },
+    utils::bigint_to_felt,
     types::{
         errors::math_errors::MathError, exec_scope::ExecutionScopes, relocatable::Relocatable,
     },
     vm::{
         errors::{hint_errors::HintError, vm_errors::VirtualMachineError},
         vm_core::VirtualMachine,
+        runners::cairo_runner::{ResourceTracker, RunResources},
     },
 };
 use std::{any::Any, boxed::Box, collections::HashMap};
@@ -152,7 +153,7 @@ fn extract_buffer(buffer: &ResOperand) -> Result<(&CellRef, Felt252), HintError>
         ResOperand::Deref(cell) => (cell, 0.into()),
         ResOperand::BinOp(bin_op) => {
             if let DerefOrImmediate::Immediate(val) = &bin_op.b {
-                (&bin_op.a, val.clone().value.into())
+                (&bin_op.a, bigint_to_felt(&val.value).unwrap())
             } else {
                 return Err(HintError::CustomHint("Failed to extract buffer, expected ResOperand of BinOp type to have Inmediate b value".to_owned().into_boxed_str()));
             }

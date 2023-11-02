@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use starknet_in_rust::utils::felt_to_hash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -158,7 +158,7 @@ fn call_contract_with_extra_arguments() {
 #[test]
 fn call_contract_not_deployed() {
     let contract_address = Address(2222.into());
-    let wrong_address = contract_address.0.clone() - Felt252::new(2); // another address
+    let wrong_address = contract_address.0.clone() - Felt252::from(2); // another address
     let error_msg = format!(
         "Contract address {:?} is not deployed",
         felt_to_hash(&wrong_address)

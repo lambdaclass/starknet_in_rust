@@ -28,11 +28,12 @@ use crate::{
 };
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_vm::{
-    felt::Felt252,
+    Felt252,
     types::{
         program::Program,
         relocatable::{MaybeRelocatable, Relocatable},
     },
+    utils::biguint_to_felt,
     vm::{
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources, RunResources},
         vm_core::VirtualMachine,
@@ -254,11 +255,12 @@ impl ExecutionEntryPoint {
         let entry_point = entry_points
             .iter()
             .filter(|x| {
-                if x.selector == DEFAULT_ENTRY_POINT_SELECTOR.to_biguint() {
+                let selector = biguint_to_felt(&x.selector).unwrap();
+                if selector == *DEFAULT_ENTRY_POINT_SELECTOR {
                     default_entry_point = Some(*x);
                 }
 
-                x.selector == self.entry_point_selector.to_biguint()
+                selector == self.entry_point_selector
             })
             .try_fold(None, |acc, x| match acc {
                 None => Ok(Some(x)),

@@ -18,7 +18,7 @@ use crate::{
     transaction::{error::TransactionError, fee::calculate_tx_fee},
     utils::{calculate_tx_resources, Address},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 

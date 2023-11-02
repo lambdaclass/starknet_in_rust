@@ -1,5 +1,5 @@
 use cairo_vm::{
-    felt::{felt_str, Felt252},
+    Felt252,
     vm::runners::cairo_runner::ExecutionResources,
 };
 use lazy_static::lazy_static;
@@ -21,6 +21,7 @@ use starknet_in_rust::{
 };
 use starknet_in_rust::{
     services::api::contract_classes::compiled_class::CompiledClass, EntryPointType,
+    utils::felt_str,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -28,7 +29,7 @@ use std::{
 };
 
 lazy_static! {
-    static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
+    static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str("1");
 }
 
 #[test]
@@ -52,7 +53,7 @@ fn internal_deploy_account() {
         .unwrap();
 
     let contract_address_salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+        felt_str("2669425616857739096022668060305620640217901643963991674344872184515580705509");
 
     let internal_deploy_account = DeployAccount::new(
         class_hash_bytes,
@@ -61,10 +62,10 @@ fn internal_deploy_account() {
         Felt252::zero(),
         vec![],
         vec![
-            felt_str!(
+            felt_str(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
             ),
-            felt_str!(
+            felt_str(
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ],
@@ -141,7 +142,7 @@ fn internal_deploy_account_cairo1() {
         .unwrap();
 
     let contract_address_salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+        felt_str("2669425616857739096022668060305620640217901643963991674344872184515580705509");
 
     let internal_deploy_account = DeployAccount::new(
         TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH
@@ -152,10 +153,10 @@ fn internal_deploy_account_cairo1() {
         Felt252::zero(),
         vec![2.into()],
         vec![
-            felt_str!(
+            felt_str(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
             ),
-            felt_str!(
+            felt_str(
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ],
@@ -190,7 +191,7 @@ fn internal_deploy_account_cairo1() {
             Some(CallInfo {
                 caller_address: Address(0.into()),
                 call_type: Some(CallType::Call),
-                contract_address: Address(felt_str!(
+                contract_address: Address(felt_str(
                     "397149464972449753182583229366244826403270781177748543857889179957856017275"
                 )),
                 code_address: None,
@@ -202,16 +203,16 @@ fn internal_deploy_account_cairo1() {
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 1
                 ]),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(felt_str(
                     "1554466106298962091002569854891683800203193677547440645928814916929210362005"
                 )),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![
                     1.into(),
-                   felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
+                   felt_str("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
                     2.into()
                 ],
-                retdata: vec![felt_str!("370462705988")],
+                retdata: vec![felt_str("370462705988")],
                 execution_resources: Some(ExecutionResources {
                     #[cfg(not(feature="cairo_1_tests"))]
                     n_steps: 144,
@@ -231,7 +232,7 @@ fn internal_deploy_account_cairo1() {
 
             Some(CallInfo {
                 call_type: Some(CallType::Call),
-                contract_address: Address(felt_str!(
+                contract_address: Address(felt_str(
                     "397149464972449753182583229366244826403270781177748543857889179957856017275"
                 )),
                 class_hash: Some(
@@ -239,7 +240,7 @@ fn internal_deploy_account_cairo1() {
                         .clone()
                         .to_be_bytes()
                 ),
-                entry_point_selector: Some(felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556")),
+                entry_point_selector: Some(felt_str("1159040026212278395030414237414753050475174923702621880048416706425641521556")),
                 entry_point_type: Some(EntryPointType::Constructor),
                 #[cfg(not(feature="cairo_1_tests"))]
                 gas_consumed: 13840,

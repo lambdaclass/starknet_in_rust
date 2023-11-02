@@ -3,8 +3,9 @@ use crate::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass, utils::Address,
+    utils::felt_str,
 };
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use num_traits::Zero;
 
 #[derive(Debug)]
@@ -21,11 +22,11 @@ pub enum TransactionHashPrefix {
 impl TransactionHashPrefix {
     fn get_prefix(&self) -> Felt252 {
         match self {
-            TransactionHashPrefix::Declare => felt_str!("28258975365558885"),
-            TransactionHashPrefix::Deploy => felt_str!("110386840629113"),
-            TransactionHashPrefix::DeployAccount => felt_str!("2036277798190617858034555652763252"),
-            TransactionHashPrefix::Invoke => felt_str!("115923154332517"),
-            TransactionHashPrefix::L1Handler => felt_str!("510926345461491391292786"),
+            TransactionHashPrefix::Declare => felt_str("28258975365558885"),
+            TransactionHashPrefix::Deploy => felt_str("110386840629113"),
+            TransactionHashPrefix::DeployAccount => felt_str("2036277798190617858034555652763252"),
+            TransactionHashPrefix::Invoke => felt_str("115923154332517"),
+            TransactionHashPrefix::L1Handler => felt_str("510926345461491391292786"),
         }
     }
 }
@@ -179,10 +180,10 @@ pub fn calculate_declare_v2_transaction_hash(
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::felt::felt_str;
     use coverage_helper::test;
 
     use crate::definitions::block_context::StarknetChainId;
+    use crate::utils::felt_str;
 
     use super::*;
 
@@ -198,7 +199,7 @@ mod tests {
         let additional_data: Vec<Felt252> = Vec::new();
 
         // Expected value taken from Python implementation of calculate_transaction_hash_common function
-        let expected = felt_str!(
+        let expected = felt_str(
             "2401716064129505935860131145275652294383308751137512921151718435935971973354"
         );
 
@@ -220,13 +221,13 @@ mod tests {
     #[test]
     fn calculate_declare_hash_test() {
         let chain_id = StarknetChainId::MainNet;
-        let sender_address = Address(felt_str!(
+        let sender_address = Address(felt_str(
             "78963962122521774108119849325604561253807220406669671815499681746608877924"
         ));
         let max_fee = 30580718124600;
         let version = 1.into();
         let nonce = 3746.into();
-        let class_hash = felt_str!(
+        let class_hash = felt_str(
             "1935775813346111469198021973672033051732472907985289186515250543849860001197"
         );
 
@@ -246,7 +247,7 @@ mod tests {
 
         assert_eq!(
             tx,
-            felt_str!(
+            felt_str(
                 "446404108171603570739811156347043235876209711235222547918688109133687877504"
             )
         )

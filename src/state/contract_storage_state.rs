@@ -6,7 +6,7 @@ use crate::{
     core::errors::state_errors::StateError,
     utils::{Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use std::collections::HashSet;
 
 #[derive(Debug)]

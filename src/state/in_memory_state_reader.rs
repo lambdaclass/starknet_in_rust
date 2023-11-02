@@ -6,7 +6,7 @@ use crate::{
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
@@ -130,7 +130,7 @@ impl StateReader for InMemoryStateReader {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::{One, Zero};
+    use num_traits::{One};
 
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;

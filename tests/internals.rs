@@ -1,7 +1,7 @@
 // This module tests our code against the blockifier to ensure they work in the same way.
 use assert_matches::assert_matches;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME};
 use cairo_vm::vm::{
     errors::{
@@ -53,7 +53,7 @@ use starknet_in_rust::{
         DeployAccount,
         {invoke_function::InvokeFunction, Declare},
     },
-    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
+    utils::{calculate_sn_keccak, felt_str, felt_to_hash, Address, ClassHash},
 };
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -65,36 +65,36 @@ const TEST_EMPTY_CONTRACT_PATH: &str = "starknet_programs/empty_contract.json";
 
 lazy_static! {
     // Addresses.
-    static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str!("257"));
-    static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str!("256"));
-    static ref TEST_FIB_CONTRACT_ADDRESS: Address = Address(felt_str!("27728"));
+    static ref TEST_ACCOUNT_CONTRACT_ADDRESS: Address = Address(felt_str("257"));
+    static ref TEST_CONTRACT_ADDRESS: Address = Address(felt_str("256"));
+    static ref TEST_FIB_CONTRACT_ADDRESS: Address = Address(felt_str("27728"));
     pub static ref TEST_SEQUENCER_ADDRESS: Address =
-    Address(felt_str!("4096"));
+    Address(felt_str("4096"));
     pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
-    Address(felt_str!("4097"));
+    Address(felt_str("4097"));
 
 
     // Class hashes.
-    static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt252 = felt_str!("273");
-    static ref TEST_CLASS_HASH: Felt252 = felt_str!("272");
-    static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str!("274");
-    static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = felt_str!("4112");
-    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1: Felt252 = felt_str!("1948962768849191111780391610229754715773924969841143100991524171924131413970");
-    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2: Felt252 = felt_str!("2889767417435368609058888822622483550637539736178264636938129582300971548553");
+    static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt252 = felt_str("273");
+    static ref TEST_CLASS_HASH: Felt252 = felt_str("272");
+    static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str("274");
+    static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = felt_str("4112");
+    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1: Felt252 = felt_str("1948962768849191111780391610229754715773924969841143100991524171924131413970");
+    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2: Felt252 = felt_str("2889767417435368609058888822622483550637539736178264636938129582300971548553");
 
     // Storage keys.
     // NOTE: this key corresponds to the lower 128 bits of an U256
     static ref TEST_ERC20_ACCOUNT_BALANCE_KEY: Felt252 =
-        felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617515");
+        felt_str("1192211877881866289306604115402199097887041303917861778777990838480655617515");
     static ref TEST_ERC20_SEQUENCER_BALANCE_KEY: Felt252 =
-        felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768274");
+        felt_str("3229073099929281304021185011369329892856197542079132996799046100564060768274");
     static ref TEST_ERC20_BALANCE_KEY_1: Felt252 =
-        felt_str!("1192211877881866289306604115402199097887041303917861778777990838480655617516");
+        felt_str("1192211877881866289306604115402199097887041303917861778777990838480655617516");
     static ref TEST_ERC20_BALANCE_KEY_2: Felt252 =
-        felt_str!("3229073099929281304021185011369329892856197542079132996799046100564060768275");
+        felt_str("3229073099929281304021185011369329892856197542079132996799046100564060768275");
 
     static ref TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY: Felt252 =
-        felt_str!("2542253978940891427830343982984992363331567580652119103860970381451088310289");
+        felt_str("2542253978940891427830343982984992363331567580652119103860970381451088310289");
 
     // Others.
     static ref INITIAL_BALANCE: Felt252 = Felt252::from_u128(100000).unwrap();
@@ -819,7 +819,7 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
         retdata: vec![1.into()],
         events: vec![OrderedEvent::new(
             0,
-            vec![felt_str!(
+            vec![felt_str(
                 "271746229759260285552388728919865295615886751538523744128730118297934206697"
             )],
             vec![
@@ -1802,7 +1802,7 @@ fn expected_deploy_account_states() -> (
 
     let mut state_after = state_before.clone();
     state_after.cache_mut().nonce_initial_values_mut().insert(
-        Address(felt_str!(
+        Address(felt_str(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
         )),
         Felt252::zero(),
@@ -1814,7 +1814,7 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
+            felt_to_hash(&felt_str(
                 "2542253978940891427830343982984992363331567580652119103860970381451088310290"
             )),
         ),
@@ -1836,13 +1836,13 @@ fn expected_deploy_account_states() -> (
     );
 
     state_after.cache_mut().nonce_writes_mut().insert(
-        Address(felt_str!(
+        Address(felt_str(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
         )),
         1.into(),
     );
     state_after.cache_mut().class_hash_writes_mut().insert(
-        Address(felt_str!(
+        Address(felt_str(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
         )),
         felt_to_hash(&0x111.into()),
@@ -1850,7 +1850,7 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
+            felt_to_hash(&felt_str(
                 "2542253978940891427830343982984992363331567580652119103860970381451088310290"
             )),
         ),
@@ -2216,7 +2216,7 @@ fn test_library_call_with_declare_v2() {
         ExecutionEntryPoint::new(
             address.clone(),
             calldata,
-            Felt252::new(selector.clone()),
+            Felt252::from(selector.clone()),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),

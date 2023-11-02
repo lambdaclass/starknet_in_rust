@@ -25,7 +25,7 @@ use crate::{
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -387,7 +387,7 @@ impl DeclareV2 {
         state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
 
         state.set_contract_class(
-            &self.compiled_class_hash.to_be_bytes(),
+            &self.compiled_class_hash.to_bytes_be(),
             &CompiledClass::Casm(Arc::new(casm_class)),
         )?;
         state.set_sierra_program(
@@ -484,7 +484,7 @@ mod tests {
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
     use num_traits::{One, Zero};
 
     #[test]

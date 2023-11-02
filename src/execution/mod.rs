@@ -12,8 +12,8 @@ use crate::{
     transaction::error::TransactionError,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
 use cairo_vm::{
+    Felt252,
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
@@ -457,8 +457,8 @@ impl TxInfoStruct {
         vec![
             MaybeRelocatable::from(&self.version),
             MaybeRelocatable::from(&self.account_contract_address.0),
-            MaybeRelocatable::from(Felt252::new(self.max_fee)),
-            MaybeRelocatable::from(Felt252::new(self.signature_len)),
+            MaybeRelocatable::from(Felt252::from(self.max_fee)),
+            MaybeRelocatable::from(Felt252::from(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
             MaybeRelocatable::from(&self.transaction_hash),
             MaybeRelocatable::from(&self.chain_id),

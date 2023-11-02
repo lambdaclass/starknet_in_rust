@@ -2,8 +2,7 @@ use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::{get_big_int, get_integer, get_relocatable, Address},
 };
-use cairo_vm::felt::Felt252;
-use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use cairo_vm::{Felt252, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 
 /// Enum representing different types of deprecated syscall requests
 #[derive(Debug, PartialEq)]

@@ -1,5 +1,5 @@
 use crate::complex_contracts::utils::*;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_crypto::FieldElement;

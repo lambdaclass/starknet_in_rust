@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
-use num_traits::{One, Zero};
+use cairo_vm::Felt252;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -24,14 +23,14 @@ fn delegate_call() {
     //* --------------------------------------------
 
     let mut contract_class_cache = HashMap::new();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     // Add get_number.cairo contract to the state
 
     let path = PathBuf::from("starknet_programs/get_number.json");
     let contract_class = ContractClass::from_path(path).unwrap();
 
-    let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
+    let address = Address(Felt252::ONE); // const CONTRACT_ADDRESS = 1;
     let class_hash = [2; 32];
 
     contract_class_cache.insert(
@@ -110,7 +109,7 @@ fn delegate_call() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),

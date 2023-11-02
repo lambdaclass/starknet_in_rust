@@ -1,7 +1,8 @@
 use crate::core::errors::contract_address_errors::ContractAddressError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
+use cairo_vm::utils::biguint_to_felt;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"COMPILED_CLASS_V1";
@@ -19,7 +20,7 @@ fn get_contract_entry_points_hashed(
     for entry_point in contract_entry_points {
         entry_points_flatted.push(
             // fix this conversion later
-            FieldElement::from_bytes_be(&Felt252::from(entry_point.selector).to_be_bytes())
+            FieldElement::from_bytes_be(&biguint_to_felt(&entry_point.selector).unwrap().to_bytes_be())
                 .map_err(|_err| {
                     ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
                 })?,
@@ -44,7 +45,7 @@ pub fn compute_casm_class_hash(
     contract_class: &CasmContractClass,
 ) -> Result<Felt252, ContractAddressError> {
     let api_version =
-        FieldElement::from_bytes_be(&Felt252::from_bytes_be(CONTRACT_CLASS_VERSION).to_be_bytes())
+        FieldElement::from_bytes_be(&Felt252::from_bytes_be(CONTRACT_CLASS_VERSION).unwrap().to_bytes_be())
             .map_err(|_err| {
                 ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
             })?;
@@ -59,7 +60,7 @@ pub fn compute_casm_class_hash(
     let mut casm_program_vector = Vec::with_capacity(contract_class.bytecode.len());
     for number in &contract_class.bytecode {
         casm_program_vector.push(
-            FieldElement::from_bytes_be(&Felt252::from(number.value.clone()).to_be_bytes())
+            FieldElement::from_bytes_be(&biguint_to_felt(&number.value).unwrap().to_bytes_be())
                 .map_err(|_err| {
                     ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
                 })?,
@@ -77,9 +78,12 @@ pub fn compute_casm_class_hash(
         casm_program_ptr,
     ];
 
-    Ok(Felt252::from_bytes_be(
+    Felt252::from_bytes_be(
         &poseidon_hash_many(&flatted_contract_class).to_bytes_be(),
-    ))
+    )
+        .map_err(|_err| {
+            ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
+        })
 }
 
 /// Helper function to fetch entry points based on their type.
@@ -102,7 +106,7 @@ mod tests {
     use std::{fs::File, io::BufReader};
 
     use super::*;
-    use cairo_vm::felt::felt_str;
+    use crate::utils::felt_str;
     use coverage_helper::test;
 
     #[test]
@@ -113,18 +117,16 @@ mod tests {
         #[cfg(not(feature = "cairo_1_tests"))]
         {
             file = File::open("starknet_programs/raw_contract_classes/321aadcf42b0a4ad905616598d16c42fa9b87c812dc398e49b57bf77930629f.casm").unwrap();
-            expected_result = felt_str!(
+            expected_result = Felt252::from_hex(
                 "321aadcf42b0a4ad905616598d16c42fa9b87c812dc398e49b57bf77930629f",
-                16
-            );
+            ).unwrap();
         }
         #[cfg(feature = "cairo_1_tests")]
         {
             file = File::open("starknet_programs/cairo1/contract_a.casm").unwrap();
-            expected_result = felt_str!(
+            expected_result = Felt252::from_hex(
                 "3a4f00bf75ba3b9230a94f104c7a4605a1901c4bd475beb59eeeeb7aceb9795",
-                16
-            );
+            ).unwrap();
         }
         let reader = BufReader::new(file);
 

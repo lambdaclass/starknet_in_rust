@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt;
-use felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_in_rust::{
@@ -17,7 +16,7 @@ use starknet_in_rust::{
     state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
-    utils::Address,
+    utils::{felt_str, Address},
 };
 use std::{collections::HashMap, hint::black_box, sync::Arc};
 
@@ -28,13 +27,13 @@ lazy_static! {
     ).unwrap();
     static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
     static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
-    static ref SALT: Felt252 = felt_str!(
+    static ref SALT: Felt252 = felt_str(
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
     );
     static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &[], Address(0.into())).unwrap());
     static ref SIGNATURE: Vec<Felt252> = vec![
-        felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
-        felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
+        felt_str("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
+        felt_str("707039245213420890976709143988743108543645298941971188668773816813012281203"),
     ];
 }
 
@@ -147,7 +146,7 @@ fn deploy() {
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
-        let salt = felt_str!(
+        let salt = felt_str(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
         let class = CONTRACT_CLASS.clone();
@@ -184,7 +183,7 @@ fn invoke() {
     let block_context = &Default::default();
 
     let salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+        felt_str("2669425616857739096022668060305620640217901643963991674344872184515580705509");
     let class = CONTRACT_CLASS.clone();
     let deploy = Deploy::new(
         salt,

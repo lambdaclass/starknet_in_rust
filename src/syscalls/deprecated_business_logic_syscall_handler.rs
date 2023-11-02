@@ -37,7 +37,7 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::cached_state::CachedState,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
@@ -647,7 +647,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         let retdata_maybe_reloc = retdata
             .clone()
             .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
+            .map(|item| MaybeRelocatable::from(Felt252::from(item)))
             .collect::<Vec<MaybeRelocatable>>();
 
         let response = DeprecatedCallContractResponse::new(
@@ -931,7 +931,7 @@ mod tests {
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{felt_to_hash, test_utils::*, Address},
     };
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
     use cairo_vm::hint_processor::hint_processor_definition::HintProcessorLogic;
     use cairo_vm::{
         hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -89,7 +89,7 @@ fn account_panic() {
 
     let invoke = InvokeFunction::new(
         account_address,
-        Felt252::new(selector),
+        Felt252::from(selector),
         0,
         TRANSACTION_VERSION.clone(),
         calldata,

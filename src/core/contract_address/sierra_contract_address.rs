@@ -3,7 +3,7 @@ use cairo_lang_starknet::{
     contract::starknet_keccak,
     contract_class::{ContractClass as SierraContractClass, ContractEntryPoint},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use serde::Serialize;
 use serde_json::ser::Formatter;
 use starknet_crypto::{poseidon_hash_many, FieldElement, PoseidonHasher};
@@ -100,7 +100,7 @@ pub fn compute_sierra_class_hash(
 
     hasher.update(sierra_program_ptr);
     let hash = hasher.finalize();
-    Ok(Felt252::from_bytes_be(&hash.to_bytes_be()))
+    Ok(Felt252::from_bytes_be(&hash.to_bytes_be()).unwrap())
 }
 
 /// Returns the contract entry points.
@@ -130,8 +130,8 @@ fn get_contract_entry_points(
 #[cfg(test)]
 mod tests {
     use crate::core::contract_address::compute_sierra_class_hash;
+    use crate::utils::felt_str;
     use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-    use cairo_vm::felt::felt_str;
     use std::{fs::File, io::BufReader};
 
     /// Test the correctness of the compute_sierra_class_hash function for a specific testnet contract.
@@ -144,7 +144,7 @@ mod tests {
         let sierra_contract_class: SierraContractClass = serde_json::from_reader(reader).unwrap();
 
         // this is the class_hash from: https://alpha4.starknet.io/feeder_gateway/get_transaction?transactionHash=0x01b852f1fe2b13db21a44f8884bc4b7760dc277bb3820b970dba929860275617
-        let expected_result = felt_str!(
+        let expected_result = felt_str(
             "487202222862199115032202787294865701687663153957776561394399544814644144883"
         );
 

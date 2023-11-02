@@ -1,8 +1,7 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-use num_traits::Zero;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -50,9 +49,9 @@ fn hello_starknet_increase_balance() {
 
     let address = Address(1111.into());
     let class_hash = [1; 32];
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
-    let storage = Felt252::zero();
+    let storage = Felt252::ZERO;
 
     contract_class_cache.insert(
         class_hash,
@@ -100,7 +99,7 @@ fn hello_starknet_increase_balance() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -112,7 +111,7 @@ fn hello_starknet_increase_balance() {
 
     let mut expected_accessed_storage_keys = HashSet::new();
     expected_accessed_storage_keys.insert(expected_key);
-    let expected_storage_read_values = vec![Felt252::zero(), Felt252::zero()];
+    let expected_storage_read_values = vec![Felt252::ZERO, Felt252::ZERO];
 
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),

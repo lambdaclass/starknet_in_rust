@@ -3,7 +3,7 @@
 use crate::CallType::Call;
 use cairo_lang_starknet::casm_contract_class::CasmContractEntryPoints;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
@@ -116,7 +116,7 @@ fn integration_test_erc20() {
     assert_eq!(vm_result.contract_address, caller_address);
     assert_eq!(
         vm_result.entry_point_selector,
-        Some(Felt252::new(casm_constructor_selector))
+        Some(Felt252::from(casm_constructor_selector))
     );
     assert_eq!(
         vm_result.entry_point_type,
@@ -132,7 +132,7 @@ fn integration_test_erc20() {
     assert_eq!(native_result.contract_address, caller_address);
     assert_eq!(
         native_result.entry_point_selector,
-        Some(Felt252::new(native_constructor_selector))
+        Some(Felt252::from(native_constructor_selector))
     );
     assert_eq!(
         native_result.entry_point_type,
@@ -475,7 +475,7 @@ fn call_contract_test() {
         &caller_class_hash,
     );
 
-    assert_eq!(result.retdata, [Felt252::new(44)]);
+    assert_eq!(result.retdata, [Felt252::from(44)]);
 }
 
 #[test]
@@ -561,7 +561,7 @@ fn call_echo_contract_test() {
         &caller_class_hash,
     );
 
-    assert_eq!(result.retdata, [Felt252::new(99999999)]);
+    assert_eq!(result.retdata, [Felt252::from(99999999)]);
 }
 
 #[test]
@@ -701,7 +701,7 @@ fn execute(
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
         calldata.to_vec(),
-        Felt252::new(selector),
+        Felt252::from(selector),
         (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),

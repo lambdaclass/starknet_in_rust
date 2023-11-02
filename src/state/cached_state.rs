@@ -12,7 +12,7 @@ use crate::{
     },
 };
 use cairo_lang_utils::bigint::BigUintAsHex;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::{
@@ -262,8 +262,8 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
-        let class_hash = class_hash.to_be_bytes();
-        let compiled_class_hash = compiled_class_hash.to_be_bytes();
+        let class_hash = class_hash.to_bytes_be();
+        let compiled_class_hash = compiled_class_hash.to_bytes_be();
 
         self.cache
             .class_hash_to_compiled_class_hash
@@ -395,7 +395,7 @@ impl<T: StateReader> State for CachedState<T> {
             None => {
                 self.add_miss();
                 let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
-                let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
+                let address = Address(Felt252::from_bytes_be(&compiled_class_hash).unwrap());
                 self.cache
                     .class_hash_initial_values
                     .insert(address, compiled_class_hash);
@@ -464,7 +464,7 @@ impl<T: StateReader> State for CachedState<T> {
         compiled_class_hash: &Felt252,
         _sierra_program: Vec<BigUintAsHex>,
     ) -> Result<(), StateError> {
-        let _compiled_class_hash = compiled_class_hash.to_be_bytes();
+        let _compiled_class_hash = compiled_class_hash.to_bytes_be();
 
         // TODO implement
         // self.sierra_programs
@@ -536,8 +536,6 @@ mod tests {
         services::api::contract_classes::deprecated_contract_class::ContractClass,
         state::in_memory_state_reader::InMemoryStateReader,
     };
-
-    use num_traits::One;
 
     /// Test checks if class hashes and nonces are correctly fetched from the state reader.
     /// It also tests the increment_nonce method.

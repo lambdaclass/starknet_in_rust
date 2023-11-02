@@ -1,5 +1,5 @@
 use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     hint_processor::builtin_hint_processor::{
         builtin_hint_processor_definition::HintProcessorData,
@@ -7,8 +7,7 @@ use cairo_vm::{
     },
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use num_traits::{One, Zero};
-use std::{collections::HashMap, ops::Shl};
+use std::collections::HashMap;
 
 pub fn addr_bound_prime(
     vm: &mut VirtualMachine,
@@ -21,8 +20,8 @@ pub fn addr_bound_prime(
             "starkware.starknet.common.storage.ADDR_BOUND".into(),
         ))?;
 
-    let lower_bound = Felt252::from(1).shl(250u32);
-    let upper_bound = Felt252::from(1).shl(251u32);
+    let lower_bound = Felt252::TWO.pow(250u32);
+    let upper_bound = Felt252::TWO.pow(251u32);
     if !(&lower_bound < addr_bound && addr_bound <= &upper_bound) {
         return Err(HintError::AssertionFailed(
             "normalize_address() cannot be used with the current constants."
@@ -34,9 +33,9 @@ pub fn addr_bound_prime(
 
     let addr = get_integer_from_var_name("addr", vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
     let is_small = if addr.as_ref() < addr_bound {
-        Felt252::one()
+        Felt252::ONE
     } else {
-        Felt252::zero()
+        Felt252::ZERO
     };
 
     insert_value_from_var_name(
@@ -56,9 +55,9 @@ pub fn addr_is_250(
 ) -> Result<(), SyscallHandlerError> {
     let addr = get_integer_from_var_name("addr", vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
     let is_250 = if addr.as_ref().bits() <= 250 {
-        Felt252::one()
+        Felt252::ONE
     } else {
-        Felt252::zero()
+        Felt252::ZERO
     };
 
     insert_value_from_var_name(

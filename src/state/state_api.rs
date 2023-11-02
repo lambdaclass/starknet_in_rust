@@ -6,7 +6,7 @@ use crate::{
     utils::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_lang_utils::bigint::BigUintAsHex;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 
 pub trait StateReader {
     /// Returns the contract class of the given class hash or compiled class hash.

@@ -3,7 +3,7 @@ use crate::{
     services::api::contract_classes::compiled_class::CompiledClass,
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::{HashMap, HashSet};
 

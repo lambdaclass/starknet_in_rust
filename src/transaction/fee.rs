@@ -15,7 +15,7 @@ use crate::{
     state::state_api::StateReader,
     state::ExecutionResourcesManager,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::HashMap;
 

@@ -1,7 +1,7 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::core::errors::state_errors::StateError;
-use cairo_vm::felt::Felt252;
 use cairo_vm::{
+    Felt252,
     types::errors::math_errors::MathError,
     vm::errors::{
         hint_errors::HintError, memory_errors::MemoryError, vm_errors::VirtualMachineError,

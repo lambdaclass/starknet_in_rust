@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use starknet_in_rust::{
         execution::{
             execution_entry_point::ExecutionEntryPoint,

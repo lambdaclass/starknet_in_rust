@@ -1,5 +1,4 @@
-use cairo_vm::felt::Felt252;
-use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
+use cairo_vm::{Felt252, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::ToPrimitive;
 
 use crate::{
@@ -328,7 +327,7 @@ impl FromPtr for StorageReadRequest {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let reserved = get_big_int(vm, syscall_ptr)?;
-        let key = get_big_int(vm, &syscall_ptr + 1)?.to_be_bytes();
+        let key = get_big_int(vm, &syscall_ptr + 1)?.to_bytes_be();
         Ok(StorageReadRequest { key, reserved }.into())
     }
 }

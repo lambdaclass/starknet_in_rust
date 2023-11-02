@@ -1,7 +1,7 @@
 use cairo_native::starknet::{
     BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 
 use crate::{
@@ -44,7 +44,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         &mut self,
         block_number: u64,
         _gas: &mut u128,
-    ) -> SyscallResult<cairo_vm::felt::Felt252> {
+    ) -> SyscallResult<cairo_vm::Felt252> {
         println!("Called `get_block_hash({block_number})` from MLIR.");
         Ok(Felt252::from_bytes_be(b"get_block_hash ok"))
     }
@@ -81,12 +81,12 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn deploy(
         &mut self,
-        class_hash: cairo_vm::felt::Felt252,
-        contract_address_salt: cairo_vm::felt::Felt252,
-        calldata: &[cairo_vm::felt::Felt252],
+        class_hash: cairo_vm::Felt252,
+        contract_address_salt: cairo_vm::Felt252,
+        calldata: &[cairo_vm::Felt252],
         deploy_from_zero: bool,
         _gas: &mut u128,
-    ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
+    ) -> SyscallResult<(cairo_vm::Felt252, Vec<cairo_vm::Felt252>)> {
         println!("Called `deploy({class_hash}, {contract_address_salt}, {calldata:?}, {deploy_from_zero})` from MLIR.");
         Ok((
             class_hash + contract_address_salt,
@@ -96,7 +96,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn replace_class(
         &mut self,
-        class_hash: cairo_vm::felt::Felt252,
+        class_hash: cairo_vm::Felt252,
         _gas: &mut u128,
     ) -> SyscallResult<()> {
         println!("Called `replace_class({class_hash})` from MLIR.");
@@ -105,11 +105,11 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn library_call(
         &mut self,
-        class_hash: cairo_vm::felt::Felt252,
-        function_selector: cairo_vm::felt::Felt252,
-        calldata: &[cairo_vm::felt::Felt252],
+        class_hash: cairo_vm::Felt252,
+        function_selector: cairo_vm::Felt252,
+        calldata: &[cairo_vm::Felt252],
         _gas: &mut u128,
-    ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
+    ) -> SyscallResult<Vec<cairo_vm::Felt252>> {
         println!(
             "Called `library_call({class_hash}, {function_selector}, {calldata:?})` from MLIR."
         );
@@ -118,11 +118,11 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn call_contract(
         &mut self,
-        address: cairo_vm::felt::Felt252,
-        entrypoint_selector: cairo_vm::felt::Felt252,
-        calldata: &[cairo_vm::felt::Felt252],
+        address: cairo_vm::Felt252,
+        entrypoint_selector: cairo_vm::Felt252,
+        calldata: &[cairo_vm::Felt252],
         _gas: &mut u128,
-    ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
+    ) -> SyscallResult<Vec<cairo_vm::Felt252>> {
         println!(
             "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from MLIR."
         );
@@ -169,9 +169,9 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     fn storage_read(
         &mut self,
         address_domain: u32,
-        address: cairo_vm::felt::Felt252,
+        address: cairo_vm::Felt252,
         _gas: &mut u128,
-    ) -> SyscallResult<cairo_vm::felt::Felt252> {
+    ) -> SyscallResult<cairo_vm::Felt252> {
         let value = match self.starknet_storage_state.read(&address.to_be_bytes()) {
             Ok(value) => Ok(value),
             Err(_e @ StateError::Io(_)) => todo!(),
@@ -184,8 +184,8 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     fn storage_write(
         &mut self,
         address_domain: u32,
-        address: cairo_vm::felt::Felt252,
-        value: cairo_vm::felt::Felt252,
+        address: cairo_vm::Felt252,
+        value: cairo_vm::Felt252,
         _gas: &mut u128,
     ) -> SyscallResult<()> {
         println!("Called `storage_write({address_domain}, {address}, {value})` from MLIR.");
@@ -196,8 +196,8 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn emit_event(
         &mut self,
-        keys: &[cairo_vm::felt::Felt252],
-        data: &[cairo_vm::felt::Felt252],
+        keys: &[cairo_vm::Felt252],
+        data: &[cairo_vm::Felt252],
         _gas: &mut u128,
     ) -> SyscallResult<()> {
         let order = self.n_emitted_events;
@@ -210,8 +210,8 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
 
     fn send_message_to_l1(
         &mut self,
-        to_address: cairo_vm::felt::Felt252,
-        payload: &[cairo_vm::felt::Felt252],
+        to_address: cairo_vm::Felt252,
+        payload: &[cairo_vm::Felt252],
         _gas: &mut u128,
     ) -> SyscallResult<()> {
         println!("Called `send_message_to_l1({to_address}, {payload:?})` from MLIR.");
@@ -328,7 +328,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         todo!()
     }
 
-    fn set_account_contract_address(&mut self, contract_address: cairo_vm::felt::Felt252) {
+    fn set_account_contract_address(&mut self, contract_address: cairo_vm::Felt252) {
         self.tx_execution_context.account_contract_address = Address(contract_address);
     }
 
@@ -340,15 +340,15 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         self.block_context.block_info.block_timestamp = block_timestamp;
     }
 
-    fn set_caller_address(&mut self, address: cairo_vm::felt::Felt252) {
+    fn set_caller_address(&mut self, address: cairo_vm::Felt252) {
         self.caller_address = Address(address);
     }
 
-    fn set_chain_id(&mut self, chain_id: cairo_vm::felt::Felt252) {
+    fn set_chain_id(&mut self, chain_id: cairo_vm::Felt252) {
         self.block_context.starknet_os_config.chain_id = chain_id;
     }
 
-    fn set_contract_address(&mut self, address: cairo_vm::felt::Felt252) {
+    fn set_contract_address(&mut self, address: cairo_vm::Felt252) {
         self.contract_address = Address(address);
     }
 
@@ -356,23 +356,23 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         self.tx_execution_context.max_fee = max_fee;
     }
 
-    fn set_nonce(&mut self, nonce: cairo_vm::felt::Felt252) {
+    fn set_nonce(&mut self, nonce: cairo_vm::Felt252) {
         self.tx_execution_context.nonce = nonce;
     }
 
-    fn set_sequencer_address(&mut self, _address: cairo_vm::felt::Felt252) {
+    fn set_sequencer_address(&mut self, _address: cairo_vm::Felt252) {
         todo!()
     }
 
-    fn set_signature(&mut self, signature: &[cairo_vm::felt::Felt252]) {
+    fn set_signature(&mut self, signature: &[cairo_vm::Felt252]) {
         self.tx_execution_context.signature = signature.to_vec();
     }
 
-    fn set_transaction_hash(&mut self, transaction_hash: cairo_vm::felt::Felt252) {
+    fn set_transaction_hash(&mut self, transaction_hash: cairo_vm::Felt252) {
         self.tx_execution_context.transaction_hash = transaction_hash;
     }
 
-    fn set_version(&mut self, version: cairo_vm::felt::Felt252) {
+    fn set_version(&mut self, version: cairo_vm::Felt252) {
         self.tx_execution_context.version = version;
     }
 }

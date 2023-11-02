@@ -44,8 +44,8 @@ use crate::{
     },
     utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
 use cairo_vm::{
+    Felt252,
     types::{
         errors::math_errors::MathError,
         relocatable::{MaybeRelocatable, Relocatable},
@@ -80,9 +80,9 @@ lazy_static! {
             map.insert(75202468540281_u128.into(), "deploy");
             map.insert(1280709301550335749748_u128.into(), "emit_event");
             map.insert(25828017502874050592466629733_u128.into(), "storage_write");
-            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_timestamp".as_bytes())), "get_block_timestamp");
-            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes())), "get_block_number");
-            map.insert(Felt252::from_bytes_be("Keccak".as_bytes()), "keccak");
+            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_timestamp".as_bytes())).unwrap(), "get_block_timestamp");
+            map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes())).unwrap(), "get_block_number");
+            map.insert(Felt252::from_bytes_be("Keccak".as_bytes()).unwrap(), "keccak");
 
             map
     };
@@ -268,7 +268,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             .retdata
             .clone()
             .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
+            .map(|item| MaybeRelocatable::from(Felt252::from(item)))
             .collect::<Vec<MaybeRelocatable>>();
 
         let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
@@ -334,7 +334,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             return Ok(CallResult {
                 gas_consumed: 0,
                 is_success: false,
-                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").unwrap().into()],
             });
         };
 
@@ -389,7 +389,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
-        self.starknet_storage_state.write(&key.to_be_bytes(), value)
+        self.starknet_storage_state.write(&key.to_bytes_be(), value)
     }
 
     pub fn syscall(
@@ -422,7 +422,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             ))?;
 
         let response = if initial_gas < required_gas {
-            let out_of_gas_felt = Felt252::from_bytes_be("Out of gas".as_bytes());
+            let out_of_gas_felt = Felt252::from_bytes_be("Out of gas".as_bytes()).unwrap();
             let retdata_start =
                 self.allocate_segment(vm, vec![MaybeRelocatable::from(out_of_gas_felt)])?;
             let response_body = ResponseBody::Failure(FailureReason {
@@ -484,7 +484,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         let current_block_number = self.block_context.block_info.block_number;
 
         if block_number > current_block_number - 10 {
-            let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
+            let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes()).unwrap();
             let retdata_start =
                 self.allocate_segment(vm, vec![MaybeRelocatable::from(out_of_range_felt)])?;
             let failure = FailureReason {
@@ -505,7 +505,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         } else {
             self.starknet_storage_state.state.get_storage_at(&(
                 BLOCK_HASH_CONTRACT_ADDRESS.clone(),
-                Felt252::new(block_number).to_be_bytes(),
+                Felt252::from(block_number).to_bytes_be(),
             ))?
         };
 
@@ -607,7 +607,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         if request.reserved != 0.into() {
             let retdata_start = self.allocate_segment(
                 vm,
-                vec![Felt252::from_bytes_be(b"Unsupported address domain").into()],
+                vec![Felt252::from_bytes_be(b"Unsupported address domain").unwrap().into()],
             )?;
             let retdata_end = retdata_start.add(1)?;
 
@@ -727,7 +727,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         if request.reserved != Felt252::zero() {
             let retdata_start = self.allocate_segment(
                 vm,
-                vec![Felt252::from_bytes_be(b"Unsupported address domain").into()],
+                vec![Felt252::from_bytes_be(b"Unsupported address domain").unwrap().into()],
             )?;
             let retdata_end = retdata_start.add(1)?;
 
@@ -792,7 +792,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 (CallResult {
                     gas_consumed: 0,
                     is_success: false,
-                    retdata: vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()],
+                    retdata: vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").unwrap().into()],
                 }),
             ));
         }
@@ -931,7 +931,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            Some(request.class_hash.to_be_bytes()),
+            Some(request.class_hash.to_bytes_be()),
             remaining_gas,
         );
 
@@ -960,7 +960,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         self.starknet_storage_state.state.set_class_hash_at(
             self.contract_address.clone(),
-            request.class_hash.to_be_bytes(),
+            request.class_hash.to_bytes_be(),
         )?;
         Ok(SyscallResponse {
             gas: remaining_gas,
@@ -1005,8 +1005,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             }
             keccak::f1600(&mut state)
         }
-        let hash_low = (Felt252::from(state[1]) << 64u32) + Felt252::from(state[0]);
-        let hash_high = (Felt252::from(state[3]) << 64u32) + Felt252::from(state[2]);
+        let shift = Felt252::TWO.pow(64u32);
+        let hash_low = (Felt252::from(state[1]) * &shift) + Felt252::from(state[0]);
+        let hash_high = (Felt252::from(state[3]) * &shift) + Felt252::from(state[2]);
         Ok(SyscallResponse {
             gas,
             body: Some(ResponseBody::Keccak(KeccakResponse {
@@ -1022,7 +1023,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         error_msg: &[u8],
     ) -> Result<ResponseBody, SyscallHandlerError> {
-        let felt_encoded_msg = Felt252::from_bytes_be(error_msg);
+        let felt_encoded_msg = Felt252::from_bytes_be(error_msg).unwrap();
         let retdata_start =
             self.allocate_segment(vm, vec![MaybeRelocatable::from(felt_encoded_msg)])?;
         Ok(ResponseBody::Failure(FailureReason {

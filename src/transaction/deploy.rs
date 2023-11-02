@@ -28,7 +28,7 @@ use crate::{
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 
 use super::Transaction;
@@ -66,7 +66,7 @@ impl Deploy {
             &contract_address_salt,
             &class_hash,
             &constructor_calldata,
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
         )?);
 
         let hash_value = calculate_deploy_transaction_hash(

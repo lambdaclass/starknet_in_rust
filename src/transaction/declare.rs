@@ -24,7 +24,7 @@ use crate::{
         ClassHash,
     },
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 
 use super::fee::charge_fee;
@@ -146,7 +146,7 @@ impl Declare {
     }
 
     pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(&self.class_hash);
+        let bytes = Felt252::from_bytes_be(&self.class_hash).unwrap();
         Vec::from([bytes])
     }
 

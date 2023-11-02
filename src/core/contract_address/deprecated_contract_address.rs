@@ -12,7 +12,7 @@ use crate::{
     hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use serde::Serialize;
 use sha3::Digest;
@@ -285,7 +285,7 @@ pub(crate) fn truncated_keccak(mut plain: [u8; 32]) -> Felt252 {
     // python code masks with (2**250 - 1) which starts 0x03 and is followed by 31 0xff in be
     // truncation is needed not to overflow the field element.
     plain[0] &= MASK_3;
-    Felt252::from_bytes_be(&plain)
+    Felt252::from_bytes_be(&plain).unwrap()
 }
 
 /// Returns the hashed entry points of a contract class.
@@ -331,7 +331,7 @@ pub fn compute_deprecated_class_hash(
                 .strip_suffix("_builtin")
                 .ok_or(ContractAddressError::BuiltinSuffix)?
                 .as_bytes(),
-        ));
+        ).unwrap());
     }
 
     let builtin_list = compute_hash_on_elements(&builtin_list_vec)?;
@@ -366,7 +366,7 @@ pub fn compute_deprecated_class_hash(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::felt::{felt_str, Felt252};
+    use cairo_vm::Felt252;
     use coverage_helper::test;
     use num_traits::Num;
 
@@ -437,9 +437,8 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            Felt252::from_str_radix(
+            Felt252::from_hex(
                 "02c3348ad109f7f3967df6494b3c48741d61675d9a7915b265aa7101a631dc33",
-                16
             )
             .unwrap()
         );
@@ -454,9 +453,9 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            felt_str!(
+            Felt252::from_dex(
                 "226341635385251092193534262877925620859725853394183386505497817801290939008"
-            )
+            ).unwrap()
         );
     }
 
@@ -469,10 +468,9 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            felt_str!(
+            Felt252::from_hex(
                 "4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f",
-                16
-            )
+            ).unwrap()
         );
     }
 

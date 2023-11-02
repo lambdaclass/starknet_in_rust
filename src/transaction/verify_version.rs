@@ -1,4 +1,4 @@
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 
 use crate::definitions::constants::{QUERY_VERSION_BASE, SUPPORTED_VERSIONS};
 
@@ -31,7 +31,7 @@ pub fn verify_version(
 
 #[cfg(test)]
 mod test {
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
 
     // TODO: fixture tests would be better here
     use crate::{definitions::constants::QUERY_VERSION_BASE, transaction::error::TransactionError};

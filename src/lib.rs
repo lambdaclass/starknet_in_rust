@@ -16,7 +16,7 @@ use crate::{
     transaction::{error::TransactionError, fee::calculate_tx_fee, L1Handler, Transaction},
     utils::Address,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use std::{collections::HashMap, sync::Arc};
 
 #[cfg(test)]
@@ -30,7 +30,6 @@ pub use crate::services::api::contract_classes::deprecated_contract_class::{
 pub use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-pub use cairo_vm::felt;
 
 pub mod core;
 pub mod definitions;
@@ -225,7 +224,7 @@ mod test {
             Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
         },
         utils::{
-            felt_to_hash,
+            felt_to_hash, felt_str,
             test_utils::{
                 create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
                 TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
@@ -237,9 +236,10 @@ mod test {
         casm_contract_class::CasmContractClass,
         contract_class::ContractClass as SierraContractClass,
     };
-    use cairo_vm::felt::{felt_str, Felt252};
+    use cairo_vm::Felt252;
+    use cairo_vm::utils::biguint_to_felt;
     use lazy_static::lazy_static;
-    use num_traits::{Num, One, Zero};
+    use num_traits::Zero;
     use pretty_assertions_sorted::assert_eq;
     use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
@@ -250,14 +250,14 @@ mod test {
         )
         .unwrap();
         static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
-        static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
-        static ref SALT: Felt252 = felt_str!(
+        static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.to_bytes_be();
+        static ref SALT: Felt252 = felt_str(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
         static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &[], Address(0.into())).unwrap());
         static ref SIGNATURE: Vec<Felt252> = vec![
-            felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
-            felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
+            felt_str("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
+            felt_str("707039245213420890976709143988743108543645298941971188668773816813012281203"),
         ];
         pub static ref TRANSACTION_VERSION: Felt252 = 1.into();
     }
@@ -299,7 +299,7 @@ mod test {
 
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let entrypoints = contract_class.clone().entry_points_by_type;
-        let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+        let entrypoint_selector = biguint_to_felt(&entrypoints.external.get(0).unwrap().selector);
 
         let mut contract_class_cache = HashMap::new();
 
@@ -321,7 +321,7 @@ mod test {
 
         let retdata = call_contract(
             address.0,
-            entrypoint_selector.into(),
+            entrypoint_selector,
             calldata,
             &mut state,
             BlockContext::default(),
@@ -336,13 +336,10 @@ mod test {
     fn test_estimate_message_fee() {
         let l1_handler = L1Handler::new(
             Address(0.into()),
-            Felt252::from_str_radix(
-                "c73f681176fc7b3f9693986fd7b14581e8d540519e27400e88b8713932be01",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("c73f681176fc7b3f9693986fd7b14581e8d540519e27400e88b8713932be01")
+                .unwrap(),
             vec![
-                Felt252::from_str_radix("8359E4B0152ed5A731162D3c7B0D8D56edB165A0", 16).unwrap(),
+                Felt252::from_hex("8359E4B0152ed5A731162D3c7B0D8D56edB165A0").unwrap(),
                 1.into(),
                 10.into(),
             ],
@@ -392,7 +389,7 @@ mod test {
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let entrypoints = contract_class.clone().entry_points_by_type;
-        let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+        let entrypoint_selector = biguint_to_felt(&entrypoints.external.get(0).unwrap().selector);
 
         let mut contract_class_cache = HashMap::new();
 
@@ -415,7 +412,7 @@ mod test {
 
         let invoke = InvokeFunction::new(
             address,
-            entrypoint_selector.into(),
+            entrypoint_selector,
             1000000,
             Felt252::zero(),
             calldata,
@@ -464,7 +461,7 @@ mod test {
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
-        let nonce = Felt252::one();
+        let nonce = Felt252::ONE;
 
         let mut state_reader = InMemoryStateReader::default();
 
@@ -483,7 +480,7 @@ mod test {
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
 
-        let hash = felt_str!(
+        let hash = felt_str(
             "134328839377938040543570691566621575472567895629741043448357033688476792132"
         );
         let fib_address = felt_to_hash(&hash);
@@ -510,7 +507,7 @@ mod test {
                 address.clone(),
                 entrypoint_selector.clone(),
                 1000000,
-                Felt252::one(),
+                Felt252::ONE,
                 calldata.clone(),
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
@@ -524,7 +521,7 @@ mod test {
                 address.clone(),
                 entrypoint_selector.clone(),
                 1000000,
-                Felt252::one(),
+                Felt252::ONE,
                 calldata.clone(),
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
@@ -538,7 +535,7 @@ mod test {
                 address,
                 entrypoint_selector,
                 1000000,
-                Felt252::one(),
+                Felt252::ONE,
                 calldata,
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
@@ -593,7 +590,7 @@ mod test {
 
         let address = Address(1111.into());
         let class_hash: ClassHash = [1; 32];
-        let nonce = Felt252::one();
+        let nonce = Felt252::ONE;
 
         let mut state_reader = InMemoryStateReader::default();
 
@@ -612,7 +609,7 @@ mod test {
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
 
-        let hash = felt_str!(
+        let hash = felt_str(
             "134328839377938040543570691566621575472567895629741043448357033688476792132"
         );
         let fib_address = felt_to_hash(&hash);
@@ -639,7 +636,7 @@ mod test {
                 address,
                 entrypoint_selector,
                 1000000,
-                Felt252::one(),
+                Felt252::ONE,
                 calldata,
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
@@ -681,7 +678,7 @@ mod test {
             .unwrap();
 
         let block_context = &Default::default();
-        let salt = felt_str!(
+        let salt = felt_str(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
         // new consumes more execution time than raw struct instantiation
@@ -761,7 +758,7 @@ mod test {
 
         let block_context = Default::default();
 
-        let salt = felt_str!(
+        let salt = felt_str(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
         let class = CONTRACT_CLASS.clone();
@@ -903,14 +900,10 @@ mod test {
         let l1_handler_tx = Transaction::L1Handler(
             L1Handler::new(
                 Address(0.into()),
-                Felt252::from_str_radix(
-                    "c73f681176fc7b3f9693986fd7b14581e8d540519e27400e88b8713932be01",
-                    16,
-                )
+                Felt252::from_hex("c73f681176fc7b3f9693986fd7b14581e8d540519e27400e88b8713932be01")
                 .unwrap(),
                 vec![
-                    Felt252::from_str_radix("8359E4B0152ed5A731162D3c7B0D8D56edB165A0", 16)
-                        .unwrap(),
+                    Felt252::from_hex("8359E4B0152ed5A731162D3c7B0D8D56edB165A0").unwrap(),
                     1.into(),
                     10.into(),
                 ],
@@ -973,7 +966,7 @@ mod test {
 
         let block_context = &Default::default();
 
-        let salt = felt_str!(
+        let salt = felt_str(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
         let class = CONTRACT_CLASS.clone();
