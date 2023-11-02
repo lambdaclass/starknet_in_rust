@@ -23,11 +23,11 @@ use starknet_in_rust::{
     utils::{calculate_sn_keccak, felt_to_hash, Address},
     CasmContractClass, SierraContractClass,
 };
-use std::{collections::HashMap, fs::File, io::BufReader, path::Path, sync::Arc};
+use std::{collections::HashMap, fs::File, io::BufReader, path::Path, sync::Arc, str::FromStr};
 
 fn main() {
     // replace this with the path to your compiled contract
-    let contract_path = "../../starknet_programs/cairo2/fibonacci.sierra";
+    let contract_path = "starknet_programs/cairo2/fibonacci.sierra";
 
     // replace this with the name of your entrypoint
     let entry_point: &str = "fib";
@@ -73,9 +73,8 @@ fn test_contract(
     //* --------------------------------------------
     //*             Deploy deployer contract
     //* --------------------------------------------
-
     let deployer_contract =
-        ContractClass::from_path("../../starknet_programs/deployer.json").unwrap();
+        ContractClass::from_str(include_str!("../../starknet_programs/deployer.json")).unwrap();
     let deployer_contract_address = Address(Felt252::from(17));
     let deployer_contract_class_hash =
         felt_to_hash(&compute_deprecated_class_hash(&deployer_contract).unwrap());
@@ -96,7 +95,7 @@ fn test_contract(
     //*             Deploy Account contract
     //* --------------------------------------------
     let account_contract =
-        ContractClass::from_path("../../starknet_programs/Account.json").unwrap();
+        ContractClass::from_str(include_str!("../../starknet_programs/Account.json")).unwrap();
     let account_contract_class_hash = felt_to_hash(&Felt252::from(1));
     state
         .set_contract_class(
@@ -238,7 +237,7 @@ mod tests {
     #[test]
     fn test_example_contract() {
         let retdata = test_contract(
-            "../../starknet_programs/cairo2/example_contract.sierra",
+            "starknet_programs/cairo2/example_contract.sierra",
             "get_balance",
             [].to_vec(),
         );
@@ -248,7 +247,7 @@ mod tests {
     #[test]
     fn test_fibonacci() {
         let retdata = test_contract(
-            "../../starknet_programs/cairo2/fibonacci.sierra",
+            "starknet_programs/cairo2/fibonacci.sierra",
             "fib",
             [1.into(), 1.into(), 10.into()].to_vec(),
         );
@@ -258,7 +257,7 @@ mod tests {
     #[test]
     fn test_factorial() {
         let retdata = test_contract(
-            "../../starknet_programs/cairo2/factorial.sierra",
+            "starknet_programs/cairo2/factorial.sierra",
             "factorial",
             [10.into()].to_vec(),
         );
