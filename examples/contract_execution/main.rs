@@ -12,7 +12,7 @@
 use cairo_vm::felt::{felt_str, Felt252};
 use starknet_in_rust::{
     core::contract_address::{compute_casm_class_hash, compute_deprecated_class_hash},
-    definitions::block_context::{BlockContext, StarknetChainId},
+    definitions::block_context::BlockContext,
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
@@ -114,7 +114,7 @@ fn test_contract(
         vec![2.into()],
         signature.clone(),
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
-        StarknetChainId::TestNet2.to_felt(),
+        chain_id.clone(),
     )
     .unwrap();
 
@@ -151,12 +151,11 @@ fn test_contract(
         signature.clone(),
         0.into(), // nonce
     )
-    //.expect("couldn't create declare transaction");
-    .unwrap();
+    .expect("couldn't create declare transaction");
     declare_tx.skip_validate = true;
 
-    declare_tx.execute(&mut state, &block_context).unwrap();
-    //.expect("could not declare the contract class");
+    declare_tx.execute(&mut state, &block_context)
+    .expect("could not declare the contract class");
 
     //* ----------------------------------------------------------
     //*     Deploy new contract class instance through the deployer
