@@ -149,6 +149,7 @@ fn test_contract(
         1.into(),
         signature.clone(),
         0.into(), // nonce
+        // Value hardcoded to pass signature validation
         2718.into(),
     )
     .expect("couldn't create declare transaction");
@@ -211,6 +212,7 @@ fn test_contract(
         account_execute_calldata,
         signature,
         Some(1.into()),
+        // Value hardcoded to pass signature validation
         2718.into(),
     )
     .unwrap();
