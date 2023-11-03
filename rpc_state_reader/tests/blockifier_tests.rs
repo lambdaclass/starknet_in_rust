@@ -123,7 +123,7 @@ pub fn execute_tx(
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     // Instantiate the RPC StateReader and the CachedState
-    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()));
+    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
     let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
@@ -133,14 +133,14 @@ pub fn execute_tx(
         block_timestamp,
         sequencer_address,
         ..
-    } = rpc_reader.0.get_block_info();
+    } = rpc_reader.0.get_block_info().unwrap();
 
     // Get transaction before giving ownership of the reader
     let tx_hash = TransactionHash(stark_felt!(tx_hash));
     let sn_api_tx = rpc_reader.0.get_transaction(&tx_hash);
 
-    let trace = rpc_reader.0.get_transaction_trace(&tx_hash);
-    let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
+    let trace = rpc_reader.0.get_transaction_trace(&tx_hash).unwrap();
+    let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash).unwrap();
 
     // Create state from RPC reader
     let global_cache = GlobalContractCache::default();
@@ -180,7 +180,7 @@ pub fn execute_tx(
     };
 
     // Map starknet_api transaction to blockifier's
-    let blockifier_tx = match sn_api_tx {
+    let blockifier_tx = match sn_api_tx.unwrap() {
         SNTransaction::Invoke(tx) => {
             let invoke = InvokeTransaction { tx, tx_hash };
             AccountTransaction::Invoke(invoke)
@@ -201,8 +201,9 @@ pub fn execute_tx(
         }
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
-            let mut next_block_state_reader =
-                RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
+            let mut next_block_state_reader = RpcStateReader(
+                RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
+            );
             let contract_class = next_block_state_reader
                 .get_compiled_contract_class(&tx.class_hash())
                 .unwrap();
@@ -240,7 +241,7 @@ pub fn execute_tx(
 #[test]
 fn test_get_gas_price() {
     let block = BlockValue::Number(BlockNumber(169928));
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, block);
+    let rpc_state = RpcState::new_infura(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
     assert_eq!(price, 22804578690);
