@@ -1,5 +1,8 @@
-use cairo_native::starknet::{
-    BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256,
+use std::{cell::RefCell, rc::Rc};
+
+use cairo_native::{
+    cache::ProgramCache,
+    starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
@@ -33,7 +36,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct NativeSyscallHandler<'a, S>
+pub struct NativeSyscallHandler<'a, 'cache, S>
 where
     S: StateReader,
 {
@@ -47,9 +50,10 @@ where
     pub(crate) tx_execution_context: TransactionExecutionContext,
     pub(crate) block_context: BlockContext,
     pub(crate) internal_calls: Vec<CallInfo>,
+    pub(crate) program_cache: Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
 }
 
-impl<'a, S: StateReader> NativeSyscallHandler<'a, S> {
+impl<'a, 'cache, S: StateReader> NativeSyscallHandler<'a, 'cache, S> {
     /// Generic code that needs to be run on all syscalls.
     fn handle_syscall_request(&mut self, gas: &mut u128, syscall_name: &str) -> SyscallResult<()> {
         let required_gas = SYSCALL_GAS_COST
@@ -72,7 +76,7 @@ impl<'a, S: StateReader> NativeSyscallHandler<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> {
+impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, 'cache, S> {
     fn get_block_hash(
         &mut self,
         block_number: u64,
@@ -293,7 +297,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
         );
 
         let ExecutionResult { call_info, .. } = exec_entry_point
-            .execute(
+            .execute_with_native_cache(
                 self.starknet_storage_state.state,
                 // TODO: This fields dont make much sense in the Cairo Native context,
                 // they are only dummy values for the `execute` method.
@@ -302,6 +306,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
+                self.program_cache.clone(),
             )
             .unwrap();
 
@@ -589,7 +594,7 @@ impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> 
     }
 }
 
-impl<'a, S> NativeSyscallHandler<'a, S>
+impl<'a, 'cache, S> NativeSyscallHandler<'a, 'cache, S>
 where
     S: StateReader,
 {
