@@ -12,7 +12,7 @@ use crate::{
         cached_state::CachedState,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
-        ExecutionResourcesManager, StateDiff,
+        ExecutionResourcesManager,
     },
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
@@ -23,12 +23,15 @@ use crate::{
     transaction::error::TransactionError,
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
-        validate_contract_deployed, Address, ClassHash,
+        validate_contract_deployed, Address,
     },
 };
+#[cfg(feature = "cairo-native")]
+use crate::{state::StateDiff, utils::ClassHash};
 use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
+#[cfg(feature = "cairo-native")]
 use cairo_native::cache::ProgramCache;
 use cairo_vm::{
     felt::Felt252,
@@ -41,9 +44,9 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::Arc;
+#[cfg(feature = "cairo-native")]
+use std::{cell::RefCell, rc::Rc};
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -169,6 +172,11 @@ impl ExecutionEntryPoint {
                     }
                 }
             }
+            #[cfg(not(feature = "cairo-native"))]
+            CompiledClass::Sierra(_) => {
+                unimplemented!("Use the feature 'cairo-native' to enable native execution")
+            }
+            #[cfg(feature = "cairo-native")]
             CompiledClass::Sierra(sierra_program_and_entrypoints) => {
                 let mut transactional_state = state.create_transactional();
 
@@ -216,6 +224,7 @@ impl ExecutionEntryPoint {
         }
     }
 
+    #[cfg(feature = "cairo-native")]
     pub fn execute_with_native_cache<T>(
         &self,
         state: &mut CachedState<T>,
@@ -737,6 +746,7 @@ impl ExecutionEntryPoint {
 
     #[cfg(not(feature = "cairo-native"))]
     #[inline(always)]
+    #[allow(dead_code)]
     fn native_execute<S: StateReader>(
         &self,
         _state: &mut CachedState<S>,
