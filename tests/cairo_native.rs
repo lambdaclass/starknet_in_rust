@@ -4,7 +4,6 @@ use crate::CallType::Call;
 use cairo_lang_starknet::casm_contract_class::CasmContractEntryPoints;
 use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
-use cairo_native::context::NativeContext;
 use cairo_vm::felt::Felt252;
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
@@ -305,7 +304,7 @@ fn integration_test_erc20() {
     assert_eq!(native_result.retdata, [].to_vec());
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(NATIVE_CLASS_HASH));
-    assert_eq!(native_result.gas_consumed, 0);
+    assert_eq!(native_result.gas_consumed, 126270);
 
     assert_eq!(vm_result.events, native_result.events);
     assert_eq!(
