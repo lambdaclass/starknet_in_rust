@@ -28,6 +28,7 @@ use crate::{
 };
 use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
+use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_native::cache::ProgramCache;
 use cairo_vm::{
     felt::Felt252,
@@ -43,8 +44,6 @@ use cairo_vm::{
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
-use cairo_lang_starknet::contract_class::ContractEntryPoints;
-
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -790,14 +789,14 @@ impl ExecutionEntryPoint {
         };
 
         let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
-            ProgramRegistry::new(&sierra_program).unwrap();
+            ProgramRegistry::new(sierra_program).unwrap();
 
         let native_executor = {
             let mut cache = program_cache.borrow_mut();
             if let Some(executor) = cache.get(*class_hash) {
                 executor
             } else {
-                cache.compile_and_insert(*class_hash, &sierra_program)
+                cache.compile_and_insert(*class_hash, sierra_program)
             }
         };
 
