@@ -169,10 +169,7 @@ impl InvokeFunction {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
-            return Ok(None);
-        }
-        if self.skip_validation {
+        if self.version.is_zero() || self.skip_validation {
             return Ok(None);
         }
 
