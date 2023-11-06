@@ -34,7 +34,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::Zero;
+use num_traits::{Zero, One};
 use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -166,6 +166,14 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        if self.version != Felt252::one() {
+            return Err(TransactionError::UnsupportedTxVersion(
+                "DeployAccount".to_string(),
+                self.version.clone(),
+                vec![1],
+            ));
+        }
+
         self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional();
