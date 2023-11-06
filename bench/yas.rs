@@ -4,11 +4,12 @@
 use cairo_vm::felt::Felt252;
 use lazy_static::lazy_static;
 use num_traits::{One, Zero};
+use starknet::core::utils::get_selector_from_name;
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::block_context::{BlockContext, StarknetChainId},
     state::{cached_state::CachedState, state_api::StateReader},
-    transaction::{DeclareV2, DeployAccount},
+    transaction::{DeclareV2, InvokeFunction},
     utils::Address,
 };
 
@@ -62,19 +63,18 @@ where
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
     DeclareV2::new(
-            &sierra_contract_class,
-            Some(casm_contract_class),
-            casm_class_hash.clone(),
-            StarknetChainId::TestNet.to_felt(),
-            Address(Felt252::one()),
-            0,
-            Felt252::one(),
-            vec![],
-            Felt252::one(),
-        )?
-        .execute(state, &BlockContext::default())?;
+        &sierra_contract_class,
+        Some(casm_contract_class),
+        casm_class_hash.clone(),
+        StarknetChainId::TestNet.to_felt(),
+        Address(Felt252::one()),
+        0,
+        Felt252::one(),
+        vec![],
+        Felt252::one(),
+    )?
+    .execute(state, &BlockContext::default())?;
 
-        println!("{:?}", casm_class_hash.to_bytes_be());
     Ok(casm_class_hash)
 }
 
@@ -158,12 +158,15 @@ fn deploy_erc20<S>(
 where
     S: StateReader,
 {
-    DeployAccount::new(
-        erc20_class_hash.to_be_bytes(),
+    InvokeFunction::new(
+        Address(Felt252::one()),
+        Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
         u64::MAX.into(),
         Felt252::one(),
-        Felt252::zero(),
         vec![
+            erc20_class_hash.clone(),
+            Felt252::zero(),
+            5.into(),
             utils::str_to_felt252(name),
             utils::str_to_felt252(symbol),
             initial_supply.0.into(),
@@ -171,10 +174,10 @@ where
             recipient,
         ],
         vec![],
-        Felt252::one(),
         StarknetChainId::TestNet.to_felt(),
+        Some(5.into()),
     )?
-    .execute(state, &BlockContext::default())?;
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
     Ok(())
 }
