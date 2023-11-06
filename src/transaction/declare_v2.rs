@@ -310,7 +310,6 @@ impl DeclareV2 {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.handle_nonce(state)?;
         if self.version != 2.into() {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeclareV2".to_string(),
@@ -319,6 +318,7 @@ impl DeclareV2 {
             ));
         }
 
+        self.handle_nonce(state)?;
         let initial_gas = INITIAL_GAS_COST;
 
         let mut resources_manager = ExecutionResourcesManager::default();
