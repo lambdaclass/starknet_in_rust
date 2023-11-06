@@ -133,10 +133,10 @@ Take into account that some tests use the [RPC State Reader](#rpc-state-reader) 
 
 ### RPC State Reader
 
-The RPC State Reader provides a way of reading the real Starknet State when using Starknet in Rust.
-Every time it needs to read a storage value, a contract class or contract, it goes to an RPC to fetch it.
-
+[The RPC State Reader](/rpc_state_reader/) provides a way of reading the real Starknet State when using Starknet in Rust.
 So you can re-execute an existing transaction in any of the Starknet networks in an easy way, just providing the transaction hash, the block number and the network in which the transaction was executed.
+Every time it needs to read a storage value, a contract class or contract, it goes to an RPC to fetch them.
+
 Right now we are using it for internal testing but we plan to release it as a library soon.
 
 #### How to configure it
