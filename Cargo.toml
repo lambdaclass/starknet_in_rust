@@ -70,3 +70,8 @@ tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 path = "bench/internals.rs"
 name = "internals"
 harness = false
+
+[[bench]]
+path = "bench/yas.rs"
+name = "yas"
+harness = false
