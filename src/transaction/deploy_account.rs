@@ -1,6 +1,6 @@
 use super::fee::{calculate_tx_fee, charge_fee};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::definitions::constants::{QUERY_VERSION_BASE, VALIDATE_RETDATA};
+use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
@@ -299,7 +299,7 @@ impl DeployAccount {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 

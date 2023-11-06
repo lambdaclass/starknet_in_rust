@@ -7,7 +7,8 @@ use num_traits::Zero;
 use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
-        block_context::StarknetChainId, constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
+        block_context::StarknetChainId,
+        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
         transaction_type::TransactionType,
     },
     execution::{CallInfo, CallType, TransactionExecutionInfo},
@@ -95,7 +96,11 @@ fn internal_deploy_account() {
                 entry_point_selector: Some(VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone()),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![class_hash, contract_address_salt],
-                execution_resources: Some(ExecutionResources { n_steps: 13, n_memory_holes: 0, ..Default::default() }),
+                execution_resources: Some(ExecutionResources {
+                    n_steps: 13,
+                    n_memory_holes: 0,
+                    ..Default::default()
+                }),
                 ..Default::default()
             }),
             Some(CallInfo {

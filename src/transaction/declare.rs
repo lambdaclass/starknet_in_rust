@@ -1,4 +1,3 @@
-use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
@@ -225,7 +224,7 @@ impl Declare {
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(None);
         }
 

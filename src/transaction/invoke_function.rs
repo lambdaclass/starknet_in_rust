@@ -7,8 +7,7 @@ use crate::{
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::{
-            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
-            VALIDATE_RETDATA,
+            EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
         transaction_type::TransactionType,
     },
@@ -457,7 +456,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     nonce: Option<Felt252>,
     version: Felt252,
 ) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
-    if version.is_zero() || version == *QUERY_VERSION_BASE {
+    if version.is_zero() {
         match nonce {
             Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
             None => {
@@ -1325,7 +1324,7 @@ mod tests {
             )
             .unwrap(),
             None,
-            &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone(),
+            Into::<Felt252>::into(1),
         );
         assert!(expected_error.is_err());
     }

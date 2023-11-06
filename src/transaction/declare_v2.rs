@@ -1,7 +1,7 @@
 use super::fee::charge_fee;
 use super::Transaction;
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
-use crate::definitions::constants::{QUERY_VERSION_BASE, VALIDATE_RETDATA};
+use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
@@ -267,7 +267,7 @@ impl DeclareV2 {
     // TODO: delete once used
     #[allow(dead_code)]
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -497,7 +497,6 @@ mod tests {
 
     use super::DeclareV2;
     use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
-    use crate::definitions::constants::QUERY_VERSION_BASE;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
@@ -647,19 +646,19 @@ mod tests {
     }
 
     #[test]
-    fn create_declare_v2_test_with_version_query() {
+    fn create_declare_v2_test() {
         // read file to create sierra contract class
         let version;
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = &Into::<Felt252>::into(2) | &QUERY_VERSION_BASE.clone();
+            version = Into::<Felt252>::into(2);
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone();
+            version = Into::<Felt252>::into(1);
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 
