@@ -16,7 +16,7 @@ use cairo_vm::{
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
         trace_errors::TraceError, vm_errors::VirtualMachineError,
-    },
+    }, felt::Felt252,
 };
 use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
@@ -149,4 +149,6 @@ pub enum TransactionError {
     FromByteArrayError(#[from] FromByteArrayError),
     #[error("DeclareV2 transaction has neither Sierra nor Casm contract class set")]
     DeclareV2NoSierraOrCasm,
+    #[error("Unsupported invoke transaction version: {0}. Supported versions: 0, 1")]
+    UnsupportedInvokeVersion(Felt252),
 }

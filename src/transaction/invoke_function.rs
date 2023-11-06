@@ -26,7 +26,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::Zero;
+use num_traits::{Zero, One};
 use std::fmt::Debug;
 
 /// Represents an InvokeFunction transaction in the starknet network.
@@ -307,6 +307,9 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        if self.version != Felt252::one() && self.version != Felt252::zero(){
+            return Err(TransactionError::UnsupportedInvokeVersion(self.version.clone()));
+        }
         if !self.skip_nonce_check {
             self.handle_nonce(state)?;
         }
@@ -355,7 +358,7 @@ impl InvokeFunction {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 
