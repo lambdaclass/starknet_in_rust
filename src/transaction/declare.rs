@@ -25,7 +25,7 @@ use crate::{
     },
 };
 use cairo_vm::felt::Felt252;
-use num_traits::{Zero, One};
+use num_traits::{One, Zero};
 
 use super::fee::charge_fee;
 use super::{verify_version, Transaction};
@@ -317,7 +317,11 @@ impl Declare {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if self.version != Felt252::one() && self.version != Felt252::zero() {
-            return Err(TransactionError::UnsupportedDeclareVersion(self.version.clone()))
+            return Err(TransactionError::UnsupportedTxVersion(
+                "Declare".to_string(),
+                self.version.clone(),
+                vec![0, 1],
+            ));
         }
         self.handle_nonce(state)?;
         let mut tx_exec_info = self.apply(state, block_context)?;

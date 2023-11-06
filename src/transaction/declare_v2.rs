@@ -312,7 +312,11 @@ impl DeclareV2 {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
         if self.version != 2.into() {
-            return Err(TransactionError::UnsupportedDeclareV2Version(self.version.clone()));
+            return Err(TransactionError::UnsupportedTxVersion(
+                "DeclareV2".to_string(),
+                self.version.clone(),
+                vec![2],
+            ));
         }
 
         let initial_gas = INITIAL_GAS_COST;

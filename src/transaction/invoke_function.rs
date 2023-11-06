@@ -7,7 +7,8 @@ use crate::{
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::{
-            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
+            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
+            VALIDATE_RETDATA,
         },
         transaction_type::TransactionType,
     },
@@ -15,7 +16,9 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::api::contract_classes::{deprecated_contract_class::EntryPointType, compiled_class::CompiledClass},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    },
     state::{
         cached_state::CachedState,
         state_api::{State, StateReader},
@@ -26,7 +29,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::{Zero, One};
+use num_traits::{One, Zero};
 use std::fmt::Debug;
 
 /// Represents an InvokeFunction transaction in the starknet network.
@@ -201,11 +204,14 @@ impl InvokeFunction {
         if let CompiledClass::Sierra(_) = contract_class {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
-            if !call_info.as_ref().and_then(|ci| Some(ci.retdata == vec![VALIDATE_RETDATA.clone()])).unwrap_or_default() {
-                return Err(TransactionError::WrongValidateRetdata)
+            if !call_info
+                .as_ref()
+                .and_then(|ci| Some(ci.retdata == vec![VALIDATE_RETDATA.clone()]))
+                .unwrap_or_default()
+            {
+                return Err(TransactionError::WrongValidateRetdata);
             }
         }
-
 
         let call_info = verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
@@ -318,8 +324,12 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::one() && self.version != Felt252::zero(){
-            return Err(TransactionError::UnsupportedInvokeVersion(self.version.clone()));
+        if self.version != Felt252::one() && self.version != Felt252::zero() {
+            return Err(TransactionError::UnsupportedTxVersion(
+                "Invoke".to_string(),
+                self.version.clone(),
+                vec![0, 1],
+            ));
         }
         if !self.skip_nonce_check {
             self.handle_nonce(state)?;

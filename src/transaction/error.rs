@@ -9,6 +9,7 @@ use crate::{
     utils::ClassHash,
 };
 use cairo_vm::{
+    felt::Felt252,
     types::{
         errors::{math_errors::MathError, program_errors::ProgramError},
         relocatable::Relocatable,
@@ -16,7 +17,7 @@ use cairo_vm::{
     vm::errors::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
         trace_errors::TraceError, vm_errors::VirtualMachineError,
-    }, felt::Felt252,
+    },
 };
 use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
@@ -149,12 +150,8 @@ pub enum TransactionError {
     FromByteArrayError(#[from] FromByteArrayError),
     #[error("DeclareV2 transaction has neither Sierra nor Casm contract class set")]
     DeclareV2NoSierraOrCasm,
-    #[error("Unsupported Invoke transaction version: {0}. Supported versions: 0, 1")]
-    UnsupportedInvokeVersion(Felt252),
+    #[error("Unsupported {0} transaction version: {1}. Supported versions:{2:?}")]
+    UnsupportedTxVersion(String, Felt252, Vec<usize>),
     #[error("The `validate` entry point should return `VALID`.")]
     WrongValidateRetdata,
-    #[error("Unsupported Declare transaction version: {0}. Supported versions: 0, 1")]
-    UnsupportedDeclareVersion(Felt252),
-    #[error("Unsupported DeclareV2 transaction version: {0}. Supported versions: 2")]
-    UnsupportedDeclareV2Version(Felt252),
 }
