@@ -1,6 +1,11 @@
 #![cfg(not(feature = "cairo_1_tests"))]
 #![cfg(feature = "cairo-native")]
 
+#[cfg(not(feature = "cairo-native"))]
+fn main() {
+    unimplemented!("This program should be compiled with the cairo-native feature");
+}
+
 use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
 use cairo_vm::felt::felt_str;
@@ -35,19 +40,19 @@ pub fn main() {
     match args.get(3).map(|s| s.as_str()) {
         Some("fibo") => bench_fibo(
             args.get(1)
-                .and_then(|x| usize::from_str_radix(x, 10).ok())
+                .and_then(|x| x.parse::<usize>().ok())
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
         Some("fact") => bench_fact(
             args.get(1)
-                .and_then(|x| usize::from_str_radix(x, 10).ok())
+                .and_then(|x| x.parse::<usize>().ok())
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
         _ => bench_erc20(
             args.get(1)
-                .and_then(|x| usize::from_str_radix(x, 10).ok())
+                .and_then(|x| x.parse::<usize>().ok())
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
@@ -253,16 +258,16 @@ fn bench_erc20(executions: usize, native: bool) {
 
             // insert deployer and erc20 classes into the cache.
             contract_class_cache.insert(
-                DEPLOYER_CLASS_HASH.clone(),
+                *DEPLOYER_CLASS_HASH,
                 CompiledClass::Casm(Arc::new(erc20_deployer_class)),
             );
-            contract_class_cache.insert(ERC20_CLASS_HASH.clone(), erc20_contract_class);
+            contract_class_cache.insert(*ERC20_CLASS_HASH, erc20_contract_class);
 
             let mut state_reader = InMemoryStateReader::default();
             // setup deployer nonce and address into the state reader
             state_reader
                 .address_to_class_hash_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), DEPLOYER_CLASS_HASH.clone());
+                .insert(DEPLOYER_ADDRESS.clone(), *DEPLOYER_CLASS_HASH);
             state_reader
                 .address_to_nonce_mut()
                 .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
@@ -279,7 +284,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
-                Some(DEPLOYER_CLASS_HASH.clone()),
+                Some(*DEPLOYER_CLASS_HASH),
                 100_000_000_000,
             );
 
@@ -331,16 +336,16 @@ fn bench_erc20(executions: usize, native: bool) {
 
             // insert deployer and erc20 classes into the cache.
             contract_class_cache.insert(
-                DEPLOYER_CLASS_HASH.clone(),
+                *DEPLOYER_CLASS_HASH,
                 CompiledClass::Casm(Arc::new(erc20_deployer_class)),
             );
-            contract_class_cache.insert(ERC20_CLASS_HASH.clone(), erc20_contract_class);
+            contract_class_cache.insert(*ERC20_CLASS_HASH, erc20_contract_class);
 
             let mut state_reader = InMemoryStateReader::default();
             // setup deployer nonce and address into the state reader
             state_reader
                 .address_to_class_hash_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), DEPLOYER_CLASS_HASH.clone());
+                .insert(DEPLOYER_ADDRESS.clone(), *DEPLOYER_CLASS_HASH);
             state_reader
                 .address_to_nonce_mut()
                 .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
@@ -357,7 +362,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
-                Some(DEPLOYER_CLASS_HASH.clone()),
+                Some(*DEPLOYER_CLASS_HASH),
                 100_000_000_000,
             );
 
@@ -420,11 +425,11 @@ fn bench_erc20(executions: usize, native: bool) {
 
     // create a transaction for deploying the first account
     let account1_deploy_tx = DeployAccount::new(
-        ACCOUNT1_CLASS_HASH.clone(), // class hash
-        0,                           // max fee
-        1.into(),                    // tx version
-        Felt252::zero(),             // nonce
-        vec![2.into()],              // constructor calldata
+        *ACCOUNT1_CLASS_HASH, // class hash
+        0,                    // max fee
+        1.into(),             // tx version
+        Felt252::zero(),      // nonce
+        vec![2.into()],       // constructor calldata
         vec![
             felt_str!(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
@@ -450,11 +455,11 @@ fn bench_erc20(executions: usize, native: bool) {
 
     // now we need to deploy account2
     let account2_deploy_tx = DeployAccount::new(
-        ACCOUNT1_CLASS_HASH.clone(), // class hash
-        0,                           // max fee
-        1.into(),                    // tx version
-        Felt252::zero(),             // nonce
-        vec![3.into()],              // constructor calldata
+        *ACCOUNT1_CLASS_HASH, // class hash
+        0,                    // max fee
+        1.into(),             // tx version
+        Felt252::zero(),      // nonce
+        vec![3.into()],       // constructor calldata
         vec![
             felt_str!(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
@@ -463,7 +468,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ], // signature
-        contract_address_salt,       // salt
+        contract_address_salt, // salt
         StarknetChainId::TestNet.to_felt(), // network
     )
     .unwrap();
@@ -502,6 +507,7 @@ fn bench_erc20(executions: usize, native: bool) {
 }
 
 #[inline(never)]
+#[allow(clippy::too_many_arguments)]
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,
