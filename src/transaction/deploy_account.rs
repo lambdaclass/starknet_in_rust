@@ -589,7 +589,7 @@ mod tests {
         let internal_deploy = DeployAccount::new(
             class_hash,
             0,
-            0.into(),
+            1.into(),
             0.into(),
             vec![10.into()],
             Vec::new(),
