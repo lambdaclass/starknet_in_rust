@@ -233,6 +233,7 @@ fn integration_test_erc20() {
     // Create state from the state_reader and contract cache.
     let state_reader = Arc::new(state_reader);
     let mut state_vm = CachedState::new(state_reader.clone(), contract_class_cache.clone());
+
     let mut state_native = CachedState::new(state_reader, contract_class_cache);
 
     /*
@@ -303,6 +304,7 @@ fn integration_test_erc20() {
     assert_eq!(native_result.retdata, [].to_vec());
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(NATIVE_CLASS_HASH));
+    assert_eq!(native_result.gas_consumed, 126270);
 
     assert_eq!(vm_result.events, native_result.events);
     assert_eq!(
@@ -641,6 +643,7 @@ fn call_contract_test() {
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
     let calldata = [fn_selector.into()].to_vec();
+
     let result = execute(
         &mut state,
         &caller_address,
@@ -1286,6 +1289,8 @@ fn keccak_syscall_test() {
     assert!(!native_result.failure_flag);
     assert_eq!(native_result.gas_consumed, 545370);
 }
+
+#[allow(clippy::too_many_arguments)]
 fn execute(
     state: &mut CachedState<InMemoryStateReader>,
     caller_address: &Address,
