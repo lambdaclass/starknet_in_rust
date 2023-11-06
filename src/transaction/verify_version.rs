@@ -1,6 +1,5 @@
 use cairo_vm::felt::Felt252;
-
-use crate::definitions::constants::{QUERY_VERSION_BASE, SUPPORTED_VERSIONS};
+use num_traits::Zero;
 
 use super::error::TransactionError;
 
@@ -10,11 +9,7 @@ pub fn verify_version(
     nonce: &Felt252,
     signature: &Vec<Felt252>,
 ) -> Result<(), TransactionError> {
-    if !SUPPORTED_VERSIONS.contains(version) {
-        return Err(TransactionError::UnsupportedVersion(version.to_string()));
-    }
-
-    if *version == 0.into() || *version == *QUERY_VERSION_BASE {
+    if version.is_zero() {
         if max_fee != 0 {
             return Err(TransactionError::InvalidMaxFee);
         }
@@ -25,7 +20,6 @@ pub fn verify_version(
             return Err(TransactionError::InvalidSignature);
         }
     }
-
     Ok(())
 }
 
