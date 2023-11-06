@@ -7,7 +7,7 @@ use crate::{
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::{
-            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
+            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
         transaction_type::TransactionType,
     },
@@ -15,7 +15,7 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    services::api::contract_classes::{deprecated_contract_class::EntryPointType, compiled_class::CompiledClass},
     state::{
         cached_state::CachedState,
         state_api::{State, StateReader},
@@ -192,6 +192,20 @@ impl InvokeFunction {
             false,
             block_context.validate_max_n_steps,
         )?;
+
+        // Validate the return data
+        let class_hash = state.get_class_hash_at(&self.contract_address)?;
+        let contract_class = state
+            .get_contract_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
+        if let CompiledClass::Sierra(_) = contract_class {
+            // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
+            // return `VALID`.
+            if !call_info.as_ref().and_then(|ci| Some(ci.retdata == vec![VALIDATE_RETDATA.clone()])).unwrap_or_default() {
+                return Err(TransactionError::WrongValidateRetdata)
+            }
+        }
+
 
         let call_info = verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;

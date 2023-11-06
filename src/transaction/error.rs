@@ -151,4 +151,6 @@ pub enum TransactionError {
     DeclareV2NoSierraOrCasm,
     #[error("Unsupported invoke transaction version: {0}. Supported versions: 0, 1")]
     UnsupportedInvokeVersion(Felt252),
+    #[error("The `validate` entry point should return `VALID`.")]
+    WrongValidateRetdata,
 }
