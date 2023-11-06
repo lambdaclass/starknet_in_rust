@@ -25,7 +25,7 @@ use crate::{
     },
 };
 use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use num_traits::{Zero, One};
 
 use super::fee::charge_fee;
 use super::{verify_version, Transaction};
@@ -283,7 +283,7 @@ impl Declare {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -316,6 +316,9 @@ impl Declare {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        if self.version != Felt252::one() && self.version != Felt252::zero() {
+            return Err(TransactionError::UnsupportedDeclareVersion(self.version.clone()))
+        }
         self.handle_nonce(state)?;
         let mut tx_exec_info = self.apply(state, block_context)?;
 
