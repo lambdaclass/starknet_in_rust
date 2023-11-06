@@ -4944,6 +4944,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "transaction_execution"
+version = "0.1.0"
+dependencies = [
+ "cairo-vm",
+ "starknet_in_rust",
+]
+
+[[package]]
 name = "try-lock"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

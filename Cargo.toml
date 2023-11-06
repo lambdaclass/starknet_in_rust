@@ -12,9 +12,10 @@ cairo_1_tests = []
 metrics = []
 
 [workspace]
-members = ["cli", "fuzzer", "rpc_state_reader", "examples/contract_execution"]
+members = ["cli", "fuzzer", "rpc_state_reader", "examples/contract_execution", "examples/transaction_execution"]
 
 [workspace.dependencies]
+
 cairo-lang-casm = "2.2.0"
 cairo-lang-runner = "2.2.0"
 cairo-lang-sierra = "2.2.0"
