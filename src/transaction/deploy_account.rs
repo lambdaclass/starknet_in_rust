@@ -34,7 +34,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::{Zero, One};
+use num_traits::{One, Zero};
 use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
