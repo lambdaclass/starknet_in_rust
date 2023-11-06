@@ -371,6 +371,12 @@ impl ExecutionEntryPoint {
         contract_class: &CasmContractClass,
         _class_hash: [u8; 32],
     ) -> Result<CasmContractEntryPoint, TransactionError> {
+        println!(
+            "type = {:?}, class_hash = {_class_hash:?}, selector = {:x}, self.class_hash = {:?}",
+            self.entry_point_type,
+            self.entry_point_selector.to_biguint(),
+            self.class_hash
+        );
         let entry_points = match self.entry_point_type {
             EntryPointType::External => &contract_class.entry_points_by_type.external,
             EntryPointType::Constructor => &contract_class.entry_points_by_type.constructor,

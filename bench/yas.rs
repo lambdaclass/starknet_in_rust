@@ -1,38 +1,60 @@
-#![deny(clippy::pedantic)]
-#![deny(warnings)]
+// #![deny(clippy::pedantic)]
+// #![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
-use num_traits::One;
+use lazy_static::lazy_static;
+use num_traits::{One, Zero};
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::block_context::{BlockContext, StarknetChainId},
     state::{cached_state::CachedState, state_api::StateReader},
-    transaction::DeclareV2,
+    transaction::{DeclareV2, DeployAccount},
     utils::Address,
 };
+
+lazy_static! {
+    static ref OWNER_ADDRESS: Felt252 = 1234.into();
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = utils::default_state()?;
 
     // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
-    declare_erc20(&mut state)?;
+    let erc20_class_hash = declare_erc20(&mut state)?;
     declare_yas_factory(&mut state)?;
     declare_yas_router(&mut state)?;
     declare_yas_pool(&mut state)?;
 
-    // // TODO: Deploy ERC20 contract.
-    // // TODO: Deploy YASFactory contract.
-    // // TODO: Deploy YASRouter contract.
-    // // TODO: Deploy YASPool contract.
+    // Deploy two ERC20 contracts.
+    deploy_erc20(
+        &mut state,
+        &erc20_class_hash,
+        "TYAS0",
+        "$YAS0",
+        (0x3782_dace_9d90_0000, 0),
+        OWNER_ADDRESS.clone(),
+    )?;
+    deploy_erc20(
+        &mut state,
+        &erc20_class_hash,
+        "TYAS1",
+        "$YAS1",
+        (0x3782_dace_9d90_0000, 0),
+        OWNER_ADDRESS.clone(),
+    )?;
 
-    // // TODO: Initialize pool (invoke).
-    // // TODO: Approve (invoke).
-    // // TODO: Swap (invoke).
+    // TODO: Deploy YASFactory contract.
+    // TODO: Deploy YASRouter contract.
+    // TODO: Deploy YASPool contract.
+
+    // TODO: Initialize pool (invoke).
+    // TODO: Approve (invoke).
+    // TODO: Swap (invoke).
 
     Ok(())
 }
 
-fn declare_erc20<S>(state: &mut CachedState<S>) -> Result<(), Box<dyn std::error::Error>>
+fn declare_erc20<S>(state: &mut CachedState<S>) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
@@ -40,22 +62,23 @@ where
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
     DeclareV2::new(
-        &sierra_contract_class,
-        Some(casm_contract_class),
-        casm_class_hash,
-        StarknetChainId::TestNet.to_felt(),
-        Address(Felt252::one()),
-        0,
-        Felt252::one(),
-        vec![],
-        Felt252::one(),
-    )?
-    .execute(state, &BlockContext::default())?;
+            &sierra_contract_class,
+            Some(casm_contract_class),
+            casm_class_hash.clone(),
+            StarknetChainId::TestNet.to_felt(),
+            Address(Felt252::one()),
+            0,
+            Felt252::one(),
+            vec![],
+            Felt252::one(),
+        )?
+        .execute(state, &BlockContext::default())?;
 
-    Ok(())
+        println!("{:?}", casm_class_hash.to_bytes_be());
+    Ok(casm_class_hash)
 }
 
-fn declare_yas_factory<S>(state: &mut CachedState<S>) -> Result<(), Box<dyn std::error::Error>>
+fn declare_yas_factory<S>(state: &mut CachedState<S>) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
@@ -65,7 +88,7 @@ where
     DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
-        casm_class_hash,
+        casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
         Address(Felt252::one()),
         0,
@@ -75,10 +98,10 @@ where
     )?
     .execute(state, &BlockContext::default())?;
 
-    Ok(())
+    Ok(casm_class_hash)
 }
 
-fn declare_yas_router<S>(state: &mut CachedState<S>) -> Result<(), Box<dyn std::error::Error>>
+fn declare_yas_router<S>(state: &mut CachedState<S>) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
@@ -88,7 +111,7 @@ where
     DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
-        casm_class_hash,
+        casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
         Address(Felt252::one()),
         0,
@@ -98,10 +121,10 @@ where
     )?
     .execute(state, &BlockContext::default())?;
 
-    Ok(())
+    Ok(casm_class_hash)
 }
 
-fn declare_yas_pool<S>(state: &mut CachedState<S>) -> Result<(), Box<dyn std::error::Error>>
+fn declare_yas_pool<S>(state: &mut CachedState<S>) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
@@ -111,7 +134,7 @@ where
     DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
-        casm_class_hash,
+        casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
         Address(Felt252::one()),
         0,
@@ -121,12 +144,44 @@ where
     )?
     .execute(state, &BlockContext::default())?;
 
+    Ok(casm_class_hash)
+}
+
+fn deploy_erc20<S>(
+    state: &mut CachedState<S>,
+    erc20_class_hash: &Felt252,
+    name: &str,
+    symbol: &str,
+    initial_supply: (u128, u128),
+    recipient: Felt252,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    DeployAccount::new(
+        erc20_class_hash.to_be_bytes(),
+        u64::MAX.into(),
+        Felt252::one(),
+        Felt252::zero(),
+        vec![
+            utils::str_to_felt252(name),
+            utils::str_to_felt252(symbol),
+            initial_supply.0.into(),
+            initial_supply.1.into(),
+            recipient,
+        ],
+        vec![],
+        Felt252::one(),
+        StarknetChainId::TestNet.to_felt(),
+    )?
+    .execute(state, &BlockContext::default())?;
+
     Ok(())
 }
 
 mod utils {
     use cairo_vm::felt::Felt252;
-    use num_traits::One;
+    use num_traits::{One, Zero};
     use starknet_in_rust::{
         core::contract_address::compute_deprecated_class_hash,
         services::api::contract_classes::{
@@ -139,6 +194,13 @@ mod utils {
     use std::{collections::HashMap, fs, path::Path, sync::Arc};
 
     const BASE_DIR: &str = "bench/yas/";
+
+    pub fn str_to_felt252(value: &str) -> Felt252 {
+        assert!(value.len() < 32);
+        value
+            .bytes()
+            .fold(Felt252::zero(), |acc, ch| (acc << 8u32) + u32::from(ch))
+    }
 
     pub fn default_state() -> Result<CachedState<InMemoryStateReader>, Box<dyn std::error::Error>> {
         let contract_class =
