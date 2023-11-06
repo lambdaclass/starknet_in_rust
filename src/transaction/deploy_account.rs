@@ -368,10 +368,6 @@ impl DeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version.is_zero() {
-            return Ok(None);
-        }
-
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             [
