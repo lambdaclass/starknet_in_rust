@@ -407,8 +407,7 @@ impl DeployAccount {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
             if !call_info
-                .as_ref()
-                .and_then(|ci| Some(ci.retdata == vec![VALIDATE_RETDATA.clone()]))
+                .as_ref().map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
