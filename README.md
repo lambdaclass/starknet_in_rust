@@ -28,7 +28,7 @@ Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https
     - [How to manually install the script dependencies](#how-to-manually-install-the-script-dependencies)
 - [🚀 Usage](#-usage)
   - [Running simple contracts](#running-simple-contracts)
-  - [Using the Cli](#using-the-cli)
+  - [Using the CLI](#using-the-cli)
   - [Testing](#testing)
   - [Profiling](#profiling)
   - [Benchmarking](#benchmarking)
@@ -73,14 +73,6 @@ $ make build
 ```
 
 Check the [Makefile](/Makefile) for additional targets.
-
-#### RPC State Reader
-
-In order to use the RPC state reader add an Infura API key in a `.env` file at root:
-
-```
-INFURA_API_KEY={some_key}
-```
 
 #### How to manually install the script dependencies
 
@@ -132,12 +124,28 @@ its documentation for more information.
 
 ### Testing
 
-[Add an Infura API key.](#rpc-state-reader)
-
 Run the following command:
 ```bash
 $ make test
 ```
+Take into account that some tests use the [RPC State Reader](#rpc-state-reader) so you need a full-node instance or an Infura API key.
+
+
+### RPC State Reader
+
+The RPC State Reader provides a way of reading the real Starknet State when using Starknet in Rust.
+Every time it needs to read a storage value, a contract class or contract, it goes to an RPC to fetch it.
+
+So you can re-execute an existing transaction in any of the Starknet networks in an easy way, just providing the transaction hash, the block number and the network in which the transaction was executed.
+Right now we are using it for internal testing but we plan to release it as a library soon.
+
+#### How to configure it
+In order to use the RPC state reader add an Infura API key in a `.env` file at root:
+
+```
+INFURA_API_KEY={some_key}
+```
+
 
 ### Profiling
 
