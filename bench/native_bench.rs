@@ -1,4 +1,5 @@
 #![cfg(not(feature = "cairo_1_tests"))]
+#![cfg(feature = "cairo-native")]
 
 use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
@@ -69,9 +70,10 @@ fn bench_fibo(executions: usize, native: bool) {
 
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
-
+            let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
+            let entrypoints = sierra_contract_class.entry_points_by_type;
             (
-                CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+                CompiledClass::Sierra(Arc::new((sierra_program, entrypoints))),
                 constructor_selector,
             )
         }
@@ -142,9 +144,10 @@ fn bench_fact(executions: usize, native: bool) {
 
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
-
+            let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
+            let entrypoints = sierra_contract_class.entry_points_by_type;
             (
-                CompiledClass::Sierra(Arc::new(sierra_contract_class)),
+                CompiledClass::Sierra(Arc::new((sierra_program, entrypoints))),
                 constructor_selector,
             )
         }
@@ -238,7 +241,9 @@ fn bench_erc20(executions: usize, native: bool) {
             let erc20_sierra_class = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
             let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
                 serde_json::from_slice(erc20_sierra_class).unwrap();
-            let erc20_contract_class = CompiledClass::Sierra(Arc::new(sierra_contract_class));
+            let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
+            let entrypoints = sierra_contract_class.entry_points_by_type;
+            let erc20_contract_class = CompiledClass::Sierra(Arc::new((sierra_program, entrypoints)));
 
             // we also need to read the contract class of the deployERC20 contract.
             // this contract is used as a deployer of the erc20.
@@ -469,14 +474,13 @@ fn bench_erc20(executions: usize, native: bool) {
     .unwrap();
 
     // execute the deploy_account transaction and retrieve the deployed account address.
-    let account2_address = account2_deploy_tx
+    let _account2_address = account2_deploy_tx
         .execute(&mut state, &Default::default())
         .expect("failed to execute the deployment of account 2")
         .validate_info
         .expect("validate_info missing")
         .contract_address;
 
-        // dbg!(account2_address.clone());
     // 4. do transfers between the accounts
 
     let transfer_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
@@ -497,7 +501,7 @@ fn bench_erc20(executions: usize, native: bool) {
             &ERC20_CLASS_HASH,
             program_cache.clone(),
         );
-        // dbg!(&result);
+        dbg!(&result);
         _ = std::hint::black_box(result);
         
     }
