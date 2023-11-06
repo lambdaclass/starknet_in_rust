@@ -12,9 +12,9 @@ use starknet_in_rust::definitions::block_context::StarknetChainId;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::state::state_api::State;
 use starknet_in_rust::transaction::DeployAccount;
+use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
-use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::{
     definitions::constants::TRANSACTION_VERSION,
     execution::{
@@ -45,15 +45,12 @@ pub fn main() {
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
         ),
-        _ => {
-            bench_erc20(
+        _ => bench_erc20(
             args.get(1)
                 .and_then(|x| usize::from_str_radix(x, 10).ok())
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
-        )
-        
-    },
+        ),
     }
 }
 
@@ -221,8 +218,7 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_SYMBOL: Felt252 = Felt252::from_bytes_be(b"be");
         static ref ERC20_DECIMALS: Felt252 = Felt252::from(24);
         static ref ERC20_INITIAL_SUPPLY: Felt252 = Felt252::from(1_000_000);
-        static ref ERC20_RECIPIENT: Felt252 =
-            felt_str!("111");
+        static ref ERC20_RECIPIENT: Felt252 = felt_str!("111");
         static ref ERC20_SALT: Felt252 = felt_str!("1234");
         static ref ERC20_DEPLOYER_CALLDATA: [Felt252; 7] = [
             Felt252::from_bytes_be(&ERC20_CLASS_HASH.clone()),
@@ -243,7 +239,8 @@ fn bench_erc20(executions: usize, native: bool) {
                 serde_json::from_slice(erc20_sierra_class).unwrap();
             let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
             let entrypoints = sierra_contract_class.entry_points_by_type;
-            let erc20_contract_class = CompiledClass::Sierra(Arc::new((sierra_program, entrypoints)));
+            let erc20_contract_class =
+                CompiledClass::Sierra(Arc::new((sierra_program, entrypoints)));
 
             // we also need to read the contract class of the deployERC20 contract.
             // this contract is used as a deployer of the erc20.
@@ -265,8 +262,7 @@ fn bench_erc20(executions: usize, native: bool) {
             // setup deployer nonce and address into the state reader
             state_reader
                 .address_to_class_hash_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), DEPLOYER_CLASS_HASH.clone()
-            );
+                .insert(DEPLOYER_ADDRESS.clone(), DEPLOYER_CLASS_HASH.clone());
             state_reader
                 .address_to_nonce_mut()
                 .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
@@ -397,7 +393,6 @@ fn bench_erc20(executions: usize, native: bool) {
         }
     };
 
-
     // 2. setup accounts (here we need to execute a deploy_account,
     //    so we execute it in the vm only).
     //    Further executions (transfers) will be executed with Native.
@@ -426,10 +421,10 @@ fn bench_erc20(executions: usize, native: bool) {
     // create a transaction for deploying the first account
     let account1_deploy_tx = DeployAccount::new(
         ACCOUNT1_CLASS_HASH.clone(), // class hash
-        0,                   // max fee
-        1.into(),            // tx version
-        Felt252::zero(),     // nonce
-        vec![2.into()],      // constructor calldata
+        0,                           // max fee
+        1.into(),                    // tx version
+        Felt252::zero(),             // nonce
+        vec![2.into()],              // constructor calldata
         vec![
             felt_str!(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
@@ -456,10 +451,10 @@ fn bench_erc20(executions: usize, native: bool) {
     // now we need to deploy account2
     let account2_deploy_tx = DeployAccount::new(
         ACCOUNT1_CLASS_HASH.clone(), // class hash
-        0,                   // max fee
-        1.into(),            // tx version
-        Felt252::zero(),     // nonce
-        vec![3.into()],      // constructor calldata
+        0,                           // max fee
+        1.into(),                    // tx version
+        Felt252::zero(),             // nonce
+        vec![3.into()],              // constructor calldata
         vec![
             felt_str!(
                 "3233776396904427614006684968846859029149676045084089832563834729503047027074"
@@ -468,7 +463,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 "707039245213420890976709143988743108543645298941971188668773816813012281203"
             ),
         ], // signature
-        contract_address_salt, // salt
+        contract_address_salt,       // salt
         StarknetChainId::TestNet.to_felt(), // network
     )
     .unwrap();
@@ -503,7 +498,6 @@ fn bench_erc20(executions: usize, native: bool) {
         );
         dbg!(&result);
         _ = std::hint::black_box(result);
-        
     }
 }
 
