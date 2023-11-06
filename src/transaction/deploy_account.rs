@@ -573,7 +573,7 @@ mod tests {
 
     #[test]
     fn deploy_account_twice_should_fail() {
-        let path = PathBuf::from("starknet_programs/constructor.json");
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract = ContractClass::from_path(path).unwrap();
 
         let hash = compute_deprecated_class_hash(&contract).unwrap();
@@ -587,7 +587,7 @@ mod tests {
             0,
             1.into(),
             0.into(),
-            vec![10.into()],
+            vec![],
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
@@ -598,8 +598,8 @@ mod tests {
             class_hash,
             0,
             1.into(),
-            0.into(),
-            vec![10.into()],
+            1.into(),
+            vec![],
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
