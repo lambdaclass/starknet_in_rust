@@ -12,7 +12,7 @@ use crate::{
         cached_state::CachedState,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
-        ExecutionResourcesManager, StateDiff,
+        ExecutionResourcesManager,
     },
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
@@ -26,9 +26,13 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
+#[cfg(feature = "cairo-native")]
+use crate::{state::StateDiff, utils::ClassHash};
 use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
+#[cfg(feature = "cairo-native")]
+use cairo_native::cache::ProgramCache;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -41,12 +45,14 @@ use cairo_vm::{
     },
 };
 use std::sync::Arc;
+#[cfg(feature = "cairo-native")]
+use std::{cell::RefCell, rc::Rc};
 
 #[cfg(feature = "cairo-native")]
 use {
     crate::syscalls::native_syscall_handler::NativeSyscallHandler,
     cairo_native::{
-        context::NativeContext, execution_result::NativeExecutionResult, executor::NativeExecutor,
+        context::NativeContext, execution_result::NativeExecutionResult,
         metadata::syscall_handler::SyscallHandlerMeta, utils::felt252_bigint,
     },
     serde_json::Value,
@@ -166,14 +172,24 @@ impl ExecutionEntryPoint {
                     }
                 }
             }
-            CompiledClass::Sierra(sierra_program_and_entrypoints) => {
+            #[cfg(not(feature = "cairo-native"))]
+            CompiledClass::Sierra(_) => {
+                unimplemented!("Use the feature 'cairo-native' to enable native execution")
+            }
+            #[cfg(feature = "cairo-native")]
+            CompiledClass::Sierra(sierra_contract_class) => {
                 let mut transactional_state = state.create_transactional();
+
+                let native_context = NativeContext::new();
+                let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
 
                 match self.native_execute(
                     &mut transactional_state,
                     sierra_program_and_entrypoints,
                     tx_execution_context,
                     block_context,
+                    &class_hash,
+                    program_cache,
                 ) {
                     Ok(call_info) => {
                         state.apply_state_update(&StateDiff::from_cached_state(
@@ -621,6 +637,7 @@ impl ExecutionEntryPoint {
 
     #[cfg(not(feature = "cairo-native"))]
     #[inline(always)]
+    #[allow(dead_code)]
     fn native_execute<S: StateReader>(
         &self,
         _state: &mut CachedState<S>,
@@ -641,6 +658,8 @@ impl ExecutionEntryPoint {
         sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
+        class_hash: &[u8; 32],
+        program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
         use cairo_lang_sierra::{
             extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
@@ -673,8 +692,15 @@ impl ExecutionEntryPoint {
         let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
             ProgramRegistry::new(sierra_program).unwrap();
 
-        let native_context = NativeContext::new();
-        let mut native_program = native_context.compile(sierra_program).unwrap();
+        let native_executor = {
+            let mut cache = program_cache.borrow_mut();
+            if let Some(executor) = cache.get(*class_hash) {
+                executor
+            } else {
+                cache.compile_and_insert(*class_hash, sierra_program)
+            }
+        };
+
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
@@ -688,14 +714,22 @@ impl ExecutionEntryPoint {
             entry_point_selector: self.entry_point_selector.clone(),
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
+            program_cache: program_cache.clone(),
             resources_manager: Default::default(),
         };
 
-        native_program
-            .insert_metadata(SyscallHandlerMeta::new(&syscall_handler))
-            .unwrap();
+        native_executor
+            .borrow_mut()
+            .get_module_mut()
+            .remove_metadata::<SyscallHandlerMeta>();
+        native_executor
+            .borrow_mut()
+            .get_module_mut()
+            .insert_metadata(SyscallHandlerMeta::new(&syscall_handler));
 
-        let syscall_addr = native_program
+        let syscall_addr = native_executor
+            .borrow()
+            .get_module()
             .get_metadata::<SyscallHandlerMeta>()
             .unwrap()
             .as_ptr()
@@ -714,7 +748,10 @@ impl ExecutionEntryPoint {
             .collect();
         let entry_point_id = &entry_point_fn.id;
 
-        let required_init_gas = native_program.get_required_init_gas(entry_point_id);
+        let required_init_gas = native_executor
+            .borrow()
+            .get_module()
+            .get_required_init_gas(entry_point_id);
 
         let calldata: Vec<_> = self
             .calldata
@@ -758,9 +795,8 @@ impl ExecutionEntryPoint {
         let mut writer: Vec<u8> = Vec::new();
         let returns = &mut serde_json::Serializer::new(&mut writer);
 
-        let native_executor = NativeExecutor::new(native_program);
-
         native_executor
+            .borrow()
             .execute(entry_point_id, json!(params), returns, required_init_gas)
             .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
 
