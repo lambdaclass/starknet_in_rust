@@ -1,3 +1,6 @@
+#![deny(clippy::pedantic)]
+#![deny(warnings)]
+
 use cairo_vm::felt::Felt252;
 use num_traits::One;
 use starknet_in_rust::{
@@ -11,11 +14,11 @@ use starknet_in_rust::{
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = utils::default_state()?;
 
-    // // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
+    // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
     declare_erc20(&mut state)?;
-    // declare_yas_factory(&mut state);
-    // // declare_yas_pool(&mut state);
-    // // declare_yas_router(&mut state);
+    declare_yas_factory(&mut state)?;
+    declare_yas_router(&mut state)?;
+    declare_yas_pool(&mut state)?;
 
     // // TODO: Deploy ERC20 contract.
     // // TODO: Deploy YASFactory contract.
@@ -52,23 +55,74 @@ where
     Ok(())
 }
 
-// fn declare_yas_factory<S>(state: &mut CachedState<S>)
-// where
-//     S: StateReader,
-// {
-//     Declare::new(
-//         ContractClass::from_path("bench/yas/yas_core_YASFactory.sierra.json").unwrap(),
-//         StarknetChainId::TestNet.to_felt(),
-//         Address(Felt252::one()),
-//         0,
-//         1.into(),
-//         vec![],
-//         Felt252::zero(),
-//     )
-//     .unwrap()
-//     .apply(state, &BlockContext::default())
-//     .unwrap();
-// }
+fn declare_yas_factory<S>(state: &mut CachedState<S>) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASFactory")?;
+    let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
+
+    DeclareV2::new(
+        &sierra_contract_class,
+        Some(casm_contract_class),
+        casm_class_hash,
+        StarknetChainId::TestNet.to_felt(),
+        Address(Felt252::one()),
+        0,
+        Felt252::one(),
+        vec![],
+        2.into(),
+    )?
+    .execute(state, &BlockContext::default())?;
+
+    Ok(())
+}
+
+fn declare_yas_router<S>(state: &mut CachedState<S>) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASRouter")?;
+    let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
+
+    DeclareV2::new(
+        &sierra_contract_class,
+        Some(casm_contract_class),
+        casm_class_hash,
+        StarknetChainId::TestNet.to_felt(),
+        Address(Felt252::one()),
+        0,
+        Felt252::one(),
+        vec![],
+        3.into(),
+    )?
+    .execute(state, &BlockContext::default())?;
+
+    Ok(())
+}
+
+fn declare_yas_pool<S>(state: &mut CachedState<S>) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASPool")?;
+    let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
+
+    DeclareV2::new(
+        &sierra_contract_class,
+        Some(casm_contract_class),
+        casm_class_hash,
+        StarknetChainId::TestNet.to_felt(),
+        Address(Felt252::one()),
+        0,
+        Felt252::one(),
+        vec![],
+        4.into(),
+    )?
+    .execute(state, &BlockContext::default())?;
+
+    Ok(())
+}
 
 mod utils {
     use cairo_vm::felt::Felt252;
