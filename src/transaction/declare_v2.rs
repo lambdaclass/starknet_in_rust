@@ -1,7 +1,7 @@
 use super::fee::charge_fee;
 use super::{verify_version, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
-use crate::definitions::constants::QUERY_VERSION_BASE;
+use crate::definitions::constants::{QUERY_VERSION_BASE, VALIDATE_RETDATA};
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
@@ -444,6 +444,23 @@ impl DeclareV2 {
                 block_context.validate_max_n_steps,
             )?
         };
+
+        // Validate the return data
+        let class_hash = state.get_class_hash_at(&self.sender_address.clone())?;
+        let contract_class = state
+            .get_contract_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
+        if let CompiledClass::Sierra(_) = contract_class {
+            // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
+            // return `VALID`.
+            if !execution_result.call_info
+                .as_ref()
+                .and_then(|ci| Some(ci.retdata == vec![VALIDATE_RETDATA.clone()]))
+                .unwrap_or_default()
+            {
+                return Err(TransactionError::WrongValidateRetdata);
+            }
+        }
 
         if execution_result.call_info.is_some() {
             verify_no_calls_to_other_contracts(&execution_result.call_info)?;
