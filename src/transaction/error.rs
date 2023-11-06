@@ -155,4 +155,6 @@ pub enum TransactionError {
     WrongValidateRetdata,
     #[error("Unsupported Declare transaction version: {0}. Supported versions: 0, 1")]
     UnsupportedDeclareVersion(Felt252),
+    #[error("Unsupported DeclareV2 transaction version: {0}. Supported versions: 2")]
+    UnsupportedDeclareV2Version(Felt252),
 }

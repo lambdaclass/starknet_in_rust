@@ -311,7 +311,9 @@ impl DeclareV2 {
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         self.handle_nonce(state)?;
-        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
+        if self.version != 2.into() {
+            return Err(TransactionError::UnsupportedDeclareV2Version(self.version.clone()));
+        }
 
         let initial_gas = INITIAL_GAS_COST;
 
