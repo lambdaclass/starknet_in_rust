@@ -28,7 +28,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 
 use super::fee::charge_fee;
-use super::{verify_version, Transaction};
+use super::Transaction;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -95,13 +95,6 @@ impl Declare {
             skip_fee_transfer: false,
         };
 
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
-
         Ok(internal_declare)
     }
 
@@ -135,13 +128,6 @@ impl Declare {
             skip_fee_transfer: false,
         };
 
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
-
         Ok(internal_declare)
     }
 
@@ -173,13 +159,6 @@ impl Declare {
             skip_fee_transfer: false,
         };
 
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
-
         Ok(internal_declare)
     }
 
@@ -195,8 +174,6 @@ impl Declare {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
-
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info = if self.skip_validate {

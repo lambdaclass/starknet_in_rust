@@ -1,5 +1,5 @@
 use super::fee::charge_fee;
-use super::{verify_version, Transaction};
+use super::Transaction;
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::constants::{QUERY_VERSION_BASE, VALIDATE_RETDATA};
 use crate::execution::execution_entry_point::ExecutionResult;
@@ -147,13 +147,6 @@ impl DeclareV2 {
             skip_validate: false,
             skip_fee_transfer: false,
         };
-
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
 
         Ok(internal_declare)
     }
