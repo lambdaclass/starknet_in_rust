@@ -830,7 +830,7 @@ mod test {
             DeployAccount::new(
                 *CLASS_HASH_BYTES,
                 0,
-                0.into(),
+                1.into(),
                 Felt252::zero(),
                 vec![],
                 SIGNATURE.clone(),
