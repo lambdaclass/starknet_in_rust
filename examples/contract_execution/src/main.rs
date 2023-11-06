@@ -104,7 +104,6 @@ fn test_contract(
         .unwrap();
 
     let internal_deploy = DeployAccount::new_with_tx_hash(
-
         account_contract_class_hash,
         0,
         1.into(),
