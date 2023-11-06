@@ -453,7 +453,8 @@ impl DeclareV2 {
         if let CompiledClass::Sierra(_) = contract_class {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
-            if !execution_result.call_info
+            if !execution_result
+                .call_info
                 .as_ref()
                 .and_then(|ci| Some(ci.retdata == vec![VALIDATE_RETDATA.clone()]))
                 .unwrap_or_default()
