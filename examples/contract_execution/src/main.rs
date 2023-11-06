@@ -57,7 +57,6 @@ fn test_contract(
     //*             Initialize needed variables
     //* --------------------------------------------
     let block_context = BlockContext::default();
-    let chain_id = block_context.starknet_os_config().chain_id().clone();
     // Values hardcoded to pass signature validation
     let signature = vec![
         felt_str!("3086480810278599376317923499561306189851900463386393948998357832163236918254"),
@@ -104,10 +103,11 @@ fn test_contract(
         )
         .unwrap();
 
-    let internal_deploy = DeployAccount::new(
+    let internal_deploy = DeployAccount::new_with_tx_hash(
+
         account_contract_class_hash,
         0,
-        0.into(),
+        1.into(),
         0.into(),
         // Values hardcoded to pass signature validation
         vec![felt_str!(
@@ -115,7 +115,7 @@ fn test_contract(
         )],
         signature.clone(),
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
-        chain_id.clone(),
+        2718.into()
     )
     .unwrap();
 
@@ -147,9 +147,9 @@ fn test_contract(
         compiled_class_hash.clone(),
         account_contract_address.clone(),
         0, // max fee
-        1.into(),
+        2.into(),
         signature.clone(),
-        0.into(), // nonce
+        1.into(), // nonce
         // Value hardcoded to pass signature validation
         2718.into(),
     )
@@ -213,7 +213,7 @@ fn test_contract(
         1.into(),
         account_execute_calldata,
         signature,
-        Some(1.into()),
+        Some(2.into()),
         // Value hardcoded to pass signature validation
         2718.into(),
     )
