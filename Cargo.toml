@@ -6,7 +6,7 @@ description = "A Rust implementation of Starknet execution logic"
 license = "Apache-2.0"
 
 [features]
-default = ["with_mimalloc", "cairo-native"]
+default = ["with_mimalloc"]
 with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
 metrics = []
@@ -74,4 +74,5 @@ harness = false
 [[bin]]
 path = "bench/native_bench.rs"
 name = "cairo_native"
+required-features = ["cairo-native"]
 harness = false

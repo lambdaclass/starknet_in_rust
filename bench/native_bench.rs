@@ -2,7 +2,7 @@
 #![cfg(feature = "cairo-native")]
 
 #[cfg(not(feature = "cairo-native"))]
-fn main() {
+fn main() {             
     unimplemented!("This program should be compiled with the cairo-native feature");
 }
 
@@ -36,7 +36,6 @@ use std::sync::Arc;
 
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
-    // dbg!(args.clone());
     match args.get(3).map(|s| s.as_str()) {
         Some("fibo") => bench_fibo(
             args.get(1)
