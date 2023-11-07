@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use rpc_state_reader::{
     execute_tx,
-    rpc_state::{RpcChain, RpcTransactionReceipt, TransactionTrace}
+    rpc_state::{RpcChain, RpcTransactionReceipt, TransactionTrace},
 };
 use starknet_api::block::BlockNumber;
 use starknet_in_rust::execution::TransactionExecutionInfo;
