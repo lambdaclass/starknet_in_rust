@@ -390,6 +390,11 @@ fn test_get_gas_price() {
     889897, // real block 889898
     RpcChain::TestNet
 )]
+#[test_case(
+    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
+    895707, // real block 895708
+    RpcChain::TestNet
+)]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
@@ -558,73 +563,4 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
             );
         }
     }
-}
-
-#[test_case(
-    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
-    895707, // real block 895708
-    RpcChain::TestNet
-)]
-fn test_get_block_hash_syscall(hash: &str, block_number: u64, chain: RpcChain) {
-    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
-
-    let TransactionExecutionInfo {
-        call_info,
-        actual_fee,
-        ..
-    } = tx_info;
-    let CallInfo {
-        execution_resources,
-        internal_calls,
-        retdata,
-        ..
-    } = call_info.unwrap();
-
-    // check Cairo VM execution resources
-    assert_eq_sorted!(
-        execution_resources.as_ref(),
-        Some(
-            &trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources
-        ),
-        "execution resources mismatch"
-    );
-
-    // check amount of internal calls
-    assert_eq!(
-        internal_calls.len(),
-        trace
-            .function_invocation
-            .as_ref()
-            .unwrap()
-            .internal_calls
-            .len(),
-        "internal calls length mismatch"
-    );
-
-    // check actual fee calculation
-    if receipt.actual_fee != actual_fee {
-        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
-
-        if diff >= 5 {
-            assert_eq!(
-                actual_fee, receipt.actual_fee,
-                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
-            );
-        }
-    }
-
-    let rpc_retdata: Vec<Felt252> = trace
-        .function_invocation
-        .unwrap()
-        .retdata
-        .unwrap()
-        .into_iter()
-        .map(|sf| Felt252::from_bytes_be(sf.bytes()))
-        .collect();
-
-    assert_eq!(retdata, rpc_retdata);
 }
