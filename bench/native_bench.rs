@@ -1,4 +1,3 @@
-#![cfg(not(feature = "cairo_1_tests"))]
 #![cfg(feature = "cairo-native")]
 
 #[cfg(not(feature = "cairo-native"))]
