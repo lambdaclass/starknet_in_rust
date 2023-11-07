@@ -1,4 +1,4 @@
-// Usage: 
+// Usage:
 // For executing the binary with cairo native you can run it like:
 // $ native_bench <n_executions> native
 // otherwise it will run it using the Cairo VM
