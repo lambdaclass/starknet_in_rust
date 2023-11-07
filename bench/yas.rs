@@ -70,7 +70,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         0x3c,
     )?;
 
-    // TODO: Initialize pool (invoke).
+    // Initialize pool (invoke).
+    initialize_pool(
+        &mut state,
+        &yas_pool_address,
+        (79228162514264337593543950336, 0),
+        false,
+    )?;
+
     // TODO: Approve (invoke).
     // TODO: Swap (invoke).
 
@@ -314,6 +321,34 @@ where
     .unwrap()
     .retdata[0]
         .clone())
+}
+
+fn initialize_pool<S>(
+    state: &mut CachedState<S>,
+    yas_pool_address: &Felt252,
+    price_sqrt: (u128, u128),
+    sign: bool,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    InvokeFunction::new(
+        Address(yas_pool_address.clone()),
+        Felt252::from_bytes_be(&get_selector_from_name("initialize").unwrap().to_bytes_be()),
+        0,
+        Felt252::one(),
+        vec![
+            price_sqrt.0.into(),
+            price_sqrt.1.into(),
+            (sign as u32).into(),
+        ],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(Felt252::zero()),
+    )?
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    Ok(())
 }
 
 mod utils {
