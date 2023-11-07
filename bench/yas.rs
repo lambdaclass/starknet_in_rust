@@ -93,7 +93,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         2000000000000000000,
     )?;
 
-    // TODO: Swap (invoke).
+    // Swap (invoke).
+    swap(&mut state, &yas_router_address)?;
 
     Ok(())
 }
@@ -402,7 +403,7 @@ where
 {
     InvokeFunction::new(
         Address(yas_router_address.clone()),
-        Felt252::from_bytes_be(&get_selector_from_name("approve").unwrap().to_bytes_be()),
+        Felt252::from_bytes_be(&get_selector_from_name("mint").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
         vec![
@@ -417,6 +418,28 @@ where
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(Felt252::zero()),
+    )?
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    Ok(())
+}
+
+fn swap<S>(
+    state: &mut CachedState<S>,
+    yas_router_address: &Felt252,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    InvokeFunction::new(
+        Address(yas_router_address.clone()),
+        Felt252::from_bytes_be(&get_selector_from_name("swap").unwrap().to_bytes_be()),
+        0,
+        Felt252::one(),
+        vec![],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(Felt252::one()),
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
