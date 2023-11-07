@@ -3,7 +3,7 @@
 
 use cairo_vm::felt::Felt252;
 use lazy_static::lazy_static;
-use num_traits::One;
+use num_traits::{One, Zero};
 use starknet::core::utils::get_selector_from_name;
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let erc20_class_hash = declare_erc20(&mut state)?;
     let yas_factory_class_hash = declare_yas_factory(&mut state)?;
     let yas_pool_class_hash = declare_yas_router(&mut state)?;
-    declare_yas_pool(&mut state)?;
+    let yas_router_class_hash = declare_yas_pool(&mut state)?;
 
     // Deploy two ERC20 contracts.
     deploy_erc20(
@@ -56,7 +56,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         yas_pool_class_hash,
     )?;
 
-    // TODO: Deploy YASRouter contract.
+    // Deploy YASRouter contract.
+    deploy_yas_router(&mut state, &yas_router_class_hash)?;
+
     // TODO: Deploy YASPool contract.
 
     // TODO: Initialize pool (invoke).
@@ -219,6 +221,35 @@ where
             2.into(),
             owner_address,
             pool_class_hash,
+        ],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(nonce),
+    )?
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    Ok(())
+}
+
+fn deploy_yas_router<S>(
+    state: &mut CachedState<S>,
+    yas_router_class_hash: &Felt252,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    // The nonce is reused as salt.
+    let nonce = utils::next_nonce();
+
+    InvokeFunction::new(
+        Address(ACCOUNT_ADDRESS.clone()),
+        Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
+        0,
+        Felt252::one(),
+        vec![
+            yas_router_class_hash.clone(),
+            nonce.clone(),
+            Felt252::zero(),
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
