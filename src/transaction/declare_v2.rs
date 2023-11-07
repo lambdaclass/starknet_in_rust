@@ -264,13 +264,7 @@ impl DeclareV2 {
         Vec::from([bytes])
     }
 
-    // TODO: delete once used
-    #[allow(dead_code)]
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            return Ok(());
-        }
-
         let contract_address = &self.sender_address;
         let current_nonce = state.get_nonce_at(contract_address)?;
         if current_nonce != self.nonce {
@@ -448,7 +442,8 @@ impl DeclareV2 {
             // return `VALID`.
             if !execution_result
                 .call_info
-                .as_ref().map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .as_ref()
+                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
