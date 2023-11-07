@@ -1,6 +1,8 @@
 use super::{
     CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
 };
+#[cfg(feature = "cairo-native")]
+use crate::state::StateDiff;
 use crate::{
     definitions::{block_context::BlockContext, constants::DEFAULT_ENTRY_POINT_SELECTOR},
     runner::StarknetRunner,
@@ -23,11 +25,9 @@ use crate::{
     transaction::error::TransactionError,
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
-        validate_contract_deployed, Address,
+        validate_contract_deployed, Address, ClassHash,
     },
 };
-#[cfg(feature = "cairo-native")]
-use crate::{state::StateDiff, utils::ClassHash};
 use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
