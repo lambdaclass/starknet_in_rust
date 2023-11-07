@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     mint(
         &mut state,
         &yas_router_address,
-        yas_pool_address,
+        yas_pool_address.clone(),
         OWNER_ADDRESS.clone(),
         -887220,
         887220,
@@ -94,7 +94,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Swap (invoke).
-    swap(&mut state, &yas_router_address)?;
+    swap(
+        &mut state,
+        &yas_router_address,
+        yas_pool_address,
+        OWNER_ADDRESS.clone(),
+        true,
+        (500000000000000000, 0, true),
+        (4295128740, 0, false),
+    )?;
 
     Ok(())
 }
@@ -427,6 +435,11 @@ where
 fn swap<S>(
     state: &mut CachedState<S>,
     yas_router_address: &Felt252,
+    yas_pool_address: Felt252,
+    recipient: Felt252,
+    zero_for_one: bool,
+    amount_specified: (u128, u128, bool),
+    price_limit_sqrt: (u128, u128, bool),
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     S: StateReader,
@@ -436,7 +449,17 @@ where
         Felt252::from_bytes_be(&get_selector_from_name("swap").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
-        vec![],
+        vec![
+            yas_pool_address,
+            recipient,
+            (zero_for_one as u32).into(),
+            amount_specified.0.into(),
+            amount_specified.1.into(),
+            (amount_specified.2 as u32).into(),
+            price_limit_sqrt.0.into(),
+            price_limit_sqrt.1.into(),
+            (price_limit_sqrt.2 as u32).into(),
+        ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(Felt252::one()),
