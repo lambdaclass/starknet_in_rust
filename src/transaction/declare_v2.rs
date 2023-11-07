@@ -492,6 +492,7 @@ mod tests {
 
     use super::DeclareV2;
     use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
+    use crate::definitions::constants::QUERY_VERSION_2;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::{
@@ -641,19 +642,19 @@ mod tests {
     }
 
     #[test]
-    fn create_declare_v2_test() {
+    fn create_declare_v2_test_with_version_query() {
         // read file to create sierra contract class
         let version;
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = Into::<Felt252>::into(2);
+            version = QUERY_VERSION_2.clone();
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = Into::<Felt252>::into(1);
+            version = QUERY_VERSION_2.clone();
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 
