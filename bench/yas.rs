@@ -27,11 +27,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
     let erc20_class_hash = declare_erc20(&mut state)?;
     let yas_factory_class_hash = declare_yas_factory(&mut state)?;
-    let yas_pool_class_hash = declare_yas_router(&mut state)?;
-    let yas_router_class_hash = declare_yas_pool(&mut state)?;
+    let yas_router_class_hash = declare_yas_router(&mut state)?;
+    let yas_pool_class_hash = declare_yas_pool(&mut state)?;
 
     // Deploy two ERC20 contracts.
-    deploy_erc20(
+    let yas0_token_address = deploy_erc20(
         &mut state,
         &erc20_class_hash,
         "TYAS0",
@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (0x3782_dace_9d90_0000, 0),
         OWNER_ADDRESS.clone(),
     )?;
-    deploy_erc20(
+    let yas1_token_address = deploy_erc20(
         &mut state,
         &erc20_class_hash,
         "TYAS1",
@@ -49,17 +49,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Deploy YASFactory contract.
-    deploy_yas_factory(
+    let yas_factory_address = deploy_yas_factory(
         &mut state,
         &yas_factory_class_hash,
         OWNER_ADDRESS.clone(),
-        yas_pool_class_hash,
+        yas_pool_class_hash.clone(),
     )?;
 
     // Deploy YASRouter contract.
-    deploy_yas_router(&mut state, &yas_router_class_hash)?;
+    let yas_router_address = deploy_yas_router(&mut state, &yas_router_class_hash)?;
 
-    // TODO: Deploy YASPool contract.
+    // Deploy YASPool contract.
+    let yas_pool_address = deploy_yas_pool(
+        &mut state,
+        &yas_pool_class_hash,
+        yas_factory_address,
+        yas0_token_address,
+        yas1_token_address,
+        0x0bb8,
+        0x3c,
+    )?;
 
     // TODO: Initialize pool (invoke).
     // TODO: Approve (invoke).
@@ -167,14 +176,14 @@ fn deploy_erc20<S>(
     symbol: &str,
     initial_supply: (u128, u128),
     recipient: Felt252,
-) -> Result<(), Box<dyn std::error::Error>>
+) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
     // The nonce is reused as salt.
     let nonce = utils::next_nonce();
 
-    InvokeFunction::new(
+    Ok(InvokeFunction::new(
         Address(ACCOUNT_ADDRESS.clone()),
         Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
         0,
@@ -193,9 +202,11 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
-
-    Ok(())
+    .execute(state, &BlockContext::default(), u64::MAX.into())?
+    .call_info
+    .unwrap()
+    .retdata[0]
+        .clone())
 }
 
 fn deploy_yas_factory<S>(
@@ -203,14 +214,14 @@ fn deploy_yas_factory<S>(
     yas_factory_class_hash: &Felt252,
     owner_address: Felt252,
     pool_class_hash: Felt252,
-) -> Result<(), Box<dyn std::error::Error>>
+) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
     // The nonce is reused as salt.
     let nonce = utils::next_nonce();
 
-    InvokeFunction::new(
+    Ok(InvokeFunction::new(
         Address(ACCOUNT_ADDRESS.clone()),
         Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
         0,
@@ -226,22 +237,24 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
-
-    Ok(())
+    .execute(state, &BlockContext::default(), u64::MAX.into())?
+    .call_info
+    .unwrap()
+    .retdata[0]
+        .clone())
 }
 
 fn deploy_yas_router<S>(
     state: &mut CachedState<S>,
     yas_router_class_hash: &Felt252,
-) -> Result<(), Box<dyn std::error::Error>>
+) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
     // The nonce is reused as salt.
     let nonce = utils::next_nonce();
 
-    InvokeFunction::new(
+    Ok(InvokeFunction::new(
         Address(ACCOUNT_ADDRESS.clone()),
         Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
         0,
@@ -255,9 +268,52 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(state, &BlockContext::default(), u64::MAX.into())?
+    .call_info
+    .unwrap()
+    .retdata[0]
+        .clone())
+}
 
-    Ok(())
+fn deploy_yas_pool<S>(
+    state: &mut CachedState<S>,
+    yas_pool_class_hash: &Felt252,
+    yas_factory_address: Felt252,
+    yas0_token_address: Felt252,
+    yas1_token_address: Felt252,
+    fee: u32,
+    tick_spacing: i32,
+) -> Result<Felt252, Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    // The nonce is reused as salt.
+    let nonce = utils::next_nonce();
+
+    Ok(InvokeFunction::new(
+        Address(ACCOUNT_ADDRESS.clone()),
+        Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
+        0,
+        Felt252::one(),
+        vec![
+            yas_pool_class_hash.clone(),
+            nonce.clone(),
+            5.into(),
+            yas_factory_address,
+            yas0_token_address,
+            yas1_token_address,
+            fee.into(),
+            tick_spacing.into(),
+        ],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(nonce),
+    )?
+    .execute(state, &BlockContext::default(), u64::MAX.into())?
+    .call_info
+    .unwrap()
+    .retdata[0]
+        .clone())
 }
 
 mod utils {
