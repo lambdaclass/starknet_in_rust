@@ -1360,7 +1360,7 @@ dependencies = [
  "cairo-felt",
  "cairo-lang-runner",
  "libc",
- "starknet-crypto 0.6.0",
+ "starknet-crypto 0.6.1",
  "starknet-curve 0.4.0",
 ]
 
@@ -4191,7 +4191,7 @@ dependencies = [
  "starknet-accounts",
  "starknet-contract",
  "starknet-core 0.5.1",
- "starknet-crypto 0.6.0",
+ "starknet-crypto 0.6.1",
  "starknet-ff",
  "starknet-macros",
  "starknet-providers",
@@ -4240,7 +4240,7 @@ dependencies = [
  "serde_json_pythonic",
  "serde_with 2.3.3",
  "sha3",
- "starknet-crypto 0.6.0",
+ "starknet-crypto 0.6.1",
  "starknet-ff",
 ]
 
@@ -4258,7 +4258,7 @@ dependencies = [
  "serde_json_pythonic",
  "serde_with 2.3.3",
  "sha3",
- "starknet-crypto 0.6.0",
+ "starknet-crypto 0.6.1",
  "starknet-ff",
 ]
 
@@ -4284,9 +4284,9 @@ dependencies = [
 
 [[package]]
 name = "starknet-crypto"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dbb308033b5c60c5677645f7ba3b012b4e3e81f773480d27fb5f342d50621e6"
+checksum = "33c03f5ac70f9b067f48db7d2d70bdf18ee0f731e8192b6cfa679136becfcdb0"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -4404,7 +4404,7 @@ dependencies = [
  "eth-keystore",
  "rand",
  "starknet-core 0.5.1",
- "starknet-crypto 0.6.0",
+ "starknet-crypto 0.6.1",
  "thiserror",
 ]
 

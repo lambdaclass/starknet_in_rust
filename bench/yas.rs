@@ -12,10 +12,14 @@ use starknet_in_rust::{
     transaction::{DeclareV2, InvokeFunction},
     utils::Address,
 };
+use std::sync::atomic::AtomicUsize;
 
 lazy_static! {
+    static ref ACCOUNT_ADDRESS: Felt252 = 0.into();
     static ref OWNER_ADDRESS: Felt252 = 1234.into();
 }
+
+static NONCE: AtomicUsize = AtomicUsize::new(1);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = utils::default_state()?;
@@ -67,11 +71,11 @@ where
         Some(casm_contract_class),
         casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
-        Address(Felt252::one()),
+        Address(ACCOUNT_ADDRESS.clone()),
         0,
         Felt252::one(),
         vec![],
-        Felt252::one(),
+        utils::next_nonce(),
     )?
     .execute(state, &BlockContext::default())?;
 
@@ -90,11 +94,11 @@ where
         Some(casm_contract_class),
         casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
-        Address(Felt252::one()),
+        Address(ACCOUNT_ADDRESS.clone()),
         0,
         Felt252::one(),
         vec![],
-        2.into(),
+        utils::next_nonce(),
     )?
     .execute(state, &BlockContext::default())?;
 
@@ -113,11 +117,11 @@ where
         Some(casm_contract_class),
         casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
-        Address(Felt252::one()),
+        Address(ACCOUNT_ADDRESS.clone()),
         0,
         Felt252::one(),
         vec![],
-        3.into(),
+        utils::next_nonce(),
     )?
     .execute(state, &BlockContext::default())?;
 
@@ -136,11 +140,11 @@ where
         Some(casm_contract_class),
         casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
-        Address(Felt252::one()),
+        Address(ACCOUNT_ADDRESS.clone()),
         0,
         Felt252::one(),
         vec![],
-        4.into(),
+        utils::next_nonce(),
     )?
     .execute(state, &BlockContext::default())?;
 
@@ -159,9 +163,9 @@ where
     S: StateReader,
 {
     InvokeFunction::new(
-        Address(Felt252::one()),
+        Address(ACCOUNT_ADDRESS.clone()),
         Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
-        u64::MAX.into(),
+        0,
         Felt252::one(),
         vec![
             erc20_class_hash.clone(),
@@ -175,7 +179,7 @@ where
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(5.into()),
+        Some(utils::next_nonce()),
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
@@ -194,7 +198,14 @@ mod utils {
         utils::Address,
         CasmContractClass, ContractClass as SierraContractClass,
     };
-    use std::{collections::HashMap, fs, path::Path, sync::Arc};
+    use std::{
+        collections::HashMap,
+        fs,
+        path::Path,
+        sync::{atomic::Ordering, Arc},
+    };
+
+    use crate::{ACCOUNT_ADDRESS, NONCE};
 
     const BASE_DIR: &str = "bench/yas/";
 
@@ -203,6 +214,10 @@ mod utils {
         value
             .bytes()
             .fold(Felt252::zero(), |acc, ch| (acc << 8u32) + u32::from(ch))
+    }
+
+    pub fn next_nonce() -> Felt252 {
+        NONCE.fetch_add(1, Ordering::Relaxed).into()
     }
 
     pub fn default_state() -> Result<CachedState<InMemoryStateReader>, Box<dyn std::error::Error>> {
@@ -215,10 +230,10 @@ mod utils {
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
-            .insert(Address(Felt252::one()), contract_class_hash);
+            .insert(Address(ACCOUNT_ADDRESS.clone()), contract_class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(Address(Felt252::one()), Felt252::one());
+            .insert(Address(ACCOUNT_ADDRESS.clone()), Felt252::one());
 
         Ok(CachedState::new(
             Arc::new(state_reader),
