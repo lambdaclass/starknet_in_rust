@@ -2,7 +2,7 @@
 #![cfg(feature = "cairo-native")]
 
 #[cfg(not(feature = "cairo-native"))]
-fn main() {             
+fn main() {
     unimplemented!("This program should be compiled with the cairo-native feature");
 }
 
