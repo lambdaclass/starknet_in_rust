@@ -72,6 +72,7 @@ lazy_static! {
                 94901967946959054011942058057773508207_u128.into(),
                 "get_execution_info",
             );
+            map.insert(22096086224907272360718070632_u128.into(), "get_block_hash");
             map.insert(100890693370601760042082660_u128.into(), "storage_read");
             map.insert(20853273475220472486191784820_u128.into(), "call_contract");
             map.insert(
@@ -113,6 +114,7 @@ lazy_static! {
         map.insert("send_message_to_l1", SYSCALL_BASE + 50 * STEP);
         map.insert("get_block_timestamp", 0);
         map.insert("keccak", 0);
+        map.insert("get_block_hash", SYSCALL_BASE + 50 * STEP);
 
         map
     };
@@ -861,6 +863,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
             "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
+            "get_block_hash" => GetBlockHashRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "get_execution_info" => Ok(SyscallRequest::GetExecutionInfo),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
