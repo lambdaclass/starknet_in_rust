@@ -23,7 +23,7 @@ use crate::{
     transaction::error::TransactionError,
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
-        validate_contract_deployed, Address, ClassHash,
+        validate_contract_deployed, Address,
     },
 };
 #[cfg(feature = "cairo-native")]
@@ -239,7 +239,7 @@ impl ExecutionEntryPoint {
         T: StateReader,
     {
         // lookup the compiled class from the state.
-        let class_hash = self.get_code_class_hash(state)?;
+        let class_hash = self.get_class_hash(state)?;
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
@@ -767,7 +767,7 @@ impl ExecutionEntryPoint {
         sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
-        class_hash: &[u8; 32],
+        class_hash: &ClassHash,
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
         use cairo_lang_sierra::{

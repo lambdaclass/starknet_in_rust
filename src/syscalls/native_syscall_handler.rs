@@ -198,7 +198,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         match self
             .starknet_storage_state
             .state
-            .set_class_hash_at(self.contract_address.clone(), class_hash.to_be_bytes())
+            .set_class_hash_at(self.contract_address.clone(), ClassHash::from(class_hash))
         {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -228,7 +228,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            Some(class_hash.to_be_bytes()),
+            Some(ClassHash::from(class_hash)),
             *gas,
         );
 
