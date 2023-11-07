@@ -313,7 +313,7 @@ fn bench_erc20(executions: usize, native: bool) {
 
             // obtain the address of the deployed erc20 contract
             let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
-            // dbg!(&erc20_address);
+
             (Address(erc20_address), state)
         }
         false => {
@@ -499,7 +499,7 @@ fn bench_erc20(executions: usize, native: bool) {
             &ERC20_CLASS_HASH,
             program_cache.clone(),
         );
-        dbg!(&result);
+
         _ = std::hint::black_box(result);
     }
 }
