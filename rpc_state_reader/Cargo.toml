@@ -21,7 +21,7 @@ thiserror = { workspace = true }
 flate2 = "1.0.25"
 serde_with = "3.0.0"
 dotenv = "0.15.0"
-cairo-vm = "0.8.5"
+cairo-vm = { workspace = true }
 blockifier = "=0.2.0-rc0"
 starknet_in_rust = { path = "../", version = "0.4.0" }
 

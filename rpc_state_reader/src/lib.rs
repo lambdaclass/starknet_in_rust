@@ -1,4 +1,5 @@
 pub mod rpc_state;
+pub mod rpc_state_errors;
 pub mod utils;
 
 // only export the sir_state_reader module when the starknet_in_rust feature
@@ -40,7 +41,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_class_cairo1() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         let class_hash =
             class_hash!("0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216");
@@ -53,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_class_cairo0() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         let class_hash =
             class_hash!("025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
@@ -62,7 +63,7 @@ mod tests {
 
     #[test]
     fn test_get_class_hash_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let address =
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
 
@@ -74,7 +75,7 @@ mod tests {
 
     #[test]
     fn test_get_nonce_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::TestNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::TestNet, BlockTag::Latest.into()).unwrap();
         // Contract deployed by xqft which will not be used again, so nonce changes will not break
         // this test.
         let address =
@@ -84,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_get_storage_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let address =
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
         let key = StorageKey(patricia_key!(0u128));
@@ -94,22 +95,22 @@ mod tests {
 
     #[test]
     fn test_get_transaction() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        rpc_state.get_transaction(&tx_hash);
+        assert!(rpc_state.get_transaction(&tx_hash).is_ok());
     }
 
     #[test]
     fn test_try_from_invoke() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        let tx = rpc_state.get_transaction(&tx_hash);
+        let tx = rpc_state.get_transaction(&tx_hash).unwrap();
         match tx {
             SNTransaction::Invoke(tx) => {
                 InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet)
@@ -121,22 +122,22 @@ mod tests {
 
     #[test]
     fn test_get_block_info() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
-        rpc_state.get_block_info();
+        assert!(rpc_state.get_block_info().is_ok());
     }
 
     // Tested with the following query to the Feeder Gateway API:
     // https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
     #[test]
     fn test_get_transaction_trace() {
-        let rpc_state = RpcState::new_infura(RpcChain::TestNet2, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::TestNet2, BlockTag::Latest.into()).unwrap();
 
         let tx_hash = TransactionHash(stark_felt!(
             "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc"
         ));
 
-        let tx_trace = rpc_state.get_transaction_trace(&tx_hash);
+        let tx_trace = rpc_state.get_transaction_trace(&tx_hash).unwrap();
 
         assert_eq!(
             tx_trace.signature,
@@ -306,11 +307,11 @@ mod tests {
 
     #[test]
     fn test_get_transaction_receipt() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
 
-        rpc_state.get_transaction_receipt(&tx_hash);
+        assert!(rpc_state.get_transaction_receipt(&tx_hash).is_ok());
     }
 }

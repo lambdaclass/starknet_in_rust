@@ -1320,7 +1320,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=113be0b800bf381fef512652f84e85a494b736c4#113be0b800bf381fef512652f84e85a494b736c4"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=4012a10b97530e208b76d42169aa9608a6a9d8fd#4012a10b97530e208b76d42169aa9608a6a9d8fd"
 dependencies = [
  "bumpalo",
  "cairo-felt",
@@ -1355,7 +1355,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=113be0b800bf381fef512652f84e85a494b736c4#113be0b800bf381fef512652f84e85a494b736c4"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=4012a10b97530e208b76d42169aa9608a6a9d8fd#4012a10b97530e208b76d42169aa9608a6a9d8fd"
 dependencies = [
  "cairo-felt",
  "cairo-lang-runner",
@@ -1572,6 +1572,15 @@ name = "const-fnv1a-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32b13ea120a812beba79e34316b3942a857c86ec1593cb34f27bb28272ce2cca"
+
+[[package]]
+name = "contract_execution"
+version = "0.4.0"
+dependencies = [
+ "cairo-vm",
+ "serde_json",
+ "starknet_in_rust",
+]
 
 [[package]]
 name = "convert_case"
