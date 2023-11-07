@@ -82,6 +82,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     approve_max(&mut state, &yas0_token_address, yas_router_address.clone())?;
     approve_max(&mut state, &yas1_token_address, yas_router_address.clone())?;
 
+    // Mint (invoke).
+    mint(
+        &mut state,
+        &yas_router_address,
+        yas_pool_address,
+        OWNER_ADDRESS.clone(),
+        -887220,
+        887220,
+        2000000000000000000,
+    )?;
+
     // TODO: Swap (invoke).
 
     Ok(())
@@ -368,6 +379,41 @@ where
         0,
         Felt252::one(),
         vec![wallet_address, u128::MAX.into(), u128::MAX.into()],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(Felt252::zero()),
+    )?
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    Ok(())
+}
+
+fn mint<S>(
+    state: &mut CachedState<S>,
+    yas_router_address: &Felt252,
+    yas_pool_address: Felt252,
+    recipient: Felt252,
+    tick_lower: i32,
+    tick_upper: i32,
+    amount: u128,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    InvokeFunction::new(
+        Address(yas_router_address.clone()),
+        Felt252::from_bytes_be(&get_selector_from_name("approve").unwrap().to_bytes_be()),
+        0,
+        Felt252::one(),
+        vec![
+            yas_pool_address,
+            recipient,
+            tick_lower.unsigned_abs().into(),
+            (tick_lower.is_negative() as u32).into(),
+            tick_upper.unsigned_abs().into(),
+            (tick_upper.is_negative() as u32).into(),
+            amount.into(),
+        ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(Felt252::zero()),
