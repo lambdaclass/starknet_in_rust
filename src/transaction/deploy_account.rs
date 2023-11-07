@@ -1,4 +1,5 @@
 use super::fee::{calculate_tx_fee, charge_fee};
+use super::get_tx_version;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
@@ -77,6 +78,7 @@ impl DeployAccount {
         contract_address_salt: Felt252,
         chain_id: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
+        let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash),

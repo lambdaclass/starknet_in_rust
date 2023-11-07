@@ -1,4 +1,3 @@
-use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
@@ -28,7 +27,7 @@ use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 
 use super::fee::charge_fee;
-use super::Transaction;
+use super::{get_tx_version, Transaction};
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -66,6 +65,7 @@ impl Declare {
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
@@ -108,11 +108,7 @@ impl Declare {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
-        let version = if &version == &*QUERY_VERSION_BASE {
-            Felt252::zero()
-        } else {
-            version
-        };
+        let version = get_tx_version(version);
 
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);

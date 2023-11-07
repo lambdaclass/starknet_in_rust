@@ -1,14 +1,13 @@
 use super::{
     fee::{calculate_tx_fee, charge_fee},
-    Transaction,
+    get_tx_version, Transaction,
 };
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::{
-            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
-            VALIDATE_RETDATA,
+            EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
         transaction_type::TransactionType,
     },
@@ -107,11 +106,7 @@ impl InvokeFunction {
         nonce: Option<Felt252>,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
-        let version = if &version == &*QUERY_VERSION_BASE {
-            Felt252::zero()
-        } else {
-            version
-        };
+        let version = get_tx_version(version);
 
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 

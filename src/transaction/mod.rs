@@ -7,15 +7,20 @@ pub mod fee;
 pub mod invoke_function;
 pub mod l1_handler;
 
+use cairo_vm::felt::Felt252;
 pub use declare::Declare;
 pub use declare_v2::DeclareV2;
 pub use deploy::Deploy;
 pub use deploy_account::DeployAccount;
 pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
+use num_traits::{One, Zero};
 
 use crate::{
-    definitions::block_context::BlockContext,
+    definitions::{
+        block_context::BlockContext,
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    },
     execution::TransactionExecutionInfo,
     state::{cached_state::CachedState, state_api::StateReader},
     utils::Address,
@@ -124,5 +129,15 @@ impl Transaction {
             ),
             Transaction::L1Handler(tx) => tx.create_for_simulation(skip_validate, skip_execute),
         }
+    }
+}
+
+//
+fn get_tx_version(version: Felt252) -> Felt252 {
+    match version {
+        version if version == *QUERY_VERSION_0 => Felt252::zero(),
+        version if version == *QUERY_VERSION_1 => Felt252::one(),
+        version if version == *QUERY_VERSION_2 => 2.into(),
+        version => version,
     }
 }
