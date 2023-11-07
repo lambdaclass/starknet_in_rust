@@ -37,7 +37,7 @@ pub enum StateError {
     #[error("Missing CasmClassCache")]
     MissingCasmClassCache,
     #[error("Constructor calldata is empty")]
-    ConstructorCalldataEmpty(),
+    ConstructorCalldataEmpty,
     #[error("Error in ExecutionEntryPoint")]
     ExecutionEntryPoint(),
     #[error("No compiled class found for compiled_class_hash {0:?}")]

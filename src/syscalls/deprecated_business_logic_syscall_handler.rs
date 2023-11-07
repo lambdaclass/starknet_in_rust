@@ -209,7 +209,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 
         if self.constructor_entry_points_empty(contract_class)? {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorCalldataEmpty());
+                return Err(StateError::ConstructorCalldataEmpty);
             }
 
             let call_info = CallInfo::empty_constructor_call(

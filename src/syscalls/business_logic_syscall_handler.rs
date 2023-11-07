@@ -343,7 +343,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
 
         if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorCalldataEmpty());
+                return Err(StateError::ConstructorCalldataEmpty);
             }
 
             let call_info = CallInfo::empty_constructor_call(
