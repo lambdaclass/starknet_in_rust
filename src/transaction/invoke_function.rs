@@ -7,7 +7,8 @@ use crate::{
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::{
-            EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
+            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
+            VALIDATE_RETDATA,
         },
         transaction_type::TransactionType,
     },
@@ -106,6 +107,12 @@ impl InvokeFunction {
         nonce: Option<Felt252>,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = if &version == &*QUERY_VERSION_BASE {
+            Felt252::zero()
+        } else {
+            version
+        };
+
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InvokeFunction {

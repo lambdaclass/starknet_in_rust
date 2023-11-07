@@ -1,3 +1,4 @@
+use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
@@ -107,6 +108,12 @@ impl Declare {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = if &version == &*QUERY_VERSION_BASE {
+            Felt252::zero()
+        } else {
+            version
+        };
+
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 

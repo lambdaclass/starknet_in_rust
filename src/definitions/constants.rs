@@ -102,3 +102,8 @@ lazy_static! {
 
     pub static ref BLOCK_HASH_CONTRACT_ADDRESS: Address = Address(1.into());
 }
+
+lazy_static! {
+    pub(crate) static ref QUERY_VERSION_BASE: Felt252 =
+        felt_str!("340282366920938463463374607431768211456");
+}
