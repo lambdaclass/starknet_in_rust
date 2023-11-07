@@ -132,7 +132,8 @@ impl Transaction {
     }
 }
 
-//
+// Parses query tx versions into their normal counterpart
+// This is used to execute old transactions an may be removed in the future as its not part of the current standard implementation
 fn get_tx_version(version: Felt252) -> Felt252 {
     match version {
         version if version == *QUERY_VERSION_0 => Felt252::zero(),
