@@ -31,7 +31,10 @@ use starknet_in_rust::{
     utils::{Address, ClassHash},
 };
 
-use crate::rpc_state::{RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace};
+use crate::{
+    rpc_state::{RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace},
+    rpc_state_errors::RpcStateError,
+};
 
 #[derive(Debug)]
 pub struct RpcStateReader(RpcState);
@@ -45,7 +48,11 @@ impl RpcStateReader {
 impl StateReader for RpcStateReader {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
         let hash = SNClassHash(StarkHash::new(*class_hash).unwrap());
-        Ok(CompiledClass::from(self.0.get_contract_class(&hash)))
+        let contract_class = self
+            .0
+            .get_contract_class(&hash)
+            .ok_or(StateError::MissingCasmClass(*class_hash))?;
+        Ok(CompiledClass::from(contract_class))
     }
 
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
@@ -96,11 +103,14 @@ pub fn execute_tx_configurable(
     block_number: BlockNumber,
     skip_validate: bool,
     skip_nonce_check: bool,
-) -> (
-    TransactionExecutionInfo,
-    TransactionTrace,
-    RpcTransactionReceipt,
-) {
+) -> Result<
+    (
+        TransactionExecutionInfo,
+        TransactionTrace,
+        RpcTransactionReceipt,
+    ),
+    RpcStateError,
+> {
     let fee_token_address = Address(felt_str!(
         "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
         16
@@ -108,8 +118,9 @@ pub fn execute_tx_configurable(
 
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
+    let rpc_state = RpcState::new_infura(network, block_number.into())?;
     // Instantiate the RPC StateReader and the CachedState
-    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()));
+    let rpc_reader = RpcStateReader(rpc_state);
     let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
@@ -126,7 +137,7 @@ pub fn execute_tx_configurable(
             block_timestamp,
             sequencer_address,
             ..
-        } = rpc_reader.0.get_block_info();
+        } = rpc_reader.0.get_block_info()?;
 
         let block_number = block_number.0;
         let block_timestamp = block_timestamp.0;
@@ -142,15 +153,15 @@ pub fn execute_tx_configurable(
 
     // Get transaction before giving ownership of the reader
     let tx_hash = TransactionHash(stark_felt!(tx_hash));
-    let tx = match rpc_reader.0.get_transaction(&tx_hash) {
+    let tx = match rpc_reader.0.get_transaction(&tx_hash)? {
         SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
         _ => unimplemented!(),
     };
 
-    let trace = rpc_reader.0.get_transaction_trace(&tx_hash);
-    let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
+    let trace = rpc_reader.0.get_transaction_trace(&tx_hash)?;
+    let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash)?;
 
     let class_cache = ContractClassCache::default();
     let mut state = CachedState::new(Arc::new(rpc_reader), class_cache);
@@ -167,22 +178,25 @@ pub fn execute_tx_configurable(
         true,
     );
 
-    (
+    Ok((
         tx.execute(&mut state, &block_context, u128::MAX).unwrap(),
         trace,
         receipt,
-    )
+    ))
 }
 
 pub fn execute_tx(
     tx_hash: &str,
     network: RpcChain,
     block_number: BlockNumber,
-) -> (
-    TransactionExecutionInfo,
-    TransactionTrace,
-    RpcTransactionReceipt,
-) {
+) -> Result<
+    (
+        TransactionExecutionInfo,
+        TransactionTrace,
+        RpcTransactionReceipt,
+    ),
+    RpcStateError,
+> {
     execute_tx_configurable(tx_hash, network, block_number, false, false)
 }
 
@@ -190,10 +204,13 @@ pub fn execute_tx_without_validate(
     tx_hash: &str,
     network: RpcChain,
     block_number: BlockNumber,
-) -> (
-    TransactionExecutionInfo,
-    TransactionTrace,
-    RpcTransactionReceipt,
-) {
+) -> Result<
+    (
+        TransactionExecutionInfo,
+        TransactionTrace,
+        RpcTransactionReceipt,
+    ),
+    RpcStateError,
+> {
     execute_tx_configurable(tx_hash, network, block_number, true, true)
 }

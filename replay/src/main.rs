@@ -1,10 +1,9 @@
 use clap::{Parser, Subcommand};
 use rpc_state_reader::{
     execute_tx,
-    rpc_state::{BlockValue, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace},
-    RpcStateReader,
+    rpc_state::{RpcChain, RpcTransactionReceipt, TransactionTrace}
 };
-use starknet_api::{block::BlockNumber, core::ChainId, transaction::TransactionReceipt};
+use starknet_api::block::BlockNumber;
 use starknet_in_rust::execution::TransactionExecutionInfo;
 
 #[derive(Debug, Parser)]
@@ -49,7 +48,7 @@ fn main() {
             };
             let block_number = BlockNumber(block_number);
 
-            let (tx_info, trace, receipt) = execute_tx(&tx_hash, rpc_chain, block_number);
+            let (tx_info, trace, receipt) = execute_tx(&tx_hash, rpc_chain, block_number).unwrap();
 
             let TransactionExecutionInfo {
                 call_info,
