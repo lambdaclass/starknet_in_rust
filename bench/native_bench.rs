@@ -1,3 +1,12 @@
+// Usage: 
+// For executing the binary with cairo native you can run it like:
+// $ native_bench <n_executions> native
+// otherwise it will run it using the Cairo VM
+// native_bench <n_executions>
+// You can also choose which benchmark to run by passing the name of the benchmark as the third argument:
+// $ native_bench <n_executions> native <fibo|fact>
+// where fibo executes a fibonacci function and fact a factorial n times.
+
 #![cfg(feature = "cairo-native")]
 
 #[cfg(not(feature = "cairo-native"))]
