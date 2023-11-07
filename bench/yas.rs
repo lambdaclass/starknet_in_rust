@@ -64,8 +64,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         &yas_pool_class_hash,
         yas_factory_address,
-        yas0_token_address,
-        yas1_token_address,
+        yas0_token_address.clone(),
+        yas1_token_address.clone(),
         0x0bb8,
         0x3c,
     )?;
@@ -78,7 +78,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         false,
     )?;
 
-    // TODO: Approve (invoke).
+    // Approve (invoke).
+    approve_max(&mut state, &yas0_token_address, yas_router_address.clone())?;
+    approve_max(&mut state, &yas1_token_address, yas_router_address.clone())?;
+
     // TODO: Swap (invoke).
 
     Ok(())
@@ -342,6 +345,29 @@ where
             price_sqrt.1.into(),
             (sign as u32).into(),
         ],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(Felt252::zero()),
+    )?
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    Ok(())
+}
+
+fn approve_max<S>(
+    state: &mut CachedState<S>,
+    token_address: &Felt252,
+    wallet_address: Felt252,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    InvokeFunction::new(
+        Address(token_address.clone()),
+        Felt252::from_bytes_be(&get_selector_from_name("approve").unwrap().to_bytes_be()),
+        0,
+        Felt252::one(),
+        vec![wallet_address, u128::MAX.into(), u128::MAX.into()],
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(Felt252::zero()),
