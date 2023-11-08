@@ -25,7 +25,7 @@ pub trait StateReader {
         &self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError>;
-    /// Returns the storage value representing the balance (in fee token) at the given address.
+    /// Returns the storage value representing the balance (in fee token) at the given address as a (low, high) pair
     fn get_fee_token_balance(
         &mut self,
         block_context: &BlockContext,

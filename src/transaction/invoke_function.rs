@@ -426,6 +426,17 @@ impl InvokeFunction {
         if self.max_fee < minimal_fee {
             return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
         }
+        // Check that the current balance is high enough to cover the max_fee
+        let (balance_low, balance_high) =
+            state.get_fee_token_balance(block_context, self.contract_address())?;
+        // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+            return Err(TransactionError::MaxFeeExceedsBalance(
+                self.max_fee,
+                balance_low,
+                balance_high,
+            ));
+        }
         Ok(())
     }
 

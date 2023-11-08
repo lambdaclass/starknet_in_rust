@@ -156,4 +156,6 @@ pub enum TransactionError {
     WrongValidateRetdata,
     #[error("Max fee ({0}) is too low. Minimum fee: {1}.")]
     MaxFeeTooLow(u128, u128),
+    #[error("Max fee ({0}) exceeds balance (Uint256({1}, {2})).")]
+    MaxFeeExceedsBalance(u128, Felt252, Felt252),
 }
