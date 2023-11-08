@@ -1102,7 +1102,10 @@ mod tests {
 
         let result = internal_invoke_function.execute(&mut state, &block_context, 0);
         assert!(result.is_err());
-        assert_matches!(result.unwrap_err(), TransactionError::FeeTransferError(_));
+        assert_matches!(
+            result.unwrap_err(),
+            TransactionError::MaxFeeExceedsBalance(_, _, _)
+        );
     }
 
     #[test]

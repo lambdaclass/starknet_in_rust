@@ -11,7 +11,7 @@ use cairo_vm::vm::{
 };
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
-use num_traits::{FromPrimitive, Num, One, Zero};
+use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::core::contract_address::{
     compute_casm_class_hash, compute_sierra_class_hash,
@@ -97,7 +97,7 @@ lazy_static! {
         felt_str!("2542253978940891427830343982984992363331567580652119103860970381451088310289");
 
     // Others.
-    static ref INITIAL_BALANCE: Felt252 = Felt252::from_u128(100000).unwrap();
+    static ref INITIAL_BALANCE: Felt252 = Felt252::from(u128::MAX);
     static ref GAS_PRICE: u128 = 1;
 }
 
