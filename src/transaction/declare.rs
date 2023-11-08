@@ -1,6 +1,10 @@
 use crate::execution::execution_entry_point::ExecutionResult;
+use crate::execution::gas_usage::get_onchain_data_segment_length;
+use crate::execution::os_usage::ESTIMATED_DECLARE_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
+use crate::state::state_api::StateChangesCount;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
@@ -26,9 +30,10 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 
-use super::fee::charge_fee;
+use super::fee::{calculate_tx_fee, charge_fee};
 use super::{get_tx_version, Transaction};
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -280,6 +285,55 @@ impl Declare {
         Ok(())
     }
 
+    fn check_fee_balance<S: State + StateReader>(
+        &self,
+        state: &mut S,
+        block_context: &BlockContext,
+    ) -> Result<(), TransactionError> {
+        if self.max_fee.is_zero() {
+            return Ok(());
+        }
+        let minimal_fee = self.estimate_minimal_fee(block_context)?;
+        // Check max fee is at least the estimated constant overhead.
+        if self.max_fee < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        }
+        // Check that the current balance is high enough to cover the max_fee
+        let (balance_low, balance_high) =
+            state.get_fee_token_balance(block_context, &self.sender_address)?;
+        // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+            return Err(TransactionError::MaxFeeExceedsBalance(
+                self.max_fee,
+                balance_low,
+                balance_high,
+            ));
+        }
+        Ok(())
+    }
+
+    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
+        let n_estimated_steps = ESTIMATED_DECLARE_STEPS;
+        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        });
+        let resources = HashMap::from([
+            (
+                "l1_gas_usage".to_string(),
+                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
+            ),
+            ("n_steps".to_string(), n_estimated_steps),
+        ]);
+        calculate_tx_fee(
+            &resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )
+    }
+
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
     #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
@@ -302,7 +356,12 @@ impl Declare {
                 vec![0, 1],
             ));
         }
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context)?;
+        }
+
         self.handle_nonce(state)?;
+
         let mut tx_exec_info = self.apply(state, block_context)?;
 
         let mut tx_execution_context =

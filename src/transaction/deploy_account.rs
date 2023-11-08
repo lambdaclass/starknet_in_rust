@@ -3,8 +3,12 @@ use super::get_tx_version;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
+use crate::execution::gas_usage::get_onchain_data_segment_length;
+use crate::execution::os_usage::ESTIMATED_DEPLOY_ACCOUNT_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
+use crate::state::state_api::StateChangesCount;
 use crate::state::StateDiff;
 use crate::{
     core::{
@@ -36,6 +40,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::{One, Zero};
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -174,6 +179,10 @@ impl DeployAccount {
                 self.version.clone(),
                 vec![1],
             ));
+        }
+
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context)?;
         }
 
         self.handle_nonce(state)?;
@@ -315,6 +324,55 @@ impl DeployAccount {
         }
         state.increment_nonce(&self.contract_address)?;
         Ok(())
+    }
+
+    fn check_fee_balance<S: State + StateReader>(
+        &self,
+        state: &mut S,
+        block_context: &BlockContext,
+    ) -> Result<(), TransactionError> {
+        if self.max_fee.is_zero() {
+            return Ok(());
+        }
+        let minimal_fee = self.estimate_minimal_fee(block_context)?;
+        // Check max fee is at least the estimated constant overhead.
+        if self.max_fee < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        }
+        // Check that the current balance is high enough to cover the max_fee
+        let (balance_low, balance_high) =
+            state.get_fee_token_balance(block_context, self.contract_address())?;
+        // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+            return Err(TransactionError::MaxFeeExceedsBalance(
+                self.max_fee,
+                balance_low,
+                balance_high,
+            ));
+        }
+        Ok(())
+    }
+
+    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
+        let n_estimated_steps = ESTIMATED_DEPLOY_ACCOUNT_STEPS;
+        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 1,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        });
+        let resources = HashMap::from([
+            (
+                "l1_gas_usage".to_string(),
+                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
+            ),
+            ("n_steps".to_string(), n_estimated_steps),
+        ]);
+        calculate_tx_fee(
+            &resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )
     }
 
     pub fn run_constructor_entrypoint<S: StateReader>(
