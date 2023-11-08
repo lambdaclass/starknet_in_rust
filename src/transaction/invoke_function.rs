@@ -338,7 +338,9 @@ impl InvokeFunction {
             ));
         }
 
-        self.check_fee_balance(state, block_context)?;
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context)?;
+        }
 
         if !self.skip_nonce_check {
             self.handle_nonce(state)?;
