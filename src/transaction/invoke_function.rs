@@ -13,14 +13,19 @@ use crate::{
     },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        gas_usage::get_onchain_data_segment_length,
+        os_usage::ESTIMATED_INVOKE_FUNCTION_STEPS,
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    services::{
+        api::contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+        },
+        eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD,
     },
     state::{
         cached_state::CachedState,
-        state_api::{State, StateReader},
+        state_api::{State, StateChangesCount, StateReader},
         ExecutionResourcesManager, StateDiff,
     },
     transaction::error::TransactionError,
@@ -29,7 +34,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::{One, Zero};
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -332,6 +337,9 @@ impl InvokeFunction {
                 vec![0, 1],
             ));
         }
+
+        self.check_fee_balance(state, block_context)?;
+
         if !self.skip_nonce_check {
             self.handle_nonce(state)?;
         }
@@ -403,6 +411,44 @@ impl InvokeFunction {
                 Ok(())
             }
         }
+    }
+
+    fn check_fee_balance<S: State + StateReader>(
+        &self,
+        state: &mut S,
+        block_context: &BlockContext,
+    ) -> Result<(), TransactionError> {
+        if self.max_fee.is_zero() {
+            return Ok(());
+        }
+        let minimal_fee = self.estimate_minimal_fee(block_context)?;
+        // Check max fee is at least the estimated constant overhead.
+        if self.max_fee < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        }
+        Ok(())
+    }
+
+    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
+        let n_estimated_steps = ESTIMATED_INVOKE_FUNCTION_STEPS;
+        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        });
+        let resources = HashMap::from([
+            (
+                "l1_gas_usage".to_string(),
+                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
+            ),
+            ("n_steps".to_string(), n_estimated_steps),
+        ]);
+        calculate_tx_fee(
+            &resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )
     }
 
     // Simulation function

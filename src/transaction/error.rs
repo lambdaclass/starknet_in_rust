@@ -154,4 +154,6 @@ pub enum TransactionError {
     UnsupportedTxVersion(String, Felt252, Vec<usize>),
     #[error("The `validate` entry point should return `VALID`.")]
     WrongValidateRetdata,
+    #[error("Max fee ({0}) is too low. Minimum fee: {1}.")]
+    MaxFeeTooLow(u128, u128),
 }
