@@ -2160,7 +2160,7 @@ fn test_deploy_undeclared_account() {
     // Deploy transaction with a not_deployed_class_hash class_hash
     let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
-        2,
+        0,
         TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),

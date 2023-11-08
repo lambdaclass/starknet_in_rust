@@ -865,7 +865,7 @@ mod test {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
             version: 2.into(),
-            max_fee: INITIAL_GAS_COST,
+            max_fee: 2900,
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),
