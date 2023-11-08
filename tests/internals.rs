@@ -212,7 +212,9 @@ fn create_account_tx_test_state_revert_test(
     let class_hash_to_class = HashMap::from([
         (
             test_account_contract_class_hash,
-            ContractClass::from_path("starknet_programs/account_without_validation_and_expensive_constructor.json")?,
+            ContractClass::from_path(
+                "starknet_programs/account_without_validation_and_expensive_constructor.json",
+            )?,
         ),
         (
             test_contract_class_hash,
