@@ -10,21 +10,21 @@ use starknet_in_rust::execution::TransactionExecutionInfo;
 #[command(about = "Replay is a tool for executing Starknet transactions.", long_about = None)]
 struct ReplayCLI {
     #[command(subcommand)]
-    subcommand: ReplaySubCommand,
+    subcommand: ReplayExecute,
 }
 
 #[derive(Subcommand, Debug)]
-enum ReplaySubCommand {
+enum ReplayExecute {
     #[clap(about = "Execute a single transaction given a transaction hash.")]
-    ExecuteTx {
+    Tx {
         tx_hash: String,
         chain: String,
         block_number: u64,
     },
     #[clap(about = "Execute all the invoke transactions in a given block.")]
-    ExecuteBlock { block_number: u64, chain: String },
+    Block { block_number: u64, chain: String },
     #[clap(about = "Execute all the invoke transactions in a given range of blocks.")]
-    ExecuteBlockRange {
+    BlockRange {
         block_start: u64,
         block_end: u64,
         chain: String,
@@ -35,7 +35,7 @@ fn main() {
     let cli = ReplayCLI::parse();
 
     match cli.subcommand {
-        ReplaySubCommand::ExecuteTx {
+        ReplayExecute::Tx {
             tx_hash,
             chain,
             block_number,
@@ -58,6 +58,8 @@ fn main() {
                 actual_fee,
                 ..
             } = tx_info;
+            
+            let sir_actual_fee = actual_fee;
 
             let TransactionTrace {
                 validate_invocation,
@@ -71,15 +73,24 @@ fn main() {
                 execution_status,
                 ..
             } = receipt;
+
+            println!("Transaction hash: {}", tx_hash);
+            println!("Block number: {}", block_number.0);
+            println!("Chain: {}", chain);
+            println!("[RPC] Execution status: {:?}", execution_status);
+            println!("[RPC] Actual fee: {}", actual_fee);
+            println!("[SIR] Actual fee: {:?}", sir_actual_fee);
         }
-        ReplaySubCommand::ExecuteBlock {
+        ReplayExecute::Block {
             block_number,
             chain,
         } => {}
-        ReplaySubCommand::ExecuteBlockRange {
+        ReplayExecute::BlockRange {
             block_start,
             block_end,
             chain,
-        } => {}
+        } => {
+
+        }
     }
 }

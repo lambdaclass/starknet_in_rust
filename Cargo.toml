@@ -76,3 +76,7 @@ tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 path = "bench/internals.rs"
 name = "internals"
 harness = false
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
