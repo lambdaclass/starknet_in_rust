@@ -652,4 +652,31 @@ mod tests {
             .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
     }
+
+    #[test]
+    fn deploy_account_wrong_version() {
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = DeployAccount::new(
+            [2; 32],
+            9000,
+            2.into(),
+            Felt252::zero(),
+            vec![],
+            vec![],
+            Felt252::one(),
+            chain_id,
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1]);
+    }
 }

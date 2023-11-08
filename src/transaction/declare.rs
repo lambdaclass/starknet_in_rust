@@ -841,4 +841,33 @@ mod tests {
                     .actual_fee,
         );
     }
+
+    #[test]
+    fn declare_wrong_version() {
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = Declare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            2.into(),
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "Declare" && ver == 2.into() && supp == vec![0, 1]);
+    }
 }
