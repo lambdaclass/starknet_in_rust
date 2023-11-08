@@ -1320,7 +1320,7 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
-    let max_fee = 3;
+    let max_fee = 2483;
     let actual_fee = 2490;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
@@ -1489,7 +1489,7 @@ fn test_invoke_with_declarev2_tx() {
         Felt252::from(0),                                     // b
         Felt252::from(0),                                     // n
     ];
-    let invoke_tx = invoke_tx_with_nonce(calldata, u128::MAX, Felt252::one());
+    let invoke_tx = invoke_tx_with_nonce(calldata, u64::MAX as u128, Felt252::one());
 
     let expected_gas_consumed = 5551;
     let result = invoke_tx
@@ -2131,7 +2131,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
-        1,
+        2483,
         TRANSACTION_VERSION.clone(),
         vec![
             test_contract_address, // CONTRACT_ADDRESS
