@@ -50,6 +50,7 @@ fn main() {
 
             let (tx_info, trace, receipt) = execute_tx(&tx_hash, rpc_chain, block_number).unwrap();
 
+            // TODO: Show all the data correctly
             let TransactionExecutionInfo {
                 call_info,
                 validate_info,
