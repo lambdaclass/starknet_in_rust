@@ -332,9 +332,7 @@ impl InvokeFunction {
                 vec![0, 1],
             ));
         }
-        if !self.skip_nonce_check {
-            self.handle_nonce(state)?;
-        }
+        self.handle_nonce(state, self.skip_nonce_check)?;
 
         let mut transactional_state = state.create_transactional();
         let mut tx_exec_info =
@@ -379,7 +377,11 @@ impl InvokeFunction {
         Ok(tx_exec_info)
     }
 
-    fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
+    fn handle_nonce<S: State + StateReader>(
+        &self,
+        state: &mut S,
+        skip_nonce_check: bool,
+    ) -> Result<(), TransactionError> {
         if self.version.is_zero() {
             return Ok(());
         }
@@ -393,11 +395,13 @@ impl InvokeFunction {
                 Ok(())
             }
             Some(nonce) => {
-                if nonce != &current_nonce {
-                    return Err(TransactionError::InvalidTransactionNonce(
-                        current_nonce.to_string(),
-                        nonce.to_string(),
-                    ));
+                if !skip_nonce_check {
+                    if nonce != &current_nonce {
+                        return Err(TransactionError::InvalidTransactionNonce(
+                            current_nonce.to_string(),
+                            nonce.to_string(),
+                        ));
+                    }
                 }
                 state.increment_nonce(contract_address)?;
                 Ok(())
