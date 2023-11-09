@@ -130,9 +130,7 @@ impl Transaction {
                 ignore_max_fee,
                 skip_nonce_check,
             ),
-            Transaction::L1Handler(tx) => {
-                tx.create_for_simulation(skip_validate, skip_execute)
-            }
+            Transaction::L1Handler(tx) => tx.create_for_simulation(skip_validate, skip_execute),
         }
     }
 }

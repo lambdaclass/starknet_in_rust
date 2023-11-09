@@ -311,7 +311,7 @@ impl DeployAccount {
 
         // In blockifier, get_nonce_at returns zero if no entry is found.
         let current_nonce = state.get_nonce_at(&self.contract_address)?;
-        if current_nonce != self.nonce && !self.skip_nonce_check  {
+        if current_nonce != self.nonce && !self.skip_nonce_check {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
                 self.nonce.to_string(),
