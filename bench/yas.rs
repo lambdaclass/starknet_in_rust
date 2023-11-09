@@ -186,7 +186,10 @@ where
     .execute(state, &BlockContext::default())?;
 
     // Ensure the execution was successful.
-    assert!(!tx_execution_info.validate_info.unwrap().failure_flag);
+    let validate_info = tx_execution_info.validate_info.unwrap();
+    if validate_info.failure_flag {
+        utils::panic_with_cairo_error(&validate_info.retdata);
+    }
 
     Ok(casm_class_hash)
 }
@@ -215,7 +218,10 @@ where
     .execute(state, &BlockContext::default())?;
 
     // Ensure the execution was successful.
-    assert!(!tx_execution_info.validate_info.unwrap().failure_flag);
+    let validate_info = tx_execution_info.validate_info.unwrap();
+    if validate_info.failure_flag {
+        utils::panic_with_cairo_error(&validate_info.retdata);
+    }
 
     Ok(casm_class_hash)
 }
@@ -244,7 +250,10 @@ where
     .execute(state, &BlockContext::default())?;
 
     // Ensure the execution was successful.
-    assert!(!tx_execution_info.validate_info.unwrap().failure_flag);
+    let validate_info = tx_execution_info.validate_info.unwrap();
+    if validate_info.failure_flag {
+        utils::panic_with_cairo_error(&validate_info.retdata);
+    }
 
     Ok(casm_class_hash)
 }
@@ -273,7 +282,10 @@ where
     .execute(state, &BlockContext::default())?;
 
     // Ensure the execution was successful.
-    assert!(!tx_execution_info.validate_info.unwrap().failure_flag);
+    let validate_info = tx_execution_info.validate_info.unwrap();
+    if validate_info.failure_flag {
+        utils::panic_with_cairo_error(&validate_info.retdata);
+    }
 
     Ok(casm_class_hash)
 }
@@ -294,7 +306,7 @@ where
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
+        Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
         Felt252::one(),
         vec![
@@ -315,7 +327,9 @@ where
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
-    assert!(!call_info.failure_flag);
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(call_info.retdata[0].clone())
 }
@@ -334,7 +348,7 @@ where
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
+        Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
         Felt252::one(),
         vec![
@@ -352,7 +366,9 @@ where
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
-    assert!(!call_info.failure_flag);
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(call_info.retdata[0].clone())
 }
@@ -369,7 +385,7 @@ where
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
+        Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
         Felt252::one(),
         vec![
@@ -385,7 +401,9 @@ where
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
-    assert!(!call_info.failure_flag);
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(call_info.retdata[0].clone())
 }
@@ -407,7 +425,7 @@ where
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
+        Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
         Felt252::one(),
         vec![
@@ -428,7 +446,9 @@ where
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
-    assert!(!call_info.failure_flag);
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(call_info.retdata[0].clone())
 }
@@ -462,7 +482,10 @@ where
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
     // Ensure the execution was successful.
-    assert!(!tx_execution_info.call_info.unwrap().failure_flag);
+    let call_info = tx_execution_info.call_info.unwrap();
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(())
 }
@@ -491,7 +514,10 @@ where
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
     // Ensure the execution was successful.
-    assert!(!tx_execution_info.call_info.unwrap().failure_flag);
+    let call_info = tx_execution_info.call_info.unwrap();
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(())
 }
@@ -532,7 +558,10 @@ where
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
     // Ensure the execution was successful.
-    assert!(!tx_execution_info.call_info.unwrap().failure_flag);
+    let call_info = tx_execution_info.call_info.unwrap();
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(())
 }
@@ -575,7 +604,10 @@ where
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
     // Ensure the execution was successful.
-    assert!(!tx_execution_info.call_info.unwrap().failure_flag);
+    let call_info = tx_execution_info.call_info.unwrap();
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(())
 }
@@ -605,7 +637,9 @@ where
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
-    assert!(!call_info.failure_flag);
+    if call_info.failure_flag {
+        utils::panic_with_cairo_error(&call_info.retdata);
+    }
 
     Ok(call_info.retdata[0].clone())
 }
@@ -615,10 +649,8 @@ mod utils {
     use cairo_vm::felt::Felt252;
     use num_traits::{One, Zero};
     use starknet_in_rust::{
-        core::contract_address::compute_deprecated_class_hash,
-        services::api::contract_classes::{
-            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-        },
+        core::contract_address::compute_casm_class_hash,
+        services::api::contract_classes::compiled_class::CompiledClass,
         state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
         utils::Address,
         CasmContractClass, ContractClass as SierraContractClass,
@@ -634,12 +666,21 @@ mod utils {
             .fold(Felt252::zero(), |acc, ch| (acc << 8u32) + u32::from(ch))
     }
 
+    pub fn panic_with_cairo_error(retdata: &[Felt252]) {
+        panic!(
+            "{:#?}",
+            retdata
+                .iter()
+                .map(Felt252::to_bytes_be)
+                .map(String::from_utf8)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap()
+        )
+    }
+
     pub fn default_state() -> Result<CachedState<InMemoryStateReader>, Box<dyn std::error::Error>> {
-        let contract_class =
-            ContractClass::from_path("starknet_programs/account_without_validation.json")?;
-        let contract_class_hash = compute_deprecated_class_hash(&contract_class)
-            .unwrap()
-            .to_be_bytes();
+        let (sierra_contract_class, casm_contract_class) = load_contract("YasCustomAccount")?;
+        let contract_class_hash = compute_casm_class_hash(&casm_contract_class)?.to_be_bytes();
 
         let mut state_reader = InMemoryStateReader::default();
         state_reader
@@ -651,10 +692,19 @@ mod utils {
 
         Ok(CachedState::new(
             Arc::new(state_reader),
-            HashMap::from([(
-                contract_class_hash,
-                CompiledClass::Deprecated(Arc::new(contract_class)),
-            )]),
+            HashMap::from([
+                (
+                    contract_class_hash,
+                    CompiledClass::Sierra(Arc::new((
+                        sierra_contract_class.extract_sierra_program()?,
+                        sierra_contract_class.entry_points_by_type,
+                    ))),
+                ),
+                (
+                    contract_class_hash,
+                    CompiledClass::Casm(Arc::new(casm_contract_class)),
+                ),
+            ]),
         ))
     }
 
