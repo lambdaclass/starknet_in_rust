@@ -131,7 +131,7 @@ impl Transaction {
                 skip_nonce_check,
             ),
             Transaction::L1Handler(tx) => {
-                tx.create_for_simulation(skip_validate, skip_execute, skip_nonce_check)
+                tx.create_for_simulation(skip_validate, skip_execute)
             }
         }
     }
