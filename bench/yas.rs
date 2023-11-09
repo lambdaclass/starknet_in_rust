@@ -16,7 +16,7 @@ use tracing::{debug, info};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 lazy_static! {
-    static ref ACCOUNT_ADDRESS: Felt252 = 0.into();
+    static ref ACCOUNT_ADDRESS: Felt252 = 4321.into();
     static ref OWNER_ADDRESS: Felt252 = 1234.into();
 }
 
@@ -93,6 +93,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (79228162514264337593543950336, 0),
         false,
     )?;
+
+    debug!(
+        "TYAS0 balance: {}",
+        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+    );
+    debug!(
+        "TYAS1 balance: {}",
+        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+    );
 
     // Approve (invoke).
     info!("Approving tokens.");
@@ -176,7 +185,8 @@ where
     )?
     .execute(state, &BlockContext::default())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    assert!(!tx_execution_info.validate_info.unwrap().failure_flag);
 
     Ok(casm_class_hash)
 }
@@ -204,7 +214,8 @@ where
     )?
     .execute(state, &BlockContext::default())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    assert!(!tx_execution_info.validate_info.unwrap().failure_flag);
 
     Ok(casm_class_hash)
 }
@@ -232,7 +243,8 @@ where
     )?
     .execute(state, &BlockContext::default())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    assert!(!tx_execution_info.validate_info.unwrap().failure_flag);
 
     Ok(casm_class_hash)
 }
@@ -260,7 +272,8 @@ where
     )?
     .execute(state, &BlockContext::default())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    assert!(!tx_execution_info.validate_info.unwrap().failure_flag);
 
     Ok(casm_class_hash)
 }
@@ -300,9 +313,11 @@ where
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    let call_info = tx_execution_info.call_info.unwrap();
+    assert!(!call_info.failure_flag);
 
-    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
+    Ok(call_info.retdata[0].clone())
 }
 
 fn deploy_yas_factory<S>(
@@ -335,9 +350,11 @@ where
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    let call_info = tx_execution_info.call_info.unwrap();
+    assert!(!call_info.failure_flag);
 
-    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
+    Ok(call_info.retdata[0].clone())
 }
 
 fn deploy_yas_router<S>(
@@ -366,9 +383,11 @@ where
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    let call_info = tx_execution_info.call_info.unwrap();
+    assert!(!call_info.failure_flag);
 
-    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
+    Ok(call_info.retdata[0].clone())
 }
 
 fn deploy_yas_pool<S>(
@@ -407,9 +426,11 @@ where
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    let call_info = tx_execution_info.call_info.unwrap();
+    assert!(!call_info.failure_flag);
 
-    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
+    Ok(call_info.retdata[0].clone())
 }
 
 fn initialize_pool<S>(
@@ -440,7 +461,8 @@ where
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    assert!(!tx_execution_info.call_info.unwrap().failure_flag);
 
     Ok(())
 }
@@ -464,11 +486,12 @@ where
         vec![wallet_address, u128::MAX.into(), u128::MAX.into()],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(Felt252::zero()),
+        Some(nonce),
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    assert!(!tx_execution_info.call_info.unwrap().failure_flag);
 
     Ok(())
 }
@@ -504,11 +527,12 @@ where
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(Felt252::zero()),
+        Some(nonce),
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    assert!(!tx_execution_info.call_info.unwrap().failure_flag);
 
     Ok(())
 }
@@ -546,11 +570,12 @@ where
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(Felt252::one()),
+        Some(nonce),
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    assert!(!tx_execution_info.call_info.unwrap().failure_flag);
 
     Ok(())
 }
@@ -578,9 +603,11 @@ where
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
-    // TODO: Ensure the execution was successful.
+    // Ensure the execution was successful.
+    let call_info = tx_execution_info.call_info.unwrap();
+    assert!(!call_info.failure_flag);
 
-    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
+    Ok(call_info.retdata[0].clone())
 }
 
 mod utils {
