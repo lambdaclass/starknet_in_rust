@@ -253,7 +253,7 @@ pub fn execute_tx(
     TransactionTrace,
     RpcTransactionReceipt,
 ) {
-    execute_tx_configurable(tx_hash, network, block_number, false, false)
+    execute_tx_configurable(tx_hash, network, block_number, false, true)
 }
 
 pub fn execute_tx_without_validate(
@@ -388,6 +388,11 @@ fn test_get_gas_price() {
 #[test_case(
     "0x01583c47a929f81f6a8c74d31708a7f161603893435d51b6897017fdcdaafee4",
     889897, // real block 889898
+    RpcChain::TestNet
+)]
+#[test_case(
+    "0x05dc2a26a65b0fc9e8cb17d8b3e9142abdb2b2d2dd2f3eb275256f23bddfc9f2",
+    899787, // real block 899788
     RpcChain::TestNet
 )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
