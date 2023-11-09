@@ -470,6 +470,7 @@ impl DeclareV2 {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = DeclareV2 {
             skip_validate,
@@ -480,6 +481,7 @@ impl DeclareV2 {
             } else {
                 self.max_fee
             },
+            skip_nonce_check,
             ..self.clone()
         };
 

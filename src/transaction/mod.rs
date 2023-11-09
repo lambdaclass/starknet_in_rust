@@ -104,12 +104,14 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::DeclareV2(tx) => tx.create_for_simulation(
                 skip_validate,
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::Deploy(tx) => {
                 tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
@@ -119,6 +121,7 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::InvokeFunction(tx) => tx.create_for_simulation(
                 skip_validate,
@@ -127,7 +130,9 @@ impl Transaction {
                 ignore_max_fee,
                 skip_nonce_check,
             ),
-            Transaction::L1Handler(tx) => tx.create_for_simulation(skip_validate, skip_execute),
+            Transaction::L1Handler(tx) => {
+                tx.create_for_simulation(skip_validate, skip_execute, skip_nonce_check)
+            }
         }
     }
 }

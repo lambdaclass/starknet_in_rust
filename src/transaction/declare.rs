@@ -337,6 +337,7 @@ impl Declare {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = Declare {
             skip_validate,
@@ -348,6 +349,7 @@ impl Declare {
             } else {
                 self.max_fee
             },
+            skip_nonce_check,
             ..self.clone()
         };
 
@@ -827,7 +829,7 @@ mod tests {
 
         let simulate_declare = declare
             .clone()
-            .create_for_simulation(true, false, true, false);
+            .create_for_simulation(true, false, true, false, false);
 
         // ---------------------
         //      Comparison

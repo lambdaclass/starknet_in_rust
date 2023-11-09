@@ -202,10 +202,16 @@ impl L1Handler {
     }
 
     /// Creates a L1Handler for simulation purposes.
-    pub fn create_for_simulation(&self, skip_validate: bool, skip_execute: bool) -> Transaction {
+    pub fn create_for_simulation(
+        &self,
+        skip_validate: bool,
+        skip_execute: bool,
+        skip_nonce_check: bool,
+    ) -> Transaction {
         let tx = L1Handler {
             skip_validate,
             skip_execute,
+            skip_nonce_check,
             ..self.clone()
         };
 
