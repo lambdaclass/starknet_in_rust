@@ -70,3 +70,9 @@ tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 path = "bench/internals.rs"
 name = "internals"
 harness = false
+
+[[bin]]
+path = "bench/native_bench.rs"
+name = "cairo_native"
+required-features = ["cairo-native"]
+harness = false
