@@ -192,9 +192,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => {
-                return Err(ContractClassError::NotADeprecatedContractClass.into())
-            }
+            CompiledClass::Sierra(_) => Err(ContractClassError::NotADeprecatedContractClass.into()),
         }
     }
 
