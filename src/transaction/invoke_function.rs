@@ -395,13 +395,11 @@ impl InvokeFunction {
                 Ok(())
             }
             Some(nonce) => {
-                if !skip_nonce_check {
-                    if nonce != &current_nonce {
-                        return Err(TransactionError::InvalidTransactionNonce(
-                            current_nonce.to_string(),
-                            nonce.to_string(),
-                        ));
-                    }
+                if !skip_nonce_check && nonce != &current_nonce {
+                    return Err(TransactionError::InvalidTransactionNonce(
+                        current_nonce.to_string(),
+                        nonce.to_string(),
+                    ));
                 }
                 state.increment_nonce(contract_address)?;
                 Ok(())
