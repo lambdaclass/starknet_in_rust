@@ -1471,4 +1471,32 @@ mod tests {
                 .class_hash_to_compiled_class_hash
         );
     }
+
+    #[test]
+    fn invoke_wrong_version() {
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = InvokeFunction::new(
+            Address(Felt252::one()),
+            Felt252::one(),
+            9000,
+            2.into(),
+            vec![],
+            vec![],
+            chain_id,
+            Some(Felt252::zero()),
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+            u128::MAX,
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1]);
+    }
 }

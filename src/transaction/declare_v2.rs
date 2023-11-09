@@ -550,9 +550,11 @@ mod tests {
 
     use super::DeclareV2;
     use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
+    use crate::definitions::block_context::{BlockContext, StarknetChainId};
     use crate::definitions::constants::QUERY_VERSION_2;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
+    use crate::transaction::error::TransactionError;
     use crate::{
         state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         utils::Address,
@@ -897,5 +899,49 @@ mod tests {
                 .to_string(),
             expected_err
         );
+    }
+
+    #[test]
+    fn declarev2_wrong_version() {
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = DeclareV2::new(
+            &sierra_contract_class,
+            None,
+            Felt252::one(),
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            1.into(),
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2]);
     }
 }
