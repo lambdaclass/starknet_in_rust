@@ -1,13 +1,13 @@
 use super::{
     fee::{calculate_tx_fee, charge_fee},
-    Transaction,
+    get_tx_version, Transaction,
 };
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::{BlockContext, StarknetChainId},
         constants::{
-            EXECUTE_ENTRY_POINT_SELECTOR, QUERY_VERSION_BASE, VALIDATE_ENTRY_POINT_SELECTOR,
+            EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
         transaction_type::TransactionType,
     },
@@ -15,7 +15,9 @@ use crate::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+    },
     state::{
         cached_state::CachedState,
         state_api::{State, StateReader},
@@ -26,7 +28,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 use std::fmt::Debug;
 
 /// Represents an InvokeFunction transaction in the starknet network.
@@ -104,6 +106,8 @@ impl InvokeFunction {
         nonce: Option<Felt252>,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
+
         let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
 
         Ok(InvokeFunction {
@@ -169,10 +173,7 @@ impl InvokeFunction {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
         }
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
-            return Ok(None);
-        }
-        if self.skip_validation {
+        if self.version.is_zero() || self.skip_validation {
             return Ok(None);
         }
 
@@ -195,6 +196,23 @@ impl InvokeFunction {
             false,
             block_context.validate_max_n_steps,
         )?;
+
+        // Validate the return data
+        let class_hash = state.get_class_hash_at(&self.contract_address)?;
+        let contract_class = state
+            .get_contract_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
+        if let CompiledClass::Sierra(_) = contract_class {
+            // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
+            // return `VALID`.
+            if !call_info
+                .as_ref()
+                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .unwrap_or_default()
+            {
+                return Err(TransactionError::WrongValidateRetdata);
+            }
+        }
 
         let call_info = verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
@@ -307,6 +325,13 @@ impl InvokeFunction {
         block_context: &BlockContext,
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        if self.version != Felt252::one() && self.version != Felt252::zero() {
+            return Err(TransactionError::UnsupportedTxVersion(
+                "Invoke".to_string(),
+                self.version.clone(),
+                vec![0, 1],
+            ));
+        }
         if !self.skip_nonce_check {
             self.handle_nonce(state)?;
         }
@@ -355,7 +380,7 @@ impl InvokeFunction {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -433,7 +458,7 @@ pub(crate) fn preprocess_invoke_function_fields(
     nonce: Option<Felt252>,
     version: Felt252,
 ) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
-    if version.is_zero() || version == *QUERY_VERSION_BASE {
+    if version.is_zero() {
         match nonce {
             Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
             None => {
@@ -1301,7 +1326,7 @@ mod tests {
             )
             .unwrap(),
             None,
-            &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone(),
+            Into::<Felt252>::into(1),
         );
         assert!(expected_error.is_err());
     }
@@ -1383,5 +1408,33 @@ mod tests {
                 .cache
                 .class_hash_to_compiled_class_hash
         );
+    }
+
+    #[test]
+    fn invoke_wrong_version() {
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = InvokeFunction::new(
+            Address(Felt252::one()),
+            Felt252::one(),
+            9000,
+            2.into(),
+            vec![],
+            vec![],
+            chain_id,
+            Some(Felt252::zero()),
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+            u128::MAX,
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1]);
     }
 }
