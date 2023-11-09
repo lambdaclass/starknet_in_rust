@@ -12,25 +12,36 @@ use starknet_in_rust::{
     transaction::{DeclareV2, InvokeFunction},
     utils::Address,
 };
-use std::sync::atomic::AtomicUsize;
+use tracing::{debug, info};
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 lazy_static! {
     static ref ACCOUNT_ADDRESS: Felt252 = 0.into();
     static ref OWNER_ADDRESS: Felt252 = 1234.into();
 }
 
-static NONCE: AtomicUsize = AtomicUsize::new(1);
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing::subscriber::set_global_default(
+        FmtSubscriber::builder()
+            .with_env_filter(EnvFilter::from_default_env())
+            .finish(),
+    )
+    .unwrap();
+
     let mut state = utils::default_state()?;
 
     // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
+    info!("Declaring the ERC20 contract.");
     let erc20_class_hash = declare_erc20(&mut state)?;
+    info!("Declaring the YASFactory contract.");
     let yas_factory_class_hash = declare_yas_factory(&mut state)?;
+    info!("Declaring the YASRouter contract.");
     let yas_router_class_hash = declare_yas_router(&mut state)?;
+    info!("Declaring the YASPool contract.");
     let yas_pool_class_hash = declare_yas_pool(&mut state)?;
 
     // Deploy two ERC20 contracts.
+    info!("Deploying TYAS0 token on ERC20.");
     let yas0_token_address = deploy_erc20(
         &mut state,
         &erc20_class_hash,
@@ -39,6 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (0x3782_dace_9d90_0000, 0),
         OWNER_ADDRESS.clone(),
     )?;
+    info!("Deploying TYAS1 token on ERC20.");
     let yas1_token_address = deploy_erc20(
         &mut state,
         &erc20_class_hash,
@@ -49,6 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Deploy YASFactory contract.
+    info!("Deploying YASFactory contract.");
     let yas_factory_address = deploy_yas_factory(
         &mut state,
         &yas_factory_class_hash,
@@ -57,9 +70,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Deploy YASRouter contract.
+    info!("Deploying YASRouter contract.");
     let yas_router_address = deploy_yas_router(&mut state, &yas_router_class_hash)?;
 
     // Deploy YASPool contract.
+    info!("Deploying YASPool contract.");
     let yas_pool_address = deploy_yas_pool(
         &mut state,
         &yas_pool_class_hash,
@@ -71,6 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Initialize pool (invoke).
+    info!("Initializing pool.");
     initialize_pool(
         &mut state,
         &yas_pool_address,
@@ -79,10 +95,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     // Approve (invoke).
+    info!("Approving tokens.");
     approve_max(&mut state, &yas0_token_address, yas_router_address.clone())?;
     approve_max(&mut state, &yas1_token_address, yas_router_address.clone())?;
 
+    debug!(
+        "TYAS0 balance: {}",
+        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+    );
+    debug!(
+        "TYAS1 balance: {}",
+        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+    );
+
     // Mint (invoke).
+    info!("Minting tokens.");
     mint(
         &mut state,
         &yas_router_address,
@@ -93,7 +120,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         2000000000000000000,
     )?;
 
+    debug!(
+        "TYAS0 balance: {}",
+        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+    );
+    debug!(
+        "TYAS1 balance: {}",
+        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+    );
+
     // Swap (invoke).
+    info!("Swapping tokens.");
     swap(
         &mut state,
         &yas_router_address,
@@ -103,6 +140,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (500000000000000000, 0, true),
         (4295128740, 0, false),
     )?;
+
+    debug!(
+        "TYAS0 balance: {}",
+        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+    );
+    debug!(
+        "TYAS1 balance: {}",
+        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+    );
 
     Ok(())
 }
@@ -114,18 +160,23 @@ where
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("ERC20")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
-    DeclareV2::new(
+    let sender_address = Address(ACCOUNT_ADDRESS.clone());
+    let nonce = state.get_nonce_at(&sender_address).unwrap();
+
+    let tx_execution_info = DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
-        Address(ACCOUNT_ADDRESS.clone()),
+        sender_address,
         0,
         Felt252::one(),
         vec![],
-        utils::next_nonce(),
+        nonce,
     )?
     .execute(state, &BlockContext::default())?;
+
+    // TODO: Ensure the execution was successful.
 
     Ok(casm_class_hash)
 }
@@ -137,18 +188,23 @@ where
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASFactory")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
-    DeclareV2::new(
+    let sender_address = Address(ACCOUNT_ADDRESS.clone());
+    let nonce = state.get_nonce_at(&sender_address).unwrap();
+
+    let tx_execution_info = DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
-        Address(ACCOUNT_ADDRESS.clone()),
+        sender_address,
         0,
         Felt252::one(),
         vec![],
-        utils::next_nonce(),
+        nonce,
     )?
     .execute(state, &BlockContext::default())?;
+
+    // TODO: Ensure the execution was successful.
 
     Ok(casm_class_hash)
 }
@@ -160,18 +216,23 @@ where
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASRouter")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
-    DeclareV2::new(
+    let sender_address = Address(ACCOUNT_ADDRESS.clone());
+    let nonce = state.get_nonce_at(&sender_address).unwrap();
+
+    let tx_execution_info = DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
-        Address(ACCOUNT_ADDRESS.clone()),
+        sender_address,
         0,
         Felt252::one(),
         vec![],
-        utils::next_nonce(),
+        nonce,
     )?
     .execute(state, &BlockContext::default())?;
+
+    // TODO: Ensure the execution was successful.
 
     Ok(casm_class_hash)
 }
@@ -183,18 +244,23 @@ where
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASPool")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
-    DeclareV2::new(
+    let sender_address = Address(ACCOUNT_ADDRESS.clone());
+    let nonce = state.get_nonce_at(&sender_address).unwrap();
+
+    let tx_execution_info = DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash.clone(),
         StarknetChainId::TestNet.to_felt(),
-        Address(ACCOUNT_ADDRESS.clone()),
+        sender_address,
         0,
         Felt252::one(),
         vec![],
-        utils::next_nonce(),
+        nonce,
     )?
     .execute(state, &BlockContext::default())?;
+
+    // TODO: Ensure the execution was successful.
 
     Ok(casm_class_hash)
 }
@@ -210,11 +276,11 @@ fn deploy_erc20<S>(
 where
     S: StateReader,
 {
-    // The nonce is reused as salt.
-    let nonce = utils::next_nonce();
+    let contract_address = Address(ACCOUNT_ADDRESS.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
 
-    Ok(InvokeFunction::new(
-        Address(ACCOUNT_ADDRESS.clone()),
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
         0,
         Felt252::one(),
@@ -232,11 +298,11 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?
-    .call_info
-    .unwrap()
-    .retdata[0]
-        .clone())
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    // TODO: Ensure the execution was successful.
+
+    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
 }
 
 fn deploy_yas_factory<S>(
@@ -248,11 +314,11 @@ fn deploy_yas_factory<S>(
 where
     S: StateReader,
 {
-    // The nonce is reused as salt.
-    let nonce = utils::next_nonce();
+    let contract_address = Address(ACCOUNT_ADDRESS.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
 
-    Ok(InvokeFunction::new(
-        Address(ACCOUNT_ADDRESS.clone()),
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
         0,
         Felt252::one(),
@@ -267,11 +333,11 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?
-    .call_info
-    .unwrap()
-    .retdata[0]
-        .clone())
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    // TODO: Ensure the execution was successful.
+
+    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
 }
 
 fn deploy_yas_router<S>(
@@ -281,11 +347,11 @@ fn deploy_yas_router<S>(
 where
     S: StateReader,
 {
-    // The nonce is reused as salt.
-    let nonce = utils::next_nonce();
+    let contract_address = Address(ACCOUNT_ADDRESS.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
 
-    Ok(InvokeFunction::new(
-        Address(ACCOUNT_ADDRESS.clone()),
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
         0,
         Felt252::one(),
@@ -298,11 +364,11 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?
-    .call_info
-    .unwrap()
-    .retdata[0]
-        .clone())
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    // TODO: Ensure the execution was successful.
+
+    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
 }
 
 fn deploy_yas_pool<S>(
@@ -317,11 +383,11 @@ fn deploy_yas_pool<S>(
 where
     S: StateReader,
 {
-    // The nonce is reused as salt.
-    let nonce = utils::next_nonce();
+    let contract_address = Address(ACCOUNT_ADDRESS.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
 
-    Ok(InvokeFunction::new(
-        Address(ACCOUNT_ADDRESS.clone()),
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy_contract")?.to_bytes_be()),
         0,
         Felt252::one(),
@@ -339,11 +405,11 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?
-    .call_info
-    .unwrap()
-    .retdata[0]
-        .clone())
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    // TODO: Ensure the execution was successful.
+
+    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
 }
 
 fn initialize_pool<S>(
@@ -355,8 +421,11 @@ fn initialize_pool<S>(
 where
     S: StateReader,
 {
-    InvokeFunction::new(
-        Address(yas_pool_address.clone()),
+    let contract_address = Address(yas_pool_address.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
+
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("initialize").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
@@ -367,9 +436,11 @@ where
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(Felt252::zero()),
+        Some(nonce),
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    // TODO: Ensure the execution was successful.
 
     Ok(())
 }
@@ -382,8 +453,11 @@ fn approve_max<S>(
 where
     S: StateReader,
 {
-    InvokeFunction::new(
-        Address(token_address.clone()),
+    let contract_address = Address(token_address.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
+
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("approve").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
@@ -393,6 +467,8 @@ where
         Some(Felt252::zero()),
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    // TODO: Ensure the execution was successful.
 
     Ok(())
 }
@@ -409,8 +485,11 @@ fn mint<S>(
 where
     S: StateReader,
 {
-    InvokeFunction::new(
-        Address(yas_router_address.clone()),
+    let contract_address = Address(yas_router_address.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
+
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("mint").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
@@ -429,6 +508,8 @@ where
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
+    // TODO: Ensure the execution was successful.
+
     Ok(())
 }
 
@@ -444,8 +525,11 @@ fn swap<S>(
 where
     S: StateReader,
 {
-    InvokeFunction::new(
-        Address(yas_router_address.clone()),
+    let contract_address = Address(yas_router_address.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
+
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("swap").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
@@ -466,10 +550,41 @@ where
     )?
     .execute(state, &BlockContext::default(), u64::MAX.into())?;
 
+    // TODO: Ensure the execution was successful.
+
     Ok(())
 }
 
+fn balance_of<S>(
+    state: &mut CachedState<S>,
+    token_address: &Felt252,
+    wallet_address: Felt252,
+) -> Result<Felt252, Box<dyn std::error::Error>>
+where
+    S: StateReader,
+{
+    let contract_address = Address(token_address.clone());
+    let nonce = state.get_nonce_at(&contract_address).unwrap();
+
+    let tx_execution_info = InvokeFunction::new(
+        contract_address,
+        Felt252::from_bytes_be(&get_selector_from_name("balanceOf").unwrap().to_bytes_be()),
+        0,
+        Felt252::one(),
+        vec![wallet_address],
+        vec![],
+        StarknetChainId::TestNet.to_felt(),
+        Some(nonce),
+    )?
+    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+
+    // TODO: Ensure the execution was successful.
+
+    Ok(tx_execution_info.call_info.unwrap().retdata[0].clone())
+}
+
 mod utils {
+    use crate::ACCOUNT_ADDRESS;
     use cairo_vm::felt::Felt252;
     use num_traits::{One, Zero};
     use starknet_in_rust::{
@@ -481,14 +596,7 @@ mod utils {
         utils::Address,
         CasmContractClass, ContractClass as SierraContractClass,
     };
-    use std::{
-        collections::HashMap,
-        fs,
-        path::Path,
-        sync::{atomic::Ordering, Arc},
-    };
-
-    use crate::{ACCOUNT_ADDRESS, NONCE};
+    use std::{collections::HashMap, fs, path::Path, sync::Arc};
 
     const BASE_DIR: &str = "bench/yas/";
 
@@ -497,10 +605,6 @@ mod utils {
         value
             .bytes()
             .fold(Felt252::zero(), |acc, ch| (acc << 8u32) + u32::from(ch))
-    }
-
-    pub fn next_nonce() -> Felt252 {
-        NONCE.fetch_add(1, Ordering::Relaxed).into()
     }
 
     pub fn default_state() -> Result<CachedState<InMemoryStateReader>, Box<dyn std::error::Error>> {
