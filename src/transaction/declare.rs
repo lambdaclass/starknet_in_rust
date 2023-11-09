@@ -49,6 +49,7 @@ pub struct Declare {
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
+    pub skip_nonce_check: bool,
 }
 
 // ------------------------------------------------------------
@@ -93,6 +94,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
@@ -128,6 +130,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
@@ -144,6 +147,7 @@ impl Declare {
         hash_value: Felt252,
         class_hash: ClassHash,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
         let internal_declare = Declare {
@@ -159,6 +163,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)

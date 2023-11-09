@@ -64,6 +64,7 @@ pub struct DeployAccount {
     skip_validate: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
+    skip_nonce_check: bool,
 }
 
 impl DeployAccount {
@@ -110,6 +111,7 @@ impl DeployAccount {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 
@@ -124,6 +126,7 @@ impl DeployAccount {
         contract_address_salt: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
+        let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash),
@@ -144,6 +147,7 @@ impl DeployAccount {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 

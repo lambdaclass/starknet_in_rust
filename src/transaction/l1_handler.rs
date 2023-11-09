@@ -36,6 +36,7 @@ pub struct L1Handler {
     paid_fee_on_l1: Option<Felt252>,
     skip_validate: bool,
     skip_execute: bool,
+    skip_nonce_check: bool,
 }
 
 impl L1Handler {
@@ -91,6 +92,7 @@ impl L1Handler {
             paid_fee_on_l1,
             skip_execute: false,
             skip_validate: false,
+            skip_nonce_check: false,
         })
     }
 

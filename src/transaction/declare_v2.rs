@@ -49,6 +49,7 @@ pub struct DeclareV2 {
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
+    pub skip_nonce_check: bool,
 }
 
 impl DeclareV2 {
@@ -147,6 +148,7 @@ impl DeclareV2 {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
