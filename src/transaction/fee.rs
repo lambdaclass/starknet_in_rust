@@ -1,5 +1,5 @@
 use super::error::TransactionError;
-use crate::definitions::constants::{FEE_FACTOR, QUERY_VERSION_BASE};
+use crate::definitions::constants::FEE_FACTOR;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::execution::CallType;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
@@ -156,8 +156,7 @@ pub fn charge_fee<S: StateReader>(
     )?;
 
     let actual_fee = {
-        let version_0 = tx_execution_context.version == 0.into()
-            || tx_execution_context.version == *QUERY_VERSION_BASE;
+        let version_0 = tx_execution_context.version.is_zero();
         let fee_exceeded_max = actual_fee > max_fee;
 
         if version_0 && fee_exceeded_max {

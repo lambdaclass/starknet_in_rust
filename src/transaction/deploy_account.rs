@@ -1,6 +1,7 @@
 use super::fee::{calculate_tx_fee, charge_fee};
+use super::get_tx_version;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::definitions::constants::QUERY_VERSION_BASE;
+use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
@@ -34,7 +35,7 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -77,6 +78,7 @@ impl DeployAccount {
         contract_address_salt: Felt252,
         chain_id: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
+        let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash),
@@ -166,6 +168,14 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        if self.version != Felt252::one() {
+            return Err(TransactionError::UnsupportedTxVersion(
+                "DeployAccount".to_string(),
+                self.version.clone(),
+                vec![1],
+            ));
+        }
+
         self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional();
@@ -291,7 +301,7 @@ impl DeployAccount {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -360,10 +370,6 @@ impl DeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
-            return Ok(None);
-        }
-
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             [
@@ -393,6 +399,23 @@ impl DeployAccount {
                 block_context.validate_max_n_steps,
             )?
         };
+
+        // Validate the return data
+        let class_hash = state.get_class_hash_at(&self.contract_address)?;
+        let contract_class = state
+            .get_contract_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
+        if let CompiledClass::Sierra(_) = contract_class {
+            // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
+            // return `VALID`.
+            if !call_info
+                .as_ref()
+                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .unwrap_or_default()
+            {
+                return Err(TransactionError::WrongValidateRetdata);
+            }
+        }
 
         verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
@@ -552,7 +575,7 @@ mod tests {
 
     #[test]
     fn deploy_account_twice_should_fail() {
-        let path = PathBuf::from("starknet_programs/constructor.json");
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract = ContractClass::from_path(path).unwrap();
 
         let hash = compute_deprecated_class_hash(&contract).unwrap();
@@ -564,9 +587,9 @@ mod tests {
         let internal_deploy = DeployAccount::new(
             class_hash,
             0,
+            1.into(),
             0.into(),
-            0.into(),
-            vec![10.into()],
+            vec![],
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
@@ -576,9 +599,9 @@ mod tests {
         let internal_deploy_error = DeployAccount::new(
             class_hash,
             0,
-            0.into(),
-            0.into(),
-            vec![10.into()],
+            1.into(),
+            1.into(),
+            vec![],
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
@@ -628,5 +651,32 @@ mod tests {
             .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
             .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
+    }
+
+    #[test]
+    fn deploy_account_wrong_version() {
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = DeployAccount::new(
+            [2; 32],
+            9000,
+            2.into(),
+            Felt252::zero(),
+            vec![],
+            vec![],
+            Felt252::one(),
+            chain_id,
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1]);
     }
 }

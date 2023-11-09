@@ -1,4 +1,3 @@
-use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
@@ -25,10 +24,10 @@ use crate::{
     },
 };
 use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 
 use super::fee::charge_fee;
-use super::{verify_version, Transaction};
+use super::{get_tx_version, Transaction};
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -66,6 +65,7 @@ impl Declare {
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
@@ -95,13 +95,6 @@ impl Declare {
             skip_fee_transfer: false,
         };
 
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
-
         Ok(internal_declare)
     }
 
@@ -115,6 +108,8 @@ impl Declare {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
+
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
@@ -134,13 +129,6 @@ impl Declare {
             skip_validate: false,
             skip_fee_transfer: false,
         };
-
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
 
         Ok(internal_declare)
     }
@@ -173,13 +161,6 @@ impl Declare {
             skip_fee_transfer: false,
         };
 
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
-
         Ok(internal_declare)
     }
 
@@ -195,8 +176,6 @@ impl Declare {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
-
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info = if self.skip_validate {
@@ -248,7 +227,7 @@ impl Declare {
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(None);
         }
 
@@ -283,7 +262,7 @@ impl Declare {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 
@@ -316,6 +295,13 @@ impl Declare {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        if self.version != Felt252::one() && self.version != Felt252::zero() {
+            return Err(TransactionError::UnsupportedTxVersion(
+                "Declare".to_string(),
+                self.version.clone(),
+                vec![0, 1],
+            ));
+        }
         self.handle_nonce(state)?;
         let mut tx_exec_info = self.apply(state, block_context)?;
 
@@ -505,184 +491,6 @@ mod tests {
                 .apply(&mut state, &BlockContext::default())
                 .unwrap(),
             transaction_exec_info
-        );
-    }
-
-    #[test]
-    fn verify_version_zero_should_fail_max_fee() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.insert(class_hash, contract_class);
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-        let max_fee = 1000;
-        let version = 0.into();
-
-        // Declare tx should fail because max_fee > 0 and version == 0
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::one()),
-            max_fee,
-            version,
-            Vec::new(),
-            Felt252::from(max_fee),
-        );
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidMaxFee
-        );
-    }
-
-    #[test]
-    fn verify_version_zero_should_fail_nonce() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.insert(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
-
-        let _state = CachedState::new(Arc::new(state_reader), contract_class_cache);
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-        let nonce = Felt252::from(148);
-        let version = 0.into();
-
-        // Declare tx should fail because nonce > 0 and version == 0
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::one()),
-            0,
-            version,
-            Vec::new(),
-            nonce,
-        );
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidNonce
-        );
-    }
-
-    #[test]
-    fn verify_signature_should_fail_not_empty_list() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.insert(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
-
-        let _state = CachedState::new(Arc::new(state_reader), contract_class_cache);
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-        let signature = vec![1.into(), 2.into()];
-
-        // Declare tx should fail because signature is not empty
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::one()),
-            0,
-            0.into(),
-            signature,
-            Felt252::zero(),
-        );
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidSignature
         );
     }
 
@@ -1032,5 +840,34 @@ mod tests {
                     .unwrap()
                     .actual_fee,
         );
+    }
+
+    #[test]
+    fn declare_wrong_version() {
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = Declare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            2.into(),
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "Declare" && ver == 2.into() && supp == vec![0, 1]);
     }
 }
