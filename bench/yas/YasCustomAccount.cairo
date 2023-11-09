@@ -53,11 +53,11 @@ mod Account {
         fn __execute__(ref self: ContractState, mut calls: Array<Call>) -> Span<felt252> {
             assert(calls.len() == 1_u32, 'MULTI_CALL_NOT_SUPPORTED');
 
-            let Call{to, selector, calldata } = calls.pop_front().expect('YCA: pop_front');
+            let Call{to, selector, calldata } = calls.pop_front().unwrap();
             core::starknet::call_contract_syscall(
                 address: to, entry_point_selector: selector, calldata: calldata.span(),
             )
-                .expect('YCA: call_contract_syscall')
+                .unwrap()
         }
 
         fn __validate__(
@@ -88,10 +88,12 @@ mod Account {
             contract_address_salt: felt252,
             call_data: Array<felt252>,
         ) -> (ContractAddress, Span<felt252>) {
-            deploy_syscall(
+            match deploy_syscall(
                 class_hash.try_into().unwrap(), contract_address_salt, call_data.span(), false
-            )
-                .expect('YCA: deploy_syscall')
+            ) {
+                Result::Ok(x) => x,
+                Result::Err(e) => core::panic(e),
+            }
         }
     }
 }
