@@ -1,7 +1,7 @@
 use super::fee::charge_fee;
-use super::{verify_version, Transaction};
+use super::{get_tx_version, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
-use crate::definitions::constants::QUERY_VERSION_BASE;
+use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
@@ -129,6 +129,7 @@ impl DeclareV2 {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
         let internal_declare = DeclareV2 {
@@ -147,13 +148,6 @@ impl DeclareV2 {
             skip_validate: false,
             skip_fee_transfer: false,
         };
-
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
 
         Ok(internal_declare)
     }
@@ -271,13 +265,7 @@ impl DeclareV2 {
         Vec::from([bytes])
     }
 
-    // TODO: delete once used
-    #[allow(dead_code)]
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
-            return Ok(());
-        }
-
         let contract_address = &self.sender_address;
         let current_nonce = state.get_nonce_at(contract_address)?;
         if current_nonce != self.nonce {
@@ -310,9 +298,15 @@ impl DeclareV2 {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        self.handle_nonce(state)?;
-        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
+        if self.version != 2.into() {
+            return Err(TransactionError::UnsupportedTxVersion(
+                "DeclareV2".to_string(),
+                self.version.clone(),
+                vec![2],
+            ));
+        }
 
+        self.handle_nonce(state)?;
         let initial_gas = INITIAL_GAS_COST;
 
         let mut resources_manager = ExecutionResourcesManager::default();
@@ -439,6 +433,24 @@ impl DeclareV2 {
             )?
         };
 
+        // Validate the return data
+        let class_hash = state.get_class_hash_at(&self.sender_address.clone())?;
+        let contract_class = state
+            .get_contract_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
+        if let CompiledClass::Sierra(_) = contract_class {
+            // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
+            // return `VALID`.
+            if !execution_result
+                .call_info
+                .as_ref()
+                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .unwrap_or_default()
+            {
+                return Err(TransactionError::WrongValidateRetdata);
+            }
+        }
+
         if execution_result.call_info.is_some() {
             verify_no_calls_to_other_contracts(&execution_result.call_info)?;
             remaining_gas -= execution_result.call_info.clone().unwrap().gas_consumed;
@@ -480,9 +492,11 @@ mod tests {
 
     use super::DeclareV2;
     use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
-    use crate::definitions::constants::QUERY_VERSION_BASE;
+    use crate::definitions::block_context::{BlockContext, StarknetChainId};
+    use crate::definitions::constants::QUERY_VERSION_2;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
+    use crate::transaction::error::TransactionError;
     use crate::{
         state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
         utils::Address,
@@ -636,13 +650,13 @@ mod tests {
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = &Into::<Felt252>::into(2) | &QUERY_VERSION_BASE.clone();
+            version = QUERY_VERSION_2.clone();
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone();
+            version = QUERY_VERSION_2.clone();
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 
@@ -827,5 +841,49 @@ mod tests {
                 .to_string(),
             expected_err
         );
+    }
+
+    #[test]
+    fn declarev2_wrong_version() {
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = DeclareV2::new(
+            &sierra_contract_class,
+            None,
+            Felt252::one(),
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            1.into(),
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2]);
     }
 }
