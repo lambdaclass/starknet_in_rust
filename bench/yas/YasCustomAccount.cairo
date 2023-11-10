@@ -54,10 +54,12 @@ mod Account {
             assert(calls.len() == 1_u32, 'MULTI_CALL_NOT_SUPPORTED');
 
             let Call{to, selector, calldata } = calls.pop_front().unwrap();
-            core::starknet::call_contract_syscall(
+            match core::starknet::call_contract_syscall(
                 address: to, entry_point_selector: selector, calldata: calldata.span(),
-            )
-                .unwrap()
+            ) {
+                Result::Ok(x) => x,
+                Result::Err(e) => core::panic(e),
+            }
         }
 
         fn __validate__(

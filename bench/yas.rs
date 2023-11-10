@@ -105,8 +105,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Approve (invoke).
     info!("Approving tokens.");
-    approve_max(&mut state, &yas0_token_address, yas_router_address.clone())?;
-    approve_max(&mut state, &yas1_token_address, yas_router_address.clone())?;
+    approve_max(
+        &mut state,
+        &ACCOUNT_ADDRESS,
+        yas0_token_address.clone(),
+        yas_router_address.clone(),
+    )?;
+    approve_max(
+        &mut state,
+        &ACCOUNT_ADDRESS,
+        yas1_token_address.clone(),
+        yas_router_address.clone(),
+    )?;
 
     debug!(
         "TYAS0 balance: {}",
@@ -121,7 +131,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Minting tokens.");
     mint(
         &mut state,
-        &yas_router_address,
+        &ACCOUNT_ADDRESS,
+        yas_router_address.clone(),
         yas_pool_address.clone(),
         OWNER_ADDRESS.clone(),
         -887220,
@@ -142,7 +153,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Swapping tokens.");
     swap(
         &mut state,
-        &yas_router_address,
+        &ACCOUNT_ADDRESS,
+        yas_router_address,
         yas_pool_address,
         OWNER_ADDRESS.clone(),
         true,
@@ -493,21 +505,30 @@ where
 
 fn approve_max<S>(
     state: &mut CachedState<S>,
-    token_address: &Felt252,
+    account_address: &Felt252,
+    token_address: Felt252,
     wallet_address: Felt252,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
-    let contract_address = Address(token_address.clone());
-    let nonce = state.get_nonce_at(&contract_address).unwrap();
+    let account_address = Address(account_address.clone());
+    let nonce = state.get_nonce_at(&account_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
-        contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("approve").unwrap().to_bytes_be()),
+        account_address,
+        Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
-        vec![wallet_address, u128::MAX.into(), u128::MAX.into()],
+        vec![
+            1.into(),
+            token_address,
+            Felt252::from_bytes_be(&get_selector_from_name("approve").unwrap().to_bytes_be()),
+            3.into(),
+            wallet_address,
+            u128::MAX.into(),
+            u128::MAX.into(),
+        ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
@@ -523,9 +544,11 @@ where
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn mint<S>(
     state: &mut CachedState<S>,
-    yas_router_address: &Felt252,
+    account_address: &Felt252,
+    yas_router_address: Felt252,
     yas_pool_address: Felt252,
     recipient: Felt252,
     tick_lower: i32,
@@ -535,15 +558,19 @@ fn mint<S>(
 where
     S: StateReader,
 {
-    let contract_address = Address(yas_router_address.clone());
-    let nonce = state.get_nonce_at(&contract_address).unwrap();
+    let account_address = Address(account_address.clone());
+    let nonce = state.get_nonce_at(&account_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
-        contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("mint").unwrap().to_bytes_be()),
+        account_address,
+        Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
         vec![
+            1.into(),
+            yas_router_address,
+            Felt252::from_bytes_be(&get_selector_from_name("mint").unwrap().to_bytes_be()),
+            7.into(),
             yas_pool_address,
             recipient,
             tick_lower.unsigned_abs().into(),
@@ -569,7 +596,8 @@ where
 
 fn swap<S>(
     state: &mut CachedState<S>,
-    yas_router_address: &Felt252,
+    account_address: &Felt252,
+    yas_router_address: Felt252,
     yas_pool_address: Felt252,
     recipient: Felt252,
     zero_for_one: bool,
@@ -579,15 +607,19 @@ fn swap<S>(
 where
     S: StateReader,
 {
-    let contract_address = Address(yas_router_address.clone());
-    let nonce = state.get_nonce_at(&contract_address).unwrap();
+    let account_address = Address(yas_router_address.clone());
+    let nonce = state.get_nonce_at(&account_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
-        contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("swap").unwrap().to_bytes_be()),
+        account_address,
+        Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
         0,
         Felt252::one(),
         vec![
+            1.into(),
+            yas_router_address,
+            Felt252::from_bytes_be(&get_selector_from_name("swap").unwrap().to_bytes_be()),
+            9.into(),
             yas_pool_address,
             recipient,
             (zero_for_one as u32).into(),
