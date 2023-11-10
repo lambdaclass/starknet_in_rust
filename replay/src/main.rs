@@ -45,7 +45,7 @@ fn main() {
             let rpc_chain = parse_network(&chain);
             let block_number = BlockNumber(block_number-1);
 
-            let (tx_info, )trace, receipt) = execute_tx(&tx_hash, rpc_chain, block_number).unwrap();
+            let (tx_info, _trace, receipt) = execute_tx(&tx_hash, rpc_chain, block_number).unwrap();
 
             let TransactionExecutionInfo {
                 revert_error,
