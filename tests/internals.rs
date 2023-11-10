@@ -753,6 +753,7 @@ fn declare_tx() -> Declare {
         skip_execute: false,
         skip_fee_transfer: false,
         skip_validate: false,
+        skip_nonce_check: false,
     }
 }
 
@@ -782,6 +783,7 @@ fn declarev2_tx() -> DeclareV2 {
         skip_execute: false,
         skip_fee_transfer: false,
         skip_validate: false,
+        skip_nonce_check: false,
     }
 }
 

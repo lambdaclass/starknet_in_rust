@@ -49,6 +49,7 @@ pub struct Declare {
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
+    pub skip_nonce_check: bool,
 }
 
 // ------------------------------------------------------------
@@ -93,6 +94,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
@@ -128,6 +130,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
@@ -144,6 +147,7 @@ impl Declare {
         hash_value: Felt252,
         class_hash: ClassHash,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
         let internal_declare = Declare {
@@ -159,6 +163,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
@@ -268,7 +273,7 @@ impl Declare {
 
         let contract_address = &self.sender_address;
         let current_nonce = state.get_nonce_at(contract_address)?;
-        if current_nonce != self.nonce {
+        if current_nonce != self.nonce && !self.skip_nonce_check {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
                 self.nonce.to_string(),
@@ -332,6 +337,7 @@ impl Declare {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = Declare {
             skip_validate,
@@ -343,6 +349,7 @@ impl Declare {
             } else {
                 self.max_fee
             },
+            skip_nonce_check,
             ..self.clone()
         };
 
@@ -822,7 +829,7 @@ mod tests {
 
         let simulate_declare = declare
             .clone()
-            .create_for_simulation(true, false, true, false);
+            .create_for_simulation(true, false, true, false, false);
 
         // ---------------------
         //      Comparison
