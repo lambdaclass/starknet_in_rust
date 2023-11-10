@@ -332,9 +332,7 @@ impl InvokeFunction {
                 vec![0, 1],
             ));
         }
-        if !self.skip_nonce_check {
-            self.handle_nonce(state)?;
-        }
+        self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional();
         let mut tx_exec_info =
@@ -393,7 +391,7 @@ impl InvokeFunction {
                 Ok(())
             }
             Some(nonce) => {
-                if nonce != &current_nonce {
+                if !self.skip_nonce_check && nonce != &current_nonce {
                     return Err(TransactionError::InvalidTransactionNonce(
                         current_nonce.to_string(),
                         nonce.to_string(),
