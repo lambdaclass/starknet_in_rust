@@ -555,8 +555,8 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
 }
 
 #[test_case(
-    "0x02af579b70128c904b4dababfed9ca5a4c38a2ee25acc709553451dad09e2e83",
-    886277, // real block 886278
+    "0x048ffc49f04504710e984923980fb63c4f17fb3022467251329adc75aae93c4b",
+    900799, // real block 900796
     RpcChain::TestNet
 )]
 #[test_case(
