@@ -148,7 +148,7 @@ pub fn execute_tx_configurable(
         SNTransaction::DeployAccount(tx) => {
             DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
                 .unwrap()
-                .create_for_simulation(skip_validate, false, false, false)
+                .create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
         }
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
@@ -180,7 +180,7 @@ pub fn execute_tx_configurable(
                     tx.class_hash().0.bytes().try_into().unwrap(),
                 )
                 .unwrap();
-                declare.create_for_simulation(skip_validate, false, false, false)
+                declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             } else {
                 let contract_class = match contract_class {
                     CompiledClass::Casm(cc) => cc.as_ref().clone(),
@@ -206,7 +206,7 @@ pub fn execute_tx_configurable(
                     Felt252::from_bytes_be(tx_hash.0.bytes()),
                 )
                 .unwrap();
-                declare.create_for_simulation(skip_validate, false, false, false)
+                declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             }
         }
         SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(

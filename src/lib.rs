@@ -876,6 +876,7 @@ mod test {
             skip_execute: false,
             skip_fee_transfer: false,
             skip_validate: false,
+            skip_nonce_check: false,
         }
     }
 
