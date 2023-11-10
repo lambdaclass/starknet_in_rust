@@ -9,6 +9,7 @@ use crate::{
     utils::ClassHash,
 };
 use cairo_vm::{
+    felt::Felt252,
     types::{
         errors::{math_errors::MathError, program_errors::ProgramError},
         relocatable::Relocatable,
@@ -149,4 +150,8 @@ pub enum TransactionError {
     FromByteArrayError(#[from] FromByteArrayError),
     #[error("DeclareV2 transaction has neither Sierra nor Casm contract class set")]
     DeclareV2NoSierraOrCasm,
+    #[error("Unsupported {0} transaction version: {1}. Supported versions:{2:?}")]
+    UnsupportedTxVersion(String, Felt252, Vec<usize>),
+    #[error("The `validate` entry point should return `VALID`.")]
+    WrongValidateRetdata,
 }

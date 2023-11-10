@@ -14,11 +14,6 @@ pub(crate) const N_DEFAULT_TOPICS: usize = 1; // Events have one default topic.
 pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
     (L1_TO_L2_MSG_HEADER_SIZE + 1) - CONSUMED_MSG_TO_L2_N_TOPICS;
 
-lazy_static! {
-    pub(crate) static ref QUERY_VERSION_BASE: Felt252 =
-        felt_str!("340282366920938463463374607431768211456");
-}
-
 pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
     (L2_TO_L1_MSG_HEADER_SIZE + 1) - LOG_MSG_TO_L1_N_TOPICS;
 
@@ -31,17 +26,6 @@ pub(crate) const N_STEPS_FEE_WEIGHT: f64 = 0.01;
 
 /// The version is considered 0 for L1-Handler transaction hash calculation purposes.
 pub(crate) const L1_HANDLER_VERSION: u64 = 0;
-
-lazy_static! {
-    pub static ref SUPPORTED_VERSIONS: [Felt252; 6] = [
-        0.into(),
-        1.into(),
-        2.into(),
-        &Into::<Felt252>::into(0) | &QUERY_VERSION_BASE.clone(),
-        &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone(),
-        &Into::<Felt252>::into(2) | &QUERY_VERSION_BASE.clone(),
-    ];
-}
 
 lazy_static! {
     // Ratios are taken from the `starknet_instance` CairoLayout object in cairo-lang.
@@ -113,5 +97,19 @@ lazy_static! {
     pub static ref VALIDATE_ENTRY_POINT_SELECTOR: Felt252 =
         felt_str!("626969833899987279399947180575486623810258720106406659648356883742278317941");
 
+    pub static ref VALIDATE_RETDATA: Felt252 =
+        felt_str!("370462705988");
+
     pub static ref BLOCK_HASH_CONTRACT_ADDRESS: Address = Address(1.into());
+}
+
+// Indentation for transactions meant to query and not addressed to the OS.
+lazy_static! {
+    static ref QUERY_VERSION_BASE: Felt252 = felt_str!("340282366920938463463374607431768211456");
+    pub(crate) static ref QUERY_VERSION_0: Felt252 =
+        &Into::<Felt252>::into(0) | &*QUERY_VERSION_BASE;
+    pub(crate) static ref QUERY_VERSION_1: Felt252 =
+        &Into::<Felt252>::into(1) | &*QUERY_VERSION_BASE;
+    pub(crate) static ref QUERY_VERSION_2: Felt252 =
+        &Into::<Felt252>::into(2) | &*QUERY_VERSION_BASE;
 }

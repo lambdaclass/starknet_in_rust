@@ -830,7 +830,7 @@ mod test {
             DeployAccount::new(
                 *CLASS_HASH_BYTES,
                 0,
-                0.into(),
+                1.into(),
                 Felt252::zero(),
                 vec![],
                 SIGNATURE.clone(),
@@ -864,7 +864,7 @@ mod test {
         DeclareV2 {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-            version: 1.into(),
+            version: 2.into(),
             max_fee: INITIAL_GAS_COST,
             signature: vec![],
             nonce: 0.into(),
