@@ -40,6 +40,7 @@ use cairo_vm::{
         relocatable::{MaybeRelocatable, Relocatable},
     },
     vm::{
+        errors::runner_errors::RunnerError,
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources, RunResources},
         vm_core::VirtualMachine,
     },
@@ -469,24 +470,24 @@ impl ExecutionEntryPoint {
 
     /// Returns the hash of the executed contract class.
     fn get_code_class_hash<S: State>(&self, state: &mut S) -> Result<[u8; 32], TransactionError> {
-        if self.class_hash.is_some() {
+        if let Some(class_hash) = self.class_hash {
             match self.call_type {
-                CallType::Delegate => return Ok(self.class_hash.unwrap()),
+                CallType::Delegate => return Ok(class_hash),
                 _ => return Err(TransactionError::CallTypeIsNotDelegate),
             }
         }
         let code_address = match self.call_type {
-            CallType::Call => Some(self.contract_address.clone()),
+            CallType::Call => &self.contract_address,
             CallType::Delegate => {
-                if self.code_address.is_some() {
-                    self.code_address.clone()
+                if let Some(ref code_address) = self.code_address {
+                    code_address
                 } else {
                     return Err(TransactionError::AttempToUseNoneCodeAddress);
                 }
             }
         };
 
-        get_deployed_address_class_hash_at_address(state, &code_address.unwrap())
+        get_deployed_address_class_hash_at_address(state, code_address)
     }
 
     fn _execute_version0_class<S: StateReader>(
@@ -653,7 +654,6 @@ impl ExecutionEntryPoint {
         );
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
-        // TODO: handle error cases
         // Load builtin costs
         let builtin_costs: Vec<MaybeRelocatable> =
             vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
@@ -664,14 +664,16 @@ impl ExecutionEntryPoint {
             .into();
 
         // Load extra data
-        let core_program_end_ptr =
-            (runner.cairo_runner.program_base.unwrap() + program.data_len()).unwrap();
+        let core_program_end_ptr = (runner
+            .cairo_runner
+            .program_base
+            .ok_or(RunnerError::NoProgBase)?
+            + program.data_len())?;
         let program_extra_data: Vec<MaybeRelocatable> =
             vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr];
         runner
             .vm
-            .load_data(core_program_end_ptr, &program_extra_data)
-            .unwrap();
+            .load_data(core_program_end_ptr, &program_extra_data)?;
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
         let data = self.calldata.iter().map(|d| d.into()).collect();
@@ -687,7 +689,7 @@ impl ExecutionEntryPoint {
             .collect();
         entrypoint_args.push(CairoArg::Single(alloc_pointer.clone()));
         entrypoint_args.push(CairoArg::Single(
-            alloc_pointer.add_usize(self.calldata.len()).unwrap(),
+            alloc_pointer.add_usize(self.calldata.len())?,
         ));
 
         let ref_vec: Vec<&CairoArg> = entrypoint_args.iter().collect();
@@ -711,11 +713,11 @@ impl ExecutionEntryPoint {
             .get_initial_fp()
             .ok_or(TransactionError::MissingInitialFp)?;
 
-        let args_ptr = initial_fp - (entrypoint_args.len() + 2);
+        let args_ptr = (initial_fp - (entrypoint_args.len() + 2))?;
 
         runner
             .vm
-            .mark_address_range_as_accessed(args_ptr.unwrap(), entrypoint_args.len())?;
+            .mark_address_range_as_accessed(args_ptr, entrypoint_args.len())?;
 
         *resources_manager = runner
             .hint_processor
