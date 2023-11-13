@@ -115,7 +115,6 @@ pub fn execute_tx_configurable(
     let chain_id = match rpc_reader.0.chain {
         RpcChain::MainNet => StarknetChainId::MainNet,
         RpcChain::TestNet => StarknetChainId::TestNet,
-        RpcChain::TestNet2 => StarknetChainId::TestNet2,
     };
     let starknet_os_config =
         StarknetOsConfig::new(chain_id.to_felt(), fee_token_address, gas_price);

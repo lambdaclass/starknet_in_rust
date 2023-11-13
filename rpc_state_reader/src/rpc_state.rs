@@ -21,7 +21,6 @@ use crate::{rpc_state_errors::RpcStateError, utils};
 pub enum RpcChain {
     MainNet,
     TestNet,
-    TestNet2,
 }
 
 impl From<RpcChain> for StarknetChainId {
@@ -29,7 +28,6 @@ impl From<RpcChain> for StarknetChainId {
         match network {
             RpcChain::MainNet => StarknetChainId::MainNet,
             RpcChain::TestNet => StarknetChainId::TestNet,
-            RpcChain::TestNet2 => StarknetChainId::TestNet2,
         }
     }
 }
@@ -39,7 +37,6 @@ impl fmt::Display for RpcChain {
         match self {
             RpcChain::MainNet => write!(f, "starknet-mainnet"),
             RpcChain::TestNet => write!(f, "starknet-goerli"),
-            RpcChain::TestNet2 => write!(f, "starknet-goerli2"),
         }
     }
 }
@@ -49,7 +46,6 @@ impl From<RpcChain> for ChainId {
         ChainId(match value {
             RpcChain::MainNet => "alpha-mainnet".to_string(),
             RpcChain::TestNet => "alpha4".to_string(),
-            RpcChain::TestNet2 => "alpha4-2".to_string(),
         })
     }
 }
