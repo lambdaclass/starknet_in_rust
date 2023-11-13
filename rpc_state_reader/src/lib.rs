@@ -119,13 +119,13 @@ mod tests {
     }
 
     // Tested with the following query to the Feeder Gateway API:
-    // https://alpha4-2.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x019feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc
+    // https://alpha-mainnet.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x035673e42bd485ae699c538d8502f730d1137545b22a64c094ecdaf86c59e592
     #[test]
     fn test_get_transaction_trace() {
-        let rpc_state = RpcState::new_infura(RpcChain::TestNet2, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         let tx_hash = TransactionHash(stark_felt!(
-            "19feb888a2d53ffddb7a1750264640afab8e9c23119e648b5259f1b5e7d51bc"
+            "0x035673e42bd485ae699c538d8502f730d1137545b22a64c094ecdaf86c59e592"
         ));
 
         let tx_trace = rpc_state.get_transaction_trace(&tx_hash).unwrap();
@@ -133,8 +133,8 @@ mod tests {
         assert_eq!(
             tx_trace.signature,
             vec![
-                stark_felt!("ffab1c47d8d5e5b76bdcc4af79e98205716c36b440f20244c69599a91ace58"),
-                stark_felt!("6aa48a0906c9c1f7381c1a040c043b649eeac1eea08f24a9d07813f6b1d05fe"),
+                stark_felt!("0x1bb2bc03d7f5faccc0e159ea2bbf54cdd1e983fc6362545391bf8fda5d8e669"),
+                stark_felt!("0x4517da2856095584a30640bf14ad59cca3ff91dded42be7e3e40e5ea2f51045"),
             ]
         );
 
@@ -142,20 +142,21 @@ mod tests {
             tx_trace.validate_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("1"),
-                stark_felt!("690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232"),
-                stark_felt!("1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573"),
+                stark_felt!("0x45dc42889b6292c540de9def0341364bd60c2d8ccced459fac8b1bfc24fa1f5"),
+                stark_felt!("0xb758361d5e84380ef1e632f89d8e76a8677dbc3f4b93a4f9d75d2a6048f312"),
                 stark_felt!("0"),
-                stark_felt!("9"),
-                stark_felt!("9"),
-                stark_felt!("4"),
-                stark_felt!("4254432d55534443"),
-                stark_felt!("f02e7324ecbd65ce267"),
-                stark_felt!("5754492d55534443"),
-                stark_felt!("8e13050d06d8f514c"),
-                stark_felt!("4554482d55534443"),
-                stark_felt!("f0e4a142c3551c149d"),
-                stark_felt!("4a50592d55534443"),
-                stark_felt!("38bd34c31a0a5c"),
+                stark_felt!("0xa"),
+                stark_felt!("0xa"),
+                stark_felt!("0x3fed4"),
+                stark_felt!("0"),
+                stark_felt!("0xdf6aedb"),
+                stark_felt!("0"),
+                stark_felt!("0"),
+                stark_felt!("0"),
+                stark_felt!("0x47c5f10d564f1623566b940a61fe54754bfff996f7536901ec969b12874f87f"),
+                stark_felt!("2"),
+                stark_felt!("0x72034953cd93dc8618123b4802003bae1f469b526bc18355250080c0f93dc17"),
+                stark_felt!("0x5f2ac628fa43d58fb8a6b7a2739de5c1edb550cb13cdcec5bc99f00135066a7"),
             ])
         );
         assert_eq!(
@@ -169,12 +170,12 @@ mod tests {
                 .unwrap()
                 .execution_resources,
             ExecutionResources {
-                n_steps: 790,
-                n_memory_holes: 51,
+                n_steps: 672,
+                n_memory_holes: 74,
                 builtin_instance_counter: HashMap::from([
-                    ("range_check_builtin".to_string(), 20),
+                    ("range_check_builtin".to_string(), 11),
                     ("ecdsa_builtin".to_string(), 1),
-                    ("pedersen_builtin".to_string(), 2),
+                    ("pedersen_builtin".to_string(), 1),
                 ]),
             }
         );
@@ -191,21 +192,22 @@ mod tests {
         assert_eq!(
             tx_trace.function_invocation.as_ref().unwrap().calldata,
             Some(vec![
-                stark_felt!("1"),
-                stark_felt!("690c876e61beda61e994543af68038edac4e1cb1990ab06e52a2d27e56a1232"),
-                stark_felt!("1f24f689ced5802b706d7a2e28743fe45c7bfa37431c97b1c766e9622b65573"),
-                stark_felt!("0"),
-                stark_felt!("9"),
-                stark_felt!("9"),
-                stark_felt!("4"),
-                stark_felt!("4254432d55534443"),
-                stark_felt!("f02e7324ecbd65ce267"),
-                stark_felt!("5754492d55534443"),
-                stark_felt!("8e13050d06d8f514c"),
-                stark_felt!("4554482d55534443"),
-                stark_felt!("f0e4a142c3551c149d"),
-                stark_felt!("4a50592d55534443"),
-                stark_felt!("38bd34c31a0a5c"),
+                stark_felt!("0x1"),
+                stark_felt!("0x45dc42889b6292c540de9def0341364bd60c2d8ccced459fac8b1bfc24fa1f5"),
+                stark_felt!("0xb758361d5e84380ef1e632f89d8e76a8677dbc3f4b93a4f9d75d2a6048f312"),
+                stark_felt!("0x0"),
+                stark_felt!("0xa"),
+                stark_felt!("0xa"),
+                stark_felt!("0x3fed4"),
+                stark_felt!("0x0"),
+                stark_felt!("0xdf6aedb"),
+                stark_felt!("0x0"),
+                stark_felt!("0x0"),
+                stark_felt!("0x0"),
+                stark_felt!("0x47c5f10d564f1623566b940a61fe54754bfff996f7536901ec969b12874f87f"),
+                stark_felt!("0x2"),
+                stark_felt!("0x72034953cd93dc8618123b4802003bae1f469b526bc18355250080c0f93dc17"),
+                stark_felt!("0x5f2ac628fa43d58fb8a6b7a2739de5c1edb550cb13cdcec5bc99f00135066a7")
             ])
         );
         assert_eq!(
@@ -219,11 +221,13 @@ mod tests {
                 .unwrap()
                 .execution_resources,
             ExecutionResources {
-                n_steps: 2808,
-                n_memory_holes: 136,
+                n_steps: 3525,
+                n_memory_holes: 421,
                 builtin_instance_counter: HashMap::from([
-                    ("range_check_builtin".to_string(), 49),
-                    ("pedersen_builtin".to_string(), 14),
+                    ("range_check_builtin".to_string(), 83),
+                    ("pedersen_builtin".to_string(), 16),
+                    ("poseidon_builtin".to_string(), 4),
+                    ("ec_op_builtin".to_string(), 3),
                 ]),
             }
         );
@@ -255,14 +259,14 @@ mod tests {
                 .internal_calls[0]
                 .internal_calls
                 .len(),
-            7
+            0
         );
 
         assert_eq!(
             tx_trace.fee_transfer_invocation.as_ref().unwrap().calldata,
             Some(vec![
-                stark_felt!("1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8"),
-                stark_felt!("2b0322a23ba4"),
+                stark_felt!("0x1176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8"),
+                stark_felt!("0x2439e47667460"),
                 stark_felt!("0"),
             ])
         );
@@ -277,8 +281,8 @@ mod tests {
                 .unwrap()
                 .execution_resources,
             ExecutionResources {
-                n_steps: 586,
-                n_memory_holes: 42,
+                n_steps: 590,
+                n_memory_holes: 40,
                 builtin_instance_counter: HashMap::from([
                     ("range_check_builtin".to_string(), 21),
                     ("pedersen_builtin".to_string(), 4),
