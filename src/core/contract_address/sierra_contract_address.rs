@@ -67,13 +67,14 @@ pub fn compute_sierra_class_hash(
         let mut buf = Cursor::new(Vec::new());
         let mut fmt = serde_json::Serializer::with_formatter(&mut buf, PythonJsonFormatter);
 
-        contract_class
+        let _ = contract_class
             .abi
             .as_ref()
             .ok_or(ContractAddressError::MissingAbi)?
-            .items
-            .serialize(&mut fmt)
-            .map_err(|_| ContractAddressError::MissingAbi)?;
+            .clone()
+            .into_iter()
+            .map(|item| item.serialize(&mut fmt).unwrap())
+            .collect::<Vec<_>>();
 
         // Note: The following unwrap should never be triggered as long as serde_json generates
         //   UTF-8 encoded data, which in practice means it should never panic.

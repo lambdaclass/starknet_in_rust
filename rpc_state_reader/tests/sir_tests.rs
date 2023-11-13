@@ -6,7 +6,6 @@ use starknet_api::{
     block::BlockNumber,
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
     hash::{StarkFelt, StarkHash},
-    stark_felt,
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash, TransactionVersion},
 };
@@ -140,7 +139,7 @@ pub fn execute_tx_configurable(
     };
 
     // Get transaction before giving ownership of the reader
-    let tx_hash = TransactionHash(stark_felt!(tx_hash));
+    let tx_hash = TransactionHash(StarkFelt::try_from(tx_hash).unwrap());
     let tx = match rpc_reader.0.get_transaction(&tx_hash).unwrap() {
         SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
             .unwrap()
@@ -271,7 +270,10 @@ pub fn execute_tx_without_validate(
 #[test]
 fn test_get_transaction_try_from() {
     let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
-    let str_hash = stark_felt!("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91");
+    let str_hash: StarkFelt =
+        StarkFelt::try_from("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91")
+            .unwrap();
+
     let tx_hash = TransactionHash(str_hash);
 
     let sn_tx = rpc_state.get_transaction(&tx_hash).unwrap();
