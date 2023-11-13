@@ -77,6 +77,12 @@ path = "bench/internals.rs"
 name = "internals"
 harness = false
 
+[[bin]]
+path = "bench/native_bench.rs"
+name = "cairo_native"
+required-features = ["cairo-native"]
+harness = false
+
 [profile.release]
 codegen-units = 1
 lto = "fat"

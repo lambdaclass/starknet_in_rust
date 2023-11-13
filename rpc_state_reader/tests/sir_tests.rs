@@ -1,7 +1,7 @@
 #![cfg(feature = "starknet_in_rust")]
 
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use rpc_state_reader::{execute_tx, execute_tx_without_validate, rpc_state::*};
+use rpc_state_reader::{execute_tx, execute_tx_without_validate, rpc_state::*, execute_tx_configurable};
 use starknet_api::{
     block::BlockNumber,
     hash::StarkFelt,
@@ -290,6 +290,64 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
     assert!(call_info.is_none());
 
     let actual_fee = actual_fee;
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+        if diff >= 5 {
+            assert_eq!(
+                actual_fee, receipt.actual_fee,
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            );
+        }
+    }
+}
+
+#[test_case(
+    "0x05dc2a26a65b0fc9e8cb17d8b3e9142abdb2b2d2dd2f3eb275256f23bddfc9f2",
+    899787, // real block 899788
+    RpcChain::TestNet
+)]
+fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) =
+        execute_tx_configurable(hash, chain, BlockNumber(block_number), false, true).unwrap();
+
+    let TransactionExecutionInfo {
+        call_info,
+        actual_fee,
+        ..
+    } = tx_info;
+    let CallInfo {
+        execution_resources,
+        internal_calls,
+        ..
+    } = call_info.unwrap();
+
+    // check Cairo VM execution resources
+    assert_eq_sorted!(
+        execution_resources.as_ref(),
+        Some(
+            &trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources
+        ),
+        "execution resources mismatch"
+    );
+
+    // check amount of internal calls
+    assert_eq!(
+        internal_calls.len(),
+        trace
+            .function_invocation
+            .as_ref()
+            .unwrap()
+            .internal_calls
+            .len(),
+        "internal calls length mismatch"
+    );
+
+    // check actual fee calculation
     if receipt.actual_fee != actual_fee {
         let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
 
