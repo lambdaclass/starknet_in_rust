@@ -22,6 +22,13 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
 /// Represents an L1Handler transaction in the StarkNet network.
@@ -95,7 +102,7 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::L1Handler,
         self.hash_value = ?self.hash_value,
         self.contract_address = ?self.contract_address,
@@ -107,6 +114,9 @@ impl L1Handler {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let entrypoint = ExecutionEntryPoint::new(
@@ -134,6 +144,8 @@ impl L1Handler {
                 &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
                 true,
                 block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )?
         };
 
@@ -313,7 +325,13 @@ mod test {
         block_context.starknet_os_config.gas_price = 1;
 
         let tx_exec = l1_handler
-            .execute(&mut state, &block_context, 100000)
+            .execute(
+                &mut state,
+                &block_context,
+                100000,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         let expected_tx_exec = expected_tx_exec_info();

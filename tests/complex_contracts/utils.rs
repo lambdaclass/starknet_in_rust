@@ -130,6 +130,8 @@ pub fn execute_entry_point(
         &mut tx_execution_context,
         false,
         call_config.block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     Ok(call_info.unwrap())
@@ -166,7 +168,12 @@ pub fn deploy(
         &CompiledClass::Deprecated(Arc::new(contract_class)),
     )?;
 
-    let tx_execution_info = internal_deploy.apply(state, block_context)?;
+    let tx_execution_info = internal_deploy.apply(
+        state,
+        block_context,
+        #[cfg(feature = "cairo-native")]
+        None,
+    )?;
 
     let call_info = tx_execution_info.call_info.unwrap();
     let contract_address = call_info.contract_address;

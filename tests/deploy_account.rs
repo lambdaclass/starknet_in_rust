@@ -75,7 +75,12 @@ fn internal_deploy_account() {
     .unwrap();
 
     let tx_info = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     let contract_address = calculate_contract_address(
@@ -179,7 +184,12 @@ fn internal_deploy_account_cairo1() {
     .unwrap();
 
     let tx_info = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     let accessed_keys: [u8; 32] = [
