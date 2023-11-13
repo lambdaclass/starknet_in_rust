@@ -1,9 +1,14 @@
 use super::fee::{calculate_tx_fee, charge_fee};
+use super::get_tx_version;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::definitions::constants::QUERY_VERSION_BASE;
+use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
+use crate::execution::gas_usage::get_onchain_data_segment_length;
+use crate::execution::os_usage::ESTIMATED_DEPLOY_ACCOUNT_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
+use crate::state::state_api::StateChangesCount;
 use crate::state::StateDiff;
 use crate::{
     core::{
@@ -34,7 +39,8 @@ use crate::{
 };
 use cairo_vm::felt::Felt252;
 use getset::Getters;
-use num_traits::Zero;
+use num_traits::{One, Zero};
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -63,6 +69,7 @@ pub struct DeployAccount {
     skip_validate: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
+    skip_nonce_check: bool,
 }
 
 impl DeployAccount {
@@ -77,6 +84,7 @@ impl DeployAccount {
         contract_address_salt: Felt252,
         chain_id: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
+        let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash),
@@ -108,6 +116,7 @@ impl DeployAccount {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 
@@ -122,6 +131,7 @@ impl DeployAccount {
         contract_address_salt: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
+        let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash),
@@ -142,6 +152,7 @@ impl DeployAccount {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 
@@ -166,6 +177,18 @@ impl DeployAccount {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        if self.version != Felt252::one() {
+            return Err(TransactionError::UnsupportedTxVersion(
+                "DeployAccount".to_string(),
+                self.version.clone(),
+                vec![1],
+            ));
+        }
+
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context)?;
+        }
+
         self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional();
@@ -291,13 +314,13 @@ impl DeployAccount {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 
         // In blockifier, get_nonce_at returns zero if no entry is found.
         let current_nonce = state.get_nonce_at(&self.contract_address)?;
-        if current_nonce != self.nonce {
+        if current_nonce != self.nonce && !self.skip_nonce_check {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
                 self.nonce.to_string(),
@@ -305,6 +328,55 @@ impl DeployAccount {
         }
         state.increment_nonce(&self.contract_address)?;
         Ok(())
+    }
+
+    fn check_fee_balance<S: State + StateReader>(
+        &self,
+        state: &mut S,
+        block_context: &BlockContext,
+    ) -> Result<(), TransactionError> {
+        if self.max_fee.is_zero() {
+            return Ok(());
+        }
+        let minimal_fee = self.estimate_minimal_fee(block_context)?;
+        // Check max fee is at least the estimated constant overhead.
+        if self.max_fee < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        }
+        // Check that the current balance is high enough to cover the max_fee
+        let (balance_low, balance_high) =
+            state.get_fee_token_balance(block_context, self.contract_address())?;
+        // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+            return Err(TransactionError::MaxFeeExceedsBalance(
+                self.max_fee,
+                balance_low,
+                balance_high,
+            ));
+        }
+        Ok(())
+    }
+
+    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
+        let n_estimated_steps = ESTIMATED_DEPLOY_ACCOUNT_STEPS;
+        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 1,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        });
+        let resources = HashMap::from([
+            (
+                "l1_gas_usage".to_string(),
+                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
+            ),
+            ("n_steps".to_string(), n_estimated_steps),
+        ]);
+        calculate_tx_fee(
+            &resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )
     }
 
     pub fn run_constructor_entrypoint<S: StateReader>(
@@ -360,10 +432,6 @@ impl DeployAccount {
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
-            return Ok(None);
-        }
-
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             [
@@ -394,6 +462,23 @@ impl DeployAccount {
             )?
         };
 
+        // Validate the return data
+        let class_hash = state.get_class_hash_at(&self.contract_address)?;
+        let contract_class = state
+            .get_contract_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
+        if let CompiledClass::Sierra(_) = contract_class {
+            // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
+            // return `VALID`.
+            if !call_info
+                .as_ref()
+                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .unwrap_or_default()
+            {
+                return Err(TransactionError::WrongValidateRetdata);
+            }
+        }
+
         verify_no_calls_to_other_contracts(&call_info)
             .map_err(|_| TransactionError::InvalidContractCall)?;
 
@@ -406,6 +491,7 @@ impl DeployAccount {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = DeployAccount {
             skip_validate,
@@ -416,6 +502,7 @@ impl DeployAccount {
             } else {
                 self.max_fee
             },
+            skip_nonce_check,
             ..self.clone()
         };
 
@@ -552,7 +639,7 @@ mod tests {
 
     #[test]
     fn deploy_account_twice_should_fail() {
-        let path = PathBuf::from("starknet_programs/constructor.json");
+        let path = PathBuf::from("starknet_programs/account_without_validation.json");
         let contract = ContractClass::from_path(path).unwrap();
 
         let hash = compute_deprecated_class_hash(&contract).unwrap();
@@ -564,9 +651,9 @@ mod tests {
         let internal_deploy = DeployAccount::new(
             class_hash,
             0,
+            1.into(),
             0.into(),
-            0.into(),
-            vec![10.into()],
+            vec![],
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
@@ -576,9 +663,9 @@ mod tests {
         let internal_deploy_error = DeployAccount::new(
             class_hash,
             0,
-            0.into(),
-            0.into(),
-            vec![10.into()],
+            1.into(),
+            1.into(),
+            vec![],
             Vec::new(),
             0.into(),
             StarknetChainId::TestNet2.to_felt(),
@@ -628,5 +715,32 @@ mod tests {
             .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
             .unwrap();
         internal_deploy.execute(&mut state, &block_context).unwrap();
+    }
+
+    #[test]
+    fn deploy_account_wrong_version() {
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = DeployAccount::new(
+            [2; 32],
+            9000,
+            2.into(),
+            Felt252::zero(),
+            vec![],
+            vec![],
+            Felt252::one(),
+            chain_id,
+        )
+        .unwrap();
+        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
+            &mut CachedState::default(),
+            &BlockContext::default(),
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1]);
     }
 }

@@ -6,18 +6,21 @@ pub mod error;
 pub mod fee;
 pub mod invoke_function;
 pub mod l1_handler;
-mod verify_version;
 
+use cairo_vm::felt::Felt252;
 pub use declare::Declare;
 pub use declare_v2::DeclareV2;
 pub use deploy::Deploy;
 pub use deploy_account::DeployAccount;
 pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
-pub use verify_version::verify_version;
+use num_traits::{One, Zero};
 
 use crate::{
-    definitions::block_context::BlockContext,
+    definitions::{
+        block_context::BlockContext,
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    },
     execution::TransactionExecutionInfo,
     state::{cached_state::CachedState, state_api::StateReader},
     utils::Address,
@@ -101,12 +104,14 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::DeclareV2(tx) => tx.create_for_simulation(
                 skip_validate,
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::Deploy(tx) => {
                 tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
@@ -116,6 +121,7 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::InvokeFunction(tx) => tx.create_for_simulation(
                 skip_validate,
@@ -126,5 +132,16 @@ impl Transaction {
             ),
             Transaction::L1Handler(tx) => tx.create_for_simulation(skip_validate, skip_execute),
         }
+    }
+}
+
+// Parses query tx versions into their normal counterpart
+// This is used to execute old transactions an may be removed in the future as its not part of the current standard implementation
+fn get_tx_version(version: Felt252) -> Felt252 {
+    match version {
+        version if version == *QUERY_VERSION_0 => Felt252::zero(),
+        version if version == *QUERY_VERSION_1 => Felt252::one(),
+        version if version == *QUERY_VERSION_2 => 2.into(),
+        version => version,
     }
 }
