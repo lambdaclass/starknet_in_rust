@@ -17,7 +17,7 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 lazy_static! {
     static ref ACCOUNT_ADDRESS: Felt252 = 4321.into();
-    static ref OWNER_ADDRESS: Felt252 = 1234.into();
+    static ref OWNER_ADDRESS: Felt252 = 4321.into();
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -100,7 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     debug!(
         "TYAS1 balance: {}",
-        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+        balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
     );
 
     // Approve (invoke).
@@ -124,7 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     debug!(
         "TYAS1 balance: {}",
-        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+        balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
     );
 
     // Mint (invoke).
@@ -146,7 +146,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     debug!(
         "TYAS1 balance: {}",
-        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+        balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
     );
 
     // Swap (invoke).
@@ -168,7 +168,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     debug!(
         "TYAS1 balance: {}",
-        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+        balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
     );
 
     Ok(())
@@ -594,6 +594,7 @@ where
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn swap<S>(
     state: &mut CachedState<S>,
     account_address: &Felt252,
@@ -607,7 +608,7 @@ fn swap<S>(
 where
     S: StateReader,
 {
-    let account_address = Address(yas_router_address.clone());
+    let account_address = Address(account_address.clone());
     let nonce = state.get_nonce_at(&account_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
