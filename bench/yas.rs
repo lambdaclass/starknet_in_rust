@@ -12,6 +12,7 @@ use starknet_in_rust::{
     transaction::{DeclareV2, InvokeFunction},
     utils::Address,
 };
+use std::time::{Duration, Instant};
 use tracing::{debug, info};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
@@ -149,18 +150,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
     );
 
-    // Swap (invoke).
-    info!("Swapping tokens.");
-    swap(
-        &mut state,
-        &ACCOUNT_ADDRESS,
-        yas_router_address,
-        yas_pool_address,
-        OWNER_ADDRESS.clone(),
-        true,
-        (500000000000000000, 0, true),
-        (4295128740, 0, false),
-    )?;
+    let mut delta_t = Duration::ZERO;
+    let mut num_runs = 0;
+    let mut state = loop {
+        let mut state = state.clone();
+
+        let yas_router_address = yas_router_address.clone();
+        let yas_pool_address = yas_pool_address.clone();
+
+        // Swap (invoke).
+        info!("Swapping tokens.");
+        let t0 = Instant::now();
+        swap(
+            &mut state,
+            &ACCOUNT_ADDRESS,
+            yas_router_address,
+            yas_pool_address,
+            OWNER_ADDRESS.clone(),
+            true,
+            (500000000000000000, 0, true),
+            (4295128740, 0, false),
+        )?;
+        let t1 = Instant::now();
+
+        delta_t += t1.duration_since(t0);
+        num_runs += 1;
+
+        if delta_t >= Duration::from_secs(5) {
+            break state;
+        }
+    };
+
+    let delta_t = delta_t.as_secs_f64();
+    println!(
+        "Executed {num_runs} swaps taking {delta_t} seconds ({} #/s, or {} s/#)",
+        num_runs as f64 / delta_t,
+        delta_t / num_runs as f64,
+    );
 
     debug!(
         "TYAS0 balance: {}",
