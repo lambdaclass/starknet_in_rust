@@ -191,7 +191,7 @@ where
         StarknetChainId::TestNet.to_felt(),
         sender_address,
         0,
-        Felt252::one(),
+        2.into(),
         vec![],
         nonce,
     )?
@@ -223,7 +223,7 @@ where
         StarknetChainId::TestNet.to_felt(),
         sender_address,
         0,
-        Felt252::one(),
+        2.into(),
         vec![],
         nonce,
     )?
@@ -255,7 +255,7 @@ where
         StarknetChainId::TestNet.to_felt(),
         sender_address,
         0,
-        Felt252::one(),
+        2.into(),
         vec![],
         nonce,
     )?
@@ -287,7 +287,7 @@ where
         StarknetChainId::TestNet.to_felt(),
         sender_address,
         0,
-        Felt252::one(),
+        2.into(),
         vec![],
         nonce,
     )?
