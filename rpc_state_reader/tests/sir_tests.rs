@@ -531,6 +531,12 @@ fn test_validate_fee(hash: &str, block_number: u64, chain: RpcChain) {
     271887, // real block 271888
     RpcChain::MainNet
 )]
+#[test_case(
+    // Declare tx
+    "0x056fc43343cd3fc1432b207d6d3f9d2794b84e7027a9790eaa93a80b5dff762c",
+    832158, // real block 832159
+    RpcChain::TestNet
+)]
 fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, _trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
     let TransactionExecutionInfo {
