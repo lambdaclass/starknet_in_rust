@@ -16,6 +16,13 @@ use std::time::{Duration, Instant};
 use tracing::{debug, info};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    starknet_in_rust::utils::{get_native_context, ClassHash},
+    std::{cell::RefCell, rc::Rc},
+};
+
 lazy_static! {
     static ref ACCOUNT_ADDRESS: Felt252 = 4321.into();
     static ref OWNER_ADDRESS: Felt252 = 4321.into();
@@ -31,21 +38,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .unwrap();
 
     let mut state = utils::default_state()?;
+    #[cfg(feature = "cairo-native")]
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(get_native_context())));
 
     // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
     info!("Declaring the ERC20 contract.");
-    let erc20_class_hash = declare_erc20(&mut state)?;
+    let erc20_class_hash = declare_erc20(
+        &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+    )?;
     info!("Declaring the YASFactory contract.");
-    let yas_factory_class_hash = declare_yas_factory(&mut state)?;
+    let yas_factory_class_hash = declare_yas_factory(
+        &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+    )?;
     info!("Declaring the YASRouter contract.");
-    let yas_router_class_hash = declare_yas_router(&mut state)?;
+    let yas_router_class_hash = declare_yas_router(
+        &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+    )?;
     info!("Declaring the YASPool contract.");
-    let yas_pool_class_hash = declare_yas_pool(&mut state)?;
+    let yas_pool_class_hash = declare_yas_pool(
+        &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+    )?;
 
     // Deploy two ERC20 contracts.
     info!("Deploying TYAS0 token on ERC20.");
     let yas0_token_address = deploy_erc20(
         &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
         &erc20_class_hash,
         "TYAS0",
         "$YAS0",
@@ -55,6 +82,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Deploying TYAS1 token on ERC20.");
     let yas1_token_address = deploy_erc20(
         &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
         &erc20_class_hash,
         "TYAS1",
         "$YAS1",
@@ -66,6 +95,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Deploying YASFactory contract.");
     let yas_factory_address = deploy_yas_factory(
         &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
         &yas_factory_class_hash,
         OWNER_ADDRESS.clone(),
         yas_pool_class_hash.clone(),
@@ -73,12 +104,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Deploy YASRouter contract.
     info!("Deploying YASRouter contract.");
-    let yas_router_address = deploy_yas_router(&mut state, &yas_router_class_hash)?;
+    let yas_router_address = deploy_yas_router(
+        &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+        &yas_router_class_hash,
+    )?;
 
     // Deploy YASPool contract.
     info!("Deploying YASPool contract.");
     let yas_pool_address = deploy_yas_pool(
         &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
         &yas_pool_class_hash,
         yas_factory_address,
         yas0_token_address.clone(),
@@ -91,6 +129,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Initializing pool.");
     initialize_pool(
         &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
         &yas_pool_address,
         (79_228_162_514_264_337_593_543_950_336, 0),
         false,
@@ -98,23 +138,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     debug!(
         "TYAS0 balance: {}",
-        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+        balance_of(
+            &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+            &yas0_token_address,
+            OWNER_ADDRESS.clone()
+        )?
     );
     debug!(
         "TYAS1 balance: {}",
-        balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
+        balance_of(
+            &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+            &yas1_token_address,
+            OWNER_ADDRESS.clone()
+        )?
     );
 
     // Approve (invoke).
     info!("Approving tokens.");
     approve_max(
         &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
         &ACCOUNT_ADDRESS,
         yas0_token_address.clone(),
         yas_router_address.clone(),
     )?;
     approve_max(
         &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
         &ACCOUNT_ADDRESS,
         yas1_token_address.clone(),
         yas_router_address.clone(),
@@ -122,17 +178,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     debug!(
         "TYAS0 balance: {}",
-        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+        balance_of(
+            &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+            &yas0_token_address,
+            OWNER_ADDRESS.clone()
+        )?
     );
     debug!(
         "TYAS1 balance: {}",
-        balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
+        balance_of(
+            &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+            &yas1_token_address,
+            OWNER_ADDRESS.clone()
+        )?
     );
 
     // Mint (invoke).
     info!("Minting tokens.");
     mint(
         &mut state,
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
         &ACCOUNT_ADDRESS,
         yas_router_address.clone(),
         yas_pool_address.clone(),
@@ -144,11 +214,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     debug!(
         "TYAS0 balance: {}",
-        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+        balance_of(
+            &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+            &yas0_token_address,
+            OWNER_ADDRESS.clone()
+        )?
     );
     debug!(
         "TYAS1 balance: {}",
-        balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
+        balance_of(
+            &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+            &yas1_token_address,
+            OWNER_ADDRESS.clone()
+        )?
     );
 
     let mut delta_t = Duration::ZERO;
@@ -164,6 +246,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let t0 = Instant::now();
         swap(
             &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
             &ACCOUNT_ADDRESS,
             yas_router_address,
             yas_pool_address,
@@ -191,17 +275,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     debug!(
         "TYAS0 balance: {}",
-        balance_of(&mut state, &yas0_token_address, OWNER_ADDRESS.clone())?
+        balance_of(
+            &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+            &yas0_token_address,
+            OWNER_ADDRESS.clone()
+        )?
     );
     debug!(
         "TYAS1 balance: {}",
-        balance_of(&mut state, &yas1_token_address, OWNER_ADDRESS.clone())?
+        balance_of(
+            &mut state,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+            &yas1_token_address,
+            OWNER_ADDRESS.clone()
+        )?
     );
 
     Ok(())
 }
 
-fn declare_erc20<S>(state: &mut CachedState<S>) -> Result<Felt252, Box<dyn std::error::Error>>
+fn declare_erc20<S>(
+    state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
@@ -222,7 +321,12 @@ where
         vec![],
         nonce,
     )?
-    .execute(state, &BlockContext::default())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let validate_info = tx_execution_info.validate_info.unwrap();
@@ -233,7 +337,10 @@ where
     Ok(casm_class_hash)
 }
 
-fn declare_yas_factory<S>(state: &mut CachedState<S>) -> Result<Felt252, Box<dyn std::error::Error>>
+fn declare_yas_factory<S>(
+    state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
@@ -254,7 +361,12 @@ where
         vec![],
         nonce,
     )?
-    .execute(state, &BlockContext::default())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let validate_info = tx_execution_info.validate_info.unwrap();
@@ -265,7 +377,10 @@ where
     Ok(casm_class_hash)
 }
 
-fn declare_yas_router<S>(state: &mut CachedState<S>) -> Result<Felt252, Box<dyn std::error::Error>>
+fn declare_yas_router<S>(
+    state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
@@ -286,7 +401,12 @@ where
         vec![],
         nonce,
     )?
-    .execute(state, &BlockContext::default())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let validate_info = tx_execution_info.validate_info.unwrap();
@@ -297,7 +417,10 @@ where
     Ok(casm_class_hash)
 }
 
-fn declare_yas_pool<S>(state: &mut CachedState<S>) -> Result<Felt252, Box<dyn std::error::Error>>
+fn declare_yas_pool<S>(
+    state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
 {
@@ -318,7 +441,12 @@ where
         vec![],
         nonce,
     )?
-    .execute(state, &BlockContext::default())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let validate_info = tx_execution_info.validate_info.unwrap();
@@ -331,6 +459,7 @@ where
 
 fn deploy_erc20<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     erc20_class_hash: &Felt252,
     name: &str,
     symbol: &str,
@@ -362,7 +491,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
@@ -375,6 +510,7 @@ where
 
 fn deploy_yas_factory<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     yas_factory_class_hash: &Felt252,
     owner_address: Felt252,
     pool_class_hash: Felt252,
@@ -401,7 +537,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
@@ -414,6 +556,7 @@ where
 
 fn deploy_yas_router<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     yas_router_class_hash: &Felt252,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
@@ -436,7 +579,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
@@ -447,8 +596,10 @@ where
     Ok(call_info.retdata[0].clone())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn deploy_yas_pool<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     yas_pool_class_hash: &Felt252,
     yas_factory_address: Felt252,
     yas0_token_address: Felt252,
@@ -482,7 +633,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
@@ -495,6 +652,7 @@ where
 
 fn initialize_pool<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     yas_pool_address: &Felt252,
     price_sqrt: (u128, u128),
     sign: bool,
@@ -519,7 +677,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
@@ -532,6 +696,7 @@ where
 
 fn approve_max<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     account_address: &Felt252,
     token_address: Felt252,
     wallet_address: Felt252,
@@ -560,7 +725,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
@@ -574,6 +745,7 @@ where
 #[allow(clippy::too_many_arguments)]
 fn mint<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     account_address: &Felt252,
     yas_router_address: Felt252,
     yas_pool_address: Felt252,
@@ -610,7 +782,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
@@ -624,6 +802,7 @@ where
 #[allow(clippy::too_many_arguments)]
 fn swap<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     account_address: &Felt252,
     yas_router_address: Felt252,
     yas_pool_address: Felt252,
@@ -662,7 +841,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
@@ -675,6 +860,7 @@ where
 
 fn balance_of<S>(
     state: &mut CachedState<S>,
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     token_address: &Felt252,
     wallet_address: Felt252,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
@@ -694,7 +880,13 @@ where
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
     )?
-    .execute(state, &BlockContext::default(), u64::MAX.into())?;
+    .execute(
+        state,
+        &BlockContext::default(),
+        u64::MAX.into(),
+        #[cfg(feature = "cairo-native")]
+        Some(program_cache),
+    )?;
 
     // Ensure the execution was successful.
     let call_info = tx_execution_info.call_info.unwrap();
