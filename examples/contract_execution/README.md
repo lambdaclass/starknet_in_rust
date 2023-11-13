@@ -10,17 +10,12 @@ As declare and deploy transactions are currently WIP, we encapsulate all the fun
 
 - Add your contract to this directory. 
 
-    - Remember that in order to call functions you must use the *external* decorator.
-
-    - You also must add ```%lang starknet``` at the beggining of the contract.
-
-
 - Compile the contract:
     - ```source starknet-venv/bin/activate```
-    - ```starknet-compile your_contract.cairo --output your_contract.json```
+    - ```cairo2/bin/starknet-compile your_contract.cairo --single-file your_contract.json```
 
 - Add a test for your contract calling ```test_contract``` passing:
     - Your compiled contract path
     - The entrypoint you are wanting to execute
     - The parameters needed in order to call that entrypoint
-    - The expected returned value     
+    - The expected returned value
