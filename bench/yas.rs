@@ -1,5 +1,5 @@
-// #![deny(clippy::pedantic)]
-// #![deny(warnings)]
+#![deny(clippy::pedantic)]
+#![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
 use lazy_static::lazy_static;
@@ -21,6 +21,7 @@ lazy_static! {
     static ref OWNER_ADDRESS: Felt252 = 4321.into();
 }
 
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::subscriber::set_global_default(
         FmtSubscriber::builder()
@@ -91,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     initialize_pool(
         &mut state,
         &yas_pool_address,
-        (79228162514264337593543950336, 0),
+        (79_228_162_514_264_337_593_543_950_336, 0),
         false,
     )?;
 
@@ -136,9 +137,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         yas_router_address.clone(),
         yas_pool_address.clone(),
         OWNER_ADDRESS.clone(),
-        -887220,
-        887220,
-        2000000000000000000,
+        -887_220,
+        887_220,
+        2_000_000_000_000_000_000,
     )?;
 
     debug!(
@@ -168,8 +169,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             yas_pool_address,
             OWNER_ADDRESS.clone(),
             true,
-            (500000000000000000, 0, true),
-            (4295128740, 0, false),
+            (500_000_000_000_000_000, 0, true),
+            (4_295_128_740, 0, false),
         )?;
         let t1 = Instant::now();
 
@@ -184,8 +185,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let delta_t = delta_t.as_secs_f64();
     println!(
         "Executed {num_runs} swaps taking {delta_t} seconds ({} #/s, or {} s/#)",
-        num_runs as f64 / delta_t,
-        delta_t / num_runs as f64,
+        f64::from(num_runs) / delta_t,
+        delta_t / f64::from(num_runs),
     );
 
     debug!(
@@ -512,7 +513,7 @@ where
         vec![
             price_sqrt.0.into(),
             price_sqrt.1.into(),
-            (sign as u32).into(),
+            u32::from(sign).into(),
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -600,9 +601,9 @@ where
             yas_pool_address,
             recipient,
             tick_lower.unsigned_abs().into(),
-            (tick_lower.is_negative() as u32).into(),
+            u32::from(tick_lower.is_negative()).into(),
             tick_upper.unsigned_abs().into(),
-            (tick_upper.is_negative() as u32).into(),
+            u32::from(tick_upper.is_negative()).into(),
             amount.into(),
         ],
         vec![],
@@ -649,13 +650,13 @@ where
             9.into(),
             yas_pool_address,
             recipient,
-            (zero_for_one as u32).into(),
+            u32::from(zero_for_one).into(),
             amount_specified.0.into(),
             amount_specified.1.into(),
-            (amount_specified.2 as u32).into(),
+            u32::from(amount_specified.2).into(),
             price_limit_sqrt.0.into(),
             price_limit_sqrt.1.into(),
-            (price_limit_sqrt.2 as u32).into(),
+            u32::from(price_limit_sqrt.2).into(),
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
