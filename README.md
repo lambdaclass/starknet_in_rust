@@ -56,6 +56,8 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 
 ### Installation
 
+If you run `make` on it's own it will print out the main targets and their description.
+
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
 
 #### Linux (x86-64)
@@ -98,7 +100,19 @@ In Mac you'll also need to tell the script where to find the gmp lib:
 export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib
 ```
 
+### Cairo Native support
 
+Starknet in Rust can be integrated with [Cairo Native](https://github.com/lambdaclass/cairo_native), which makes the execution of sierra programs possible through native machine code. To use it, the following needs to be setup:
+
+- LLVM `17` needs to be installed and the `MLIR_SYS_170_PREFIX` and `TABLEGEN_170_PREFIX` environment variable needs to point to said installation. In macOS, run
+  ```
+  brew install llvm@17
+  export MLIR_SYS_170_PREFIX=/opt/homebrew/opt/llvm@17
+  export TABLEGEN_170_PREFIX=/opt/homebrew/opt/llvm@17
+  ```
+  and you're set.
+
+Afterwards, compiling with the feature flag `cairo-native` will enable native execution. You can check out some example test code that uses it under `tests/cairo_native.rs`.
 
 ## 🚀 Usage
 
@@ -108,7 +122,6 @@ You can find a tutorial on running contracts [here](/examples/contract_execution
 
 ### Using the CLI
 You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
-
 
 ### Customization
 
@@ -152,6 +165,11 @@ let state2 = CachedState::new(state_reader.clone(), cache.clone()); // Cache is 
 cache.extend(state1.state.drain_private_contract_class_cache());
 cache.extend(state2.state.drain_private_contract_class_cache());
 ```
+
+#### Logging configuration
+
+This project uses the [`tracing`](https://crates.io/crates/tracing) crate as a library. Check out
+its documentation for more information.
 
 ### Testing
 

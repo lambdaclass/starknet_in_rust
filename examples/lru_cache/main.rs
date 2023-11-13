@@ -96,7 +96,7 @@ fn run_contract(
 
     // Store the local cache changes into the shared cache. This updates the shared cache with all
     // the contracts used on this state.
-    contract_cache.extend(state.drain_private_contract_class_cache());
+    contract_cache.extend(state.drain_private_contract_class_cache().unwrap());
 
     invoke_tx_execution_info.call_info.unwrap().retdata
 }

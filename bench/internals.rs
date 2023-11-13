@@ -81,7 +81,7 @@ fn deploy_account() {
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let class_hash = *CLASS_HASH_BYTES;
         let signature = SIGNATURE.clone();
         scope(|| {
@@ -116,7 +116,7 @@ fn declare() {
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut cloned_state = state.clone();
+        let mut cloned_state = state.clone_for_testing();
         let class = CONTRACT_CLASS.clone();
         let address = CONTRACT_ADDRESS.clone();
         scope(|| {
@@ -158,7 +158,7 @@ fn deploy() {
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let salt = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
@@ -213,7 +213,7 @@ fn invoke() {
     let _deploy_exec_info = deploy.execute(&mut state, block_context).unwrap();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let address = CONTRACT_ADDRESS.clone();
         let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
         let signature = SIGNATURE.clone();

@@ -28,6 +28,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use std::fmt::Debug;
 
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
@@ -244,8 +245,12 @@ impl InvokeFunction {
         remaining_gas: u128,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info =
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?;
+        let validate_info = if self.skip_validation {
+            None
+        } else {
+            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+        };
+
         // Execute transaction
         let ExecutionResult {
             call_info,
@@ -261,7 +266,7 @@ impl InvokeFunction {
                 remaining_gas,
             )?
         };
-        let changes = state.count_actual_storage_changes(Some((
+        let changes = state.count_actual_state_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
             &self.contract_address,
         )))?;
@@ -289,6 +294,14 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+        tx_type = ?TransactionType::InvokeFunction,
+        self.version = ?self.version,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.entry_point_selector = ?self.entry_point_selector,
+        self.entry_point_type = ?self.entry_point_type,
+    ))]
     pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
@@ -299,7 +312,7 @@ impl InvokeFunction {
             self.handle_nonce(state)?;
         }
 
-        let mut transactional_state = state.create_transactional();
+        let mut transactional_state = state.create_transactional()?;
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
 
@@ -659,7 +672,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let result = internal_invoke_function
             .apply(&mut transactional, &BlockContext::default(), 0)
@@ -804,7 +817,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         let expected_error =
             internal_invoke_function.apply(&mut transactional, &BlockContext::default(), 0);
 
@@ -867,7 +880,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let result = internal_invoke_function
             .apply(&mut transactional, &BlockContext::default(), 0)
@@ -940,7 +953,7 @@ mod tests {
             )
             .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let expected_error =
             internal_invoke_function.apply(&mut transactional, &BlockContext::default(), 0);
@@ -1291,7 +1304,7 @@ mod tests {
             )
             .unwrap(),
             None,
-            &1.into() | &QUERY_VERSION_BASE.clone(),
+            &Into::<Felt252>::into(1) | &QUERY_VERSION_BASE.clone(),
         );
         assert!(expected_error.is_err());
     }
@@ -1342,7 +1355,7 @@ mod tests {
         let mut state =
             CachedState::new(Arc::new(state_reader), Arc::new(casm_contract_class_cache));
 
-        let state_before_execution = state.clone();
+        let state_before_execution = state.clone_for_testing();
 
         let result = internal_invoke_function
             .execute(&mut state, &BlockContext::default(), 0)
