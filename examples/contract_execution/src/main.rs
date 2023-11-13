@@ -119,7 +119,7 @@ fn test_contract(
     .unwrap();
 
     let account_contract_address = internal_deploy
-        .execute(&mut state, &block_context)
+        .execute(&mut state, &block_context, None)
         .expect("Account Deploy Failed")
         .call_info
         .unwrap()
@@ -155,7 +155,7 @@ fn test_contract(
     .expect("couldn't create declare transaction");
 
     declare_tx
-        .execute(&mut state, &block_context)
+        .execute(&mut state, &block_context, None)
         .expect("could not declare the contract class");
 
     //* ----------------------------------------------------------
@@ -175,7 +175,7 @@ fn test_contract(
     .unwrap();
 
     let contract_address = deploy
-        .execute(&mut state, &block_context, 0)
+        .execute(&mut state, &block_context, 0, None)
         .expect("could not deploy contract")
         .call_info
         .unwrap()
@@ -218,7 +218,9 @@ fn test_contract(
     )
     .unwrap();
 
-    let tx_exec_info = invoke_tx.execute(&mut state, &block_context, 0).unwrap();
+    let tx_exec_info = invoke_tx
+        .execute(&mut state, &block_context, 0, None)
+        .unwrap();
 
     //* --------------------------------------------
     //*          Extract return values
