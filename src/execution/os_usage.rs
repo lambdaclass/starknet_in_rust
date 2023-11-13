@@ -4,6 +4,12 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 
 use crate::{definitions::transaction_type::TransactionType, transaction::error::TransactionError};
 
+pub(crate) const ESTIMATED_INVOKE_FUNCTION_STEPS: usize = 3363;
+pub(crate) const ESTIMATED_DECLARE_STEPS: usize = 2703;
+pub(crate) const ESTIMATED_DEPLOY_STEPS: usize = 0;
+pub(crate) const ESTIMATED_DEPLOY_ACCOUNT_STEPS: usize = 3612;
+pub(crate) const ESTIMATED_L1_HANDLER_STEPS: usize = 1068;
+
 #[derive(Debug, Clone)]
 pub struct OsResources {
     execute_syscalls: HashMap<String, ExecutionResources>,
@@ -16,7 +22,7 @@ impl Default for OsResources {
             (
                 TransactionType::InvokeFunction,
                 ExecutionResources {
-                    n_steps: 3363,
+                    n_steps: ESTIMATED_INVOKE_FUNCTION_STEPS,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([
                         ("pedersen_builtin".to_string(), 16),
@@ -27,7 +33,7 @@ impl Default for OsResources {
             (
                 TransactionType::Declare,
                 ExecutionResources {
-                    n_steps: 2703,
+                    n_steps: ESTIMATED_DECLARE_STEPS,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([
                         ("pedersen_builtin".to_string(), 15),
@@ -38,7 +44,7 @@ impl Default for OsResources {
             (
                 TransactionType::Deploy,
                 ExecutionResources {
-                    n_steps: 0,
+                    n_steps: ESTIMATED_DEPLOY_STEPS,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::new(),
                 },
@@ -46,7 +52,7 @@ impl Default for OsResources {
             (
                 TransactionType::DeployAccount,
                 ExecutionResources {
-                    n_steps: 3612,
+                    n_steps: ESTIMATED_DEPLOY_ACCOUNT_STEPS,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([
                         ("pedersen_builtin".to_string(), 23),
@@ -57,7 +63,7 @@ impl Default for OsResources {
             (
                 TransactionType::L1Handler,
                 ExecutionResources {
-                    n_steps: 1068,
+                    n_steps: ESTIMATED_L1_HANDLER_STEPS,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([
                         ("pedersen_builtin".to_string(), 11),

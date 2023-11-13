@@ -1,6 +1,10 @@
 use crate::execution::execution_entry_point::ExecutionResult;
+use crate::execution::gas_usage::get_onchain_data_segment_length;
+use crate::execution::os_usage::ESTIMATED_DECLARE_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
+use crate::state::state_api::StateChangesCount;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash,
@@ -26,9 +30,10 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
 
-use super::fee::charge_fee;
+use super::fee::{calculate_tx_fee, charge_fee};
 use super::{get_tx_version, Transaction};
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -49,6 +54,7 @@ pub struct Declare {
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
+    pub skip_nonce_check: bool,
 }
 
 // ------------------------------------------------------------
@@ -93,6 +99,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
@@ -128,6 +135,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
@@ -144,6 +152,7 @@ impl Declare {
         hash_value: Felt252,
         class_hash: ClassHash,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
         let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
 
         let internal_declare = Declare {
@@ -159,6 +168,7 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
         Ok(internal_declare)
@@ -268,7 +278,7 @@ impl Declare {
 
         let contract_address = &self.sender_address;
         let current_nonce = state.get_nonce_at(contract_address)?;
-        if current_nonce != self.nonce {
+        if current_nonce != self.nonce && !self.skip_nonce_check {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
                 self.nonce.to_string(),
@@ -278,6 +288,55 @@ impl Declare {
         state.increment_nonce(contract_address)?;
 
         Ok(())
+    }
+
+    fn check_fee_balance<S: State + StateReader>(
+        &self,
+        state: &mut S,
+        block_context: &BlockContext,
+    ) -> Result<(), TransactionError> {
+        if self.max_fee.is_zero() {
+            return Ok(());
+        }
+        let minimal_fee = self.estimate_minimal_fee(block_context)?;
+        // Check max fee is at least the estimated constant overhead.
+        if self.max_fee < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        }
+        // Check that the current balance is high enough to cover the max_fee
+        let (balance_low, balance_high) =
+            state.get_fee_token_balance(block_context, &self.sender_address)?;
+        // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+            return Err(TransactionError::MaxFeeExceedsBalance(
+                self.max_fee,
+                balance_low,
+                balance_high,
+            ));
+        }
+        Ok(())
+    }
+
+    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
+        let n_estimated_steps = ESTIMATED_DECLARE_STEPS;
+        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        });
+        let resources = HashMap::from([
+            (
+                "l1_gas_usage".to_string(),
+                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
+            ),
+            ("n_steps".to_string(), n_estimated_steps),
+        ]);
+        calculate_tx_fee(
+            &resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )
     }
 
     /// Calculates actual fee used by the transaction using the execution
@@ -302,7 +361,12 @@ impl Declare {
                 vec![0, 1],
             ));
         }
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context)?;
+        }
+
         self.handle_nonce(state)?;
+
         let mut tx_exec_info = self.apply(state, block_context)?;
 
         let mut tx_execution_context =
@@ -332,6 +396,7 @@ impl Declare {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = Declare {
             skip_validate,
@@ -343,6 +408,7 @@ impl Declare {
             } else {
                 self.max_fee
             },
+            skip_nonce_check,
             ..self.clone()
         };
 
@@ -738,7 +804,7 @@ mod tests {
         // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
             internal_declare.execute(&mut state, &BlockContext::default()),
-            Err(TransactionError::FeeTransferError(_))
+            Err(TransactionError::MaxFeeExceedsBalance(_, _, _))
         );
     }
 
@@ -822,7 +888,7 @@ mod tests {
 
         let simulate_declare = declare
             .clone()
-            .create_for_simulation(true, false, true, false);
+            .create_for_simulation(true, false, true, false, false);
 
         // ---------------------
         //      Comparison

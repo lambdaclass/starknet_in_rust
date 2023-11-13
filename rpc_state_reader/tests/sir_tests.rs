@@ -148,7 +148,7 @@ pub fn execute_tx_configurable(
         SNTransaction::DeployAccount(tx) => {
             DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
                 .unwrap()
-                .create_for_simulation(skip_validate, false, false, false)
+                .create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
         }
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
@@ -180,7 +180,7 @@ pub fn execute_tx_configurable(
                     tx.class_hash().0.bytes().try_into().unwrap(),
                 )
                 .unwrap();
-                declare.create_for_simulation(skip_validate, false, false, false)
+                declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             } else {
                 let contract_class = match contract_class {
                     CompiledClass::Casm(cc) => cc.as_ref().clone(),
@@ -206,7 +206,7 @@ pub fn execute_tx_configurable(
                     Felt252::from_bytes_be(tx_hash.0.bytes()),
                 )
                 .unwrap();
-                declare.create_for_simulation(skip_validate, false, false, false)
+                declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             }
         }
         SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(
@@ -555,17 +555,14 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
 }
 
 #[test_case(
-    "0x048ffc49f04504710e984923980fb63c4f17fb3022467251329adc75aae93c4b",
-    900799, // real block 900796
+    "0x05dc2a26a65b0fc9e8cb17d8b3e9142abdb2b2d2dd2f3eb275256f23bddfc9f2",
+    899787, // real block 899788
     RpcChain::TestNet
 )]
-#[test_case(
-    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
-    895707, // real block 895708
-    RpcChain::TestNet
-)]
-fn test_transaction_fee_and_retdata(hash: &str, block_number: u64, chain: RpcChain) {
-    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) =
+        execute_tx_configurable(hash, chain, BlockNumber(block_number), false, true);
+
 
     let TransactionExecutionInfo {
         call_info,
@@ -573,9 +570,36 @@ fn test_transaction_fee_and_retdata(hash: &str, block_number: u64, chain: RpcCha
         ..
     } = tx_info;
     let CallInfo {
-        retdata,
+        execution_resources,
+        internal_calls,
         ..
     } = call_info.unwrap();
+
+    // check Cairo VM execution resources
+    assert_eq_sorted!(
+        execution_resources.as_ref(),
+        Some(
+            &trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources
+        ),
+        "execution resources mismatch"
+    );
+
+    // check amount of internal calls
+    assert_eq!(
+        internal_calls.len(),
+        trace
+            .function_invocation
+            .as_ref()
+            .unwrap()
+            .internal_calls
+            .len(),
+        "internal calls length mismatch"
+    );
+
 
     // check actual fee calculation
     if receipt.actual_fee != actual_fee {
@@ -588,15 +612,4 @@ fn test_transaction_fee_and_retdata(hash: &str, block_number: u64, chain: RpcCha
             );
         }
     }
-
-    let rpc_retdata: Vec<Felt252> = trace
-        .function_invocation
-        .unwrap()
-        .retdata
-        .unwrap()
-        .into_iter()
-        .map(|sf| Felt252::from_bytes_be(sf.bytes()))
-        .collect();
-
-    assert_eq!(retdata, rpc_retdata);
 }

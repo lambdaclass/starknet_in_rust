@@ -11,7 +11,7 @@ use cairo_vm::vm::{
 };
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
-use num_traits::{FromPrimitive, Num, One, Zero};
+use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::core::contract_address::{
     compute_casm_class_hash, compute_sierra_class_hash,
@@ -97,7 +97,7 @@ lazy_static! {
         felt_str!("2542253978940891427830343982984992363331567580652119103860970381451088310289");
 
     // Others.
-    static ref INITIAL_BALANCE: Felt252 = Felt252::from_u128(100000).unwrap();
+    static ref INITIAL_BALANCE: Felt252 = Felt252::from(u128::MAX);
     static ref GAS_PRICE: u128 = 1;
 }
 
@@ -130,6 +130,91 @@ fn create_account_tx_test_state(
         (
             test_account_contract_class_hash,
             ContractClass::from_path(ACCOUNT_CONTRACT_PATH)?,
+        ),
+        (
+            test_contract_class_hash,
+            ContractClass::from_path(TEST_CONTRACT_PATH)?,
+        ),
+        (
+            test_erc20_class_hash,
+            ContractClass::from_path(ERC20_CONTRACT_PATH)?,
+        ),
+    ]);
+
+    let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
+    let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
+    let test_erc20_address = block_context
+        .starknet_os_config()
+        .fee_token_address()
+        .clone();
+    let address_to_class_hash = HashMap::from([
+        (test_contract_address, test_contract_class_hash),
+        (
+            test_account_contract_address,
+            test_account_contract_class_hash,
+        ),
+        (test_erc20_address.clone(), test_erc20_class_hash),
+    ]);
+
+    let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+
+    let storage_view = HashMap::from([(
+        (test_erc20_address, test_erc20_account_balance_key),
+        INITIAL_BALANCE.clone(),
+    )]);
+
+    let cached_state = CachedState::new(
+        {
+            let mut state_reader = InMemoryStateReader::default();
+            for (contract_address, class_hash) in address_to_class_hash {
+                let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
+                    .iter()
+                    .filter_map(|((address, storage_key), storage_value)| {
+                        (address == &contract_address).then_some((
+                            (address.clone(), felt_to_hash(storage_key)),
+                            storage_value.clone(),
+                        ))
+                    })
+                    .collect();
+
+                let stored: HashMap<StorageEntry, Felt252> = storage_keys;
+
+                state_reader
+                    .address_to_class_hash_mut()
+                    .insert(contract_address.clone(), class_hash);
+
+                state_reader
+                    .address_to_nonce_mut()
+                    .insert(contract_address.clone(), Felt252::zero());
+                state_reader.address_to_storage_mut().extend(stored);
+            }
+            for (class_hash, contract_class) in class_hash_to_class {
+                state_reader.class_hash_to_compiled_class_mut().insert(
+                    class_hash,
+                    CompiledClass::Deprecated(Arc::new(contract_class)),
+                );
+            }
+            Arc::new(state_reader)
+        },
+        HashMap::new(),
+    );
+
+    Ok((block_context, cached_state))
+}
+
+fn create_account_tx_test_state_revert_test(
+) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+    let block_context = new_starknet_block_context_for_testing();
+
+    let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
+    let test_account_contract_class_hash = felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
+    let test_erc20_class_hash = felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone());
+    let class_hash_to_class = HashMap::from([
+        (
+            test_account_contract_class_hash,
+            ContractClass::from_path(
+                "starknet_programs/account_without_validation_and_expensive_constructor.json",
+            )?,
         ),
         (
             test_contract_class_hash,
@@ -753,6 +838,7 @@ fn declare_tx() -> Declare {
         skip_execute: false,
         skip_fee_transfer: false,
         skip_validate: false,
+        skip_nonce_check: false,
     }
 }
 
@@ -782,6 +868,7 @@ fn declarev2_tx() -> DeclareV2 {
         skip_execute: false,
         skip_fee_transfer: false,
         skip_validate: false,
+        skip_nonce_check: false,
     }
 }
 
@@ -1320,7 +1407,7 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
-    let max_fee = 3;
+    let max_fee = 2483;
     let actual_fee = 2490;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
@@ -1489,7 +1576,7 @@ fn test_invoke_with_declarev2_tx() {
         Felt252::from(0),                                     // b
         Felt252::from(0),                                     // n
     ];
-    let invoke_tx = invoke_tx_with_nonce(calldata, u128::MAX, Felt252::one());
+    let invoke_tx = invoke_tx_with_nonce(calldata, u64::MAX as u128, Felt252::one());
 
     let expected_gas_consumed = 5551;
     let result = invoke_tx
@@ -1612,13 +1699,14 @@ fn test_deploy_account() {
 
 #[test]
 fn test_deploy_account_revert() {
-    let (block_context, mut state) = create_account_tx_test_state().unwrap();
+    let (block_context, mut state) = create_account_tx_test_state_revert_test().unwrap();
 
-    let expected_fee = 1;
+    let actual_fee = 3100;
+    let max_fee = 3097;
 
     let deploy_account_tx = DeployAccount::new(
         felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-        1,
+        max_fee,
         TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
@@ -1692,14 +1780,14 @@ fn test_deploy_account_revert() {
             Address(0x1001.into()),
             felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
         ),
-        INITIAL_BALANCE.clone() - Felt252::one(), // minus the max fee that will be transfered
+        INITIAL_BALANCE.clone() - max_fee as u32, // minus the max fee that will be transfered
     );
     state_reverted.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
             felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
         ),
-        Felt252::one(), // the max fee received by the sequencer
+        max_fee.into(), // the max fee received by the sequencer
     );
 
     // Set nonce
@@ -1713,11 +1801,11 @@ fn test_deploy_account_revert() {
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &block_context,
         deploy_account_tx.contract_address(),
-        expected_fee,
+        max_fee,
     );
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3625),
+        ("n_steps".to_string(), 3914),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
         ("l1_gas_usage".to_string(), 3060),
@@ -1725,22 +1813,22 @@ fn test_deploy_account_revert() {
 
     let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
 
-    assert_eq!(fee, 3097);
+    assert_eq!(fee, actual_fee);
 
     let mut expected_execution_info = TransactionExecutionInfo::new(
         None,
         None,
         None,
         None,
-        expected_fee,
+        max_fee,
         // Entry **not** in blockifier.
         // Default::default(),
         resources,
         TransactionType::DeployAccount.into(),
     )
-    .to_revert_error(format!("Calculated fee ({}) exceeds max fee ({})", fee, 1).as_str());
+    .to_revert_error(format!("Calculated fee ({}) exceeds max fee ({})", fee, max_fee).as_str());
 
-    expected_execution_info.set_fee_info(expected_fee, expected_fee_transfer_call_info.into());
+    expected_execution_info.set_fee_info(max_fee, expected_fee_transfer_call_info.into());
 
     assert_eq_sorted!(tx_info, expected_execution_info);
 
@@ -1751,7 +1839,7 @@ fn test_deploy_account_revert() {
 
     let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
 
-    validate_final_balances(&mut state, &block_context, &hash, expected_fee);
+    validate_final_balances(&mut state, &block_context, &hash, max_fee);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
@@ -2131,7 +2219,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
-        1,
+        2483,
         TRANSACTION_VERSION.clone(),
         vec![
             test_contract_address, // CONTRACT_ADDRESS
@@ -2160,7 +2248,7 @@ fn test_deploy_undeclared_account() {
     // Deploy transaction with a not_deployed_class_hash class_hash
     let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
-        2,
+        0,
         TRANSACTION_VERSION.clone(),
         Default::default(),
         Default::default(),
