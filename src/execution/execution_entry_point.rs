@@ -153,6 +153,7 @@ impl ExecutionEntryPoint {
                 _ => "the VM",
             }
         );
+
         match contract_class {
             CompiledClass::Deprecated(contract_class) => {
                 let call_info = self._execute_version0_class(
