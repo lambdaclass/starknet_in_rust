@@ -3738,6 +3738,7 @@ dependencies = [
  "blockifier",
  "cairo-lang-starknet",
  "cairo-lang-utils",
+ "cairo-vm 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cairo-vm 0.8.2 (git+https://github.com/lambdaclass/cairo-vm?branch=update-blockifier-version)",
  "dotenv",
  "flate2",
