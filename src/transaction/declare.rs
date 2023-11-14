@@ -1,3 +1,5 @@
+use crate::core::contract_address::compute_deprecated_class_hash;
+use crate::core::transaction_hash::calculate_declare_transaction_hash;
 use crate::definitions::block_context::BlockContext;
 use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 use crate::definitions::transaction_type::TransactionType;
@@ -9,10 +11,6 @@ use crate::state::cached_state::CachedState;
 use crate::state::contract_class_cache::ContractClassCache;
 use crate::state::state_api::{State, StateChangesCount, StateReader};
 use crate::{
-    core::{
-        contract_address::compute_deprecated_class_hash,
-        transaction_hash::calculate_declare_transaction_hash,
-    },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,

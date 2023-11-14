@@ -5,6 +5,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractEntryPoints;
 use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::felt::Felt252;
+use cairo_vm::with_std::collections::HashSet;
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
@@ -28,8 +29,6 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
-
-use std::collections::HashSet;
 use std::sync::Arc;
 
 fn insert_sierra_class_into_cache(
