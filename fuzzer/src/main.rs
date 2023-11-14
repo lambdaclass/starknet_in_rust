@@ -194,7 +194,6 @@ fn main() {
                     &mut tx_execution_context,
                     false,
                     block_context.invoke_tx_max_n_steps(),
-                    None,
                 )
                 .unwrap();
             assert_eq!(call_info.unwrap(), expected_call_info);

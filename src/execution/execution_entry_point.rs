@@ -40,7 +40,6 @@ use cairo_vm::{
     },
 };
 use std::sync::Arc;
-use tracing::debug;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -55,6 +54,7 @@ use {
     },
     serde_json::Value,
     std::{cell::RefCell, rc::Rc},
+    tracing::debug,
 };
 
 #[derive(Debug, Default)]
