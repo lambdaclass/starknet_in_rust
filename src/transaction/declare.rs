@@ -922,11 +922,10 @@ mod tests {
             Felt252::zero(),
         )
         .unwrap();
-        let result = internal_declare
-            .execute::<CachedState<InMemoryStateReader, PermanentContractClassCache>>(
-                &mut CachedState::default(),
-                &BlockContext::default(),
-            );
+        let result = internal_declare.execute(
+            &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
+            &BlockContext::default(),
+        );
 
         assert_matches!(
         result,

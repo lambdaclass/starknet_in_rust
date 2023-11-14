@@ -940,8 +940,8 @@ mod tests {
             Felt252::zero(),
         )
         .unwrap();
-        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
-            &mut CachedState::default(),
+        let result = internal_declare.execute(
+            &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
         );
 

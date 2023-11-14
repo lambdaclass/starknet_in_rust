@@ -345,7 +345,7 @@ impl InvokeFunction {
 
         self.handle_nonce(state)?;
 
-        let mut transactional_state = state.create_transactional();
+        let mut transactional_state = state.create_transactional()?;
         let mut tx_exec_info =
             self.apply(&mut transactional_state, block_context, remaining_gas)?;
 
@@ -1493,8 +1493,8 @@ mod tests {
             Some(Felt252::zero()),
         )
         .unwrap();
-        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
-            &mut CachedState::default(),
+        let result = internal_declare.execute(
+            &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
             u128::MAX,
         );

@@ -16,9 +16,6 @@ use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use starknet_in_rust::core::contract_address::{
-    compute_casm_class_hash, compute_sierra_class_hash,
-};
 use starknet_in_rust::core::errors::state_errors::StateError;
 use starknet_in_rust::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -33,41 +30,31 @@ use starknet_in_rust::transaction::{DeclareV2, Deploy};
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
-    core::{
-        contract_address::{compute_casm_class_hash, compute_sierra_class_hash},
-        errors::state_errors::StateError,
+    core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash},
+    definitions::constants::{
+        CONSTRUCTOR_ENTRY_POINT_SELECTOR, EXECUTE_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION,
+        TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
+        VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
     },
+};
+use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
-        constants::{
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR, DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
-            EXECUTE_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION, TRANSFER_ENTRY_POINT_SELECTOR,
-            TRANSFER_EVENT_SELECTOR, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR,
-        },
         transaction_type::TransactionType,
     },
-    execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
-        TransactionExecutionContext, TransactionExecutionInfo,
-    },
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
     state::{
         cached_state::CachedState,
         contract_class_cache::{ContractClassCache, PermanentContractClassCache},
         in_memory_state_reader::InMemoryStateReader,
         state_api::{State, StateReader},
         state_cache::{StateCache, StorageEntry},
-        BlockInfo, ExecutionResourcesManager,
+        BlockInfo,
     },
     transaction::{
-        error::TransactionError, fee::calculate_tx_fee, invoke_function::InvokeFunction, Declare,
-        DeclareV2, Deploy, DeployAccount,
+        error::TransactionError, invoke_function::InvokeFunction, Declare, DeployAccount,
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
-    CasmContractClass, EntryPointType,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -223,8 +210,13 @@ fn create_account_tx_test_state() -> Result<
     Ok((block_context, cached_state))
 }
 
-fn create_account_tx_test_state_revert_test(
-) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+fn create_account_tx_test_state_revert_test() -> Result<
+    (
+        BlockContext,
+        CachedState<InMemoryStateReader, PermanentContractClassCache>,
+    ),
+    Box<dyn std::error::Error>,
+> {
     let block_context = new_starknet_block_context_for_testing();
 
     let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
@@ -302,13 +294,13 @@ fn create_account_tx_test_state_revert_test(
             }
             Arc::new(state_reader)
         },
-        HashMap::new(),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     Ok((block_context, cached_state))
 }
 
-fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
+fn expected_state_before_tx() -> CachedState<InMemoryStateReader, PermanentContractClassCache> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
     CachedState::new(

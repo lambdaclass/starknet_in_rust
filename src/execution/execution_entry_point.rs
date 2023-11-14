@@ -52,10 +52,12 @@ use std::sync::Arc;
 use {
     crate::syscalls::native_syscall_handler::NativeSyscallHandler,
     cairo_native::{
-        context::NativeContext, execution_result::NativeExecutionResult, executor::NativeExecutor,
+        context::NativeContext, execution_result::NativeExecutionResult,
         metadata::syscall_handler::SyscallHandlerMeta, utils::felt252_bigint,
     },
+    core::cell::RefCell,
     serde_json::Value,
+    std::rc::Rc,
 };
 
 #[derive(Debug, Default)]
@@ -179,7 +181,7 @@ impl ExecutionEntryPoint {
             }
             #[cfg(feature = "cairo-native")]
             CompiledClass::Sierra(sierra_program_and_entrypoints) => {
-                let mut transactional_state = state.create_transactional();
+                let mut transactional_state = state.create_transactional()?;
 
                 let native_context = NativeContext::new();
                 let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
@@ -226,9 +228,9 @@ impl ExecutionEntryPoint {
     }
 
     #[cfg(feature = "cairo-native")]
-    pub fn execute_with_native_cache<T>(
+    pub fn execute_with_native_cache<T, C>(
         &self,
-        state: &mut CachedState<T>,
+        state: &mut CachedState<T, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &mut TransactionExecutionContext,
@@ -238,6 +240,7 @@ impl ExecutionEntryPoint {
     ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
+        C: ContractClassCache,
     {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
@@ -291,7 +294,7 @@ impl ExecutionEntryPoint {
                 }
             }
             CompiledClass::Sierra(sierra_contract_class) => {
-                let mut transactional_state = state.create_transactional();
+                let mut transactional_state = state.create_transactional()?;
 
                 match self.native_execute(
                     &mut transactional_state,
