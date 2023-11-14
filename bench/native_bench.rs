@@ -40,7 +40,7 @@ use starknet_in_rust::{
     utils::{Address, ClassHash},
 };
 use std::cell::RefCell;
-use std::collections::HashMap;
+
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -70,7 +70,7 @@ pub fn main() {
 
 fn bench_fibo(executions: usize, native: bool) {
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
     static CASM_CLASS_HASH: ClassHash = [2; 32];
 
     let (contract_class, constructor_selector) = match native {
@@ -144,7 +144,7 @@ fn bench_fibo(executions: usize, native: bool) {
 
 fn bench_fact(executions: usize, native: bool) {
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
     static CASM_CLASS_HASH: ClassHash = [2; 32];
 
     let (contract_class, constructor_selector) = match native {
@@ -221,7 +221,7 @@ fn bench_fact(executions: usize, native: bool) {
 fn bench_erc20(executions: usize, native: bool) {
     // 1. setup ERC20 contract and state.
     // Create state reader and preload the contract classes.
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     lazy_static! {
         static ref ERC20_CLASS_HASH: ClassHash = felt_str!("2").to_be_bytes();

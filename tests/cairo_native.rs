@@ -28,7 +28,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
-use std::collections::HashMap;
+
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -70,7 +70,7 @@ fn get_block_hash_test() {
     let casm_external_selector = &casm_entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let native_class_hash: ClassHash = [1; 32];
     let casm_class_hash: ClassHash = [2; 32];
@@ -1066,7 +1066,7 @@ fn replace_class_contract_call() {
     .unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
     let mut native_contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
@@ -1268,7 +1268,7 @@ fn keccak_syscall_test() {
     let native_class_hash: ClassHash = [1; 32];
 
     let caller_address = Address(123456789.into());
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     insert_sierra_class_into_cache(
         &contract_class_cache,
@@ -1364,7 +1364,7 @@ fn library_call() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = [1; 32];
