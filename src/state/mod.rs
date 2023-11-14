@@ -1,5 +1,6 @@
 use self::{
     cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
+    state_cache::StateCache,
 };
 use crate::{
     core::errors::state_errors::StateError,
@@ -125,19 +126,13 @@ impl StateDiff {
         }
     }
 
-    pub fn from_cached_state<T, C>(cached_state: CachedState<T, C>) -> Result<Self, StateError>
-    where
-        T: StateReader,
-        C: ContractClassCache,
-    {
-        let state_cache = cached_state.cache().to_owned();
+    pub fn from_cached_state(state_cache: &StateCache) -> Result<Self, StateError> {
+        let substracted_maps = &state_cache.storage_writes;
+        let storage_updates = to_state_diff_storage_mapping(substracted_maps);
 
-        let substracted_maps = state_cache.storage_writes;
-        let storage_updates = to_state_diff_storage_mapping(&substracted_maps);
-
-        let address_to_nonce = state_cache.nonce_writes;
-        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes;
-        let address_to_class_hash = state_cache.class_hash_writes;
+        let address_to_nonce = state_cache.nonce_writes.clone();
+        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes.clone();
+        let address_to_class_hash = state_cache.class_hash_writes.clone();
 
         Ok(StateDiff {
             address_to_class_hash,
@@ -257,7 +252,7 @@ mod test {
             Arc::new(PermanentContractClassCache::default()),
         );
 
-        let diff = StateDiff::from_cached_state(cached_state).unwrap();
+        let diff = StateDiff::from_cached_state(&cached_state.cache).unwrap();
 
         assert_eq!(0, diff.storage_updates.len());
     }
@@ -330,7 +325,7 @@ mod test {
             Arc::new(PermanentContractClassCache::default()),
         );
 
-        let diff = StateDiff::from_cached_state(cached_state_original.clone_for_testing()).unwrap();
+        let diff = StateDiff::from_cached_state(cached_state_original.cache()).unwrap();
 
         let cached_state = diff
             .to_cached_state::<_, PermanentContractClassCache>(
@@ -390,7 +385,7 @@ mod test {
             Arc::new(PermanentContractClassCache::default()),
         );
 
-        let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
+        let mut diff = StateDiff::from_cached_state(cached_state.cache()).unwrap();
 
         let diff_squashed = diff.squash(diff.clone());
 

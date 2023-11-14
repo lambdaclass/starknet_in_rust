@@ -1,5 +1,6 @@
 use crate::{
     definitions::block_context::BlockContext,
+    definitions::constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
     execution::TransactionExecutionInfo,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
@@ -13,7 +14,6 @@ pub use deploy_account::DeployAccount;
 use error::TransactionError;
 pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
-pub use verify_version::verify_version;
 
 pub mod declare;
 pub mod declare_v2;
@@ -23,7 +23,9 @@ pub mod error;
 pub mod fee;
 pub mod invoke_function;
 pub mod l1_handler;
-mod verify_version;
+
+use cairo_vm::felt::Felt252;
+use num_traits::{One, Zero};
 
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
@@ -102,12 +104,14 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::DeclareV2(tx) => tx.create_for_simulation(
                 skip_validate,
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::Deploy(tx) => {
                 tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
@@ -117,6 +121,7 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::InvokeFunction(tx) => tx.create_for_simulation(
                 skip_validate,
@@ -127,5 +132,16 @@ impl Transaction {
             ),
             Transaction::L1Handler(tx) => tx.create_for_simulation(skip_validate, skip_execute),
         }
+    }
+}
+
+// Parses query tx versions into their normal counterpart
+// This is used to execute old transactions an may be removed in the future as its not part of the current standard implementation
+fn get_tx_version(version: Felt252) -> Felt252 {
+    match version {
+        version if version == *QUERY_VERSION_0 => Felt252::zero(),
+        version if version == *QUERY_VERSION_1 => Felt252::one(),
+        version if version == *QUERY_VERSION_2 => 2.into(),
+        version => version,
     }
 }

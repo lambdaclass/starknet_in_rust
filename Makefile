@@ -202,10 +202,10 @@ test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	$(MAKE) test-cairo-2
 
 test-cairo-1: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics
+	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics,cairo-native
 
 test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --all-targets --features=metrics
+	cargo nextest run --workspace --all-targets --features=metrics,cairo-native
 
 test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --test cairo_native --features=cairo-native

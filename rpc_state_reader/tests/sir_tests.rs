@@ -106,7 +106,7 @@ pub fn execute_tx_configurable(
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     // Instantiate the RPC StateReader and the CachedState
-    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()));
+    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
     let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
@@ -123,7 +123,7 @@ pub fn execute_tx_configurable(
             block_timestamp,
             sequencer_address,
             ..
-        } = rpc_reader.0.get_block_info();
+        } = rpc_reader.0.get_block_info().unwrap();
 
         let block_number = block_number.0;
         let block_timestamp = block_timestamp.0;
@@ -139,19 +139,20 @@ pub fn execute_tx_configurable(
 
     // Get transaction before giving ownership of the reader
     let tx_hash = TransactionHash(stark_felt!(tx_hash));
-    let tx = match rpc_reader.0.get_transaction(&tx_hash) {
+    let tx = match rpc_reader.0.get_transaction(&tx_hash).unwrap() {
         SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
         SNTransaction::DeployAccount(tx) => {
             DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
                 .unwrap()
-                .create_for_simulation(skip_validate, false, false, false)
+                .create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
         }
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
-            let next_block_state_reader =
-                RpcStateReader(RpcState::new_infura(network, (block_number.next()).into()));
+            let next_block_state_reader = RpcStateReader(
+                RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
+            );
             let contract_class = next_block_state_reader
                 .get_contract_class(tx.class_hash().0.bytes().try_into().unwrap())
                 .unwrap();
@@ -177,7 +178,7 @@ pub fn execute_tx_configurable(
                     tx.class_hash().0.bytes().try_into().unwrap(),
                 )
                 .unwrap();
-                declare.create_for_simulation(skip_validate, false, false, false)
+                declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             } else {
                 let contract_class = match contract_class {
                     CompiledClass::Casm(cc) => cc.as_ref().clone(),
@@ -203,7 +204,7 @@ pub fn execute_tx_configurable(
                     Felt252::from_bytes_be(tx_hash.0.bytes()),
                 )
                 .unwrap();
-                declare.create_for_simulation(skip_validate, false, false, false)
+                declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             }
         }
         SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(
@@ -216,8 +217,8 @@ pub fn execute_tx_configurable(
         _ => unimplemented!(),
     };
 
-    let trace = rpc_reader.0.get_transaction_trace(&tx_hash);
-    let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash);
+    let trace = rpc_reader.0.get_transaction_trace(&tx_hash).unwrap();
+    let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash).unwrap();
 
     let class_cache = Arc::new(PermanentContractClassCache::default());
     let mut state = CachedState::new(Arc::new(rpc_reader), class_cache);
@@ -267,11 +268,11 @@ pub fn execute_tx_without_validate(
 
 #[test]
 fn test_get_transaction_try_from() {
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into());
+    let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
     let str_hash = stark_felt!("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91");
     let tx_hash = TransactionHash(str_hash);
 
-    let sn_tx = rpc_state.get_transaction(&tx_hash);
+    let sn_tx = rpc_state.get_transaction(&tx_hash).unwrap();
     match &sn_tx {
         SNTransaction::Invoke(sn_tx) => {
             let tx =
@@ -286,7 +287,7 @@ fn test_get_transaction_try_from() {
 #[test]
 fn test_get_gas_price() {
     let block = BlockValue::Number(BlockNumber(169928));
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, block);
+    let rpc_state = RpcState::new_infura(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
     assert_eq!(price, 22804578690);
@@ -395,7 +396,6 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         actual_fee,
         ..
     } = tx_info;
-
     let CallInfo {
         execution_resources,
         internal_calls,
@@ -540,6 +540,64 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
     assert!(call_info.is_none());
 
     let actual_fee = actual_fee;
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+        if diff >= 5 {
+            assert_eq!(
+                actual_fee, receipt.actual_fee,
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            );
+        }
+    }
+}
+
+#[test_case(
+    "0x05dc2a26a65b0fc9e8cb17d8b3e9142abdb2b2d2dd2f3eb275256f23bddfc9f2",
+    899787, // real block 899788
+    RpcChain::TestNet
+)]
+fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) =
+        execute_tx_configurable(hash, chain, BlockNumber(block_number), false, true);
+
+    let TransactionExecutionInfo {
+        call_info,
+        actual_fee,
+        ..
+    } = tx_info;
+    let CallInfo {
+        execution_resources,
+        internal_calls,
+        ..
+    } = call_info.unwrap();
+
+    // check Cairo VM execution resources
+    assert_eq_sorted!(
+        execution_resources.as_ref(),
+        Some(
+            &trace
+                .function_invocation
+                .as_ref()
+                .unwrap()
+                .execution_resources
+        ),
+        "execution resources mismatch"
+    );
+
+    // check amount of internal calls
+    assert_eq!(
+        internal_calls.len(),
+        trace
+            .function_invocation
+            .as_ref()
+            .unwrap()
+            .internal_calls
+            .len(),
+        "internal calls length mismatch"
+    );
+
+    // check actual fee calculation
     if receipt.actual_fee != actual_fee {
         let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
 

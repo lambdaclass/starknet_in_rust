@@ -2,9 +2,7 @@ use super::error::TransactionError;
 use crate::{
     definitions::{
         block_context::BlockContext,
-        constants::{
-            FEE_FACTOR, INITIAL_GAS_COST, QUERY_VERSION_BASE, TRANSFER_ENTRY_POINT_SELECTOR,
-        },
+        constants::{FEE_FACTOR, INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
     },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
@@ -157,8 +155,7 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     )?;
 
     let actual_fee = {
-        let version_0 = tx_execution_context.version == 0.into()
-            || tx_execution_context.version == *QUERY_VERSION_BASE;
+        let version_0 = tx_execution_context.version.is_zero();
         let fee_exceeded_max = actual_fee > max_fee;
 
         if version_0 && fee_exceeded_max {

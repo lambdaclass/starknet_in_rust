@@ -1221,7 +1221,7 @@ mod tests {
             .unwrap();
 
         state
-            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
+            .apply_state_update(&StateDiff::from_cached_state(transactional.cache()).unwrap())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

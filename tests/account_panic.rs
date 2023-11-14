@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use cairo_vm::felt::Felt252;
 use starknet_in_rust::{
