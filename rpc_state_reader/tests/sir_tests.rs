@@ -1,7 +1,9 @@
 #![cfg(feature = "starknet_in_rust")]
 
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use rpc_state_reader::{execute_tx, execute_tx_without_validate, rpc_state::*, execute_tx_configurable};
+use rpc_state_reader::{
+    execute_tx, execute_tx_configurable, execute_tx_without_validate, rpc_state::*,
+};
 use starknet_api::{
     block::BlockNumber,
     hash::StarkFelt,

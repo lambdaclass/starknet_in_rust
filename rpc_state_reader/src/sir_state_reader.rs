@@ -27,12 +27,16 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         BlockInfo,
     },
-    transaction::{Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler},
+    transaction::{
+        error::TransactionError, Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler,
+    },
     utils::{Address, ClassHash},
 };
 
 use crate::{
-    rpc_state::{RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace},
+    rpc_state::{
+        BlockValue, RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace,
+    },
     rpc_state_errors::RpcStateError,
 };
 
@@ -108,7 +112,7 @@ pub fn execute_tx_configurable(
         TransactionTrace,
         RpcTransactionReceipt,
     ),
-    RpcStateError,
+    TransactionError,
 > {
     let fee_token_address = Address(felt_str!(
         "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
@@ -247,11 +251,8 @@ pub fn execute_tx_configurable(
         true,
     );
 
-    Ok((
-        tx.execute(&mut state, &block_context, u128::MAX).unwrap(),
-        trace,
-        receipt,
-    ))
+    let sir_execution = tx.execute(&mut state, &block_context, u128::MAX)?;
+    Ok((sir_execution, trace, receipt))
 }
 
 pub fn execute_tx(
@@ -264,7 +265,7 @@ pub fn execute_tx(
         TransactionTrace,
         RpcTransactionReceipt,
     ),
-    RpcStateError,
+    TransactionError,
 > {
     execute_tx_configurable(tx_hash, network, block_number, false, false)
 }
@@ -279,7 +280,15 @@ pub fn execute_tx_without_validate(
         TransactionTrace,
         RpcTransactionReceipt,
     ),
-    RpcStateError,
+    TransactionError,
 > {
     execute_tx_configurable(tx_hash, network, block_number, true, true)
+}
+
+pub fn get_transaction_hashes(
+    block_number: BlockNumber,
+    network: RpcChain,
+) -> Result<Vec<String>, RpcStateError> {
+    let rpc_state = RpcState::new_infura(network, BlockValue::Number(block_number))?;
+    rpc_state.get_transaction_hashes()
 }
