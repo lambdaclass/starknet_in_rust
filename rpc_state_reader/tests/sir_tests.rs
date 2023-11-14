@@ -150,6 +150,12 @@ pub fn execute_tx_configurable(
                 .create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
         }
         SNTransaction::Declare(tx) => {
+            let max_fee = match tx.clone() {
+                starknet_api::transaction::DeclareTransaction::V0(tx) => tx.max_fee,
+                starknet_api::transaction::DeclareTransaction::V1(tx) => tx.max_fee,
+                starknet_api::transaction::DeclareTransaction::V2(tx) => tx.max_fee,
+                starknet_api::transaction::DeclareTransaction::V3(_) => todo!(),
+            };
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
             let next_block_state_reader = RpcStateReader(
                 RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
@@ -167,7 +173,7 @@ pub fn execute_tx_configurable(
                 let declare = Declare::new_with_tx_and_class_hash(
                     contract_class,
                     Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
-                    tx.max_fee().0,
+                    max_fee.0,
                     Felt252::from_bytes_be(tx.version().0.bytes()),
                     tx.signature()
                         .0
@@ -194,7 +200,7 @@ pub fn execute_tx_configurable(
                     Some(contract_class),
                     compiled_class_hash,
                     Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
-                    tx.max_fee().0,
+                    max_fee.0,
                     Felt252::from_bytes_be(tx.version().0.bytes()),
                     tx.signature()
                         .0
