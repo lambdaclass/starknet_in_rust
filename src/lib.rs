@@ -1,5 +1,5 @@
 #![deny(warnings)]
-#![forbid(unsafe_code)]
+// #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
 use crate::{

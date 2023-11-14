@@ -743,7 +743,8 @@ impl ExecutionEntryPoint {
             resources_manager: Default::default(),
         };
 
-        native_executor
+        // Store the current syscall handler so that it can be restored later on.
+        let parent_syscall_handler = native_executor
             .borrow_mut()
             .get_module_mut()
             .remove_metadata::<SyscallHandlerMeta>();
@@ -905,8 +906,9 @@ impl ExecutionEntryPoint {
         let mut writer: Vec<u8> = Vec::new();
         let returns = &mut serde_json::Serializer::new(&mut writer);
 
-        native_executor
-            .borrow()
+        // Execute the entrypoint without borrowing the `native_executor`. This avoid double borrow
+        // errors on recursive contracts.
+        unsafe { native_executor.try_borrow_unguarded().unwrap() }
             .execute(entry_point_id, json!(params), returns, required_init_gas)
             .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
 
@@ -915,6 +917,19 @@ impl ExecutionEntryPoint {
             &ret_types,
         )
         .expect("failed to serialize starknet execution result");
+
+        // Restore the previous syscall handler. This avoids segmentation faults when returning from
+        // recursive contracts.
+        native_executor
+            .borrow_mut()
+            .get_module_mut()
+            .remove_metadata::<SyscallHandlerMeta>();
+        if let Some(parent_syscall_handler) = parent_syscall_handler {
+            native_executor
+                .borrow_mut()
+                .get_module_mut()
+                .insert_metadata(parent_syscall_handler);
+        }
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),

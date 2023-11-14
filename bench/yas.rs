@@ -265,8 +265,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if delta_t >= Duration::from_secs(5) {
             break state;
         }
-
-        break state;
     };
 
     let delta_t = delta_t.as_secs_f64();
