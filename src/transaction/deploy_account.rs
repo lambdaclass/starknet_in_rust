@@ -40,6 +40,7 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::{One, Zero};
+use starknet_api::transaction::DeployAccountTransaction;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -513,36 +514,42 @@ impl DeployAccount {
         value: starknet_api::transaction::DeployAccountTransaction,
         chain_id: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
-        let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
-        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
+        match value {
+            DeployAccountTransaction::V1(value) => {
+                let max_fee = value.max_fee.0;
+                let version = Felt252::one();
+                let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+                let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
+                let contract_address_salt =
+                    Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
 
-        let signature = value
-            .signature
-            .0
-            .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
-            .collect();
-        let constructor_calldata = value
-            .constructor_calldata
-            .0
-            .as_ref()
-            .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
-            .collect();
+                let signature = value
+                    .signature
+                    .0
+                    .iter()
+                    .map(|f| Felt252::from_bytes_be(f.bytes()))
+                    .collect();
+                let constructor_calldata = value
+                    .constructor_calldata
+                    .0
+                    .as_ref()
+                    .iter()
+                    .map(|f| Felt252::from_bytes_be(f.bytes()))
+                    .collect();
 
-        DeployAccount::new(
-            class_hash,
-            max_fee,
-            version,
-            nonce,
-            constructor_calldata,
-            signature,
-            contract_address_salt,
-            chain_id,
-        )
+                DeployAccount::new(
+                    class_hash,
+                    max_fee,
+                    version,
+                    nonce,
+                    constructor_calldata,
+                    signature,
+                    contract_address_salt,
+                    chain_id,
+                )
+            }
+            DeployAccountTransaction::V3(_value) => todo!(),
+        }
     }
 }
 
@@ -550,14 +557,14 @@ impl DeployAccount {
 //      Try from starknet api
 // ----------------------------------
 
-impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
+impl TryFrom<starknet_api::transaction::DeployAccountTransactionV1> for DeployAccount {
     type Error = SyscallHandlerError;
 
     fn try_from(
-        value: starknet_api::transaction::DeployAccountTransaction,
+        value: starknet_api::transaction::DeployAccountTransactionV1,
     ) -> Result<Self, SyscallHandlerError> {
         let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be(value.version.0.bytes());
+        let version = Felt252::one();
         let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
         let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
         let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());

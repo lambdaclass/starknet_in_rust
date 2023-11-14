@@ -8,8 +8,8 @@ mod tests {
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         class_hash,
-        core::{ClassHash, ContractAddress, PatriciaKey},
-        hash::{StarkFelt, StarkHash},
+        core::{ContractAddress, PatriciaKey},
+        hash::StarkFelt,
         patricia_key, stark_felt,
         state::StorageKey,
         transaction::{Transaction as SNTransaction, TransactionHash},
@@ -20,13 +20,14 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::rpc_state::*;
+    use starknet_api::{core::ClassHash, hash::StarkHash};
 
     /// A utility macro to create a [`ContractAddress`] from a hex string / unsigned integer
     /// representation.
     /// Imported from starknet_api
     macro_rules! contract_address {
         ($s:expr) => {
-            ContractAddress(patricia_key!($s))
+            ContractAddress(starknet_api::patricia_key!($s))
         };
     }
 

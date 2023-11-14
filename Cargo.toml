@@ -25,7 +25,8 @@ cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", branch = "update-b
 ] }
 num-traits = "0.2.15"
 starknet = "0.5.0"
-starknet_api = "0.4.1"
+#starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "9139ec4" }
+starknet_api = "0.6.0-rc1"
 thiserror = "1.0.32"
 
 [dependencies]

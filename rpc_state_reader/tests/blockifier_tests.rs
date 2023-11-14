@@ -1,6 +1,6 @@
 use blockifier::{
-    block_context::BlockContext,
-    execution::{contract_class::ContractClass, entry_point::CallInfo},
+    block_context::{BlockContext, FeeTokenAddresses, GasPrices},
+    execution::{call_info::CallInfo, contract_class::ContractClass},
     state::{
         cached_state::{CachedState, GlobalContractCache},
         errors::StateError,
@@ -39,7 +39,7 @@ use starknet_api::{
     hash::{StarkFelt, StarkHash},
     patricia_key, stark_felt,
     state::StorageKey,
-    transaction::{Transaction as SNTransaction, TransactionHash},
+    transaction::{Fee, Transaction as SNTransaction, TransactionHash},
 };
 use test_case::test_case;
 
@@ -61,7 +61,7 @@ impl StateReader for RpcStateReader {
     }
 
     fn get_class_hash_at(&mut self, contract_address: ContractAddress) -> StateResult<ClassHash> {
-        Ok(self.0.get_class_hash_at(&contract_address))
+        Ok(ClassHash(self.0.get_class_hash_at(&contract_address).0))
     }
 
     /// Returns the contract class of the given class hash.
@@ -166,14 +166,24 @@ pub fn execute_tx(
         ("keccak_builtin".to_string(), N_STEPS_FEE_WEIGHT * 2048.0), // 2**11
     ]));
 
+    let fee_token_addresses = FeeTokenAddresses {
+        strk_fee_token_address: fee_token_address,
+        eth_fee_token_address: fee_token_address,
+    };
+
+    let gas_prices = GasPrices {
+        strk_l1_gas_price: gas_price,
+        eth_l1_gas_price: gas_price,
+    };
+
     let block_context = BlockContext {
         chain_id,
         block_number,
         block_timestamp,
         sequencer_address,
-        fee_token_address,
+        fee_token_addresses,
         vm_resource_fee_cost,
-        gas_price,
+        gas_prices,
         invoke_tx_max_n_steps: 1_000_000,
         validate_max_n_steps: 1_000_000,
         max_recursion_depth: 500,
@@ -182,14 +192,18 @@ pub fn execute_tx(
     // Map starknet_api transaction to blockifier's
     let blockifier_tx = match sn_api_tx.unwrap() {
         SNTransaction::Invoke(tx) => {
-            let invoke = InvokeTransaction { tx, tx_hash };
+            let invoke = InvokeTransaction {
+                tx,
+                tx_hash,
+                only_query: false,
+            };
             AccountTransaction::Invoke(invoke)
         }
         SNTransaction::DeployAccount(tx) => {
             let contract_address = calculate_contract_address(
-                tx.contract_address_salt,
-                tx.class_hash,
-                &tx.constructor_calldata,
+                tx.contract_address_salt(),
+                tx.class_hash(),
+                &tx.constructor_calldata(),
                 ContractAddress::default(),
             )
             .unwrap();
@@ -197,6 +211,7 @@ pub fn execute_tx(
                 tx,
                 tx_hash,
                 contract_address,
+                only_query: false,
             })
         }
         SNTransaction::Declare(tx) => {
@@ -216,7 +231,7 @@ pub fn execute_tx(
             let blockifier_tx = L1HandlerTransaction {
                 tx,
                 tx_hash,
-                paid_fee_on_l1: starknet_api::transaction::Fee(u128::MAX),
+                paid_fee_on_l1: Fee(u128::MAX),
             };
             return (
                 blockifier_tx

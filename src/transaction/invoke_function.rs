@@ -142,6 +142,7 @@ impl InvokeFunction {
         match tx {
             starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, chain_id),
             starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, chain_id),
+            starknet_api::transaction::InvokeTransaction::V3(_v3) => todo!(),
         }
     }
 
