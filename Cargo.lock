@@ -1320,7 +1320,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=make-context-send-and-sync#0b26e21d2a7294a2c2cf3c161bed2bdd62e24c33"
+source = "git+https://github.com/lambdaclass/cairo_native?branch=make-context-send-and-sync#d6f122fd4dc573ae6d33f595680fe801ad350cd0"
 dependencies = [
  "bumpalo",
  "cairo-felt",
@@ -1355,7 +1355,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=make-context-send-and-sync#0b26e21d2a7294a2c2cf3c161bed2bdd62e24c33"
+source = "git+https://github.com/lambdaclass/cairo_native?branch=make-context-send-and-sync#d6f122fd4dc573ae6d33f595680fe801ad350cd0"
 dependencies = [
  "cairo-felt",
  "cairo-lang-runner",

@@ -11,7 +11,8 @@ use crate::{
         to_cache_state_storage_mapping, Address, ClassHash,
     },
 };
-use cairo_lang_utils::bigint::BigUintAsHex;
+use cairo_lang_sierra::program::Program as SierraProgram;
+use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
@@ -21,6 +22,7 @@ use std::{
 };
 
 pub type ContractClassCache = HashMap<ClassHash, CompiledClass>;
+pub type SierraProgramCache = HashMap<ClassHash, Arc<(SierraProgram, ContractEntryPoints)>>;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
 
@@ -30,8 +32,12 @@ pub struct CachedState<T: StateReader> {
     pub state_reader: Arc<T>,
     #[getset(get = "pub", get_mut = "pub")]
     pub(crate) cache: StateCache,
+
     #[get = "pub"]
     pub(crate) contract_classes: ContractClassCache,
+    #[get = "pub"]
+    pub(crate) sierra_programs: SierraProgramCache,
+
     cache_hits: usize,
     cache_misses: usize,
 }
@@ -69,6 +75,7 @@ impl<T: StateReader> CachedState<T> {
             cache: StateCache::default(),
             state_reader,
             contract_classes,
+            sierra_programs: Default::default(),
             cache_hits: 0,
             cache_misses: 0,
         }
@@ -83,6 +90,7 @@ impl<T: StateReader> CachedState<T> {
         Self {
             cache,
             contract_classes: HashMap::new(),
+            sierra_programs: Default::default(),
             state_reader,
             cache_hits: 0,
             cache_misses: 0,
@@ -108,6 +116,7 @@ impl<T: StateReader> CachedState<T> {
             state_reader: self.state_reader.clone(),
             cache: self.cache.clone(),
             contract_classes: self.contract_classes.clone(),
+            sierra_programs: self.sierra_programs.clone(),
             cache_hits: 0,
             cache_misses: 0,
         }
@@ -257,11 +266,11 @@ impl<T: StateReader> State for CachedState<T> {
 
     fn set_compiled_class_hash(
         &mut self,
-        class_hash: &Felt252,
+        sierra_class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
-        let class_hash = class_hash.to_be_bytes();
-        let compiled_class_hash = compiled_class_hash.to_be_bytes();
+        let class_hash = compiled_class_hash.to_be_bytes();
+        let compiled_class_hash = sierra_class_hash.to_be_bytes();
 
         self.cache
             .compiled_class_hash_writes
@@ -392,6 +401,10 @@ impl<T: StateReader> State for CachedState<T> {
 
     // TODO: check if that the proper way to store it (converting hash to address)
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
+        if let Some(compiled_class_hash) = self.cache.compiled_class_hash_writes.get(class_hash) {
+            return Ok(*compiled_class_hash);
+        }
+
         match self
             .cache
             .class_hash_to_compiled_class_hash
@@ -472,23 +485,17 @@ impl<T: StateReader> State for CachedState<T> {
     fn set_sierra_program(
         &mut self,
         compiled_class_hash: &Felt252,
-        _sierra_program: Vec<BigUintAsHex>,
-    ) -> Result<(), StateError> {
-        let _compiled_class_hash = compiled_class_hash.to_be_bytes();
-
-        // TODO implement
-        // self.sierra_programs
-        //     .as_mut()
-        //     .ok_or(StateError::MissingSierraProgramsCache)?
-        //     .insert(compiled_class_hash, sierra_program);
-        Ok(())
+        sierra_program: Arc<(SierraProgram, ContractEntryPoints)>,
+    ) {
+        self.sierra_programs
+            .insert(compiled_class_hash.to_be_bytes(), sierra_program);
     }
 
     fn get_sierra_program(
         &mut self,
-        _class_hash: &ClassHash,
-    ) -> Result<Vec<cairo_lang_utils::bigint::BigUintAsHex>, StateError> {
-        todo!()
+        class_hash: &ClassHash,
+    ) -> Option<Arc<(SierraProgram, ContractEntryPoints)>> {
+        self.sierra_programs.get(class_hash).cloned()
     }
 }
 

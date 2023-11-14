@@ -26,13 +26,7 @@ use crate::{
         validate_contract_deployed, Address,
     },
 };
-#[cfg(feature = "cairo-native")]
-use crate::{state::StateDiff, utils::ClassHash};
-use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_lang_starknet::contract_class::ContractEntryPoints;
-#[cfg(feature = "cairo-native")]
-use cairo_native::cache::ProgramCache;
 use cairo_vm::{
     felt::Felt252,
     types::{
@@ -46,17 +40,21 @@ use cairo_vm::{
     },
 };
 use std::sync::Arc;
-#[cfg(feature = "cairo-native")]
-use std::{cell::RefCell, rc::Rc};
+use tracing::debug;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::syscalls::native_syscall_handler::NativeSyscallHandler,
+    crate::{
+        state::StateDiff, syscalls::native_syscall_handler::NativeSyscallHandler, utils::ClassHash,
+    },
+    cairo_lang_sierra::program::Program as SierraProgram,
+    cairo_lang_starknet::contract_class::ContractEntryPoints,
     cairo_native::{
-        execution_result::NativeExecutionResult, metadata::syscall_handler::SyscallHandlerMeta,
-        utils::felt252_bigint,
+        cache::ProgramCache, execution_result::NativeExecutionResult,
+        metadata::syscall_handler::SyscallHandlerMeta, utils::felt252_bigint,
     },
     serde_json::Value,
+    std::{cell::RefCell, rc::Rc},
 };
 
 #[derive(Debug, Default)]
@@ -127,9 +125,34 @@ impl ExecutionEntryPoint {
     {
         // lookup the compiled class from the state.
         let class_hash = self.get_code_class_hash(state)?;
+
+        let get_contract_class = |state: &mut CachedState<T>| {
+            state
+                .get_contract_class(&class_hash)
+                .map_err(|_| TransactionError::MissingCompiledClass)
+        };
+
+        #[cfg(feature = "cairo-native")]
         let contract_class = state
-            .get_contract_class(&class_hash)
-            .map_err(|_| TransactionError::MissingCompiledClass)?;
+            .get_compiled_class_hash(&class_hash)
+            .ok()
+            .and_then(|compiled_class_hash| {
+                state
+                    .get_sierra_program(&compiled_class_hash)
+                    .map(CompiledClass::Sierra)
+            })
+            .map_or_else(|| get_contract_class(state), Ok)?;
+        #[cfg(not(feature = "cairo-native"))]
+        let contract_class = get_contract_class(state)?;
+
+        #[cfg(feature = "cairo-native")]
+        debug!(
+            "Executing entry point using {}",
+            match &contract_class {
+                CompiledClass::Sierra(_) => "Cairo Native's JIT",
+                _ => "the VM",
+            }
+        );
         match contract_class {
             CompiledClass::Deprecated(contract_class) => {
                 let call_info = self._execute_version0_class(
@@ -643,21 +666,6 @@ impl ExecutionEntryPoint {
         )
     }
 
-    #[cfg(not(feature = "cairo-native"))]
-    #[inline(always)]
-    #[allow(dead_code)]
-    fn native_execute<S: StateReader>(
-        &self,
-        _state: &mut CachedState<S>,
-        _sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
-        _tx_execution_context: &mut TransactionExecutionContext,
-        _block_context: &BlockContext,
-    ) -> Result<CallInfo, TransactionError> {
-        Err(TransactionError::SierraCompileError(
-            "This version of SiR was compiled without the Cairo Native feature".to_string(),
-        ))
-    }
-
     #[cfg(feature = "cairo-native")]
     #[inline(always)]
     fn native_execute<S: StateReader>(
@@ -674,6 +682,7 @@ impl ExecutionEntryPoint {
         };
         use cairo_lang_sierra::{
             extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
+            program::GenericArg,
             program_registry::ProgramRegistry,
         };
         use serde_json::json;
@@ -783,12 +792,96 @@ impl ExecutionEntryPoint {
             - `calldata`, an array of Felt arguments to the method being called.
         */
 
+        // The calldata has a type of `Struct<Snapshot<Array<felt252>>>`.
+        let is_calldata = |ty: &[GenericArg]| -> bool {
+            // A `Struct` type declaration contains the usertype and the inner type.
+            if ty.len() != 2 {
+                return false;
+            }
+
+            // The inner type must be a type declaration for it to be a `Snapshot`.
+            let ty = match &ty[1] {
+                GenericArg::Type(x) => x,
+                _ => return false,
+            };
+
+            // Make sure it's really a `Snapshot` and extract its generic arguments.
+            let ty = &match sierra_program
+                .type_declarations
+                .iter()
+                .find(|x| &x.id == ty)
+            {
+                Some(x) if x.long_id.generic_id.0.as_str() == "Snapshot" => x,
+                _ => return false,
+            }
+            .long_id
+            .generic_args;
+
+            // A `Snapshot` type declaration contains only the inner type.
+            if ty.len() != 1 {
+                return false;
+            }
+
+            // The inner type must be a type declaration for it to be an `Array`.
+            let ty = match &ty[0] {
+                GenericArg::Type(x) => x,
+                _ => return false,
+            };
+
+            // Make sure it's really an `Array` and extract its generic arguments.
+            let ty = &match sierra_program
+                .type_declarations
+                .iter()
+                .find(|x| &x.id == ty)
+            {
+                Some(x) if x.long_id.generic_id.0.as_str() == "Array" => x,
+                _ => return false,
+            }
+            .long_id
+            .generic_args;
+
+            // An `Array` type declaration contains only the inner type.
+            if ty.len() != 1 {
+                return false;
+            }
+
+            // The inner type must be a type declaration for it to be a `felt252`.
+            let ty = match &ty[0] {
+                GenericArg::Type(x) => x,
+                _ => return false,
+            };
+
+            // Make sure it's really a `felt252` and extract its generic arguments.
+            let ty = &match sierra_program
+                .type_declarations
+                .iter()
+                .find(|x| &x.id == ty)
+            {
+                Some(x) if x.long_id.generic_id.0.as_str() == "felt252" => x,
+                _ => return false,
+            }
+            .long_id
+            .generic_args;
+
+            // An `felt252` type declaration must have no arguments.
+            if !ty.is_empty() {
+                return false;
+            }
+
+            true
+        };
+
         let wrapped_calldata = vec![calldata];
         let params: Vec<Value> = sierra_program.funcs[entry_point_id.id as usize]
             .params
             .iter()
             .map(|param| {
-                match param.ty.debug_name.as_ref().unwrap().as_str() {
+                let param_ty = sierra_program
+                    .type_declarations
+                    .iter()
+                    .find(|x| x.id == param.ty)
+                    .unwrap();
+                match param_ty.long_id.generic_id.0.as_str() {
                     "GasBuiltin" => {
                         json!(self.initial_gas)
                     }
@@ -798,8 +891,9 @@ impl ExecutionEntryPoint {
                     "System" => {
                         json!(syscall_addr)
                     }
-                    // calldata
-                    "core::array::Span::<core::felt252>" => json!(wrapped_calldata),
+                    "Struct" if is_calldata(&param_ty.long_id.generic_args) => {
+                        json!(wrapped_calldata)
+                    }
                     x => {
                         unimplemented!("unhandled param type: {:?}", x);
                     }

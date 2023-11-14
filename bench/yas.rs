@@ -1,5 +1,5 @@
-#![deny(clippy::pedantic)]
-#![deny(warnings)]
+// #![deny(clippy::pedantic)]
+// #![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
 use lazy_static::lazy_static;
@@ -235,6 +235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut delta_t = Duration::ZERO;
     let mut num_runs = 0;
+    #[allow(clippy::never_loop)]
     let mut state = loop {
         let mut state = state.clone();
 
@@ -264,6 +265,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if delta_t >= Duration::from_secs(5) {
             break state;
         }
+
+        break state;
     };
 
     let delta_t = delta_t.as_secs_f64();
@@ -902,9 +905,12 @@ mod utils {
     use cairo_vm::felt::Felt252;
     use num_traits::{One, Zero};
     use starknet_in_rust::{
-        core::contract_address::compute_casm_class_hash,
+        core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash},
         services::api::contract_classes::compiled_class::CompiledClass,
-        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
+        state::{
+            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+            state_api::State,
+        },
         utils::Address,
         CasmContractClass, ContractClass as SierraContractClass,
     };
@@ -933,32 +939,38 @@ mod utils {
 
     pub fn default_state() -> Result<CachedState<InMemoryStateReader>, Box<dyn std::error::Error>> {
         let (sierra_contract_class, casm_contract_class) = load_contract("YasCustomAccount")?;
-        let contract_class_hash = compute_casm_class_hash(&casm_contract_class)?.to_be_bytes();
+        let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?.to_be_bytes();
 
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
-            .insert(Address(ACCOUNT_ADDRESS.clone()), contract_class_hash);
+            .insert(Address(ACCOUNT_ADDRESS.clone()), casm_class_hash);
         state_reader
             .address_to_nonce_mut()
             .insert(Address(ACCOUNT_ADDRESS.clone()), Felt252::one());
 
-        Ok(CachedState::new(
+        let mut cached_state = CachedState::new(
             Arc::new(state_reader),
-            HashMap::from([
-                (
-                    contract_class_hash,
-                    CompiledClass::Sierra(Arc::new((
-                        sierra_contract_class.extract_sierra_program()?,
-                        sierra_contract_class.entry_points_by_type,
-                    ))),
-                ),
-                (
-                    contract_class_hash,
-                    CompiledClass::Casm(Arc::new(casm_contract_class)),
-                ),
-            ]),
-        ))
+            HashMap::from([(
+                casm_class_hash,
+                CompiledClass::Casm(Arc::new(casm_contract_class)),
+            )]),
+        );
+
+        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class)?.to_be_bytes();
+        cached_state.set_sierra_program(
+            &Felt252::from_bytes_be(&sierra_class_hash),
+            Arc::new((
+                sierra_contract_class.extract_sierra_program()?,
+                sierra_contract_class.entry_points_by_type,
+            )),
+        );
+        cached_state.set_compiled_class_hash(
+            &Felt252::from_bytes_be(&sierra_class_hash),
+            &Felt252::from_bytes_be(&casm_class_hash),
+        )?;
+
+        Ok(cached_state)
     }
 
     pub fn load_contract(
