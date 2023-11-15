@@ -1,5 +1,5 @@
-// #![deny(clippy::pedantic)]
-// #![deny(warnings)]
+#![deny(clippy::pedantic)]
+#![deny(warnings)]
 
 use cairo_vm::felt::Felt252;
 use lazy_static::lazy_static;
@@ -22,6 +22,9 @@ use {
     starknet_in_rust::utils::{get_native_context, ClassHash},
     std::{cell::RefCell, rc::Rc},
 };
+
+const WARMUP_TIME: Duration = Duration::from_secs(3);
+const BENCHMARK_TIME: Duration = Duration::from_secs(5);
 
 lazy_static! {
     static ref ACCOUNT_ADDRESS: Felt252 = 4321.into();
@@ -235,7 +238,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut delta_t = Duration::ZERO;
     let mut num_runs = 0;
-    #[allow(clippy::never_loop)]
     let mut state = loop {
         let mut state = state.clone();
 
@@ -260,14 +262,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let t1 = Instant::now();
 
         delta_t += t1.duration_since(t0);
-        num_runs += 1;
+        if delta_t >= WARMUP_TIME {
+            num_runs += 1;
 
-        if delta_t >= Duration::from_secs(5) {
-            break state;
+            if delta_t >= (WARMUP_TIME + BENCHMARK_TIME) {
+                break state;
+            }
         }
     };
 
-    let delta_t = delta_t.as_secs_f64();
+    let delta_t = (delta_t - WARMUP_TIME).as_secs_f64();
     println!(
         "Executed {num_runs} swaps taking {delta_t} seconds ({} #/s, or {} s/#)",
         f64::from(num_runs) / delta_t,
