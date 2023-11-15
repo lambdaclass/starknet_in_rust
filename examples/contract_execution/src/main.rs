@@ -122,6 +122,8 @@ fn test_contract(
         .execute(
             &mut state,
             &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .expect("Account Deploy Failed")
         .call_info

@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 default = ["with_mimalloc"]
 with_mimalloc = ["dep:mimalloc"]
+cairo-native = ["starknet_in_rust/cairo-native"]
 
 [dependencies]
 starknet_in_rust = { path = "../", version = "0.4.0" }

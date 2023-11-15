@@ -273,6 +273,8 @@ fn call_parser(
         &mut TransactionExecutionContext::default(),
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
