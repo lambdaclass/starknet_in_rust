@@ -24,7 +24,7 @@ use blockifier::{
 use cairo_lang_starknet::{
     casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
 };
-use cairo_vm_blockifier::types::program::Program;
+use cairo_vm_blockifier::{felt::Felt252, types::program::Program};
 use pretty_assertions_sorted::assert_eq;
 use rpc_state_reader::rpc_state::*;
 use rpc_state_reader::utils;
@@ -410,6 +410,11 @@ fn blockifier_test_recent_tx() {
     889897, // real block 889898
     RpcChain::TestNet
 )]
+#[test_case(
+    "0x07d33fb412498d05e5b264ac7ead3a767b80bacff522f23174e039bbeb8e08ea",
+    399850, // real block 399851
+    RpcChain::MainNet
+)]
 fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
@@ -422,6 +427,7 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let CallInfo {
         vm_resources,
         inner_calls,
+        execution,
         ..
     } = execute_call_info.unwrap();
 
@@ -473,6 +479,22 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
             .internal_calls
             .len()
     );
+    let blockifier_retdata: Vec<Felt252> = execution
+        .retdata
+        .0
+        .into_iter()
+        .map(|x| Felt252::from_bytes_be(x.bytes()))
+        .collect();
+    let rpc_retdata: Vec<Felt252> = trace
+        .function_invocation
+        .unwrap()
+        .retdata
+        .unwrap()
+        .into_iter()
+        .map(|x| Felt252::from_bytes_be(x.bytes()))
+        .collect();
+
+    assert_eq!(blockifier_retdata, rpc_retdata);
 }
 
 #[test_case(
