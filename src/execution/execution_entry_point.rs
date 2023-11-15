@@ -815,7 +815,7 @@ impl ExecutionEntryPoint {
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
-        let syscall_handler = NativeSyscallHandler {
+        let mut syscall_handler = NativeSyscallHandler {
             starknet_storage_state: contract_storage_state,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
@@ -836,7 +836,7 @@ impl ExecutionEntryPoint {
         native_executor
             .borrow_mut()
             .get_module_mut()
-            .insert_metadata(SyscallHandlerMeta::new(&syscall_handler));
+            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler));
 
         let syscall_addr = native_executor
             .borrow()
