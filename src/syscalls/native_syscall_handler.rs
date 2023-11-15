@@ -343,7 +343,9 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
             Err(_) => Ok(Felt252::zero()),
         };
 
-        tracing::debug!("Called `storage_read({address_domain}, {address}) = {value:?}` from Cairo Native");
+        tracing::debug!(
+            "Called `storage_read({address_domain}, {address}) = {value:?}` from Cairo Native"
+        );
         value
     }
 
