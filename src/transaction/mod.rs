@@ -27,6 +27,13 @@ use crate::{
 };
 use error::TransactionError;
 
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
 /// it can be one of:
@@ -74,14 +81,49 @@ impl Transaction {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Declare(tx) => tx.execute(state, block_context),
-            Transaction::DeclareV2(tx) => tx.execute(state, block_context),
-            Transaction::Deploy(tx) => tx.execute(state, block_context),
-            Transaction::DeployAccount(tx) => tx.execute(state, block_context),
-            Transaction::InvokeFunction(tx) => tx.execute(state, block_context, remaining_gas),
-            Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
+            Transaction::Declare(tx) => tx.execute(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::DeclareV2(tx) => tx.execute(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::Deploy(tx) => tx.execute(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::DeployAccount(tx) => tx.execute(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::InvokeFunction(tx) => tx.execute(
+                state,
+                block_context,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::L1Handler(tx) => tx.execute(
+                state,
+                block_context,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
         }
     }
 
