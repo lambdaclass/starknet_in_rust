@@ -14,10 +14,7 @@ use crate::hash_utils::calculate_contract_address;
 use crate::services::api::contract_class_errors::ContractClassError;
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::state_api::State;
-<<<<<<< HEAD
-=======
 use crate::syscalls::business_logic_syscall_handler::KECCAK_ROUND_COST;
->>>>>>> main
 use crate::utils::felt_to_hash;
 use crate::utils::ClassHash;
 use crate::{
@@ -56,11 +53,7 @@ where
     pub(crate) program_cache: Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
 }
 
-<<<<<<< HEAD
-impl<'a, S: StateReader> NativeSyscallHandler<'a, S> {
-=======
 impl<'a, 'cache, S: StateReader> NativeSyscallHandler<'a, 'cache, S> {
->>>>>>> main
     /// Generic code that needs to be run on all syscalls.
     fn handle_syscall_request(&mut self, gas: &mut u128, syscall_name: &str) -> SyscallResult<()> {
         let required_gas = SYSCALL_GAS_COST
@@ -83,11 +76,7 @@ impl<'a, 'cache, S: StateReader> NativeSyscallHandler<'a, 'cache, S> {
     }
 }
 
-<<<<<<< HEAD
-impl<'a, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, S> {
-=======
 impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, 'cache, S> {
->>>>>>> main
     fn get_block_hash(
         &mut self,
         block_number: u64,
@@ -317,10 +306,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
-<<<<<<< HEAD
-=======
                 self.program_cache.clone(),
->>>>>>> main
             )
             .unwrap();
 
@@ -430,9 +416,6 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
 
         self.handle_syscall_request(gas, "keccak")?;
 
-<<<<<<< HEAD
-        Ok(U256(Felt252::from(1234567890).to_le_bytes()))
-=======
         let length = input.len();
 
         if length % 17 != 0 {
@@ -468,7 +451,6 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         .concat();
 
         SyscallResult::Ok(U256(hash[0..32].try_into().unwrap()))
->>>>>>> main
     }
 
     fn secp256k1_add(
@@ -612,11 +594,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
     }
 }
 
-<<<<<<< HEAD
-impl<'a, S> NativeSyscallHandler<'a, S>
-=======
 impl<'a, 'cache, S> NativeSyscallHandler<'a, 'cache, S>
->>>>>>> main
 where
     S: StateReader,
 {
