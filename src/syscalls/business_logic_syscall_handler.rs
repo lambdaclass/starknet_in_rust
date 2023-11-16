@@ -57,6 +57,12 @@ use lazy_static::lazy_static;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use num_traits::{One, ToPrimitive, Zero};
 
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 pub(crate) const STEP: u128 = 100;
 pub(crate) const SYSCALL_BASE: u128 = 100 * STEP;
 pub(crate) const KECCAK_ROUND_COST: u128 = 180000;
@@ -278,6 +284,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         remaining_gas: u128,
         execution_entry_point: ExecutionEntryPoint,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let ExecutionResult {
             call_info,
@@ -291,6 +300,8 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
@@ -361,6 +372,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<CallResult, StateError> {
         let compiled_class = if let Ok(compiled_class) = self
             .starknet_storage_state
@@ -414,6 +428,8 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 &mut self.tx_execution_context,
                 self.support_reverted,
                 self.block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
@@ -436,6 +452,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
         let syscall_name = self.selector_to_syscall.get(&selector).ok_or(
@@ -477,7 +496,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         } else {
             // Execute with remaining gas.
             let remaining_gas = initial_gas - required_gas;
-            self.execute_syscall(request, remaining_gas, vm)?
+            self.execute_syscall(
+                request,
+                remaining_gas,
+                vm,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )?
         };
 
         // Write response to the syscall segment.
@@ -495,11 +520,32 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         request: SyscallRequest,
         remaining_gas: u128,
         vm: &mut VirtualMachine,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         match request {
-            SyscallRequest::LibraryCall(req) => self.library_call(vm, req, remaining_gas),
-            SyscallRequest::CallContract(req) => self.call_contract(vm, req, remaining_gas),
-            SyscallRequest::Deploy(req) => self.deploy(vm, req, remaining_gas),
+            SyscallRequest::LibraryCall(req) => self.library_call(
+                vm,
+                req,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            SyscallRequest::CallContract(req) => self.call_contract(
+                vm,
+                req,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            SyscallRequest::Deploy(req) => self.deploy(
+                vm,
+                req,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
             SyscallRequest::StorageRead(req) => self.storage_read(vm, req, remaining_gas),
             SyscallRequest::StorageWrite(req) => self.storage_write(vm, req, remaining_gas),
             SyscallRequest::GetExecutionInfo => self.get_execution_info(vm, remaining_gas),
@@ -750,6 +796,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         request: CallContractRequest,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         let execution_entry_point = ExecutionEntryPoint::new(
@@ -763,7 +812,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             remaining_gas,
         );
 
-        self.call_contract_helper(vm, remaining_gas, execution_entry_point)
+        self.call_contract_helper(
+            vm,
+            remaining_gas,
+            execution_entry_point,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     /// Performs a storage read operation.
@@ -803,6 +858,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &VirtualMachine,
         request: DeployRequest,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(Address, CallResult), SyscallHandlerError> {
         if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
             return Err(SyscallHandlerError::DeployFromZero(
@@ -851,6 +909,8 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             class_hash_bytes,
             constructor_calldata,
             remaining_gas,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         Ok((contract_address, result))
@@ -862,8 +922,17 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         syscall_request: DeployRequest,
         mut remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let (contract_address, result) = self.syscall_deploy(vm, syscall_request, remaining_gas)?;
+        let (contract_address, result) = self.syscall_deploy(
+            vm,
+            syscall_request,
+            remaining_gas,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )?;
 
         remaining_gas -= result.gas_consumed;
 
@@ -978,6 +1047,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         request: LibraryCallRequest,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         let execution_entry_point = ExecutionEntryPoint::new(
@@ -991,7 +1063,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             remaining_gas,
         );
 
-        self.call_contract_helper(vm, remaining_gas, execution_entry_point)
+        self.call_contract_helper(
+            vm,
+            remaining_gas,
+            execution_entry_point,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     /// Get the time stamp of the block.

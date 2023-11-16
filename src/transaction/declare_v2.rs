@@ -35,6 +35,13 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 /// Represents a declare transaction in the starknet network.
 /// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
 /// DeclareV2 is meant to be used with the new cairo contract sintax, starting from Cairo1.
@@ -340,7 +347,7 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::Declare,
         self.version = ?self.version,
         self.sierra_class_hash = ?self.sierra_class_hash,
@@ -353,6 +360,9 @@ impl DeclareV2 {
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if self.version != 2.into() {
             return Err(TransactionError::UnsupportedTxVersion(
@@ -379,6 +389,8 @@ impl DeclareV2 {
                 state,
                 &mut resources_manager,
                 block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache.clone(),
             )?;
             (info, gas)
         };
@@ -407,6 +419,8 @@ impl DeclareV2 {
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
@@ -462,6 +476,9 @@ impl DeclareV2 {
         state: &mut CachedState<S>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(ExecutionResult, u128), TransactionError> {
         let calldata = [self.compiled_class_hash.clone()].to_vec();
 
@@ -490,6 +507,8 @@ impl DeclareV2 {
                 &mut tx_execution_context,
                 true,
                 block_context.validate_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )?
         };
 
@@ -941,6 +960,8 @@ mod tests {
         let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
             &mut CachedState::default(),
             &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         assert_matches!(

@@ -7,13 +7,6 @@
 // $ native_bench <n_executions> native <fibo|fact>
 // where fibo executes a fibonacci function and fact a factorial n times.
 
-#![cfg(feature = "cairo-native")]
-
-#[cfg(not(feature = "cairo-native"))]
-fn main() {
-    unimplemented!("This program should be compiled with the cairo-native feature");
-}
-
 use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
 use cairo_vm::felt::felt_str;
@@ -26,6 +19,7 @@ use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledC
 use starknet_in_rust::state::state_api::State;
 use starknet_in_rust::transaction::DeployAccount;
 use starknet_in_rust::utils::calculate_sn_keccak;
+use starknet_in_rust::utils::get_native_context;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -244,6 +238,7 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_DEPLOYMENT_CALLER_ADDRESS: Address = Address(0000.into());
     }
 
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(get_native_context())));
     let (erc20_address, mut state): (Address, CachedState<InMemoryStateReader>) = match native {
         true => {
             let erc20_sierra_class = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
@@ -317,6 +312,7 @@ fn bench_erc20(executions: usize, native: bool) {
                     &mut tx_execution_context,
                     false,
                     block_context.invoke_tx_max_n_steps(),
+                    Some(program_cache.clone()),
                 )
                 .unwrap();
 
@@ -395,6 +391,7 @@ fn bench_erc20(executions: usize, native: bool) {
                     &mut tx_execution_context,
                     false,
                     block_context.invoke_tx_max_n_steps(),
+                    Some(program_cache.clone()),
                 )
                 .unwrap();
 
@@ -454,7 +451,7 @@ fn bench_erc20(executions: usize, native: bool) {
     // this will create the account and after that,
     // we can extract its address.
     let account1_address = account1_deploy_tx
-        .execute(&mut state, &Default::default())
+        .execute(&mut state, &Default::default(), Some(program_cache.clone()))
         .expect("failed to execute the deployment of account 1")
         .validate_info
         .expect("validate_info missing")
@@ -482,7 +479,7 @@ fn bench_erc20(executions: usize, native: bool) {
 
     // execute the deploy_account transaction and retrieve the deployed account address.
     let _account2_address = account2_deploy_tx
-        .execute(&mut state, &Default::default())
+        .execute(&mut state, &Default::default(), Some(program_cache.clone()))
         .expect("failed to execute the deployment of account 2")
         .validate_info
         .expect("validate_info missing")
@@ -493,9 +490,6 @@ fn bench_erc20(executions: usize, native: bool) {
     let transfer_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
     // calldata for transfering 123 tokens from account1 to account2
     let calldata = vec![Felt252::from(12), Felt252::from(123)];
-
-    let native_ctx = NativeContext::new();
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
 
     for _ in 0..executions {
         let result = execute(
@@ -550,14 +544,14 @@ fn execute(
     let mut resources_manager = ExecutionResourcesManager::default();
 
     exec_entry_point
-        .execute_with_native_cache(
+        .execute(
             state,
             &block_context,
             &mut resources_manager,
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
-            program_cache,
+            Some(program_cache),
         )
         .unwrap()
         .call_info
