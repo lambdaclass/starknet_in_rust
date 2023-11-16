@@ -27,23 +27,23 @@ use cairo_vm::{
 use std::{any::Any, cell::RefCell, collections::HashMap, rc::Rc};
 
 /// Definition of the deprecated syscall hint processor with associated structs
-pub(crate) struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
+pub(crate) struct DeprecatedSyscallHintProcessor<'a, 'cache, S: StateReader> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
     run_resources: RunResources,
 
     #[cfg(feature = "cairo-native")]
-    program_cache: Option<Rc<RefCell<ProgramCache<'a, ClassHash>>>>,
+    program_cache: Option<Rc<RefCell<ProgramCache<'cache, ClassHash>>>>,
 }
 
 /// Implementations and methods for DeprecatedSyscallHintProcessor
-impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
+impl<'a, 'cache, S: StateReader> DeprecatedSyscallHintProcessor<'a, 'cache, S> {
     /// Constructor for DeprecatedSyscallHintProcessor
     pub fn new(
         syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
         run_resources: RunResources,
         #[cfg(feature = "cairo-native")] program_cache: Option<
-            Rc<RefCell<ProgramCache<'a, ClassHash>>>,
+            Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
         >,
     ) -> Self {
         DeprecatedSyscallHintProcessor {
@@ -197,7 +197,9 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
 }
 
 /// Implement the HintProcessorLogic trait for DeprecatedSyscallHintProcessor
-impl<'a, S: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'a, S> {
+impl<'a, 'cache, S: StateReader> HintProcessorLogic
+    for DeprecatedSyscallHintProcessor<'a, 'cache, S>
+{
     /// Executes the received hint
     fn execute_hint(
         &mut self,
@@ -221,7 +223,7 @@ impl<'a, S: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'
 }
 
 /// Implement the ResourceTracker trait for DeprecatedSyscallHintProcessor
-impl<'a, S: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, S> {
+impl<'a, 'cache, S: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, 'cache, S> {
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }
@@ -240,7 +242,9 @@ impl<'a, S: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, 
 }
 
 /// Implement the HintProcessorPostRun trait for DeprecatedSyscallHintProcessor
-impl<'a, S: StateReader> HintProcessorPostRun for DeprecatedSyscallHintProcessor<'a, S> {
+impl<'a, 'cache, S: StateReader> HintProcessorPostRun
+    for DeprecatedSyscallHintProcessor<'a, 'cache, S>
+{
     /// Validates the execution post run
     fn post_run(
         &self,
@@ -301,7 +305,7 @@ mod tests {
             'a,
             InMemoryStateReader,
         >;
-    type SyscallHintProcessor<'a, T> = super::DeprecatedSyscallHintProcessor<'a, T>;
+    type SyscallHintProcessor<'a, 'cache, T> = super::DeprecatedSyscallHintProcessor<'a, 'cache, T>;
 
     /// Test checks if the send_message_to_l1 syscall is read correctly.
     #[test]

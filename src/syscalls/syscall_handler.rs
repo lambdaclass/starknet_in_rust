@@ -33,22 +33,22 @@ pub(crate) trait HintProcessorPostRun {
 }
 
 #[allow(unused)]
-pub(crate) struct SyscallHintProcessor<'a, S: StateReader> {
+pub(crate) struct SyscallHintProcessor<'a, 'cache, S: StateReader> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
     pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S>,
     pub(crate) run_resources: RunResources,
 
     #[cfg(feature = "cairo-native")]
-    program_cache: Option<Rc<RefCell<ProgramCache<'a, ClassHash>>>>,
+    program_cache: Option<Rc<RefCell<ProgramCache<'cache, ClassHash>>>>,
 }
 
-impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
+impl<'a, 'cache, S: StateReader> SyscallHintProcessor<'a, 'cache, S> {
     pub fn new(
         syscall_handler: BusinessLogicSyscallHandler<'a, S>,
         hints: &[(usize, Vec<Hint>)],
         run_resources: RunResources,
         #[cfg(feature = "cairo-native")] program_cache: Option<
-            Rc<RefCell<ProgramCache<'a, ClassHash>>>,
+            Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
         >,
     ) -> Self {
         SyscallHintProcessor {
@@ -61,7 +61,7 @@ impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
+impl<'a, 'cache, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, 'cache, S> {
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -125,7 +125,7 @@ impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> ResourceTracker for SyscallHintProcessor<'a, S> {
+impl<'a, 'cache, S: StateReader> ResourceTracker for SyscallHintProcessor<'a, 'cache, S> {
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }
@@ -143,7 +143,7 @@ impl<'a, S: StateReader> ResourceTracker for SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, S> {
+impl<'a, 'cache, S: StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, 'cache, S> {
     fn post_run(
         &self,
         runner: &mut VirtualMachine,

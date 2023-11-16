@@ -154,6 +154,13 @@ impl ExecutionEntryPoint {
             }
         );
 
+        #[cfg(feature = "cairo-native")]
+        let program_cache = program_cache.unwrap_or_else(|| {
+            Rc::new(RefCell::new(ProgramCache::new(
+                crate::utils::get_native_context(),
+            )))
+        });
+
         match contract_class {
             CompiledClass::Deprecated(contract_class) => {
                 let call_info = self._execute_version0_class(
@@ -163,6 +170,8 @@ impl ExecutionEntryPoint {
                     tx_execution_context,
                     contract_class,
                     class_hash,
+                    #[cfg(feature = "cairo-native")]
+                    program_cache,
                 )?;
                 Ok(ExecutionResult {
                     call_info: Some(call_info),
@@ -179,6 +188,8 @@ impl ExecutionEntryPoint {
                     contract_class,
                     class_hash,
                     support_reverted,
+                    #[cfg(feature = "cairo-native")]
+                    program_cache,
                 ) {
                     Ok(call_info) => Ok(ExecutionResult {
                         call_info: Some(call_info),
@@ -207,12 +218,6 @@ impl ExecutionEntryPoint {
             #[cfg(feature = "cairo-native")]
             CompiledClass::Sierra(sierra_program_and_entrypoints) => {
                 let mut transactional_state = state.create_transactional();
-
-                let program_cache = program_cache.unwrap_or_else(|| {
-                    Rc::new(RefCell::new(ProgramCache::new(
-                        crate::utils::get_native_context(),
-                    )))
-                });
 
                 match self.native_execute(
                     &mut transactional_state,
@@ -419,6 +424,7 @@ impl ExecutionEntryPoint {
         tx_execution_context: &mut TransactionExecutionContext,
         contract_class: Arc<ContractClass>,
         class_hash: [u8; 32],
+        #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
         // fetch selected entry point
@@ -458,7 +464,7 @@ impl ExecutionEntryPoint {
             syscall_handler,
             RunResources::default(),
             #[cfg(feature = "cairo-native")]
-            None,
+            Some(program_cache),
         );
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
@@ -529,6 +535,7 @@ impl ExecutionEntryPoint {
         contract_class: Arc<CasmContractClass>,
         class_hash: [u8; 32],
         support_reverted: bool,
+        #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
         let previous_cairo_usage = resources_manager.cairo_usage.clone();
 
@@ -577,7 +584,7 @@ impl ExecutionEntryPoint {
             &contract_class.hints,
             RunResources::default(),
             #[cfg(feature = "cairo-native")]
-            None,
+            Some(program_cache),
         );
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
