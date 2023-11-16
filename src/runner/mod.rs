@@ -466,6 +466,8 @@ mod test {
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -482,6 +484,8 @@ mod test {
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -501,6 +505,8 @@ mod test {
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -523,6 +529,8 @@ mod test {
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -545,6 +553,8 @@ mod test {
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -567,6 +577,8 @@ mod test {
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
@@ -590,6 +602,8 @@ mod test {
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let runner = StarknetRunner::new(cairo_runner, vm, hint_processor);

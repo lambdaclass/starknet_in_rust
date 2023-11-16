@@ -2,7 +2,11 @@ use super::{
     deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, hint_code::*,
     other_syscalls, syscall_handler::HintProcessorPostRun,
 };
-use crate::{state::state_api::StateReader, syscalls::syscall_handler_errors::SyscallHandlerError};
+use crate::{
+    state::state_api::StateReader, syscalls::syscall_handler_errors::SyscallHandlerError,
+    utils::ClassHash,
+};
+use cairo_native::cache::ProgramCache;
 use cairo_vm::{
     felt::Felt252,
     hint_processor::hint_processor_definition::HintProcessorLogic,
@@ -20,13 +24,16 @@ use cairo_vm::{
     types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use std::{any::Any, collections::HashMap};
+use std::{any::Any, cell::RefCell, collections::HashMap, rc::Rc};
 
 /// Definition of the deprecated syscall hint processor with associated structs
 pub(crate) struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
     run_resources: RunResources,
+
+    #[cfg(feature = "cairo-native")]
+    program_cache: Option<Rc<RefCell<ProgramCache<'a, ClassHash>>>>,
 }
 
 /// Implementations and methods for DeprecatedSyscallHintProcessor
@@ -35,11 +42,16 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
     pub fn new(
         syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
         run_resources: RunResources,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'a, ClassHash>>>,
+        >,
     ) -> Self {
         DeprecatedSyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler,
             run_resources,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         }
     }
 
@@ -82,9 +94,8 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
                 self.syscall_handler.deploy(
                     vm,
                     syscall_ptr,
-                    // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
-                    None,
+                    self.program_cache.clone(),
                 )
             }
             EMIT_EVENT_CODE => {
@@ -112,9 +123,8 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
                 self.syscall_handler.library_call(
                     vm,
                     syscall_ptr,
-                    // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
-                    None,
+                    self.program_cache.clone(),
                 )
             }
             LIBRARY_CALL_L1_HANDLER => {
@@ -122,9 +132,8 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
                 self.syscall_handler.library_call_l1_handler(
                     vm,
                     syscall_ptr,
-                    // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
-                    None,
+                    self.program_cache.clone(),
                 )
             }
             CALL_CONTRACT => {
@@ -132,9 +141,8 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
                 self.syscall_handler.call_contract(
                     vm,
                     syscall_ptr,
-                    // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
-                    None,
+                    self.program_cache.clone(),
                 )
             }
             STORAGE_READ => {
@@ -166,9 +174,8 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
                 self.syscall_handler.delegate_call(
                     vm,
                     syscall_ptr,
-                    // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
-                    None,
+                    self.program_cache.clone(),
                 )
             }
             DELEGATE_L1_HANDLER => {
@@ -176,9 +183,8 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
                 self.syscall_handler.delegate_l1_handler(
                     vm,
                     syscall_ptr,
-                    // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
-                    None,
+                    self.program_cache.clone(),
                 )
             }
             REPLACE_CLASS => {
@@ -378,6 +384,8 @@ mod tests {
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         syscall_handler
             .execute_hint(
@@ -412,6 +420,8 @@ mod tests {
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         syscall_handler
             .execute_hint(
@@ -466,6 +476,8 @@ mod tests {
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         syscall_handler
             .execute_hint(
@@ -525,6 +537,8 @@ mod tests {
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let tx_execution_context = TransactionExecutionContext {
@@ -633,6 +647,8 @@ mod tests {
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         syscall_handler_hint_processor.syscall_handler.tx_info_ptr =
@@ -674,6 +690,8 @@ mod tests {
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         hint_processor
             .execute_hint(
@@ -722,6 +740,8 @@ mod tests {
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         hint_processor
             .execute_hint(
@@ -771,6 +791,8 @@ mod tests {
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let hint_data =
@@ -807,6 +829,8 @@ mod tests {
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         hint_processor
             .execute_hint(
@@ -849,6 +873,8 @@ mod tests {
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let tx_execution_context = TransactionExecutionContext {
@@ -917,6 +943,8 @@ mod tests {
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         let storage_value = Felt252::new(3);
@@ -982,6 +1010,8 @@ mod tests {
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         syscall_handler_hint_processor
@@ -1056,6 +1086,8 @@ mod tests {
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         // Set contract class
@@ -1150,6 +1182,8 @@ mod tests {
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         // Set contract class
@@ -1197,6 +1231,9 @@ mod tests {
                 .unwrap(),
             class_hash
         );
+
+        // The following line avoids immutable borrow while mutable borrow is still active.
+        drop(syscall_handler_hint_processor);
 
         /*
         INVOKE

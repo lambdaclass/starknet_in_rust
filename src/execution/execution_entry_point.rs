@@ -454,8 +454,12 @@ impl ExecutionEntryPoint {
             block_context.clone(),
             initial_syscall_ptr,
         );
-        let hint_processor =
-            DeprecatedSyscallHintProcessor::new(syscall_handler, RunResources::default());
+        let hint_processor = DeprecatedSyscallHintProcessor::new(
+            syscall_handler,
+            RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 
         // Positional arguments are passed to *args in the 'run_from_entrypoint' function.
