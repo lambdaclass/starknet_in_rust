@@ -71,7 +71,6 @@ pub fn compute_sierra_class_hash(
             .abi
             .as_ref()
             .ok_or(ContractAddressError::MissingAbi)?
-            .items
             .serialize(&mut fmt)
             .map_err(|_| ContractAddressError::MissingAbi)?;
 
