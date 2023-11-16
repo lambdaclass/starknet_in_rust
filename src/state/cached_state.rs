@@ -478,12 +478,12 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             .get(class_hash)
             .cloned();
         if let Some(compiled_class) = compiled_class_op {
-            //self.add_hit();
+            self.add_hit();
             return Ok(compiled_class);
         } else if let Some(compiled_class) =
             self.contract_class_cache().get_contract_class(*class_hash)
         {
-            //self.add_hit();
+            self.add_hit();
             self.contract_class_cache_private
                 .write()
                 .map_err(|_| StateError::FailedToReadContractClassCache)?
@@ -495,20 +495,24 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         if let Some(compiled_class_hash) =
             self.cache.class_hash_to_compiled_class_hash.get(class_hash)
         {
-            let mut write_guard = self
+            let casm_class_op = self
                 .contract_class_cache_private
-                .write()
-                .map_err(|_| StateError::FailedToReadContractClassCache)?;
-
-            if let Some(casm_class) = write_guard.get(compiled_class_hash).cloned() {
-                //self.add_hit();
+                .read()
+                .map_err(|_| StateError::FailedToReadContractClassCache)?
+                .get(compiled_class_hash)
+                .cloned();
+            if let Some(casm_class) = casm_class_op {
+                self.add_hit();
                 return Ok(casm_class);
             } else if let Some(casm_class) = self
                 .contract_class_cache()
                 .get_contract_class(*compiled_class_hash)
             {
-                //self.add_hit();
-                write_guard.insert(*class_hash, casm_class.clone());
+                self.add_hit();
+                self.contract_class_cache_private
+                    .write()
+                    .map_err(|_| StateError::FailedToReadContractClassCache)?
+                    .insert(*class_hash, casm_class.clone());
                 return Ok(casm_class);
             }
         }
