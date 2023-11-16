@@ -562,8 +562,6 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
 fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) =
         execute_tx_configurable(hash, chain, BlockNumber(block_number), false, true);
-
-
     let TransactionExecutionInfo {
         call_info,
         actual_fee,
@@ -600,7 +598,6 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
         "internal calls length mismatch"
     );
 
-
     // check actual fee calculation
     if receipt.actual_fee != actual_fee {
         let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
@@ -632,10 +629,7 @@ fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: 
         actual_fee,
         ..
     } = tx_info;
-    let CallInfo {
-        retdata,
-        ..
-    } = call_info.unwrap();
+    let CallInfo { retdata, .. } = call_info.unwrap();
 
     // check actual fee calculation
     if receipt.actual_fee != actual_fee {
