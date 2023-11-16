@@ -576,6 +576,8 @@ impl ExecutionEntryPoint {
             syscall_handler,
             &contract_class.hints,
             RunResources::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         let mut runner = StarknetRunner::new(cairo_runner, vm, hint_processor);
 

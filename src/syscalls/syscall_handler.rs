@@ -1,10 +1,11 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use crate::state::state_api::StateReader;
 use crate::transaction::error::TransactionError;
+use crate::{state::state_api::StateReader, utils::ClassHash};
 use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
+use cairo_native::cache::ProgramCache;
 use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
     felt::Felt252,
@@ -20,7 +21,7 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
-use std::{any::Any, boxed::Box, collections::HashMap};
+use std::{any::Any, boxed::Box, cell::RefCell, collections::HashMap, rc::Rc};
 
 pub(crate) trait HintProcessorPostRun {
     /// Performs post run syscall related tasks (if any).
@@ -36,6 +37,9 @@ pub(crate) struct SyscallHintProcessor<'a, S: StateReader> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
     pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S>,
     pub(crate) run_resources: RunResources,
+
+    #[cfg(feature = "cairo-native")]
+    program_cache: Option<Rc<RefCell<ProgramCache<'a, ClassHash>>>>,
 }
 
 impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
@@ -43,11 +47,16 @@ impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
         syscall_handler: BusinessLogicSyscallHandler<'a, S>,
         hints: &[(usize, Vec<Hint>)],
         run_resources: RunResources,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'a, ClassHash>>>,
+        >,
     ) -> Self {
         SyscallHintProcessor {
             cairo1_hint_processor: Cairo1HintProcessor::new(hints, run_resources.clone()),
             syscall_handler,
             run_resources,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         }
     }
 }
@@ -73,9 +82,8 @@ impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
                             .syscall(
                                 vm,
                                 syscall_ptr,
-                                // TODO: Get the program_cache somehow.
                                 #[cfg(feature = "cairo-native")]
-                                None,
+                                self.program_cache.clone(),
                             )
                             .map_err(|err| {
                                 HintError::CustomHint(
