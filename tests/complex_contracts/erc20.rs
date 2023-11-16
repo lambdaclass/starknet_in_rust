@@ -110,6 +110,8 @@ fn test_erc20_cairo2() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
@@ -153,7 +155,12 @@ fn test_erc20_cairo2() {
     .unwrap();
 
     let account_address_1 = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("failed to execute internal_deploy_account")
         .validate_info
         .expect("validate_info missing")
@@ -197,7 +204,12 @@ fn test_erc20_cairo2() {
     .unwrap();
 
     let account_address_2 = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap()
         .validate_info
         .unwrap()
@@ -214,6 +226,8 @@ fn test_erc20_cairo2() {
         &mut state,
         BlockContext::default(),
         account_address_1.clone(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )
     .unwrap();
 
@@ -228,6 +242,8 @@ fn test_erc20_cairo2() {
         &mut state,
         BlockContext::default(),
         account_address_1.clone(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )
     .unwrap();
 
@@ -242,6 +258,8 @@ fn test_erc20_cairo2() {
         &mut state,
         BlockContext::default(),
         account_address_1,
+        #[cfg(feature = "cairo-native")]
+        None,
     )
     .unwrap();
 

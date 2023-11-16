@@ -65,7 +65,13 @@ fn main() {
             Some(Felt252::from(i * 2)),
         )
         .unwrap()
-        .execute(&mut cached_state, &block_context, 0)
+        .execute(
+            &mut cached_state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
         let tx_exec_info = InvokeFunction::new(
@@ -79,7 +85,13 @@ fn main() {
             Some(Felt252::from((i * 2) + 1)),
         )
         .unwrap()
-        .execute(&mut cached_state, &block_context, 0)
+        .execute(
+            &mut cached_state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
         assert_eq!(

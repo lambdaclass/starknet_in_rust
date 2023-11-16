@@ -131,6 +131,8 @@ fn test_contract<'a>(
         &mut tx_execution_context,
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     assert_matches!(result, Err(e) if e.to_string().contains(error_msg));

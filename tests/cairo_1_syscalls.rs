@@ -117,6 +117,8 @@ fn storage_write_read() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -140,6 +142,8 @@ fn storage_write_read() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [25.into()]);
@@ -164,6 +168,8 @@ fn storage_write_read() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -187,6 +193,8 @@ fn storage_write_read() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [125.into()])
@@ -343,7 +351,9 @@ fn library_call() {
                 &mut resources_manager,
                 &mut tx_execution_context,
                 false,
-                block_context.invoke_tx_max_n_steps()
+                block_context.invoke_tx_max_n_steps(),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap()
             .call_info
@@ -470,6 +480,8 @@ fn call_contract_storage_write_read() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -493,6 +505,8 @@ fn call_contract_storage_write_read() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [25.into()]);
@@ -517,6 +531,8 @@ fn call_contract_storage_write_read() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -540,6 +556,8 @@ fn call_contract_storage_write_read() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [125.into()])
@@ -612,6 +630,8 @@ fn emit_event() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(
@@ -733,6 +753,8 @@ fn deploy_cairo1_from_cairo1() {
         &mut tx_execution_context,
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     assert!(call_info.is_ok());
@@ -835,6 +857,8 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         &mut tx_execution_context,
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     assert!(call_info.is_ok());
@@ -936,6 +960,8 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         &mut tx_execution_context,
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     assert!(call_info.is_ok());
@@ -1039,6 +1065,8 @@ fn deploy_cairo0_and_invoke() {
         &mut tx_execution_context,
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     assert!(call_info.is_ok());
@@ -1081,6 +1109,8 @@ fn deploy_cairo0_and_invoke() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -1154,6 +1184,8 @@ fn test_send_message_to_l1_syscall() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -1258,6 +1290,8 @@ fn test_get_execution_info() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -1386,6 +1420,8 @@ fn replace_class_internal() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     // Check that the class was indeed replaced in storage
@@ -1517,6 +1553,8 @@ fn replace_class_contract_call() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(result.call_info.unwrap().retdata, vec![25.into()]);
@@ -1544,6 +1582,8 @@ fn replace_class_contract_call() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -1570,6 +1610,8 @@ fn replace_class_contract_call() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(result.call_info.clone().unwrap().retdata, vec![17.into()]);
@@ -1693,6 +1735,8 @@ fn replace_class_contract_call_same_transaction() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(
@@ -1816,6 +1860,8 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(
@@ -1937,6 +1983,8 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(
@@ -2054,6 +2102,8 @@ fn call_contract_replace_class_cairo_0() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(
@@ -2130,6 +2180,8 @@ fn test_out_of_gas_failure() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     let call_info = call_info.call_info.unwrap();
@@ -2207,6 +2259,8 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(
@@ -2296,6 +2350,8 @@ fn deploy_syscall_failure_in_constructor() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     // Check that we get the error from the constructor
@@ -2372,6 +2428,8 @@ fn storage_read_no_value() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     // As the value doesn't exist in storage, it's value will be 0
@@ -2444,6 +2502,8 @@ fn storage_read_unavailable_address_domain() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -2519,6 +2579,8 @@ fn storage_write_unavailable_address_domain() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -2624,6 +2686,8 @@ fn library_call_failure() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -2732,6 +2796,8 @@ fn send_messages_to_l1_different_contract_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     let l1_to_l2_messages = call_info
@@ -2853,6 +2919,8 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     let l1_to_l2_messages = call_info
@@ -2974,6 +3042,8 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     let l1_to_l2_messages = call_info
@@ -3065,6 +3135,8 @@ fn keccak_syscall() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -3180,6 +3252,8 @@ fn library_call_recursive_50_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info
@@ -3331,6 +3405,8 @@ fn call_contract_storage_write_read_recursive_50_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -3354,6 +3430,8 @@ fn call_contract_storage_write_read_recursive_50_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [25.into()]);
@@ -3378,6 +3456,8 @@ fn call_contract_storage_write_read_recursive_50_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info
@@ -3406,6 +3486,8 @@ fn call_contract_storage_write_read_recursive_50_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [75.into()])
@@ -3530,6 +3612,8 @@ fn call_contract_storage_write_read_recursive_100_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -3553,6 +3637,8 @@ fn call_contract_storage_write_read_recursive_100_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [25.into()]);
@@ -3577,6 +3663,8 @@ fn call_contract_storage_write_read_recursive_100_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info
@@ -3605,6 +3693,8 @@ fn call_contract_storage_write_read_recursive_100_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [125.into()])

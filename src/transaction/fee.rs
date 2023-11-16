@@ -18,6 +18,13 @@ use cairo_vm::felt::Felt252;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::HashMap;
 
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 // second element is the actual fee that the transaction uses
 pub type FeeInfo = (Option<CallInfo>, u128);
 
@@ -28,6 +35,9 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
     block_context: &BlockContext,
     tx_execution_context: &mut TransactionExecutionContext,
     actual_fee: u128,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee > tx_execution_context.max_fee {
         return Err(TransactionError::ActualFeeExceedsMaxFee(
@@ -65,6 +75,8 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
             tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )
         .map_err(|e| TransactionError::FeeTransferError(Box::new(e)))?;
 
@@ -143,6 +155,9 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     max_fee: u128,
     tx_execution_context: &mut TransactionExecutionContext,
     skip_fee_transfer: bool,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<FeeInfo, TransactionError> {
     if max_fee.is_zero() {
         return Ok((None, 0));
@@ -175,6 +190,8 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
             block_context,
             tx_execution_context,
             actual_fee,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?)
     };
 
@@ -219,6 +236,8 @@ mod tests {
             max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -253,6 +272,8 @@ mod tests {
             max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 

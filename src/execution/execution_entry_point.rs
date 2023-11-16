@@ -52,8 +52,8 @@ use std::sync::Arc;
 use {
     crate::syscalls::native_syscall_handler::NativeSyscallHandler,
     cairo_native::{
-        context::NativeContext, execution_result::NativeExecutionResult,
-        metadata::syscall_handler::SyscallHandlerMeta, utils::felt252_bigint,
+        execution_result::NativeExecutionResult, metadata::syscall_handler::SyscallHandlerMeta,
+        utils::felt252_bigint,
     },
     core::cell::RefCell,
     serde_json::Value,
@@ -119,6 +119,9 @@ impl ExecutionEntryPoint {
         tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
         max_steps: u64,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
@@ -183,122 +186,15 @@ impl ExecutionEntryPoint {
             CompiledClass::Sierra(sierra_program_and_entrypoints) => {
                 let mut transactional_state = state.create_transactional()?;
 
-                let native_context = NativeContext::new();
-                let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
+                let program_cache = program_cache.unwrap_or_else(|| {
+                    Rc::new(RefCell::new(ProgramCache::new(
+                        crate::utils::get_native_context(),
+                    )))
+                });
 
                 match self.native_execute(
                     &mut transactional_state,
                     sierra_program_and_entrypoints,
-                    tx_execution_context,
-                    block_context,
-                    &class_hash,
-                    program_cache,
-                ) {
-                    Ok(call_info) => {
-                        state.apply_state_update(&StateDiff::from_cached_state(
-                            transactional_state.cache(),
-                        )?)?;
-
-                        Ok(ExecutionResult {
-                            call_info: Some(call_info),
-                            revert_error: None,
-                            n_reverted_steps: 0,
-                        })
-                    }
-                    Err(e) => {
-                        if !support_reverted {
-                            state.apply_state_update(&StateDiff::from_cached_state(
-                                transactional_state.cache(),
-                            )?)?;
-
-                            return Err(e);
-                        }
-
-                        let n_reverted_steps =
-                            (max_steps as usize) - resources_manager.cairo_usage.n_steps;
-                        Ok(ExecutionResult {
-                            call_info: None,
-                            revert_error: Some(e.to_string()),
-                            n_reverted_steps,
-                        })
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(feature = "cairo-native")]
-    pub fn execute_with_native_cache<T, C>(
-        &self,
-        state: &mut CachedState<T, C>,
-        block_context: &BlockContext,
-        resources_manager: &mut ExecutionResourcesManager,
-        tx_execution_context: &mut TransactionExecutionContext,
-        support_reverted: bool,
-        max_steps: u64,
-        program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
-    ) -> Result<ExecutionResult, TransactionError>
-    where
-        T: StateReader,
-        C: ContractClassCache,
-    {
-        // lookup the compiled class from the state.
-        let class_hash = self.get_code_class_hash(state)?;
-        let contract_class = state
-            .get_contract_class(&class_hash)
-            .map_err(|_| TransactionError::MissingCompiledClass)?;
-        match contract_class {
-            CompiledClass::Deprecated(contract_class) => {
-                let call_info = self._execute_version0_class(
-                    state,
-                    resources_manager,
-                    block_context,
-                    tx_execution_context,
-                    contract_class,
-                    class_hash,
-                )?;
-                Ok(ExecutionResult {
-                    call_info: Some(call_info),
-                    revert_error: None,
-                    n_reverted_steps: 0,
-                })
-            }
-            CompiledClass::Casm(contract_class) => {
-                match self._execute(
-                    state,
-                    resources_manager,
-                    block_context,
-                    tx_execution_context,
-                    contract_class,
-                    class_hash,
-                    support_reverted,
-                ) {
-                    Ok(call_info) => Ok(ExecutionResult {
-                        call_info: Some(call_info),
-                        revert_error: None,
-                        n_reverted_steps: 0,
-                    }),
-                    Err(e) => {
-                        if !support_reverted {
-                            return Err(e);
-                        }
-
-                        let n_reverted_steps =
-                            (max_steps as usize) - resources_manager.cairo_usage.n_steps;
-                        Ok(ExecutionResult {
-                            call_info: None,
-                            revert_error: Some(e.to_string()),
-                            n_reverted_steps,
-                        })
-                    }
-                }
-            }
-            CompiledClass::Sierra(sierra_contract_class) => {
-                let mut transactional_state = state.create_transactional()?;
-
-                match self.native_execute(
-                    &mut transactional_state,
-                    sierra_contract_class,
                     tx_execution_context,
                     block_context,
                     &class_hash,
@@ -775,13 +671,20 @@ impl ExecutionEntryPoint {
         class_hash: &[u8; 32],
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
+        use crate::{
+            syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
+        };
         use cairo_lang_sierra::{
             extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
             program_registry::ProgramRegistry,
         };
         use serde_json::json;
 
-        use crate::syscalls::business_logic_syscall_handler::SYSCALL_BASE;
+        // Ensure we're using the global context, if initialized.
+        if let Some(native_context) = NATIVE_CONTEXT.get() {
+            assert_eq!(program_cache.borrow().context(), native_context);
+        }
+
         let sierra_program = &sierra_program_and_entrypoints.0;
         let contract_entrypoints = &sierra_program_and_entrypoints.1;
 
@@ -818,7 +721,7 @@ impl ExecutionEntryPoint {
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
-        let syscall_handler = NativeSyscallHandler {
+        let mut syscall_handler = NativeSyscallHandler {
             starknet_storage_state: contract_storage_state,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
@@ -839,7 +742,7 @@ impl ExecutionEntryPoint {
         native_executor
             .borrow_mut()
             .get_module_mut()
-            .insert_metadata(SyscallHandlerMeta::new(&syscall_handler));
+            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler));
 
         let syscall_addr = native_executor
             .borrow()

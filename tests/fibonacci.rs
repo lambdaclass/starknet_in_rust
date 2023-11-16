@@ -133,6 +133,8 @@ fn integration_test() {
                 &mut tx_execution_context,
                 false,
                 block_context.invoke_tx_max_n_steps(),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap()
             .call_info
@@ -230,6 +232,8 @@ fn integration_test_cairo1() {
                 &mut tx_execution_context,
                 false,
                 block_context.invoke_tx_max_n_steps(),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap()
             .call_info

@@ -37,6 +37,13 @@ use getset::Getters;
 use num_traits::{One, Zero};
 use std::{collections::HashMap, fmt::Debug};
 
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 /// Represents an InvokeFunction transaction in the starknet network.
 #[derive(Debug, Getters, Clone)]
 pub struct InvokeFunction {
@@ -175,6 +182,9 @@ impl InvokeFunction {
         state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<Option<CallInfo>, TransactionError> {
         if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
             return Ok(None);
@@ -201,6 +211,8 @@ impl InvokeFunction {
             &mut self.get_execution_context(block_context.validate_max_n_steps)?,
             false,
             block_context.validate_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         // Validate the return data
@@ -234,6 +246,9 @@ impl InvokeFunction {
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<ExecutionResult, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -252,6 +267,8 @@ impl InvokeFunction {
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
             true,
             block_context.invoke_tx_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )
     }
 
@@ -266,12 +283,21 @@ impl InvokeFunction {
         state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info = if self.skip_validation {
             None
         } else {
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+            self.run_validate_entrypoint(
+                state,
+                &mut resources_manager,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache.clone(),
+            )?
         };
 
         // Execute transaction
@@ -287,6 +313,8 @@ impl InvokeFunction {
                 block_context,
                 &mut resources_manager,
                 remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )?
         };
         let changes = state.count_actual_state_changes(Some((
@@ -317,7 +345,7 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::InvokeFunction,
         self.version = ?self.version,
         self.hash_value = ?self.hash_value,
@@ -330,6 +358,9 @@ impl InvokeFunction {
         state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if self.version != Felt252::one() && self.version != Felt252::zero() {
             return Err(TransactionError::UnsupportedTxVersion(
@@ -346,8 +377,13 @@ impl InvokeFunction {
         self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional()?;
-        let mut tx_exec_info =
-            self.apply(&mut transactional_state, block_context, remaining_gas)?;
+        let mut tx_exec_info = self.apply(
+            &mut transactional_state,
+            block_context,
+            remaining_gas,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+        )?;
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
@@ -381,6 +417,8 @@ impl InvokeFunction {
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
@@ -759,7 +797,13 @@ mod tests {
         let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut transactional, &BlockContext::default(), 0)
+            .apply(
+                &mut transactional,
+                &BlockContext::default(),
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
         state
             .apply_state_update(&StateDiff::from_cached_state(transactional.cache()).unwrap())
@@ -834,7 +878,13 @@ mod tests {
             .unwrap();
 
         let result = internal_invoke_function
-            .execute(&mut state, &BlockContext::default(), 0)
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
@@ -902,8 +952,13 @@ mod tests {
             .unwrap();
 
         let mut transactional = state.create_transactional().unwrap();
-        let expected_error =
-            internal_invoke_function.apply(&mut transactional, &BlockContext::default(), 0);
+        let expected_error = internal_invoke_function.apply(
+            &mut transactional,
+            &BlockContext::default(),
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -967,7 +1022,13 @@ mod tests {
         let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut transactional, &BlockContext::default(), 0)
+            .apply(
+                &mut transactional,
+                &BlockContext::default(),
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
         state
             .apply_state_update(&StateDiff::from_cached_state(transactional.cache()).unwrap())
@@ -1039,8 +1100,13 @@ mod tests {
 
         let mut transactional = state.create_transactional().unwrap();
         // Invoke result
-        let expected_error =
-            internal_invoke_function.apply(&mut transactional, &BlockContext::default(), 0);
+        let expected_error = internal_invoke_function.apply(
+            &mut transactional,
+            &BlockContext::default(),
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce);
@@ -1103,7 +1169,13 @@ mod tests {
 
         let block_context = BlockContext::default();
 
-        let result = internal_invoke_function.execute(&mut state, &block_context, 0);
+        let result = internal_invoke_function.execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
         assert!(result.is_err());
         assert_matches!(
             result.unwrap_err(),
@@ -1168,7 +1240,13 @@ mod tests {
         block_context.starknet_os_config.gas_price = 1;
 
         let tx_info = internal_invoke_function
-            .execute(&mut state, &block_context, 0)
+            .execute(
+                &mut state,
+                &block_context,
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
         let expected_actual_fee = 2483;
         let expected_tx_info = tx_info.clone().to_revert_error(
@@ -1235,11 +1313,22 @@ mod tests {
             .unwrap();
 
         internal_invoke_function
-            .execute(&mut state, &BlockContext::default(), 0)
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.execute(&mut state, &BlockContext::default(), 0);
+        let expected_error = internal_invoke_function.execute(
+            &mut state,
+            &BlockContext::default(),
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
 
         assert!(expected_error.is_err());
         assert_matches!(
@@ -1300,8 +1389,13 @@ mod tests {
             )
             .unwrap();
 
-        let expected_error =
-            internal_invoke_function.execute(&mut state, &BlockContext::default(), 0);
+        let expected_error = internal_invoke_function.execute(
+            &mut state,
+            &BlockContext::default(),
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
 
         assert!(expected_error.is_err());
         assert_matches!(expected_error.unwrap_err(), TransactionError::MissingNonce)
@@ -1445,7 +1539,13 @@ mod tests {
         let state_before_execution = state.clone_for_testing();
 
         let result = internal_invoke_function
-            .execute(&mut state, &BlockContext::default(), 0)
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         assert!(result.call_info.is_none());
@@ -1497,6 +1597,8 @@ mod tests {
             &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
             u128::MAX,
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         assert_matches!(

@@ -88,7 +88,14 @@ fn main() {
         .unwrap();
 
         let tx = Transaction::InvokeFunction(invoke_first);
-        tx.execute(&mut state, &block_context, 0).unwrap();
+        tx.execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
         let invoke_second = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
@@ -103,7 +110,15 @@ fn main() {
         .unwrap();
 
         let tx = Transaction::InvokeFunction(invoke_second);
-        let tx_exec_info = tx.execute(&mut state, &block_context, 0).unwrap();
+        let tx_exec_info = tx
+            .execute(
+                &mut state,
+                &block_context,
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .unwrap();
 
         assert_eq!(
             tx_exec_info.call_info.unwrap().retdata,

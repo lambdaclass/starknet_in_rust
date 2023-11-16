@@ -153,6 +153,8 @@ fn test_contract<'a>(
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .expect("Could not execute contract")
         .call_info
@@ -1207,6 +1209,8 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         &mut tx_execution_context,
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     assert!(call_info.is_ok());
@@ -1311,6 +1315,8 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -1415,6 +1421,8 @@ fn deploy_cairo1_and_invoke() {
         &mut tx_execution_context,
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     assert!(call_info.is_ok());
@@ -1455,6 +1463,8 @@ fn deploy_cairo1_and_invoke() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info
@@ -1554,6 +1564,8 @@ fn send_messages_to_l1_different_contract_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info

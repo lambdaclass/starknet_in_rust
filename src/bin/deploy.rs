@@ -55,6 +55,13 @@ fn main() {
             .unwrap();
         let tx = Transaction::Deploy(deploy);
 
-        tx.execute(&mut state, &block_context, 0).unwrap();
+        tx.execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
     }
 }

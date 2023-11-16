@@ -203,7 +203,13 @@ fn invoke_parser(
         transaction_hash.unwrap(),
     )?;
     let mut transactional_state = cached_state.create_transactional()?;
-    let _tx_info = internal_invoke.apply(&mut transactional_state, &BlockContext::default(), 0)?;
+    let _tx_info = internal_invoke.apply(
+        &mut transactional_state,
+        &BlockContext::default(),
+        0,
+        #[cfg(feature = "cairo-native")]
+        None,
+    )?;
     cached_state.apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
 
     let tx_hash = calculate_transaction_hash_common(
@@ -269,6 +275,8 @@ fn call_parser(
         &mut TransactionExecutionContext::default(),
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;

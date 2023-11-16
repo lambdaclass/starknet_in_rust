@@ -105,7 +105,13 @@ fn account_panic() {
 
     let tx = Transaction::InvokeFunction(invoke);
     let exec_info = tx
-        .execute(&mut state, &block_context, u128::MAX)
+        .execute(
+            &mut state,
+            &block_context,
+            u128::MAX,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("failed to invoke");
     let call_info = exec_info.call_info.as_ref().unwrap();
 

@@ -64,7 +64,14 @@ fn run_contract(
     )
     .unwrap();
 
-    declare_tx.execute(&mut state, &block_context).unwrap();
+    declare_tx
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     let deploy_tx = Deploy::new(
         Default::default(),
@@ -75,7 +82,14 @@ fn run_contract(
     )
     .unwrap();
 
-    deploy_tx.execute(&mut state, &block_context).unwrap();
+    deploy_tx
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     let entry_point_selector =
         Felt252::from_bytes_be(&calculate_sn_keccak(entry_point.as_ref().as_bytes()));
@@ -92,7 +106,15 @@ fn run_contract(
     )
     .unwrap();
 
-    let invoke_tx_execution_info = invoke_tx.execute(&mut state, &block_context, 0).unwrap();
+    let invoke_tx_execution_info = invoke_tx
+        .execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     // Store the local cache changes into the shared cache. This updates the shared cache with all
     // the contracts used on this state.
