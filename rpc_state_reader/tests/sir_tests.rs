@@ -613,3 +613,50 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
         }
     }
 }
+
+#[test_case(
+    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
+    895707, // real block 895708
+    RpcChain::TestNet
+)]
+#[test_case(
+    "0x048ffc49f04504710e984923980fb63c4f17fb3022467251329adc75aae93c4b",
+    900795, // real block 900796
+    RpcChain::TestNet
+)]
+fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
+
+    let TransactionExecutionInfo {
+        call_info,
+        actual_fee,
+        ..
+    } = tx_info;
+    let CallInfo {
+        retdata,
+        ..
+    } = call_info.unwrap();
+
+    // check actual fee calculation
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+        if diff >= 5 {
+            assert_eq!(
+                actual_fee, receipt.actual_fee,
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            );
+        }
+    }
+
+    let rpc_retdata: Vec<Felt252> = trace
+        .function_invocation
+        .unwrap()
+        .retdata
+        .unwrap()
+        .into_iter()
+        .map(|sf| Felt252::from_bytes_be(sf.bytes()))
+        .collect();
+
+    assert_eq!(retdata, rpc_retdata);
+}
