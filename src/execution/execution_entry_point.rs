@@ -667,6 +667,10 @@ impl ExecutionEntryPoint {
     ) -> Result<CallInfo, TransactionError> {
         use cairo_native::values::JITValue;
 
+        use crate::{
+            syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
+        };
+
         // Ensure we're using the global context, if initialized.
         if let Some(native_context) = NATIVE_CONTEXT.get() {
             assert_eq!(program_cache.borrow().context(), native_context);
