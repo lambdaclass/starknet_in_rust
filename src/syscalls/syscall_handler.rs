@@ -1,11 +1,10 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
+use crate::state::state_api::StateReader;
 use crate::transaction::error::TransactionError;
-use crate::{state::state_api::StateReader, utils::ClassHash};
 use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
-use cairo_native::cache::ProgramCache;
 use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
     felt::Felt252,
@@ -21,7 +20,14 @@ use cairo_vm::{
         vm_core::VirtualMachine,
     },
 };
-use std::{any::Any, boxed::Box, cell::RefCell, collections::HashMap, rc::Rc};
+use std::{any::Any, boxed::Box, collections::HashMap};
+
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 pub(crate) trait HintProcessorPostRun {
     /// Performs post run syscall related tasks (if any).
@@ -40,6 +46,8 @@ pub(crate) struct SyscallHintProcessor<'a, 'cache, S: StateReader> {
 
     #[cfg(feature = "cairo-native")]
     program_cache: Option<Rc<RefCell<ProgramCache<'cache, ClassHash>>>>,
+    #[cfg(not(feature = "cairo-native"))]
+    program_cache: std::marker::PhantomData<&'cache ()>,
 }
 
 impl<'a, 'cache, S: StateReader> SyscallHintProcessor<'a, 'cache, S> {
@@ -51,11 +59,13 @@ impl<'a, 'cache, S: StateReader> SyscallHintProcessor<'a, 'cache, S> {
             Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
         >,
     ) -> Self {
+        #[cfg(not(feature = "cairo-native"))]
+        let program_cache = std::marker::PhantomData;
+
         SyscallHintProcessor {
             cairo1_hint_processor: Cairo1HintProcessor::new(hints, run_resources.clone()),
             syscall_handler,
             run_resources,
-            #[cfg(feature = "cairo-native")]
             program_cache,
         }
     }

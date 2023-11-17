@@ -2,11 +2,7 @@ use super::{
     deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, hint_code::*,
     other_syscalls, syscall_handler::HintProcessorPostRun,
 };
-use crate::{
-    state::state_api::StateReader, syscalls::syscall_handler_errors::SyscallHandlerError,
-    utils::ClassHash,
-};
-use cairo_native::cache::ProgramCache;
+use crate::{state::state_api::StateReader, syscalls::syscall_handler_errors::SyscallHandlerError};
 use cairo_vm::{
     felt::Felt252,
     hint_processor::hint_processor_definition::HintProcessorLogic,
@@ -24,7 +20,14 @@ use cairo_vm::{
     types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
-use std::{any::Any, cell::RefCell, collections::HashMap, rc::Rc};
+use std::{any::Any, collections::HashMap};
+
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 /// Definition of the deprecated syscall hint processor with associated structs
 pub(crate) struct DeprecatedSyscallHintProcessor<'a, 'cache, S: StateReader> {
@@ -34,6 +37,8 @@ pub(crate) struct DeprecatedSyscallHintProcessor<'a, 'cache, S: StateReader> {
 
     #[cfg(feature = "cairo-native")]
     program_cache: Option<Rc<RefCell<ProgramCache<'cache, ClassHash>>>>,
+    #[cfg(not(feature = "cairo-native"))]
+    program_cache: std::marker::PhantomData<&'cache ()>,
 }
 
 /// Implementations and methods for DeprecatedSyscallHintProcessor
@@ -46,11 +51,13 @@ impl<'a, 'cache, S: StateReader> DeprecatedSyscallHintProcessor<'a, 'cache, S> {
             Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
         >,
     ) -> Self {
+        #[cfg(not(feature = "cairo-native"))]
+        let program_cache = std::marker::PhantomData;
+
         DeprecatedSyscallHintProcessor {
             builtin_hint_processor: BuiltinHintProcessor::new_empty(),
             syscall_handler,
             run_resources,
-            #[cfg(feature = "cairo-native")]
             program_cache,
         }
     }
