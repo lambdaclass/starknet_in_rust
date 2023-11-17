@@ -119,7 +119,12 @@ fn test_contract(
     .unwrap();
 
     let account_contract_address = internal_deploy
-        .execute(&mut state, &block_context)
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("Account Deploy Failed")
         .call_info
         .unwrap()
@@ -155,7 +160,12 @@ fn test_contract(
     .expect("couldn't create declare transaction");
 
     declare_tx
-        .execute(&mut state, &block_context)
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("could not declare the contract class");
 
     //* ----------------------------------------------------------
@@ -175,7 +185,13 @@ fn test_contract(
     .unwrap();
 
     let contract_address = deploy
-        .execute(&mut state, &block_context, 0)
+        .execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("could not deploy contract")
         .call_info
         .unwrap()
@@ -218,7 +234,15 @@ fn test_contract(
     )
     .unwrap();
 
-    let tx_exec_info = invoke_tx.execute(&mut state, &block_context, 0).unwrap();
+    let tx_exec_info = invoke_tx
+        .execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     //* --------------------------------------------
     //*          Extract return values

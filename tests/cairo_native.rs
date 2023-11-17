@@ -1335,6 +1335,8 @@ fn execute(
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info
@@ -1477,7 +1479,9 @@ fn library_call() {
                 &mut resources_manager,
                 &mut tx_execution_context,
                 false,
-                block_context.invoke_tx_max_n_steps()
+                block_context.invoke_tx_max_n_steps(),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap()
             .call_info
@@ -1526,6 +1530,8 @@ fn execute_deploy(
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info
@@ -1813,6 +1819,8 @@ fn get_execution_info_test() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info
