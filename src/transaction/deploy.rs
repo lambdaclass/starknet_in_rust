@@ -362,9 +362,8 @@ mod tests {
         // Set contract_class
         let contract_class =
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
-        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
-        //transform class_hash to [u8; 32]
-        let class_hash_bytes = class_hash.to_be_bytes();
+        let class_hash_felt: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = ClassHash::from(class_hash_felt);
 
         let internal_deploy = Deploy::new(
             0.into(),
@@ -387,7 +386,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            state.get_contract_class(&class_hash_bytes).unwrap(),
+            state.get_contract_class(&class_hash).unwrap(),
             CompiledClass::Deprecated(Arc::new(contract_class))
         );
 
@@ -395,7 +394,7 @@ mod tests {
             state
                 .get_class_hash_at(&internal_deploy.contract_address)
                 .unwrap(),
-            class_hash_bytes
+            class_hash
         );
 
         let storage_key = calculate_sn_keccak(b"owner");
@@ -417,13 +416,12 @@ mod tests {
         let contract_class =
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
 
-        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
-        //transform class_hash to [u8; 32]
-        let class_hash_bytes = class_hash.to_be_bytes();
+        let class_hash_felt: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = ClassHash::from(class_hash_felt);
 
         state
             .set_contract_class(
-                &class_hash_bytes,
+                &class_hash,
                 &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
             )
             .unwrap();
@@ -451,14 +449,12 @@ mod tests {
         let contract_path = "starknet_programs/amm.json";
         let contract_class = ContractClass::from_path(contract_path).unwrap();
 
-        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
-        //transform class_hash to [u8; 32]
-        let mut class_hash_bytes = [0u8; 32];
-        class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
+        let class_hash_felt: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = ClassHash::from(class_hash_felt);
 
         state
             .set_contract_class(
-                &class_hash_bytes,
+                &class_hash,
                 &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
             )
             .unwrap();

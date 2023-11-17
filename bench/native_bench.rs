@@ -63,7 +63,7 @@ pub fn main() {
 fn bench_fibo(executions: usize, native: bool) {
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
-    static CASM_CLASS_HASH: ClassHash = [2; 32];
+    static CASM_CLASS_HASH: ClassHash = ClassHash([2; 32]);
 
     let (contract_class, constructor_selector) = match native {
         true => {
@@ -137,7 +137,7 @@ fn bench_fibo(executions: usize, native: bool) {
 fn bench_fact(executions: usize, native: bool) {
     // Create state reader with class hash data
     let mut contract_class_cache = HashMap::new();
-    static CASM_CLASS_HASH: ClassHash = [2; 32];
+    static CASM_CLASS_HASH: ClassHash = ClassHash([2; 32]);
 
     let (contract_class, constructor_selector) = match native {
         true => {
@@ -216,9 +216,9 @@ fn bench_erc20(executions: usize, native: bool) {
     let mut contract_class_cache = HashMap::new();
 
     lazy_static! {
-        static ref ERC20_CLASS_HASH: ClassHash = felt_str!("2").to_be_bytes();
-        static ref DEPLOYER_CLASS_HASH: ClassHash = felt_str!("10").to_be_bytes();
-        static ref ACCOUNT1_CLASS_HASH: ClassHash = felt_str!("1").to_be_bytes();
+        static ref ERC20_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("2"));
+        static ref DEPLOYER_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("10"));
+        static ref ACCOUNT1_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("1"));
         static ref DEPLOYER_ADDRESS: Address = Address(1111.into());
         static ref ERC20_NAME: Felt252 = Felt252::from_bytes_be(b"be");
         static ref ERC20_SYMBOL: Felt252 = Felt252::from_bytes_be(b"be");
@@ -227,7 +227,7 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_RECIPIENT: Felt252 = felt_str!("111");
         static ref ERC20_SALT: Felt252 = felt_str!("1234");
         static ref ERC20_DEPLOYER_CALLDATA: [Felt252; 7] = [
-            Felt252::from_bytes_be(&ERC20_CLASS_HASH.clone()),
+            Felt252::from_bytes_be(ERC20_CLASS_HASH.to_bytes_be()),
             ERC20_SALT.clone(),
             ERC20_RECIPIENT.clone(),
             ERC20_NAME.clone(),
@@ -419,8 +419,8 @@ fn bench_erc20(executions: usize, native: bool) {
         .unwrap();
     state
         .set_compiled_class_hash(
-            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH.clone()),
-            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH.clone()),
+            &Felt252::from_bytes_be(ACCOUNT1_CLASS_HASH.to_bytes_be()),
+            &Felt252::from_bytes_be(ACCOUNT1_CLASS_HASH.to_bytes_be()),
         )
         .unwrap();
 

@@ -18,7 +18,7 @@ use starknet_in_rust::{
     state::{cached_state::CachedState, state_api::State},
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{error::TransactionError, Deploy},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
 };
 use starknet_in_rust::{ContractEntryPoint, EntryPointType};
 use std::{
@@ -30,14 +30,17 @@ pub struct CallConfig<'a> {
     pub state: &'a mut CachedState<InMemoryStateReader>,
     pub caller_address: &'a Address,
     pub address: &'a Address,
-    pub class_hash: &'a [u8; 32],
+    pub class_hash: &'a ClassHash,
     pub entry_points_by_type: &'a HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub entry_point_type: &'a EntryPointType,
     pub block_context: &'a BlockContext,
     pub resources_manager: &'a mut ExecutionResourcesManager,
 }
 
-pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) -> HashSet<[u8; 32]> {
+pub fn get_accessed_keys(
+    variable_name: &str,
+    fields: Vec<Vec<FieldElement>>,
+) -> HashSet<ClassHash> {
     let variable_hash = calculate_sn_keccak(variable_name.as_bytes());
     let variable_hash = FieldElement::from_bytes_be(&variable_hash).unwrap();
 
@@ -50,13 +53,13 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
         })
         .collect::<Vec<FieldElement>>();
 
-    let mut accessed_storage_keys: HashSet<[u8; 32]> = HashSet::new();
+    let mut accessed_storage_keys: HashSet<ClassHash> = HashSet::new();
 
     if keys.is_empty() {
-        accessed_storage_keys.insert(variable_hash.to_bytes_be());
+        accessed_storage_keys.insert(ClassHash(variable_hash.to_bytes_be()));
     }
     for key in keys {
-        accessed_storage_keys.insert(key.to_bytes_be());
+        accessed_storage_keys.insert(ClassHash(key.to_bytes_be()));
     }
 
     accessed_storage_keys
@@ -66,7 +69,7 @@ pub fn get_entry_points(
     function_name: &str,
     entry_point_type: &EntryPointType,
     address: &Address,
-    class_hash: &[u8; 32],
+    class_hash: &ClassHash,
     calldata: &[Felt252],
     caller_address: &Address,
 ) -> (ExecutionEntryPoint, Felt252) {
@@ -143,7 +146,7 @@ pub fn deploy(
     calldata: &[Felt252],
     block_context: &BlockContext,
     hash_value: Option<Felt252>,
-) -> Result<(Address, [u8; 32]), TransactionError> {
+) -> Result<(Address, ClassHash), TransactionError> {
     let contract_class = ContractClass::from_path(path).unwrap();
 
     let internal_deploy = match hash_value {
