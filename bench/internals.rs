@@ -15,12 +15,15 @@ use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader,
+    },
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
     utils::{Address, ClassHash},
 };
-use std::{collections::HashMap, hint::black_box, sync::Arc};
+use std::{hint::black_box, sync::Arc};
 
 #[cfg(feature = "cairo-native")]
 use std::{cell::RefCell, rc::Rc};
@@ -74,7 +77,10 @@ fn deploy_account(
     const RUNS: usize = 500;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
@@ -86,7 +92,7 @@ fn deploy_account(
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let class_hash = *CLASS_HASH;
         let signature = SIGNATURE.clone();
         scope(|| {
@@ -118,12 +124,15 @@ fn declare(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCac
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let state = CachedState::new(state_reader, HashMap::new());
+    let state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut cloned_state = state.clone();
+        let mut cloned_state = state.clone_for_testing();
         let class = CONTRACT_CLASS.clone();
         let address = CONTRACT_ADDRESS.clone();
         scope(|| {
@@ -155,7 +164,10 @@ fn deploy(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCach
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
@@ -167,7 +179,7 @@ fn deploy(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCach
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let salt = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
@@ -198,7 +210,10 @@ fn invoke(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCach
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
@@ -231,7 +246,7 @@ fn invoke(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCach
         .unwrap();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let address = CONTRACT_ADDRESS.clone();
         let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
         let signature = SIGNATURE.clone();

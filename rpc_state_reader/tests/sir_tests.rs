@@ -23,10 +23,8 @@ use starknet_in_rust::{
     execution::{CallInfo, TransactionExecutionInfo},
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::{CachedState, ContractClassCache},
-        state_api::StateReader,
-        state_cache::StorageEntry,
-        BlockInfo,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        state_api::StateReader, state_cache::StorageEntry, BlockInfo,
     },
     transaction::{Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler},
     utils::{Address, ClassHash},
@@ -222,7 +220,7 @@ pub fn execute_tx_configurable(
     let trace = rpc_reader.0.get_transaction_trace(&tx_hash).unwrap();
     let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash).unwrap();
 
-    let class_cache = ContractClassCache::default();
+    let class_cache = Arc::new(PermanentContractClassCache::default());
     let mut state = CachedState::new(Arc::new(rpc_reader), class_cache);
 
     let block_context = BlockContext::new(
