@@ -52,7 +52,7 @@ use std::{cell::RefCell, rc::Rc};
 #[cfg(feature = "cairo-native")]
 use {
     crate::syscalls::native_syscall_handler::NativeSyscallHandler,
-    cairo_native::{context::NativeContext, metadata::syscall_handler::SyscallHandlerMeta},
+    cairo_native::metadata::syscall_handler::SyscallHandlerMeta,
 };
 
 #[derive(Debug, Default)]
