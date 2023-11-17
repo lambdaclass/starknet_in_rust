@@ -34,6 +34,12 @@ use num_traits::Zero;
 use super::Transaction;
 use std::fmt::Debug;
 
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 /// Represents a Deploy Transaction in the starknet network
 #[derive(Debug, Clone)]
 pub struct Deploy {
@@ -149,6 +155,9 @@ impl Deploy {
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self.contract_class {
             CompiledClass::Sierra(_) => todo!(),
@@ -163,7 +172,12 @@ impl Deploy {
             // Contract has no constructors
             Ok(self.handle_empty_constructor(state)?)
         } else {
-            self.invoke_constructor(state, block_context)
+            self.invoke_constructor(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )
         }
     }
 
@@ -214,6 +228,9 @@ impl Deploy {
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -248,6 +265,8 @@ impl Deploy {
             &mut tx_execution_context,
             true,
             block_context.validate_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         let changes = state.count_actual_state_changes(None)?;
@@ -274,7 +293,7 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::Deploy,
         self.version = ?self.version,
         self.contract_hash = ?self.contract_hash,
@@ -286,8 +305,16 @@ impl Deploy {
         &self,
         state: &mut CachedState<S>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx_exec_info = self.apply(state, block_context)?;
+        let mut tx_exec_info = self.apply(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )?;
         let (fee_transfer_info, actual_fee) = (None, 0);
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
@@ -350,7 +377,14 @@ mod tests {
 
         let block_context = Default::default();
 
-        let _result = internal_deploy.apply(&mut state, &block_context).unwrap();
+        let _result = internal_deploy
+            .apply(
+                &mut state,
+                &block_context,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .unwrap();
 
         assert_eq!(
             state.get_contract_class(&class_hash_bytes).unwrap(),
@@ -399,7 +433,12 @@ mod tests {
 
         let block_context = Default::default();
 
-        let result = internal_deploy.execute(&mut state, &block_context);
+        let result = internal_deploy.execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
         assert_matches!(result.unwrap_err(), TransactionError::CairoRunner(..))
     }
 
@@ -435,7 +474,12 @@ mod tests {
 
         let block_context = Default::default();
 
-        let result = internal_deploy.execute(&mut state, &block_context);
+        let result = internal_deploy.execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
         assert_matches!(
             result.unwrap_err(),
             TransactionError::EmptyConstructorCalldata

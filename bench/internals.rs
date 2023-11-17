@@ -1,5 +1,6 @@
 #![deny(warnings)]
 
+use cairo_native::cache::ProgramCache;
 use cairo_vm::felt;
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
@@ -20,6 +21,12 @@ use starknet_in_rust::{
     utils::Address,
 };
 use std::{collections::HashMap, hint::black_box, sync::Arc};
+
+#[cfg(feature = "cairo-native")]
+use {
+    starknet_in_rust::utils::ClassHash,
+    std::{cell::RefCell, rc::Rc},
+};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
@@ -48,10 +55,15 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
-    deploy_account();
-    declare();
-    deploy();
-    invoke();
+    #[cfg(feature = "cairo-native")]
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(
+        starknet_in_rust::utils::get_native_context(),
+    )));
+
+    deploy_account(program_cache.clone());
+    declare(program_cache.clone());
+    deploy(program_cache.clone());
+    invoke(program_cache.clone());
 
     // The black_box ensures there's no tail-call optimization.
     // If not, the flamegraph ends up less nice.
@@ -59,7 +71,9 @@ fn main() {
 }
 
 #[inline(never)]
-fn deploy_account() {
+fn deploy_account(
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) {
     const RUNS: usize = 500;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
@@ -91,14 +105,19 @@ fn deploy_account() {
                 StarknetChainId::TestNet.to_felt(),
             )
             .unwrap();
-            internal_deploy_account.execute(&mut state_copy, block_context)
+            internal_deploy_account.execute(
+                &mut state_copy,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                Some(program_cache.clone()),
+            )
         })
         .unwrap();
     }
 }
 
 #[inline(never)]
-fn declare() {
+fn declare(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
@@ -123,14 +142,19 @@ fn declare() {
             )
             .expect("couldn't create transaction");
 
-            declare_tx.execute(&mut cloned_state, block_context)
+            declare_tx.execute(
+                &mut cloned_state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                Some(program_cache.clone()),
+            )
         })
         .unwrap();
     }
 }
 
 #[inline(never)]
-fn deploy() {
+fn deploy(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
@@ -161,14 +185,19 @@ fn deploy() {
                 0.into(),
             )
             .unwrap();
-            internal_deploy.execute(&mut state_copy, block_context)
+            internal_deploy.execute(
+                &mut state_copy,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                Some(program_cache.clone()),
+            )
         })
         .unwrap();
     }
 }
 
 #[inline(never)]
-fn invoke() {
+fn invoke(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
@@ -195,7 +224,14 @@ fn invoke() {
     )
     .unwrap();
 
-    let _deploy_exec_info = deploy.execute(&mut state, block_context).unwrap();
+    let _deploy_exec_info = deploy
+        .execute(
+            &mut state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            Some(program_cache.clone()),
+        )
+        .unwrap();
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone();
@@ -216,7 +252,13 @@ fn invoke() {
                 Some(Felt252::zero()),
             )
             .unwrap();
-            internal_invoke.execute(&mut state_copy, block_context, 2_000_000)
+            internal_invoke.execute(
+                &mut state_copy,
+                block_context,
+                2_000_000,
+                #[cfg(feature = "cairo-native")]
+                Some(program_cache.clone()),
+            )
         })
         .unwrap();
     }

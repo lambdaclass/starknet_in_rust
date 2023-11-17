@@ -44,6 +44,12 @@ use cairo_vm::{
 };
 use num_traits::{One, ToPrimitive, Zero};
 
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 //* -----------------------------------
 //* DeprecatedBLSyscallHandler implementation
 //* -----------------------------------
@@ -192,7 +198,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => todo!(),
+            CompiledClass::Sierra(_) => Err(ContractClassError::NotADeprecatedContractClass.into()),
         }
     }
 
@@ -201,6 +207,9 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         contract_address: &Address,
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), StateError> {
         let contract_class = self
             .starknet_storage_state
@@ -243,6 +252,8 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
@@ -295,6 +306,9 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<Address, SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::Deploy(request) => request,
@@ -347,6 +361,8 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             &deploy_contract_address,
             class_hash_bytes,
             constructor_calldata,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
         Ok(deploy_contract_address)
     }
@@ -356,6 +372,9 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<Vec<Felt252>, SyscallHandlerError> {
         let request = self.read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
@@ -456,6 +475,8 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )
             .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))?;
 
@@ -495,8 +516,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("delegate_l1_handler", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "delegate_l1_handler",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     pub(crate) fn syscall_get_contract_address(
@@ -619,8 +649,16 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        let contract_address = self.syscall_deploy(vm, syscall_ptr)?;
+        let contract_address = self.syscall_deploy(
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )?;
 
         let response = DeprecatedDeployResponse::new(
             contract_address.0,
@@ -641,8 +679,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         syscall_name: &str,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        let retdata = self.syscall_call_contract(syscall_name, vm, syscall_ptr)?;
+        let retdata = self.syscall_call_contract(
+            syscall_name,
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )?;
 
         let retdata_maybe_reloc = retdata
             .clone()
@@ -785,32 +832,68 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("library_call", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "library_call",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     pub(crate) fn library_call_l1_handler(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "library_call_l1_handler",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     pub(crate) fn call_contract(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("call_contract", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "call_contract",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     pub(crate) fn delegate_call(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("delegate_call", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "delegate_call",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     pub(crate) fn syscall_storage_read(
@@ -988,7 +1071,12 @@ mod tests {
         );
 
         assert_matches!(
-            syscall.syscall_deploy(&vm, relocatable!(1, 0)),
+            syscall.syscall_deploy(
+                &vm,
+                relocatable!(1, 0),
+                #[cfg(feature = "cairo-native")]
+                None,
+            ),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
     }
