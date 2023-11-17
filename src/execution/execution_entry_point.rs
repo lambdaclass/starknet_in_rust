@@ -181,7 +181,7 @@ impl ExecutionEntryPoint {
                 unimplemented!("Use the feature 'cairo-native' to enable native execution")
             }
             #[cfg(feature = "cairo-native")]
-            CompiledClass::Sierra(sierra_contract_class) => {
+            CompiledClass::Sierra(sierra_program_and_entrypoints) => {
                 let mut transactional_state = state.create_transactional();
 
                 let program_cache = program_cache.unwrap_or_else(|| {
