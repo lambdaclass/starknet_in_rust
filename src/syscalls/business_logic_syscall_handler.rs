@@ -55,6 +55,7 @@ use cairo_vm::{
 use lazy_static::lazy_static;
 
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::contract_class_cache::ContractClassCache;
 use num_traits::{One, ToPrimitive, Zero};
 
 #[cfg(feature = "cairo-native")]
@@ -128,7 +129,7 @@ lazy_static! {
 
 /// Structure representing the [BusinessLogicSyscallHandler].
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
+pub struct BusinessLogicSyscallHandler<'a, S: StateReader, C: ContractClassCache> {
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
     /// Get the expected pointer to the syscall
@@ -150,7 +151,7 @@ pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
     /// Context information related to the current block
     pub(crate) block_context: BlockContext,
     /// State of the storage related to Starknet contract
-    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     /// Indicates whether the current execution supports the "reverted" status.
     pub(crate) support_reverted: bool,
     /// Get the selector for the entry point of the contract.
@@ -162,12 +163,12 @@ pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, S, C> {
     /// Constructor creates a new [BusinessLogicSyscallHandler] instance
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -201,8 +202,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         }
     }
 
+
     /// Constructor with default values, used for testing
-    pub fn default_with_state(state: &'a mut CachedState<S>) -> Self {
+    pub fn default_with_state(state: &'a mut CachedState<S, C>) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
             Default::default(),
@@ -216,7 +218,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
     ) -> Self {
         let syscalls = Vec::from([
             // Emits an event with a given set of keys and data.
@@ -392,7 +394,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
 
         if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorCalldataEmpty());
+                return Err(StateError::ConstructorCalldataEmpty);
             }
 
             let call_info = CallInfo::empty_constructor_call(
@@ -431,7 +433,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 #[cfg(feature = "cairo-native")]
                 program_cache,
             )
-            .map_err(|_| StateError::ExecutionEntryPoint())?;
+            .map_err(|_| StateError::ExecutionEntryPoint)?;
 
         let call_info = call_info.ok_or(StateError::CustomError(
             revert_error.unwrap_or_else(|| "Execution error".to_string()),
@@ -645,7 +647,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, S, C> {
     /// Emit an event.
     fn emit_event(
         &mut self,

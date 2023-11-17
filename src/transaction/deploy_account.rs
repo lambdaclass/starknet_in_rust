@@ -31,8 +31,11 @@ use crate::{
     services::api::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{
+        contract_class_cache::ContractClassCache,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
@@ -178,9 +181,9 @@ impl DeployAccount {
         self.contract_address_salt = ?self.contract_address_salt,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
@@ -200,7 +203,7 @@ impl DeployAccount {
 
         self.handle_nonce(state)?;
 
-        let mut transactional_state = state.create_transactional();
+        let mut transactional_state = state.create_transactional()?;
         let mut tx_exec_info = self.apply(
             &mut transactional_state,
             block_context,
@@ -266,9 +269,9 @@ impl DeployAccount {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    fn apply<S: StateReader>(
+    fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
@@ -322,10 +325,10 @@ impl DeployAccount {
         ))
     }
 
-    pub fn handle_constructor<S: StateReader>(
+    pub fn handle_constructor<S: StateReader, C: ContractClassCache>(
         &self,
         contract_class: CompiledClass,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         #[cfg(feature = "cairo-native")] program_cache: Option<
@@ -419,9 +422,9 @@ impl DeployAccount {
         )
     }
 
-    pub fn run_constructor_entrypoint<S: StateReader>(
+    pub fn run_constructor_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         #[cfg(feature = "cairo-native")] program_cache: Option<
@@ -471,9 +474,9 @@ impl DeployAccount {
         )
     }
 
-    pub fn run_validate_entrypoint<S: StateReader>(
+    pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         #[cfg(feature = "cairo-native")] program_cache: Option<
@@ -643,17 +646,16 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
     use super::*;
     use crate::{
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::block_context::StarknetChainId,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::felt_to_hash,
     };
+    use std::{path::PathBuf, sync::Arc};
 
     #[test]
     fn get_state_selector() {
@@ -664,7 +666,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut _state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut _state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -696,7 +701,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -758,7 +766,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -802,8 +813,8 @@ mod tests {
             chain_id,
         )
         .unwrap();
-        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
-            &mut CachedState::default(),
+        let result = internal_declare.execute(
+            &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
             #[cfg(feature = "cairo-native")]
             None,

@@ -1,21 +1,21 @@
 // This module tests our code against the blockifier to ensure they work in the same way.
 use assert_matches::assert_matches;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-use cairo_vm::felt::{felt_str, Felt252};
-use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME};
-use cairo_vm::vm::{
-    errors::{
-        cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError, vm_exception::VmException,
+use cairo_vm::{
+    felt::{felt_str, Felt252},
+    vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
+    vm::{
+        errors::{
+            cairo_run_errors::CairoRunError, vm_errors::VirtualMachineError,
+            vm_exception::VmException,
+        },
+        runners::cairo_runner::ExecutionResources,
     },
-    runners::cairo_runner::ExecutionResources,
 };
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use starknet_in_rust::core::contract_address::{
-    compute_casm_class_hash, compute_sierra_class_hash,
-};
 use starknet_in_rust::core::errors::state_errors::StateError;
 use starknet_in_rust::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -31,33 +31,36 @@ use starknet_in_rust::utils::CompiledClassHash;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
+    core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash},
+    definitions::constants::{
+        CONSTRUCTOR_ENTRY_POINT_SELECTOR, EXECUTE_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION,
+        TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
+        VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
+    },
+};
+use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
-        constants::{
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR, EXECUTE_ENTRY_POINT_SELECTOR, TRANSACTION_VERSION,
-            TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
-            VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
-        },
         transaction_type::TransactionType,
     },
     execution::{CallInfo, CallType, OrderedEvent, TransactionExecutionInfo},
-    state::in_memory_state_reader::InMemoryStateReader,
     state::{
         cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
         state_api::{State, StateReader},
-        state_cache::StateCache,
-        state_cache::StorageEntry,
+        state_cache::{StateCache, StorageEntry},
         BlockInfo,
     },
     transaction::{
-        error::TransactionError,
-        DeployAccount,
-        {invoke_function::InvokeFunction, Declare},
+        error::TransactionError, invoke_function::InvokeFunction, Declare, DeployAccount,
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 const ACCOUNT_CONTRACT_PATH: &str = "starknet_programs/account_without_validation.json";
 const ERC20_CONTRACT_PATH: &str = "starknet_programs/ERC20.json";
@@ -120,8 +123,13 @@ pub fn new_starknet_block_context_for_testing() -> BlockContext {
     )
 }
 
-fn create_account_tx_test_state(
-) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+fn create_account_tx_test_state() -> Result<
+    (
+        BlockContext,
+        CachedState<InMemoryStateReader, PermanentContractClassCache>,
+    ),
+    Box<dyn std::error::Error>,
+> {
     let block_context = new_starknet_block_context_for_testing();
 
     let test_contract_class_hash = *TEST_CLASS_HASH;
@@ -195,14 +203,19 @@ fn create_account_tx_test_state(
             }
             Arc::new(state_reader)
         },
-        HashMap::new(),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     Ok((block_context, cached_state))
 }
 
-fn create_account_tx_test_state_revert_test(
-) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+fn create_account_tx_test_state_revert_test() -> Result<
+    (
+        BlockContext,
+        CachedState<InMemoryStateReader, PermanentContractClassCache>,
+    ),
+    Box<dyn std::error::Error>,
+> {
     let block_context = new_starknet_block_context_for_testing();
 
     let test_contract_class_hash = *TEST_CLASS_HASH;
@@ -280,46 +293,50 @@ fn create_account_tx_test_state_revert_test(
             }
             Arc::new(state_reader)
         },
-        HashMap::new(),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     Ok((block_context, cached_state))
 }
 
-fn expected_state_before_tx() -> CachedState<InMemoryStateReader> {
+fn expected_state_before_tx() -> CachedState<InMemoryStateReader, PermanentContractClassCache> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    CachedState::new(Arc::new(in_memory_state_reader), HashMap::new())
+    CachedState::new(
+        Arc::new(in_memory_state_reader),
+        Arc::new(PermanentContractClassCache::default()),
+    )
 }
 
-fn expected_state_after_tx(fee: u128) -> CachedState<InMemoryStateReader> {
+fn expected_state_after_tx(
+    fee: u128,
+) -> CachedState<InMemoryStateReader, PermanentContractClassCache> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
-    let contract_classes_cache = HashMap::from([
-        (
-            *TEST_CLASS_HASH,
-            CompiledClass::Deprecated(Arc::new(
-                ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
-            )),
-        ),
-        (
-            *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
-            CompiledClass::Deprecated(Arc::new(
-                ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
-            )),
-        ),
-        (
-            *TEST_ERC20_CONTRACT_CLASS_HASH,
-            CompiledClass::Deprecated(Arc::new(
-                ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
-            )),
-        ),
-    ]);
+    let contract_classes_cache = PermanentContractClassCache::default();
+    contract_classes_cache.set_contract_class(
+        *TEST_CLASS_HASH,
+        CompiledClass::Deprecated(Arc::new(
+            ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
+        )),
+    );
+    contract_classes_cache.set_contract_class(
+        *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
+        CompiledClass::Deprecated(Arc::new(
+            ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
+        )),
+    );
+    contract_classes_cache.set_contract_class(
+        *TEST_ERC20_CONTRACT_CLASS_HASH,
+        CompiledClass::Deprecated(Arc::new(
+            ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
+        )),
+    );
 
     CachedState::new_for_testing(
         Arc::new(in_memory_state_reader),
         state_cache_after_invoke_tx(fee),
-        contract_classes_cache,
+        Arc::new(contract_classes_cache),
     )
 }
 
@@ -601,8 +618,12 @@ fn test_create_account_tx_test_state() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        (&*state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>(),
+        (&*expected_initial_state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -973,8 +994,12 @@ fn test_declare_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        (&*state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>(),
+        (&*expected_initial_state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -1066,8 +1091,12 @@ fn test_declarev2_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        (&*state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>(),
+        (&*expected_initial_state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -1477,8 +1506,12 @@ fn test_invoke_tx_state() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        (&*state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>(),
+        (&*expected_initial_state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -1556,8 +1589,12 @@ fn test_invoke_with_declarev2_tx() {
     let expected_initial_state = expected_state_before_tx();
     assert_eq!(&state.cache(), &expected_initial_state.cache());
     assert_eq!(
-        &state.contract_classes(),
-        &expected_initial_state.contract_classes()
+        (&*state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>(),
+        (&*expected_initial_state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>()
     );
     assert_eq!(
         &state.state_reader.address_to_class_hash,
@@ -1675,7 +1712,14 @@ fn test_deploy_account() {
     let (state_before, state_after) = expected_deploy_account_states();
 
     assert_eq!(&state.cache(), &state_before.cache());
-    assert_eq!(&state.contract_classes(), &state_before.contract_classes());
+    assert_eq!(
+        (&*state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>(),
+        (&*state_before.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>()
+    );
 
     let tx_info = deploy_account_tx
         .execute(
@@ -1793,8 +1837,15 @@ fn test_deploy_account_revert() {
     let (state_before, mut state_after) = expected_deploy_account_states();
 
     assert_eq_sorted!(&state.cache(), &state_before.cache());
-    assert_eq_sorted!(&state.contract_classes(), &state_before.contract_classes());
-    assert!(&state.contract_classes().is_empty());
+    assert_eq!(
+        (&*state.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>(),
+        (&*state_before.contract_class_cache().clone())
+            .into_iter()
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(state.contract_class_cache().as_ref().into_iter().count(), 0);
 
     let tx_info = deploy_account_tx
         .execute(
@@ -1832,11 +1883,6 @@ fn test_deploy_account_revert() {
         .cache_mut()
         .storage_initial_values_mut()
         .extend(state_after.cache_mut().storage_initial_values_mut().clone());
-
-    // Set contract class cache
-    state_reverted
-        .set_contract_classes(state_after.contract_classes().clone())
-        .unwrap();
 
     // Set storage writes related to the fee transfer
     state_reverted
@@ -1918,8 +1964,8 @@ fn test_deploy_account_revert() {
 }
 
 fn expected_deploy_account_states() -> (
-    CachedState<InMemoryStateReader>,
-    CachedState<InMemoryStateReader>,
+    CachedState<InMemoryStateReader, PermanentContractClassCache>,
+    CachedState<InMemoryStateReader, PermanentContractClassCache>,
 ) {
     let fee = Felt252::from(3097);
     let mut state_before = CachedState::new(
@@ -1962,7 +2008,7 @@ fn expected_deploy_account_states() -> (
             ]),
             HashMap::new(),
         )),
-        HashMap::new(),
+        Arc::new(PermanentContractClassCache::default()),
     );
     state_before.set_storage_at(
         &(
@@ -1974,7 +2020,12 @@ fn expected_deploy_account_states() -> (
         INITIAL_BALANCE.clone(),
     );
 
-    let mut state_after = state_before.clone();
+    let mut state_after = state_before.clone_for_testing();
+
+    // Make the contract cache independent (otherwise tests will fail because the initial state's
+    // cache will not be empty anymore).
+    *state_after.contract_class_cache_mut() = Arc::new(PermanentContractClassCache::default());
+
     state_after.cache_mut().nonce_initial_values_mut().insert(
         Address(felt_str!(
             "386181506763903095743576862849245034886954647214831045800703908858571591162"
@@ -2445,6 +2496,7 @@ fn test_library_call_with_declare_v2() {
     {
         casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
     }
+
     // Create an execution entry point
     let calldata = vec![
         Felt252::from_bytes_be(casm_contract_hash.to_bytes_be()),
