@@ -901,9 +901,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         address: Address,
     ) -> Result<Felt252, SyscallHandlerError> {
-        Ok(self
-            .starknet_storage_state
-            .read(&felt_to_hash(&address.0))?)
+        Ok(self.starknet_storage_state.read(address)?)
     }
 
     pub(crate) fn syscall_storage_write(
@@ -911,9 +909,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         address: Address,
         value: Felt252,
     ) -> Result<(), SyscallHandlerError> {
-        let address = felt_to_hash(&address.0);
-        self.starknet_storage_state.read(&address)?;
-        self.starknet_storage_state.write(&address, value);
+        self.starknet_storage_state.read(address.clone())?;
+        self.starknet_storage_state.write(address, value);
 
         Ok(())
     }
@@ -1016,7 +1013,7 @@ mod tests {
             in_memory_state_reader::InMemoryStateReader,
         },
         syscalls::syscall_handler_errors::SyscallHandlerError,
-        utils::{felt_to_hash, test_utils::*, Address},
+        utils::{test_utils::*, Address},
     };
     use cairo_vm::felt::Felt252;
     use cairo_vm::hint_processor::hint_processor_definition::HintProcessorLogic;
@@ -1154,7 +1151,7 @@ mod tests {
         // Initialize state reader with value
         let mut state_reader = InMemoryStateReader::default();
         state_reader.address_to_storage.insert(
-            (Address(Felt252::one()), felt_to_hash(&Felt252::one())),
+            (Address(Felt252::one()), Felt252::one().to_be_bytes()),
             Felt252::zero(),
         );
         // Create empty-cached state
@@ -1171,7 +1168,7 @@ mod tests {
         assert_eq!(
             state.cache().storage_initial_values,
             HashMap::from([(
-                (Address(Felt252::one()), felt_to_hash(&Felt252::one())),
+                (Address(Felt252::one()), Felt252::one().to_be_bytes()),
                 Felt252::zero()
             )])
         )

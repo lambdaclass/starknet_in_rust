@@ -2,14 +2,15 @@
 
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::utils::ClassHash;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{
         cached_state::CachedState,
         contract_class_cache::{ContractClassCache, PermanentContractClassCache},
@@ -17,7 +18,6 @@ use starknet_in_rust::{
         ExecutionResourcesManager,
     },
     utils::Address,
-    EntryPointType,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -36,7 +36,7 @@ fn delegate_call() {
     let contract_class = ContractClass::from_path(path).unwrap();
 
     let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
-    let class_hash = [2; 32];
+    let class_hash = ClassHash([2; 32]);
 
     contract_class_cache.set_contract_class(
         class_hash,
@@ -70,7 +70,7 @@ fn delegate_call() {
     //  ------------ contract data --------------------
 
     let address = Address(1111.into());
-    let class_hash = [1; 32];
+    let class_hash = ClassHash([1; 32]);
 
     contract_class_cache.set_contract_class(
         class_hash,

@@ -21,27 +21,24 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader,
     },
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
-    utils::Address,
+    utils::{Address, ClassHash},
 };
 use std::{hint::black_box, sync::Arc};
 
 #[cfg(feature = "cairo-native")]
-use {
-    starknet_in_rust::utils::ClassHash,
-    std::{cell::RefCell, rc::Rc},
-};
+use std::{cell::RefCell, rc::Rc};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
     static ref CONTRACT_CLASS: ContractClass = ContractClass::from_path(
         "starknet_programs/account_without_validation.json",
     ).unwrap();
-    static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
-    static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
+    static ref CLASS_HASH_FELT: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
+    static ref CLASS_HASH: ClassHash = ClassHash(CLASS_HASH_FELT.to_be_bytes());
     static ref SALT: Felt252 = felt_str!(
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
     );
-    static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &[], Address(0.into())).unwrap());
+    static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT, &CLASS_HASH_FELT, &[], Address(0.into())).unwrap());
     static ref SIGNATURE: Vec<Felt252> = vec![
         felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
         felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
@@ -87,7 +84,7 @@ fn deploy_account(
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &CLASS_HASH,
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();
@@ -96,7 +93,7 @@ fn deploy_account(
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone_for_testing();
-        let class_hash = *CLASS_HASH_BYTES;
+        let class_hash = *CLASS_HASH;
         let signature = SIGNATURE.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
@@ -174,7 +171,7 @@ fn deploy(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCach
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &CLASS_HASH,
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();
@@ -220,7 +217,7 @@ fn invoke(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCach
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &CLASS_HASH,
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();

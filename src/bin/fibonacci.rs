@@ -1,6 +1,7 @@
 use cairo_vm::felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
 use num_traits::Zero;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -34,7 +35,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/fibonacci.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [1; 32];
+    static ref CONTRACT_CLASS_HASH: ClassHash = ClassHash([1; 32]);
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 

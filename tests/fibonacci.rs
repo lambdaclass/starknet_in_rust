@@ -53,7 +53,7 @@ fn integration_test() {
     //  ------------ contract data --------------------
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.set_contract_class(
@@ -159,7 +159,7 @@ fn integration_test_cairo1() {
     let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache

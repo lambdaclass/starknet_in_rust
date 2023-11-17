@@ -12,6 +12,7 @@ use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WO
 use crate::state::cached_state::CachedState;
 use crate::state::contract_class_cache::ContractClassCache;
 use crate::state::state_api::StateChangesCount;
+use crate::utils::ClassHash;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
@@ -38,7 +39,6 @@ use std::sync::Arc;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::utils::ClassHash,
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };
@@ -54,6 +54,7 @@ pub struct DeclareV2 {
     pub max_fee: u128,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
+    // maybe change this for ClassHash
     pub compiled_class_hash: Felt252,
     pub sierra_contract_class: Option<SierraContractClass>,
     pub sierra_class_hash: Felt252,
@@ -458,13 +459,12 @@ impl DeclareV2 {
                 self.compiled_class_hash.to_string(),
             ));
         }
-        if let Some(ref class) = self.sierra_contract_class {
-            state.set_sierra_program(&self.sierra_class_hash, class.sierra_program.clone())?;
-        }
+        state
+            .set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash.clone())?;
 
-        state.set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash)?;
+        let compiled_contract_class = ClassHash::from(self.compiled_class_hash.clone());
         state.set_contract_class(
-            &self.compiled_class_hash.to_be_bytes(),
+            &compiled_contract_class,
             &CompiledClass::Casm(Arc::new(casm_class)),
         )?;
 
@@ -576,6 +576,7 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::transaction::error::TransactionError;
+    use crate::utils::ClassHash;
     use crate::{
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
@@ -645,9 +646,10 @@ mod tests {
             true,
         )
         .unwrap();
-
+        let internal_declare_compiled_class_hash =
+            ClassHash::from(internal_declare.compiled_class_hash);
         let casm_class = match state
-            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
             CompiledClass::Casm(casm) => casm.as_ref().clone(),
@@ -714,9 +716,10 @@ mod tests {
             true,
         )
         .unwrap();
-
+        let internal_declare_compiled_class_hash =
+            ClassHash::from(internal_declare.compiled_class_hash);
         let casm_class = match state
-            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
             CompiledClass::Casm(casm) => casm.as_ref().clone(),
@@ -785,9 +788,10 @@ mod tests {
             true,
         )
         .unwrap();
-
+        let internal_declare_compiled_class_hash =
+            ClassHash::from(internal_declare.compiled_class_hash);
         let casm_class = match state
-            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
             CompiledClass::Casm(casm) => casm.as_ref().clone(),
@@ -854,9 +858,10 @@ mod tests {
             true,
         )
         .unwrap();
-
+        let internal_declare_compiled_class_hash =
+            ClassHash::from(internal_declare.compiled_class_hash);
         let casm_class = match state
-            .get_contract_class(&internal_declare.compiled_class_hash.to_be_bytes())
+            .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
             CompiledClass::Casm(casm) => casm.as_ref().clone(),

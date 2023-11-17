@@ -36,7 +36,7 @@ fn amm_proxy_init_pool_test() {
     )
     .unwrap();
     // Deploy proxy
-    let (proxy_address, proxy_class_hash) = deploy(
+    let (proxy_address, proxy_class_hash_bytes) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
@@ -44,7 +44,7 @@ fn amm_proxy_init_pool_test() {
         None,
     )
     .unwrap();
-
+    let proxy_class_hash = proxy_class_hash_bytes;
     let proxy_entry_points_by_type =
         TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
             .unwrap()

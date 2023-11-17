@@ -259,17 +259,18 @@ mod test {
             in_memory_state_reader::InMemoryStateReader, state_api::State,
         },
         transaction::l1_handler::L1Handler,
-        utils::Address,
+        utils::{Address, ClassHash},
     };
+    use std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    };
+
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{Num, Zero};
-    use std::{
-        collections::{HashMap, HashSet},
-        sync::Arc,
-    };
 
     /// Test the correct execution of the L1Handler.
     #[test]
@@ -295,7 +296,7 @@ mod test {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
@@ -347,10 +348,10 @@ mod test {
                 call_type: Some(crate::execution::CallType::Call),
                 contract_address: Address(0.into()),
                 code_address: None,
-                class_hash: Some([
+                class_hash: Some(ClassHash([
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1,
-                ]),
+                ])),
                 entry_point_selector: Some(felt_str!(
                     "352040181584456735608515580760888541466059565068553383579463728554843487745"
                 )),
@@ -372,10 +373,10 @@ mod test {
                 events: vec![],
                 l2_to_l1_messages: vec![],
                 storage_read_values: vec![0.into(), 0.into()],
-                accessed_storage_keys: HashSet::from([[
+                accessed_storage_keys: HashSet::from([ClassHash([
                     4, 40, 11, 247, 0, 35, 63, 18, 141, 159, 101, 81, 182, 2, 213, 216, 100, 110,
                     5, 5, 101, 122, 13, 252, 204, 72, 77, 8, 58, 226, 194, 24,
-                ]]),
+                ])]),
                 internal_calls: vec![],
                 gas_consumed: 0,
                 failure_flag: false,

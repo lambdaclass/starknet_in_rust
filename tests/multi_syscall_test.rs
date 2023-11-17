@@ -29,7 +29,7 @@ fn test_multiple_syscall() {
     let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache
@@ -96,7 +96,7 @@ fn test_multiple_syscall() {
         let entrypoint_selector =
             Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes()));
         let new_call_data = vec![
-            Felt252::from_bytes_be(&class_hash),
+            Felt252::from_bytes_be(&class_hash.0),
             entrypoint_selector,
             Felt252::from(25),
         ];
@@ -220,7 +220,7 @@ fn test_syscall(
     calldata: Vec<Felt252>,
     caller_address: Address,
     entry_point_type: EntryPointType,
-    class_hash: [u8; 32],
+    class_hash: ClassHash,
     state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
 ) -> CallInfo {
     let entrypoint_selector =

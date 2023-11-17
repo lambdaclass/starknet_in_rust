@@ -14,7 +14,7 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
     },
     transaction::InvokeFunction,
-    utils::Address,
+    utils::{Address, ClassHash},
 };
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
@@ -33,7 +33,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/first_contract.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [5, 133, 114, 83, 104, 231, 159, 23, 87, 255, 235, 75, 170, 4, 84, 140, 49, 77, 101, 41, 147, 198, 201, 231, 38, 189, 215, 84, 231, 141, 140, 122];
+    static ref CONTRACT_CLASS_HASH: ClassHash = ClassHash([5, 133, 114, 83, 104, 231, 159, 23, 87, 255, 235, 75, 170, 4, 84, 140, 49, 77, 101, 41, 147, 198, 201, 231, 38, 189, 215, 84, 231, 141, 140, 122]);
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 

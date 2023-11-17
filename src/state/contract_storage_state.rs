@@ -29,19 +29,23 @@ impl<'a, S: StateReader, C: ContractClassCache> ContractStorageState<'a, S, C> {
         }
     }
 
-    pub(crate) fn read(&mut self, address: &ClassHash) -> Result<Felt252, StateError> {
-        self.accessed_keys.insert(*address);
+    pub(crate) fn read(&mut self, address: Address) -> Result<Felt252, StateError> {
+        self.accessed_keys
+            .insert(ClassHash::from(address.0.clone()));
         let value = self
             .state
-            .get_storage_at(&(self.contract_address.clone(), *address))?;
+            .get_storage_at(&(self.contract_address.clone(), (address).0.to_be_bytes()))?;
 
         self.read_values.push(value.clone());
         Ok(value)
     }
 
-    pub(crate) fn write(&mut self, address: &ClassHash, value: Felt252) {
-        self.accessed_keys.insert(*address);
-        self.state
-            .set_storage_at(&(self.contract_address.clone(), *address), value);
+    pub(crate) fn write(&mut self, address: Address, value: Felt252) {
+        self.accessed_keys
+            .insert(ClassHash::from(address.0.clone()));
+        self.state.set_storage_at(
+            &(self.contract_address.clone(), (address).0.to_be_bytes()),
+            value,
+        );
     }
 }

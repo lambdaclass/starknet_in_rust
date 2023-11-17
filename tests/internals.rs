@@ -27,6 +27,7 @@ use starknet_in_rust::services::api::contract_classes::deprecated_contract_class
 use starknet_in_rust::state::ExecutionResourcesManager;
 use starknet_in_rust::transaction::fee::calculate_tx_fee;
 use starknet_in_rust::transaction::{DeclareV2, Deploy};
+use starknet_in_rust::utils::CompiledClassHash;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -78,12 +79,12 @@ lazy_static! {
 
 
     // Class hashes.
-    static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: Felt252 = felt_str!("273");
-    static ref TEST_CLASS_HASH: Felt252 = felt_str!("272");
-    static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = felt_str!("274");
-    static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = felt_str!("4112");
-    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1: Felt252 = felt_str!("1948962768849191111780391610229754715773924969841143100991524171924131413970");
-    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2: Felt252 = felt_str!("2889767417435368609058888822622483550637539736178264636938129582300971548553");
+    static ref TEST_ACCOUNT_CONTRACT_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("273"));
+    static ref TEST_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("272"));
+    static ref TEST_EMPTY_CONTRACT_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("274"));
+    static ref TEST_ERC20_CONTRACT_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("4112"));
+    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1: ClassHash = ClassHash::from(felt_str!("1948962768849191111780391610229754715773924969841143100991524171924131413970"));
+    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2: ClassHash = ClassHash::from(felt_str!("2889767417435368609058888822622483550637539736178264636938129582300971548553"));
 
     // Storage keys.
     // NOTE: this key corresponds to the lower 128 bits of an U256
@@ -131,9 +132,9 @@ fn create_account_tx_test_state() -> Result<
 > {
     let block_context = new_starknet_block_context_for_testing();
 
-    let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
-    let test_account_contract_class_hash = felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
-    let test_erc20_class_hash = felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone());
+    let test_contract_class_hash = *TEST_CLASS_HASH;
+    let test_account_contract_class_hash = *TEST_ACCOUNT_CONTRACT_CLASS_HASH;
+    let test_erc20_class_hash = *TEST_ERC20_CONTRACT_CLASS_HASH;
     let class_hash_to_class = HashMap::from([
         (
             test_account_contract_class_hash,
@@ -175,17 +176,15 @@ fn create_account_tx_test_state() -> Result<
         {
             let mut state_reader = InMemoryStateReader::default();
             for (contract_address, class_hash) in address_to_class_hash {
-                let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
+                let storage_keys: HashMap<StorageEntry, Felt252> = storage_view
                     .iter()
                     .filter_map(|((address, storage_key), storage_value)| {
                         (address == &contract_address).then_some((
-                            (address.clone(), felt_to_hash(storage_key)),
+                            (address.clone(), storage_key.to_be_bytes()),
                             storage_value.clone(),
                         ))
                     })
                     .collect();
-
-                let stored: HashMap<StorageEntry, Felt252> = storage_keys;
 
                 state_reader
                     .address_to_class_hash_mut()
@@ -194,7 +193,7 @@ fn create_account_tx_test_state() -> Result<
                 state_reader
                     .address_to_nonce_mut()
                     .insert(contract_address.clone(), Felt252::zero());
-                state_reader.address_to_storage_mut().extend(stored);
+                state_reader.address_to_storage_mut().extend(storage_keys);
             }
             for (class_hash, contract_class) in class_hash_to_class {
                 state_reader.class_hash_to_compiled_class_mut().insert(
@@ -219,9 +218,9 @@ fn create_account_tx_test_state_revert_test() -> Result<
 > {
     let block_context = new_starknet_block_context_for_testing();
 
-    let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
-    let test_account_contract_class_hash = felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone());
-    let test_erc20_class_hash = felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone());
+    let test_contract_class_hash = *TEST_CLASS_HASH;
+    let test_account_contract_class_hash = *TEST_ACCOUNT_CONTRACT_CLASS_HASH;
+    let test_erc20_class_hash = *TEST_ERC20_CONTRACT_CLASS_HASH;
     let class_hash_to_class = HashMap::from([
         (
             test_account_contract_class_hash,
@@ -265,11 +264,11 @@ fn create_account_tx_test_state_revert_test() -> Result<
         {
             let mut state_reader = InMemoryStateReader::default();
             for (contract_address, class_hash) in address_to_class_hash {
-                let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
+                let storage_keys: HashMap<(Address, [u8; 32]), Felt252> = storage_view
                     .iter()
                     .filter_map(|((address, storage_key), storage_value)| {
                         (address == &contract_address).then_some((
-                            (address.clone(), felt_to_hash(storage_key)),
+                            (address.clone(), storage_key.to_be_bytes()),
                             storage_value.clone(),
                         ))
                     })
@@ -316,19 +315,19 @@ fn expected_state_after_tx(
 
     let contract_classes_cache = PermanentContractClassCache::default();
     contract_classes_cache.set_contract_class(
-        felt_to_hash(&TEST_CLASS_HASH.clone()),
+        *TEST_CLASS_HASH,
         CompiledClass::Deprecated(Arc::new(
             ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
         )),
     );
     contract_classes_cache.set_contract_class(
-        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone()),
+        *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
         CompiledClass::Deprecated(Arc::new(
             ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
         )),
     );
     contract_classes_cache.set_contract_class(
-        felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
+        *TEST_ERC20_CONTRACT_CLASS_HASH,
         CompiledClass::Deprecated(Arc::new(
             ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
         )),
@@ -344,7 +343,7 @@ fn expected_state_after_tx(
 fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
     let class_hash_initial_values = HashMap::from([(
         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-        felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH.clone()),
+        *TEST_ERC20_CONTRACT_CLASS_HASH,
     )]);
 
     let nonce_initial_values =
@@ -354,28 +353,28 @@ fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY.clone()),
+                TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_be_bytes(),
             ),
             Felt252::zero(),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+                TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_be_bytes(),
             ),
             INITIAL_BALANCE.clone(),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_BALANCE_KEY_1.clone()),
+                TEST_ERC20_BALANCE_KEY_1.clone().to_be_bytes(),
             ),
             Felt252::zero(),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_BALANCE_KEY_2.clone()),
+                TEST_ERC20_BALANCE_KEY_2.clone().to_be_bytes(),
             ),
             Felt252::zero(),
         ),
@@ -389,36 +388,36 @@ fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY.clone()),
+                TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_be_bytes(),
             ),
             Felt252::from(fee),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+                TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_be_bytes(),
             ),
             INITIAL_BALANCE.clone() - Felt252::from(fee),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_BALANCE_KEY_1.clone()),
+                TEST_ERC20_BALANCE_KEY_1.clone().to_be_bytes(),
             ),
             Felt252::from(0),
         ),
         (
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_BALANCE_KEY_2.clone()),
+                TEST_ERC20_BALANCE_KEY_2.clone().to_be_bytes(),
             ),
             Felt252::from(0),
         ),
     ]);
 
     let compiled_class_hash_initial_values = HashMap::new();
-    let compiled_class_hash_writes = HashMap::new();
-    let compiled_class_hash = HashMap::new();
+    let compiled_class_hash_writes: HashMap<ClassHash, CompiledClassHash> = HashMap::new();
+    let compiled_class_hash: HashMap<ClassHash, CompiledClassHash> = HashMap::new();
 
     StateCache::new_for_testing(
         class_hash_initial_values,
@@ -436,17 +435,14 @@ fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
 fn initial_in_memory_state_reader() -> InMemoryStateReader {
     InMemoryStateReader::new(
         HashMap::from([
-            (
-                TEST_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_CLASS_HASH),
-            ),
+            (TEST_CONTRACT_ADDRESS.clone(), *TEST_CLASS_HASH),
             (
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
             ),
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                *TEST_ERC20_CONTRACT_CLASS_HASH,
             ),
         ]),
         HashMap::from([
@@ -457,25 +453,25 @@ fn initial_in_memory_state_reader() -> InMemoryStateReader {
         HashMap::from([(
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY.clone()),
+                TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_be_bytes(),
             ),
             INITIAL_BALANCE.clone(),
         )]),
         HashMap::from([
             (
-                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+                *TEST_ERC20_CONTRACT_CLASS_HASH,
                 CompiledClass::Deprecated(Arc::new(
                     ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap(),
                 )),
             ),
             (
-                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+                *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
                 CompiledClass::Deprecated(Arc::new(
                     ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap(),
                 )),
             ),
             (
-                felt_to_hash(&TEST_CLASS_HASH),
+                *TEST_CLASS_HASH,
                 CompiledClass::Deprecated(Arc::new(
                     ContractClass::from_path(TEST_CONTRACT_PATH).unwrap(),
                 )),
@@ -497,7 +493,7 @@ fn expected_validate_call_info(
         contract_address: storage_address,
 
         // Entries **not** in blockifier.
-        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+        class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         call_type: Some(CallType::Call),
         execution_resources: Some(ExecutionResources {
             n_steps: 13,
@@ -539,25 +535,25 @@ fn expected_fee_transfer_call_info(
         }],
 
         // Entries **not** in blockifier.
-        class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
+        class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
         call_type: Some(CallType::Call),
         accessed_storage_keys: HashSet::from([
-            [
+            ClassHash([
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ],
-            [
+            ]),
+            ClassHash([
                 5, 158, 221, 96, 243, 245, 236, 116, 233, 4, 68, 137, 231, 149, 207, 133, 23, 150,
                 101, 24, 93, 212, 49, 126, 49, 102, 131, 144, 118, 15, 48, 18,
-            ],
-            [
+            ]),
+            ClassHash([
                 5, 158, 221, 96, 243, 245, 236, 116, 233, 4, 68, 137, 231, 149, 207, 133, 23, 150,
                 101, 24, 93, 212, 49, 126, 49, 102, 131, 144, 118, 15, 48, 17,
-            ],
-            [
+            ]),
+            ClassHash([
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ],
+            ]),
         ]),
         storage_read_values: vec![
             INITIAL_BALANCE.clone(),
@@ -595,7 +591,7 @@ fn validate_final_balances<S>(
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            *erc20_account_balance_storage_key,
+            erc20_account_balance_storage_key.0,
         ))
         .unwrap();
     assert_eq!(
@@ -609,7 +605,7 @@ fn validate_final_balances<S>(
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
+            TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_be_bytes(),
         ))
         .unwrap();
     assert_eq!(sequencer_balance, fee.into());
@@ -644,24 +640,24 @@ fn test_create_account_tx_test_state() {
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
-        ]));
+        ])));
 
     let value = state
         .get_storage_at(&(
@@ -669,16 +665,16 @@ fn test_create_account_tx_test_state() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
+            TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_be_bytes(),
         ))
         .unwrap();
     assert_eq!(value, *INITIAL_BALANCE);
 
     let class_hash = state.get_class_hash_at(&TEST_CONTRACT_ADDRESS).unwrap();
-    assert_eq!(class_hash, felt_to_hash(&TEST_CLASS_HASH));
+    assert_eq!(class_hash, TEST_CLASS_HASH.clone());
 
     let _contract_class: ContractClass = state
-        .get_contract_class(&felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH))
+        .get_contract_class(&TEST_ERC20_CONTRACT_CLASS_HASH.clone())
         .unwrap()
         .try_into()
         .unwrap();
@@ -725,7 +721,7 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: Address(Felt252::from(4097)),
         code_address: None,
-        class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
+        class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::zero()],
@@ -761,22 +757,22 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
-            [
+            ClassHash([
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ],
-            [
+            ]),
+            ClassHash([
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
-            ],
-            [
+            ]),
+            ClassHash([
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ],
-            [
+            ]),
+            ClassHash([
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ],
+            ]),
         ]),
     }
 }
@@ -789,7 +785,7 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: Address(Felt252::from(4097)),
         code_address: None,
-        class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
+        class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::zero()],
@@ -825,22 +821,22 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
-            [
+            ClassHash([
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ],
-            [
+            ]),
+            ClassHash([
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ],
-            [
+            ]),
+            ClassHash([
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
-            ],
-            [
+            ]),
+            ClassHash([
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ],
+            ]),
         ]),
     }
 }
@@ -848,7 +844,7 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
 fn declare_tx() -> Declare {
     Declare {
         contract_class: ContractClass::from_path(TEST_EMPTY_CONTRACT_PATH).unwrap(),
-        class_hash: felt_to_hash(&TEST_EMPTY_CONTRACT_CLASS_HASH),
+        class_hash: *TEST_EMPTY_CONTRACT_CLASS_HASH,
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
         version: 1.into(),
@@ -905,11 +901,11 @@ fn deploy_fib_syscall() -> Deploy {
     let contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        contract_hash = felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2.clone())
+        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        contract_hash = felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone())
+        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
     }
     Deploy {
         hash_value: 0.into(),
@@ -930,7 +926,7 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
         caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         call_type: Some(CallType::Call),
         contract_address: TEST_ERC20_CONTRACT_ADDRESS.clone(),
-        class_hash: Some(felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)),
+        class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
@@ -962,22 +958,22 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
             Felt252::zero(),
         ],
         accessed_storage_keys: HashSet::from([
-            [
+            ClassHash([
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ],
-            [
+            ]),
+            ClassHash([
                 7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
                 135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ],
-            [
+            ]),
+            ClassHash([
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
-            ],
-            [
+            ]),
+            ClassHash([
                 2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
                 119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ],
+            ]),
         ]),
 
         execution_resources: Some(ExecutionResources {
@@ -1020,24 +1016,24 @@ fn test_declare_tx() {
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
-        ]));
+        ])));
 
     let declare_tx = declare_tx();
     // Check ContractClass is not set before the declare_tx
@@ -1066,10 +1062,12 @@ fn test_declare_tx() {
         Some(CallInfo {
             call_type: Some(CallType::Call),
             contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-            class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+            class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
-            calldata: vec![TEST_EMPTY_CONTRACT_CLASS_HASH.clone()],
+            calldata: vec![Felt252::from_bytes_be(
+                TEST_EMPTY_CONTRACT_CLASS_HASH.clone().to_bytes_be(),
+            )],
             execution_resources: Some(ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
@@ -1115,24 +1113,24 @@ fn test_declarev2_tx() {
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
-        ]));
+        ])));
 
     let declare_tx = declarev2_tx();
     // Check ContractClass is not set before the declare_tx
@@ -1150,7 +1148,7 @@ fn test_declarev2_tx() {
         .unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state
-        .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
+        .get_contract_class(&ClassHash::from(declare_tx.compiled_class_hash))
         .is_ok());
 
     let resources = HashMap::from([
@@ -1164,20 +1162,20 @@ fn test_declarev2_tx() {
     let contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2.clone();
+        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone();
+        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1;
     }
     let expected_execution_info = TransactionExecutionInfo::new(
         Some(CallInfo {
             call_type: Some(CallType::Call),
             contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-            class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)),
+            class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
             entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
             entry_point_type: Some(EntryPointType::External),
-            calldata: vec![contract_hash],
+            calldata: vec![Felt252::from_bytes_be(contract_hash.to_bytes_be())],
             execution_resources: Some(ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
@@ -1201,7 +1199,7 @@ fn expected_execute_call_info() -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         code_address: None,
-        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(EXECUTE_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
@@ -1219,7 +1217,7 @@ fn expected_execute_call_info() -> CallInfo {
         internal_calls: vec![CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             call_type: Some(CallType::Call),
-            class_hash: Some(felt_to_hash(&TEST_CLASS_HASH.clone())),
+            class_hash: Some(*TEST_CLASS_HASH),
             entry_point_selector: Some(
                 Felt252::from_str_radix(
                     "039a1491f76903a16feed0a6433bec78de4c73194944e1118e226820ad479701",
@@ -1255,18 +1253,18 @@ fn expected_fib_execute_call_info() -> CallInfo {
     let contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        contract_hash = felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2.clone());
+        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        contract_hash = felt_to_hash(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone());
+        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1;
     }
     CallInfo {
         caller_address: Address(Felt252::zero()),
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         code_address: None,
-        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(EXECUTE_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
@@ -1324,7 +1322,7 @@ fn expected_validate_call_info_2() -> CallInfo {
         caller_address: Address(Felt252::zero()),
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(VALIDATE_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
@@ -1351,7 +1349,7 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
         caller_address: Address(Felt252::zero()),
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        class_hash: Some(felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH.clone())),
+        class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(VALIDATE_ENTRY_POINT_SELECTOR.clone()),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
@@ -1494,7 +1492,7 @@ fn test_invoke_tx_exceeded_max_fee() {
     let balance = state
         .get_storage_at(&(
             test_erc20_address,
-            felt_to_hash(&test_erc20_account_balance_key),
+            test_erc20_account_balance_key.to_be_bytes(),
         ))
         .unwrap();
     let expected_balance = INITIAL_BALANCE.clone() - Felt252::from(max_fee);
@@ -1530,24 +1528,24 @@ fn test_invoke_tx_state() {
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
-        ]));
+        ])));
 
     let Address(test_contract_address) = TEST_CONTRACT_ADDRESS.clone();
     let calldata = vec![
@@ -1613,24 +1611,24 @@ fn test_invoke_with_declarev2_tx() {
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 16, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 16
-        ]));
+        ])));
     assert!(&state
         .state_reader
         .class_hash_to_compiled_class
-        .contains_key(&[
+        .contains_key(&ClassHash([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 1, 17
-        ]));
+        ])));
 
     // Declare the fibonacci contract
     let declare_tx = declarev2_tx();
@@ -1687,7 +1685,7 @@ fn test_deploy_account() {
     let expected_fee = 3097;
 
     let deploy_account_tx = DeployAccount::new(
-        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+        *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
         expected_fee,
         TRANSACTION_VERSION.clone(),
         Default::default(),
@@ -1704,7 +1702,9 @@ fn test_deploy_account() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
+                .clone()
+                .to_be_bytes(),
         ),
         INITIAL_BALANCE.clone(),
     );
@@ -1736,7 +1736,7 @@ fn test_deploy_account() {
     let expected_validate_call_info = expected_validate_call_info(
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
         [
-            Felt252::from_bytes_be(deploy_account_tx.class_hash()),
+            Felt252::from_bytes_be(&deploy_account_tx.class_hash().0),
             deploy_account_tx.contract_address_salt().clone(),
         ]
         .into_iter()
@@ -1751,7 +1751,7 @@ fn test_deploy_account() {
         contract_address: deploy_account_tx.contract_address().clone(),
 
         // Entries **not** in blockifier.
-        class_hash: Some(TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes()),
+        class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
         call_type: Some(CallType::Call),
 
         ..Default::default()
@@ -1793,8 +1793,8 @@ fn test_deploy_account() {
     assert_eq!(nonce_from_state, Felt252::one());
 
     let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
-
-    validate_final_balances(&mut state, &block_context, &hash, expected_fee);
+    let class_hash = ClassHash(hash);
+    validate_final_balances(&mut state, &block_context, &class_hash, expected_fee);
 
     let class_hash_from_state = state
         .get_class_hash_at(deploy_account_tx.contract_address())
@@ -1810,7 +1810,7 @@ fn test_deploy_account_revert() {
     let max_fee = 3097;
 
     let deploy_account_tx = DeployAccount::new(
-        felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+        *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
         max_fee,
         TRANSACTION_VERSION.clone(),
         Default::default(),
@@ -1827,7 +1827,9 @@ fn test_deploy_account_revert() {
                 .starknet_os_config()
                 .fee_token_address()
                 .clone(),
-            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
+                .clone()
+                .to_be_bytes(),
         ),
         INITIAL_BALANCE.clone(),
     );
@@ -1890,14 +1892,16 @@ fn test_deploy_account_revert() {
     state_reverted.set_storage_at(
         &(
             Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
+                .clone()
+                .to_be_bytes(),
         ),
         INITIAL_BALANCE.clone() - max_fee as u32, // minus the max fee that will be transfered
     );
     state_reverted.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
+            TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_be_bytes(),
         ),
         max_fee.into(), // the max fee received by the sequencer
     );
@@ -1949,7 +1953,7 @@ fn test_deploy_account_revert() {
         .unwrap();
     assert_eq!(nonce_from_state, Felt252::one());
 
-    let hash = TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes();
+    let hash = felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY);
 
     validate_final_balances(&mut state, &block_context, &hash, max_fee);
 
@@ -1978,7 +1982,7 @@ fn expected_deploy_account_states() -> (
             HashMap::from([(
                 (
                     Address(0x1001.into()),
-                    felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY),
+                    TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_be_bytes(),
                 ),
                 INITIAL_BALANCE.clone(),
             )]),
@@ -2009,7 +2013,9 @@ fn expected_deploy_account_states() -> (
     state_before.set_storage_at(
         &(
             Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
+                .clone()
+                .to_be_bytes(),
         ),
         INITIAL_BALANCE.clone(),
     );
@@ -2033,23 +2039,24 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
+            felt_str!(
                 "2542253978940891427830343982984992363331567580652119103860970381451088310290"
-            )),
+            )
+            .to_be_bytes(),
         ),
         Felt252::zero(),
     );
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_BALANCE_KEY_2),
+            TEST_ERC20_BALANCE_KEY_2.clone().to_be_bytes(),
         ),
         Felt252::zero(),
     );
     state_after.cache_mut().storage_initial_values_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
+            TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_be_bytes(),
         ),
         Felt252::zero(),
     );
@@ -2069,30 +2076,31 @@ fn expected_deploy_account_states() -> (
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&felt_str!(
+            felt_str!(
                 "2542253978940891427830343982984992363331567580652119103860970381451088310290"
-            )),
+            )
+            .to_be_bytes(),
         ),
         Felt252::zero(),
     );
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY),
+            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_be_bytes(),
         ),
         INITIAL_BALANCE.clone() - &fee,
     );
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_BALANCE_KEY_2),
+            TEST_ERC20_BALANCE_KEY_2.to_be_bytes(),
         ),
         Felt252::zero(),
     );
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
-            felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY),
+            TEST_ERC20_SEQUENCER_BALANCE_KEY.to_be_bytes(),
         ),
         fee,
     );
@@ -2149,15 +2157,12 @@ fn test_state_for_declare_tx() {
         HashMap::from([
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
+                *TEST_ERC20_CONTRACT_CLASS_HASH
             ),
-            (
-                TEST_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_CLASS_HASH)
-            ),
+            (TEST_CONTRACT_ADDRESS.clone(), *TEST_CLASS_HASH),
             (
                 TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)
+                *TEST_ACCOUNT_CONTRACT_CLASS_HASH
             ),
         ]),
     );
@@ -2176,7 +2181,7 @@ fn test_state_for_declare_tx() {
         HashMap::from([(
             (
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                TEST_ERC20_ACCOUNT_BALANCE_KEY.to_be_bytes()
             ),
             INITIAL_BALANCE.clone()
         ),]),
@@ -2186,7 +2191,7 @@ fn test_state_for_declare_tx() {
     //     state_reader.class_hash_to_contract_class,
     //     HashMap::from([
     //         (
-    //             felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH),
+    //            TEST_ERC20_CONTRACT_CLASS_HASH.to_be_bytes(),
     //             ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()
     //         ),
     //         (
@@ -2194,7 +2199,7 @@ fn test_state_for_declare_tx() {
     //             ContractClass::from_path(TEST_CONTRACT_PATH).unwrap()
     //         ),
     //         (
-    //             felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+    //            TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes(),
     //             ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap()
     //         ),
     //     ])
@@ -2209,11 +2214,11 @@ fn test_state_for_declare_tx() {
             HashMap::from([
                 (
                     TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH)
+                    *TEST_ACCOUNT_CONTRACT_CLASS_HASH
                 ),
                 (
                     TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                    felt_to_hash(&TEST_ERC20_CONTRACT_CLASS_HASH)
+                    *TEST_ERC20_CONTRACT_CLASS_HASH
                 )
             ]),
             HashMap::new(),
@@ -2222,28 +2227,28 @@ fn test_state_for_declare_tx() {
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                        felt_to_hash(&TEST_ERC20_BALANCE_KEY_2)
+                        TEST_ERC20_BALANCE_KEY_2.clone().to_be_bytes()
                     ),
                     0.into()
                 ),
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                        felt_to_hash(&TEST_ERC20_BALANCE_KEY_1)
+                        TEST_ERC20_BALANCE_KEY_1.clone().to_be_bytes()
                     ),
                     0.into()
                 ),
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                        felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                        TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_be_bytes()
                     ),
                     0.into()
                 ),
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                        felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                        TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_be_bytes()
                     ),
                     INITIAL_BALANCE.clone()
                 )
@@ -2255,28 +2260,28 @@ fn test_state_for_declare_tx() {
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                        felt_to_hash(&TEST_ERC20_BALANCE_KEY_2)
+                        TEST_ERC20_BALANCE_KEY_2.clone().to_be_bytes()
                     ),
                     0.into()
                 ),
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                        felt_to_hash(&TEST_ERC20_BALANCE_KEY_1)
+                        TEST_ERC20_BALANCE_KEY_1.clone().to_be_bytes()
                     ),
                     0.into()
                 ),
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                        felt_to_hash(&TEST_ERC20_SEQUENCER_BALANCE_KEY)
+                        TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_be_bytes()
                     ),
                     fee.clone(),
                 ),
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                        felt_to_hash(&TEST_ERC20_ACCOUNT_BALANCE_KEY)
+                        TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_be_bytes()
                     ),
                     INITIAL_BALANCE.clone() - &fee,
                 ),
@@ -2298,7 +2303,7 @@ fn test_state_for_declare_tx() {
     //             ContractClass::from_path(ERC20_CONTRACT_PATH).unwrap()
     //         ),
     //         (
-    //             felt_to_hash(&TEST_ACCOUNT_CONTRACT_CLASS_HASH),
+    //            TEST_ACCOUNT_CONTRACT_CLASS_HASH.to_be_bytes(),
     //             ContractClass::from_path(ACCOUNT_CONTRACT_PATH).unwrap()
     //         ),
     //     ]))
@@ -2380,7 +2385,7 @@ fn test_invoke_tx_wrong_entrypoint() {
 fn test_deploy_undeclared_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let not_deployed_class_hash = [1; 32];
+    let not_deployed_class_hash = ClassHash([1; 32]);
     // Deploy transaction with a not_deployed_class_hash class_hash
     let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
@@ -2448,8 +2453,8 @@ fn test_library_call_with_declare_v2() {
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     let address = Address(6666.into());
-    let mut class_hash: ClassHash = [0; 32];
-    class_hash[0] = 1;
+    let mut class_hash: ClassHash = ClassHash([0; 32]);
+    class_hash.0[0] = 1;
     let nonce = Felt252::zero();
 
     state
@@ -2485,16 +2490,16 @@ fn test_library_call_with_declare_v2() {
     let casm_contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2.clone();
+        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone();
+        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
     }
 
     // Create an execution entry point
     let calldata = vec![
-        casm_contract_hash,
+        Felt252::from_bytes_be(casm_contract_hash.to_bytes_be()),
         Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
         1.into(),
         1.into(),
@@ -2536,18 +2541,18 @@ fn test_library_call_with_declare_v2() {
     let casm_contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2.clone()
+        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        casm_contract_hash = TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1.clone()
+        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
     }
 
     let expected_internal_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: address.clone(),
-        class_hash: Some(casm_contract_hash.to_be_bytes()),
+        class_hash: Some(casm_contract_hash),
         entry_point_selector: Some(external_entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]

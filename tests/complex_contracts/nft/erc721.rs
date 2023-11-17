@@ -9,18 +9,20 @@ use cairo_vm::{
 };
 use num_traits::Zero;
 use starknet_crypto::FieldElement;
+use starknet_in_rust::definitions::block_context::BlockContext;
+use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
+use starknet_in_rust::state::cached_state::CachedState;
+use starknet_in_rust::transaction::error::TransactionError;
+use starknet_in_rust::utils::ClassHash;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
-    definitions::block_context::BlockContext,
     execution::{CallInfo, CallType, OrderedEvent},
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{
-        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
         ExecutionResourcesManager,
     },
-    transaction::error::TransactionError,
     utils::{calculate_sn_keccak, Address},
-    EntryPointType,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -130,9 +132,9 @@ fn erc721_balance_of_test() {
     let mut accessed_storage_keys = HashSet::new();
     let mut balance = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
         .drain()
-        .collect::<Vec<[u8; 32]>>()[0];
+        .collect::<Vec<ClassHash>>()[0];
     accessed_storage_keys.insert(balance);
-    balance[31] += 1;
+    balance.0[31] += 1;
     accessed_storage_keys.insert(balance);
 
     let expected_call_info = CallInfo {
@@ -713,16 +715,16 @@ fn erc721_transfer_from_test() {
 
     let mut balance_from = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
         .drain()
-        .collect::<Vec<[u8; 32]>>()[0];
+        .collect::<Vec<ClassHash>>()[0];
     accessed_storage_keys.insert(balance_from);
-    balance_from[31] += 1;
+    balance_from.0[31] += 1;
     accessed_storage_keys.insert(balance_from);
 
     let mut balance_to = get_accessed_keys("ERC721_balances", vec![vec![777_u32.into()]])
         .drain()
-        .collect::<Vec<[u8; 32]>>()[0];
+        .collect::<Vec<ClassHash>>()[0];
     accessed_storage_keys.insert(balance_to);
-    balance_to[31] += 1;
+    balance_to.0[31] += 1;
     accessed_storage_keys.insert(balance_to);
 
     let expected_read_values = vec![

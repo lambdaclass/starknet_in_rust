@@ -1,14 +1,15 @@
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::utils::ClassHash;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{
         cached_state::CachedState,
         contract_class_cache::{ContractClassCache, PermanentContractClassCache},
@@ -16,7 +17,6 @@ use starknet_in_rust::{
         ExecutionResourcesManager,
     },
     utils::{calculate_sn_keccak, Address},
-    EntryPointType,
 };
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
@@ -47,7 +47,7 @@ fn integration_storage_test() {
     //  ------------ contract data --------------------
 
     let address = Address(1111.into());
-    let class_hash = [1; 32];
+    let class_hash = ClassHash([1; 32]);
     let nonce = Felt252::new(88);
     let storage_entry = (address.clone(), [90; 32]);
     let storage_value = Felt252::new(10902);
@@ -107,8 +107,8 @@ fn integration_storage_test() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let expected_key = calculate_sn_keccak("_counter".as_bytes());
-
+    let expected_key_bytes = calculate_sn_keccak("_counter".as_bytes());
+    let expected_key = ClassHash(expected_key_bytes);
     let mut expected_accessed_storage_keys = HashSet::new();
     expected_accessed_storage_keys.insert(expected_key);
 
@@ -153,7 +153,7 @@ fn integration_storage_test() {
         state
             .cache()
             .storage_writes()
-            .get(&(address, expected_key))
+            .get(&(address, expected_key.0))
             .cloned(),
         Some(Felt252::new(42))
     );
