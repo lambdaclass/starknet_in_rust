@@ -7,7 +7,8 @@ use num_traits::Zero;
 use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
-        block_context::StarknetChainId, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+        block_context::StarknetChainId,
+        constants::{CONSTRUCTOR_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR},
         transaction_type::TransactionType,
     },
     execution::{CallInfo, CallType, TransactionExecutionInfo},
@@ -57,7 +58,7 @@ fn internal_deploy_account() {
     let internal_deploy_account = DeployAccount::new(
         class_hash,
         0,
-        0.into(),
+        1.into(),
         Felt252::zero(),
         vec![],
         vec![
@@ -74,7 +75,12 @@ fn internal_deploy_account() {
     .unwrap();
 
     let tx_info = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     let contract_address = calculate_contract_address(
@@ -88,7 +94,23 @@ fn internal_deploy_account() {
     assert_eq!(
         tx_info,
         TransactionExecutionInfo::new(
-            None,
+            Some(CallInfo {
+                call_type: Some(CallType::Call),
+                contract_address: Address(contract_address.clone()),
+                class_hash: Some(class_hash),
+                entry_point_selector: Some(VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone()),
+                entry_point_type: Some(EntryPointType::External),
+                calldata: vec![
+                    Felt252::from_bytes_be(class_hash.to_bytes_be()),
+                    contract_address_salt
+                ],
+                execution_resources: Some(ExecutionResources {
+                    n_steps: 13,
+                    n_memory_holes: 0,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
             Some(CallInfo {
                 call_type: Some(CallType::Call),
                 contract_address: Address(contract_address),
@@ -101,7 +123,7 @@ fn internal_deploy_account() {
             None,
             0,
             [
-                ("n_steps", 3612),
+                ("n_steps", 3625),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 83),
                 ("l1_gas_usage", 3060)
@@ -163,7 +185,12 @@ fn internal_deploy_account_cairo1() {
     .unwrap();
 
     let tx_info = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     let accessed_keys: ClassHash = ClassHash([

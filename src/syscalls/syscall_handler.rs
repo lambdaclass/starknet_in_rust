@@ -70,7 +70,13 @@ impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
                     StarknetHint::SystemCall { system } => {
                         let syscall_ptr = as_relocatable(vm, system)?;
                         self.syscall_handler
-                            .syscall(vm, syscall_ptr)
+                            .syscall(
+                                vm,
+                                syscall_ptr,
+                                // TODO: Get the program_cache somehow.
+                                #[cfg(feature = "cairo-native")]
+                                None,
+                            )
                             .map_err(|err| {
                                 HintError::CustomHint(
                                     format!("Syscall handler invocation error: {err}")

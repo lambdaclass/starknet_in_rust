@@ -84,6 +84,32 @@ impl PartialEq<[u8; 32]> for ClassHash {
 
 pub type CompiledClassHash = ClassHash;
 
+#[cfg(feature = "cairo-native")]
+pub(crate) static NATIVE_CONTEXT: std::sync::OnceLock<cairo_native::context::NativeContext> =
+    std::sync::OnceLock::new();
+
+/// Set the global native context.
+///
+/// Use this function to set the global native context. It must be called before anything else to
+/// avoid the global context to be automatically initialized with a different context.
+///
+/// When using a program cache, the global native context should remain uninitialized.
+#[cfg(feature = "cairo-native")]
+pub fn set_native_context(
+    context: cairo_native::context::NativeContext,
+) -> Result<(), cairo_native::context::NativeContext> {
+    NATIVE_CONTEXT.set(context)
+}
+
+/// Return the global native context.
+///
+/// This function may initialize it with a new context if it wasn't already initialized.
+#[cfg(feature = "cairo-native")]
+pub fn get_native_context() -> &'static cairo_native::context::NativeContext {
+    use cairo_native::context::NativeContext;
+    NATIVE_CONTEXT.get_or_init(NativeContext::new)
+}
+
 //* -------------------
 //*      Address
 //* -------------------

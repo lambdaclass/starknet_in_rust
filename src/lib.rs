@@ -32,6 +32,13 @@ pub use cairo_lang_starknet::contract_class::ContractClass;
 pub use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 pub use cairo_vm::felt;
 
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 pub mod core;
 pub mod definitions;
 pub mod execution;
@@ -56,6 +63,9 @@ pub fn simulate_transaction<S: StateReader>(
     skip_fee_transfer: bool,
     ignore_max_fee: bool,
     skip_nonce_check: bool,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
     let mut cache_state = CachedState::new(Arc::new(state), HashMap::new());
     let mut result = Vec::with_capacity(transactions.len());
@@ -67,8 +77,13 @@ pub fn simulate_transaction<S: StateReader>(
             ignore_max_fee,
             skip_nonce_check,
         );
-        let tx_result =
-            tx_for_simulation.execute(&mut cache_state, block_context, remaining_gas)?;
+        let tx_result = tx_for_simulation.execute(
+            &mut cache_state,
+            block_context,
+            remaining_gas,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+        )?;
         result.push(tx_result);
     }
 
@@ -80,6 +95,9 @@ pub fn estimate_fee<T>(
     transactions: &[Transaction],
     mut cached_state: CachedState<T>,
     block_context: &BlockContext,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<Vec<(u128, usize)>, TransactionError>
 where
     T: StateReader,
@@ -93,8 +111,13 @@ where
         // This is important, since we're interested in the fee estimation even if the account does not currently have sufficient funds.
         let tx_for_simulation = transaction.create_for_simulation(false, false, true, true, false);
 
-        let transaction_result =
-            tx_for_simulation.execute(&mut cached_state, block_context, 100_000_000)?;
+        let transaction_result = tx_for_simulation.execute(
+            &mut cached_state,
+            block_context,
+            100_000_000,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+        )?;
         if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
             result.push((transaction_result.actual_fee, *gas_usage));
         } else {
@@ -114,6 +137,9 @@ pub fn call_contract<T: StateReader>(
     state: &mut CachedState<T>,
     block_context: BlockContext,
     caller_address: Address,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<Vec<Felt252>, TransactionError> {
     let contract_address = Address(contract_address);
     let class_hash = state.get_class_hash_at(&contract_address)?;
@@ -154,6 +180,8 @@ pub fn call_contract<T: StateReader>(
         &mut tx_execution_context,
         false,
         block_context.invoke_tx_max_n_steps,
+        #[cfg(feature = "cairo-native")]
+        program_cache,
     )?;
 
     let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
@@ -165,6 +193,9 @@ pub fn estimate_message_fee<T>(
     l1_handler: &L1Handler,
     state: T,
     block_context: &BlockContext,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<(u128, usize), TransactionError>
 where
     T: StateReader,
@@ -176,7 +207,13 @@ where
     cached_state.get_class_hash_at(l1_handler.contract_address())?;
 
     // execute the transaction with the fake state.
-    let transaction_result = l1_handler.execute(&mut cached_state, block_context, 1_000_000)?;
+    let transaction_result = l1_handler.execute(
+        &mut cached_state,
+        block_context,
+        1_000_000,
+        #[cfg(feature = "cairo-native")]
+        program_cache,
+    )?;
     let tx_fee = calculate_tx_fee(
         &transaction_result.actual_resources,
         block_context.starknet_os_config.gas_price,
@@ -194,8 +231,17 @@ pub fn execute_transaction<S: StateReader>(
     state: &mut CachedState<S>,
     block_context: BlockContext,
     remaining_gas: u128,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    tx.execute(state, &block_context, remaining_gas)
+    tx.execute(
+        state,
+        &block_context,
+        remaining_gas,
+        #[cfg(feature = "cairo-native")]
+        program_cache,
+    )
 }
 
 #[cfg(test)]
@@ -287,7 +333,14 @@ mod test {
         .unwrap();
         let transaction = Transaction::InvokeFunction(invoke_function);
 
-        let estimated_fee = estimate_fee(&[transaction], state, &block_context).unwrap();
+        let estimated_fee = estimate_fee(
+            &[transaction],
+            state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
         assert_eq!(estimated_fee[0], (2483, 2448));
     }
 
@@ -327,6 +380,8 @@ mod test {
             &mut state,
             BlockContext::default(),
             Address(0.into()),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -381,7 +436,14 @@ mod test {
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
 
-        let estimated_fee = estimate_message_fee(&l1_handler, state, &block_context).unwrap();
+        let estimated_fee = estimate_message_fee(
+            &l1_handler,
+            state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
         assert_eq!(estimated_fee, (18485, 18471));
     }
 
@@ -438,6 +500,8 @@ mod test {
                 &mut state,
                 &mut ExecutionResourcesManager::default(),
                 &block_context,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
 
@@ -559,6 +623,8 @@ mod test {
             true,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -661,6 +727,8 @@ mod test {
             true,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -706,6 +774,8 @@ mod test {
             false,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -743,6 +813,8 @@ mod test {
             false,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -773,7 +845,14 @@ mod test {
         )
         .unwrap();
 
-        let _deploy_exec_info = deploy.execute(&mut state, &block_context).unwrap();
+        let _deploy_exec_info = deploy
+            .execute(
+                &mut state,
+                &block_context,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .unwrap();
 
         let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
         let calldata = vec![
@@ -806,6 +885,8 @@ mod test {
             false,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -829,7 +910,7 @@ mod test {
             DeployAccount::new(
                 CLASS_HASH.to_owned(),
                 0,
-                0.into(),
+                1.into(),
                 Felt252::zero(),
                 vec![],
                 SIGNATURE.clone(),
@@ -849,6 +930,8 @@ mod test {
             false,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -863,8 +946,8 @@ mod test {
         DeclareV2 {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
-            version: 1.into(),
-            max_fee: INITIAL_GAS_COST,
+            version: 2.into(),
+            max_fee: 2900,
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),
@@ -875,6 +958,7 @@ mod test {
             skip_execute: false,
             skip_fee_transfer: false,
             skip_validate: false,
+            skip_nonce_check: false,
         }
     }
 
@@ -893,6 +977,8 @@ mod test {
             true,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -961,6 +1047,8 @@ mod test {
             false,
             false, // won't have any effect
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -1018,11 +1106,20 @@ mod test {
             false,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
         assert_eq!(
-            estimate_fee(&[deploy, invoke_tx], state, block_context,).unwrap(),
+            estimate_fee(
+                &[deploy, invoke_tx],
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .unwrap(),
             [(0, 1836), (0, 2448)]
         );
     }
@@ -1037,7 +1134,13 @@ mod test {
         let declare_tx = Transaction::DeclareV2(Box::new(declare_v2));
 
         let err = declare_tx
-            .execute(&mut state, &block_context, INITIAL_GAS_COST)
+            .execute(
+                &mut state,
+                &block_context,
+                INITIAL_GAS_COST,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap_err();
 
         assert_eq!(
@@ -1141,6 +1244,8 @@ mod test {
             true,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()[0]
             .actual_fee;
@@ -1155,6 +1260,8 @@ mod test {
             true,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()[0]
             .actual_fee;

@@ -79,7 +79,13 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
             ADDR_IS_250 => other_syscalls::addr_is_250(vm, hint_data),
             DEPLOY => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.deploy(vm, syscall_ptr)
+                self.syscall_handler.deploy(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
             }
             EMIT_EVENT_CODE => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -103,16 +109,33 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
             }
             LIBRARY_CALL => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.library_call(vm, syscall_ptr)
+                self.syscall_handler.library_call(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
             }
             LIBRARY_CALL_L1_HANDLER => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler
-                    .library_call_l1_handler(vm, syscall_ptr)
+                self.syscall_handler.library_call_l1_handler(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
             }
             CALL_CONTRACT => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.call_contract(vm, syscall_ptr)
+                self.syscall_handler.call_contract(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
             }
             STORAGE_READ => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -140,11 +163,23 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
             }
             DELEGATE_CALL => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.delegate_call(vm, syscall_ptr)
+                self.syscall_handler.delegate_call(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
             }
             DELEGATE_L1_HANDLER => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.delegate_l1_handler(vm, syscall_ptr)
+                self.syscall_handler.delegate_l1_handler(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
             }
             REPLACE_CLASS => {
                 let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
@@ -1186,7 +1221,13 @@ mod tests {
         let mut transactional = state.create_transactional();
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut transactional, &BlockContext::default(), 0)
+            .apply(
+                &mut transactional,
+                &BlockContext::default(),
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         state

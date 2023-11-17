@@ -6,23 +6,33 @@ pub mod error;
 pub mod fee;
 pub mod invoke_function;
 pub mod l1_handler;
-mod verify_version;
 
+use cairo_vm::felt::Felt252;
 pub use declare::Declare;
 pub use declare_v2::DeclareV2;
 pub use deploy::Deploy;
 pub use deploy_account::DeployAccount;
 pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
-pub use verify_version::verify_version;
+use num_traits::{One, Zero};
 
 use crate::{
-    definitions::block_context::BlockContext,
+    definitions::{
+        block_context::BlockContext,
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    },
     execution::TransactionExecutionInfo,
     state::{cached_state::CachedState, state_api::StateReader},
     utils::Address,
 };
 use error::TransactionError;
+
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
@@ -71,14 +81,49 @@ impl Transaction {
         state: &mut CachedState<S>,
         block_context: &BlockContext,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Declare(tx) => tx.execute(state, block_context),
-            Transaction::DeclareV2(tx) => tx.execute(state, block_context),
-            Transaction::Deploy(tx) => tx.execute(state, block_context),
-            Transaction::DeployAccount(tx) => tx.execute(state, block_context),
-            Transaction::InvokeFunction(tx) => tx.execute(state, block_context, remaining_gas),
-            Transaction::L1Handler(tx) => tx.execute(state, block_context, remaining_gas),
+            Transaction::Declare(tx) => tx.execute(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::DeclareV2(tx) => tx.execute(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::Deploy(tx) => tx.execute(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::DeployAccount(tx) => tx.execute(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::InvokeFunction(tx) => tx.execute(
+                state,
+                block_context,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            Transaction::L1Handler(tx) => tx.execute(
+                state,
+                block_context,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
         }
     }
 
@@ -101,12 +146,14 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::DeclareV2(tx) => tx.create_for_simulation(
                 skip_validate,
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::Deploy(tx) => {
                 tx.create_for_simulation(skip_validate, skip_execute, skip_fee_transfer)
@@ -116,6 +163,7 @@ impl Transaction {
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
+                skip_nonce_check,
             ),
             Transaction::InvokeFunction(tx) => tx.create_for_simulation(
                 skip_validate,
@@ -126,5 +174,16 @@ impl Transaction {
             ),
             Transaction::L1Handler(tx) => tx.create_for_simulation(skip_validate, skip_execute),
         }
+    }
+}
+
+// Parses query tx versions into their normal counterpart
+// This is used to execute old transactions an may be removed in the future as its not part of the current standard implementation
+fn get_tx_version(version: Felt252) -> Felt252 {
+    match version {
+        version if version == *QUERY_VERSION_0 => Felt252::zero(),
+        version if version == *QUERY_VERSION_1 => Felt252::one(),
+        version if version == *QUERY_VERSION_2 => 2.into(),
+        version => version,
     }
 }

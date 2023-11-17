@@ -243,6 +243,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
             &mut self.tx_execution_context,
             false,
             self.block_context.invoke_tx_max_n_steps,
+            Some(self.program_cache.clone()),
         )?;
 
         let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
@@ -297,7 +298,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         );
 
         let ExecutionResult { call_info, .. } = exec_entry_point
-            .execute_with_native_cache(
+            .execute(
                 self.starknet_storage_state.state,
                 // TODO: This fields dont make much sense in the Cairo Native context,
                 // they are only dummy values for the `execute` method.
@@ -306,7 +307,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
-                self.program_cache.clone(),
+                Some(self.program_cache.clone()),
             )
             .unwrap();
 
@@ -649,6 +650,7 @@ where
                 &mut self.tx_execution_context,
                 false,
                 u64::MAX,
+                Some(self.program_cache.clone()),
             )
             .map_err(|_| StateError::ExecutionEntryPoint())?;
 
