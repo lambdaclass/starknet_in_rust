@@ -48,7 +48,7 @@ fn integration_test() {
     //  ------------ contract data --------------------
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(
@@ -154,7 +154,7 @@ fn integration_test_cairo1() {
     let mut contract_class_cache = HashMap::new();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
     contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));

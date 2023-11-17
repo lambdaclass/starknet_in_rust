@@ -659,7 +659,7 @@ mod tests {
         },
         state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
-        utils::calculate_sn_keccak,
+        utils::{calculate_sn_keccak, ClassHash},
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use num_traits::Num;
@@ -764,7 +764,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -847,7 +847,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -921,7 +921,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -989,7 +989,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -1068,7 +1068,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -1116,7 +1116,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contact_state
         let nonce = Felt252::zero();
@@ -1206,7 +1206,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -1282,7 +1282,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -1359,7 +1359,7 @@ mod tests {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contact_state
         let contract_address = Address(0.into());
@@ -1506,7 +1506,7 @@ mod tests {
         };
 
         let mut state_reader = InMemoryStateReader::default();
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let program_data = include_bytes!("../../starknet_programs/cairo1/factorial.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let contract_address = Address(0.into());

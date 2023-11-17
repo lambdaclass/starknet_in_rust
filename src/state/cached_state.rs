@@ -22,7 +22,7 @@ use std::{
 
 pub type ContractClassCache = HashMap<ClassHash, CompiledClass>;
 
-pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &[0u8; 32];
+pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &ClassHash([0u8; 32]);
 
 /// Represents a cached state of contract classes with optional caches.
 #[derive(Default, Clone, Debug, Eq, Getters, MutGetters, PartialEq)]
@@ -260,8 +260,8 @@ impl<T: StateReader> State for CachedState<T> {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
-        let class_hash = class_hash.to_be_bytes();
-        let compiled_class_hash = compiled_class_hash.to_be_bytes();
+        let class_hash = ClassHash::from(class_hash.clone());
+        let compiled_class_hash = ClassHash::from(compiled_class_hash.clone());
 
         self.cache
             .compiled_class_hash_writes
@@ -405,7 +405,7 @@ impl<T: StateReader> State for CachedState<T> {
             None => {
                 self.add_miss();
                 let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
-                let address = Address(Felt252::from_bytes_be(&compiled_class_hash));
+                let address = Address(Felt252::from_bytes_be(compiled_class_hash.to_bytes_be()));
                 self.cache
                     .class_hash_initial_values
                     .insert(address, compiled_class_hash);
@@ -562,7 +562,7 @@ mod tests {
         );
 
         let contract_address = Address(4242.into());
-        let class_hash = [3; 32];
+        let class_hash: ClassHash = ClassHash([3; 32]);
         let nonce = Felt252::new(47602);
         let storage_entry = (contract_address.clone(), [101; 32]);
         let storage_value = Felt252::new(1);
@@ -605,19 +605,22 @@ mod tests {
             ContractClass::from_path("starknet_programs/raw_contract_classes/class_with_abi.json")
                 .unwrap();
 
-        state_reader
-            .class_hash_to_compiled_class
-            .insert([1; 32], CompiledClass::Deprecated(Arc::new(contract_class)));
+        state_reader.class_hash_to_compiled_class.insert(
+            ClassHash([1; 32]),
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         cached_state.set_contract_classes(HashMap::new()).unwrap();
 
         assert_eq!(
-            cached_state.get_contract_class(&[1; 32]).unwrap(),
+            cached_state
+                .get_contract_class(&ClassHash([1; 32]))
+                .unwrap(),
             cached_state
                 .state_reader
-                .get_contract_class(&[1; 32])
+                .get_contract_class(&ClassHash([1; 32]))
                 .unwrap()
         );
     }
@@ -651,7 +654,7 @@ mod tests {
         let mut cached_state = CachedState::new(state_reader, HashMap::new());
 
         assert!(cached_state
-            .deploy_contract(contract_address, [10; 32])
+            .deploy_contract(contract_address, ClassHash([10; 32]))
             .is_ok());
     }
 
@@ -698,7 +701,7 @@ mod tests {
         let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         let result = cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
+            .deploy_contract(contract_address.clone(), ClassHash([10; 32]))
             .unwrap_err();
 
         assert_matches!(
@@ -723,10 +726,10 @@ mod tests {
         let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
+            .deploy_contract(contract_address.clone(), ClassHash([10; 32]))
             .unwrap();
         let result = cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
+            .deploy_contract(contract_address.clone(), ClassHash([10; 32]))
             .unwrap_err();
 
         assert_matches!(
@@ -751,11 +754,11 @@ mod tests {
         let mut cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
 
         cached_state
-            .deploy_contract(contract_address.clone(), [10; 32])
+            .deploy_contract(contract_address.clone(), ClassHash([10; 32]))
             .unwrap();
 
         assert!(cached_state
-            .set_class_hash_at(contract_address.clone(), [12; 32])
+            .set_class_hash_at(contract_address.clone(), ClassHash([12; 32]))
             .is_ok());
 
         assert_matches!(
@@ -782,7 +785,7 @@ mod tests {
         let state_diff = StateDiff {
             address_to_class_hash: HashMap::from([(
                 address_one.clone(),
-                Felt252::one().to_be_bytes(),
+                ClassHash::from(Felt252::one()),
             )]),
             address_to_nonce: HashMap::from([(address_one.clone(), Felt252::one())]),
             class_hash_to_compiled_class: HashMap::new(),
@@ -801,6 +804,7 @@ mod tests {
                 .class_hash_writes
                 .get(&address_one)
                 .unwrap()
+                .to_bytes_be()
         )
         .is_one());
         assert!(cached_state.cache.storage_writes.is_empty());
@@ -874,7 +878,7 @@ mod tests {
         cached_state
             .cache
             .class_hash_writes
-            .insert(address.clone(), [0; 32]);
+            .insert(address.clone(), ClassHash([0; 32]));
         let _ = <CachedState<_> as State>::get_class_hash_at(&mut cached_state, &address);
         assert_eq!(cached_state.cache_misses, 1);
         assert_eq!(cached_state.cache_hits, 1);
