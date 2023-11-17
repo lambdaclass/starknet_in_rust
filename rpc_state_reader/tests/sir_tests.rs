@@ -41,7 +41,7 @@ pub struct RpcStateReader(RpcState);
 
 impl StateReader for RpcStateReader {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        let hash = SNClassHash(StarkHash::new(*class_hash).unwrap());
+        let hash = SNClassHash(StarkHash::new(class_hash.0).unwrap());
         Ok(CompiledClass::from(
             self.0.get_contract_class(&hash).unwrap(),
         ))
@@ -56,7 +56,7 @@ impl StateReader for RpcStateReader {
         );
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(self.0.get_class_hash_at(&address).0.bytes());
-        Ok(bytes)
+        Ok(ClassHash(bytes))
     }
 
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
@@ -83,7 +83,7 @@ impl StateReader for RpcStateReader {
         Ok(Felt252::from_bytes_be(value.bytes()))
     }
 
-    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
+    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         Ok(*class_hash)
     }
 }
@@ -156,7 +156,7 @@ pub fn execute_tx_configurable(
                 RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
             );
             let contract_class = next_block_state_reader
-                .get_contract_class(tx.class_hash().0.bytes().try_into().unwrap())
+                .get_contract_class(&ClassHash(tx.class_hash().0.bytes().try_into().unwrap()))
                 .unwrap();
 
             if tx.version() != TransactionVersion(2_u8.into()) {
@@ -177,7 +177,7 @@ pub fn execute_tx_configurable(
                         .collect(),
                     Felt252::from_bytes_be(tx.nonce().0.bytes()),
                     Felt252::from_bytes_be(tx_hash.0.bytes()),
-                    tx.class_hash().0.bytes().try_into().unwrap(),
+                    ClassHash(tx.class_hash().0.bytes().try_into().unwrap()),
                 )
                 .unwrap();
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)

@@ -7,6 +7,7 @@ use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_in_rust::execution::execution_entry_point::ExecutionResult;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -115,7 +116,7 @@ fn main() {
             //  ------------ contract data --------------------
 
             let address = Address(1111.into());
-            let class_hash = [1; 32];
+            let class_hash: ClassHash = ClassHash([1; 32]);
 
             contract_class_cache.insert(
                 class_hash,
@@ -166,7 +167,8 @@ fn main() {
             );
             let mut resources_manager = ExecutionResourcesManager::default();
 
-            let expected_key = calculate_sn_keccak("_counter".as_bytes());
+            let expected_key_bytes = calculate_sn_keccak("_counter".as_bytes());
+            let expected_key = ClassHash(expected_key_bytes);
 
             let mut expected_accessed_storage_keys = HashSet::new();
             expected_accessed_storage_keys.insert(expected_key);
@@ -205,7 +207,7 @@ fn main() {
                 state
                     .cache()
                     .storage_writes()
-                    .get(&(address, expected_key))
+                    .get(&(address, expected_key_bytes))
                     .cloned(),
                 Some(Felt252::from_bytes_be(data_to_ascii(data).as_bytes()))
             );

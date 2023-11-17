@@ -198,7 +198,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         match self
             .starknet_storage_state
             .state
-            .set_class_hash_at(self.contract_address.clone(), class_hash.to_be_bytes())
+            .set_class_hash_at(self.contract_address.clone(), ClassHash::from(class_hash))
         {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -228,7 +228,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            Some(class_hash.to_be_bytes()),
+            Some(ClassHash::from(class_hash)),
             *gas,
         );
 
@@ -336,10 +336,8 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
         tracing::debug!("Called `storage_read({address_domain}, {address})` from Cairo Native");
-
         self.handle_syscall_request(gas, "storage_read")?;
-
-        let value = match self.starknet_storage_state.read(&address.to_be_bytes()) {
+        let value = match self.starknet_storage_state.read(Address(address.clone())) {
             Ok(value) => Ok(value),
             Err(_e @ StateError::Io(_)) => todo!(),
             Err(_) => Ok(Felt252::zero()),
@@ -362,9 +360,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         );
 
         self.handle_syscall_request(gas, "storage_write")?;
-
-        self.starknet_storage_state
-            .write(&address.to_be_bytes(), value);
+        self.starknet_storage_state.write(Address(address), value);
         Ok(())
     }
 
