@@ -1018,7 +1018,14 @@ fn test_declare_tx() {
     // Check ContractClass is not set before the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_err());
     // Execute declare_tx
-    let result = declare_tx.execute(&mut state, &block_context).unwrap();
+    let result = declare_tx
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
@@ -1104,7 +1111,14 @@ fn test_declarev2_tx() {
         .get_contract_class(&felt_to_hash(&declare_tx.compiled_class_hash))
         .is_err());
     // Execute declare_tx
-    let result = declare_tx.execute(&mut state, &block_context).unwrap();
+    let result = declare_tx
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
     // Check ContractClass is set after the declare_tx
     assert!(state
         .get_contract_class(&declare_tx.compiled_class_hash.to_be_bytes())
@@ -1391,7 +1405,15 @@ fn test_invoke_tx() {
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
-    let result = invoke_tx.execute(state, block_context, 0).unwrap();
+    let result = invoke_tx
+        .execute(
+            state,
+            block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
     let expected_execution_info = expected_transaction_execution_info(block_context);
 
     assert_eq_sorted!(result, expected_execution_info);
@@ -1413,7 +1435,15 @@ fn test_invoke_tx_exceeded_max_fee() {
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
     // transaction.
-    let result = invoke_tx.execute(state, block_context, 0).unwrap();
+    let result = invoke_tx
+        .execute(
+            state,
+            block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
     let mut expected_result = expected_transaction_execution_info(block_context).to_revert_error(
         format!(
             "Calculated fee ({}) exceeds max fee ({})",
@@ -1496,7 +1526,13 @@ fn test_invoke_tx_state() {
     let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     let result = invoke_tx
-        .execute(state, starknet_general_context, 0)
+        .execute(
+            state,
+            starknet_general_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     let expected_final_state = expected_state_after_tx(result.actual_fee);
@@ -1561,11 +1597,25 @@ fn test_invoke_with_declarev2_tx() {
 
     // Declare the fibonacci contract
     let declare_tx = declarev2_tx();
-    declare_tx.execute(state, block_context).unwrap();
+    declare_tx
+        .execute(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     // Deploy the fibonacci contract
     let deploy = deploy_fib_syscall();
-    deploy.execute(state, block_context).unwrap();
+    deploy
+        .execute(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     let Address(test_contract_address) = TEST_FIB_CONTRACT_ADDRESS.clone();
     let calldata = vec![
@@ -1580,7 +1630,13 @@ fn test_invoke_with_declarev2_tx() {
 
     let expected_gas_consumed = 5551;
     let result = invoke_tx
-        .execute(state, block_context, expected_gas_consumed)
+        .execute(
+            state,
+            block_context,
+            expected_gas_consumed,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     let expected_execution_info = expected_fib_transaction_execution_info(block_context);
@@ -1622,7 +1678,12 @@ fn test_deploy_account() {
     assert_eq!(&state.contract_classes(), &state_before.contract_classes());
 
     let tx_info = deploy_account_tx
-        .execute(&mut state, &block_context)
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     use pretty_assertions_sorted::assert_eq_sorted;
@@ -1734,7 +1795,12 @@ fn test_deploy_account_revert() {
     assert!(&state.contract_classes().is_empty());
 
     let tx_info = deploy_account_tx
-        .execute(&mut state, &block_context)
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     assert!(tx_info.revert_error.is_some());
@@ -2011,7 +2077,14 @@ fn test_state_for_declare_tx() {
         .unwrap()
         .is_zero());
     // Execute declare_tx
-    assert!(declare_tx.execute(&mut state, &block_context).is_ok());
+    assert!(declare_tx
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .is_ok());
     assert!(state
         .get_nonce_at(&declare_tx.sender_address)
         .unwrap()
@@ -2195,7 +2268,13 @@ fn test_invoke_tx_wrong_call_data() {
     let invoke_tx = invoke_tx(calldata, u128::MAX);
 
     // Execute transaction
-    let result = invoke_tx.execute(state, starknet_general_context, 0);
+    let result = invoke_tx.execute(
+        state,
+        starknet_general_context,
+        0,
+        #[cfg(feature = "cairo-native")]
+        None,
+    );
 
     // Assert error
     assert_matches!(
@@ -2234,7 +2313,13 @@ fn test_invoke_tx_wrong_entrypoint() {
     .unwrap();
 
     // Execute transaction
-    let result = invoke_tx.execute(state, starknet_general_context, 0);
+    let result = invoke_tx.execute(
+        state,
+        starknet_general_context,
+        0,
+        #[cfg(feature = "cairo-native")]
+        None,
+    );
 
     // Assert error
     assert_matches!(result, Err(TransactionError::EntryPointNotFound));
@@ -2262,7 +2347,12 @@ fn test_deploy_undeclared_account() {
     assert!(state.get_contract_class(&not_deployed_class_hash).is_err());
 
     // Execute transaction
-    let result = deploy_account_tx.execute(&mut state, &block_context);
+    let result = deploy_account_tx.execute(
+        &mut state,
+        &block_context,
+        #[cfg(feature = "cairo-native")]
+        None,
+    );
 
     // Execute transaction
     assert_matches!(
@@ -2277,11 +2367,25 @@ fn test_library_call_with_declare_v2() {
 
     // Declare the fibonacci contract
     let declare_tx = declarev2_tx();
-    declare_tx.execute(state, block_context).unwrap();
+    declare_tx
+        .execute(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     // Deploy the fibonacci contract
     let deploy = deploy_fib_syscall();
-    deploy.execute(state, block_context).unwrap();
+    deploy
+        .execute(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     //  Create program and entry point types for contract class
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -2372,6 +2476,8 @@ fn test_library_call_with_declare_v2() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 

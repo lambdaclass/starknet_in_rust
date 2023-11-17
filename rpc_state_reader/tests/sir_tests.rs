@@ -238,7 +238,8 @@ pub fn execute_tx_configurable(
     );
 
     (
-        tx.execute(&mut state, &block_context, u128::MAX).unwrap(),
+        tx.execute(&mut state, &block_context, u128::MAX, None)
+            .unwrap(),
         trace,
         receipt,
     )

@@ -53,8 +53,8 @@ use std::{cell::RefCell, rc::Rc};
 use {
     crate::syscalls::native_syscall_handler::NativeSyscallHandler,
     cairo_native::{
-        context::NativeContext, execution_result::NativeExecutionResult,
-        metadata::syscall_handler::SyscallHandlerMeta, utils::felt252_bigint,
+        execution_result::NativeExecutionResult, metadata::syscall_handler::SyscallHandlerMeta,
+        utils::felt252_bigint,
     },
     serde_json::Value,
 };
@@ -118,6 +118,9 @@ impl ExecutionEntryPoint {
         tx_execution_context: &mut TransactionExecutionContext,
         support_reverted: bool,
         max_steps: u64,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
@@ -181,8 +184,11 @@ impl ExecutionEntryPoint {
             CompiledClass::Sierra(sierra_contract_class) => {
                 let mut transactional_state = state.create_transactional();
 
-                let native_context = NativeContext::new();
-                let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_context)));
+                let program_cache = program_cache.unwrap_or_else(|| {
+                    Rc::new(RefCell::new(ProgramCache::new(
+                        crate::utils::get_native_context(),
+                    )))
+                });
 
                 match self.native_execute(
                     &mut transactional_state,
@@ -663,13 +669,20 @@ impl ExecutionEntryPoint {
         class_hash: &[u8; 32],
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
+        use crate::{
+            syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
+        };
         use cairo_lang_sierra::{
             extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
             program_registry::ProgramRegistry,
         };
         use serde_json::json;
 
-        use crate::syscalls::business_logic_syscall_handler::SYSCALL_BASE;
+        // Ensure we're using the global context, if initialized.
+        if let Some(native_context) = NATIVE_CONTEXT.get() {
+            assert_eq!(program_cache.borrow().context(), native_context);
+        }
+
         let sierra_program = &sierra_program_and_entrypoints.0;
         let contract_entrypoints = &sierra_program_and_entrypoints.1;
 
@@ -706,7 +719,7 @@ impl ExecutionEntryPoint {
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
-        let syscall_handler = NativeSyscallHandler {
+        let mut syscall_handler = NativeSyscallHandler {
             starknet_storage_state: contract_storage_state,
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
@@ -727,7 +740,7 @@ impl ExecutionEntryPoint {
         native_executor
             .borrow_mut()
             .get_module_mut()
-            .insert_metadata(SyscallHandlerMeta::new(&syscall_handler));
+            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler));
 
         let syscall_addr = native_executor
             .borrow()
