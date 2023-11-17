@@ -141,13 +141,13 @@ fn call_contract_with_extra_arguments() {
     test_contract(
         "starknet_programs/syscalls.json",
         "test_call_contract",
-        [1; 32],
+        ClassHash([1; 32]),
         Address(1111.into()),
         Address(0.into()),
         BlockContext::default(),
         None,
         [(
-            [2u8; 32],
+            ClassHash([2u8; 32]),
             Path::new("starknet_programs/syscalls-lib.json"),
             Some((Address(2222.into()), vec![("lib_state", 10.into())])),
         )]
@@ -168,13 +168,13 @@ fn call_contract_not_deployed() {
     test_contract(
         "starknet_programs/syscalls.json",
         "test_call_contract",
-        [1; 32],
+        ClassHash([1; 32]),
         Address(1111.into()),
         Address(0.into()),
         BlockContext::default(),
         None,
         [(
-            [2u8; 32],
+            ClassHash([2u8; 32]),
             Path::new("starknet_programs/syscalls-lib.json"),
             Some((contract_address, vec![("lib_state", 10.into())])),
         )]
@@ -189,7 +189,7 @@ fn library_call_not_declared_contract() {
     test_contract(
         "starknet_programs/syscalls.json",
         "test_library_call",
-        [1; 32],
+        ClassHash([1; 32]),
         Address(1111.into()),
         Address(0.into()),
         BlockContext::default(),
@@ -202,18 +202,18 @@ fn library_call_not_declared_contract() {
 
 #[test]
 fn deploy_not_declared_class_hash() {
-    let not_declared_class_hash = [2u8; 32];
+    let not_declared_class_hash = ClassHash([2u8; 32]);
     test_contract(
         "starknet_programs/syscalls.json",
         "test_deploy",
-        [1; 32],
+        ClassHash([1; 32]),
         Address(11111.into()),
         Address(0.into()),
         BlockContext::default(),
         None,
         [].into_iter(),
         [
-            Felt252::from_bytes_be(not_declared_class_hash.as_ref()),
+            Felt252::from_bytes_be(not_declared_class_hash.to_bytes_be()),
             0.into(),
         ],
         &StateError::NoneCompiledHash(not_declared_class_hash).to_string(),
