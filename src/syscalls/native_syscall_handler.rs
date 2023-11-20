@@ -1,3 +1,4 @@
+use crate::ContractClassCache;
 use std::{cell::RefCell, rc::Rc};
 
 use cairo_native::{
@@ -36,11 +37,12 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct NativeSyscallHandler<'a, 'cache, S>
+pub struct NativeSyscallHandler<'a, 'cache, S, C>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
-    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     pub(crate) contract_address: Address,
     pub(crate) caller_address: Address,
     pub(crate) entry_point_selector: Felt252,
@@ -53,7 +55,7 @@ where
     pub(crate) program_cache: Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
 }
 
-impl<'a, 'cache, S: StateReader> NativeSyscallHandler<'a, 'cache, S> {
+impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a, 'cache, S, C> {
     /// Generic code that needs to be run on all syscalls.
     fn handle_syscall_request(&mut self, gas: &mut u128, syscall_name: &str) -> SyscallResult<()> {
         let required_gas = SYSCALL_GAS_COST
@@ -76,7 +78,9 @@ impl<'a, 'cache, S: StateReader> NativeSyscallHandler<'a, 'cache, S> {
     }
 }
 
-impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, 'cache, S> {
+impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
+    for NativeSyscallHandler<'a, 'cache, S, C>
+{
     fn get_block_hash(
         &mut self,
         block_number: u64,
@@ -591,9 +595,10 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
     }
 }
 
-impl<'a, 'cache, S> NativeSyscallHandler<'a, 'cache, S>
+impl<'a, 'cache, S, C> NativeSyscallHandler<'a, 'cache, S, C>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     fn execute_constructor_entry_point(
         &mut self,
@@ -618,7 +623,7 @@ where
 
         if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorCalldataEmpty());
+                return Err(StateError::ConstructorCalldataEmpty);
             }
 
             let call_info = CallInfo::empty_constructor_call(
@@ -652,7 +657,7 @@ where
                 u64::MAX,
                 Some(self.program_cache.clone()),
             )
-            .map_err(|_| StateError::ExecutionEntryPoint())?;
+            .map_err(|_| StateError::ExecutionEntryPoint)?;
 
         let call_info = call_info.ok_or(StateError::CustomError("Execution error".to_string()))?;
 

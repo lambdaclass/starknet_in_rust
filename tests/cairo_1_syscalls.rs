@@ -1,8 +1,3 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
-
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
     felt::{felt_str, Felt252},
@@ -11,6 +6,7 @@ use cairo_vm::{
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
+use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -20,11 +16,20 @@ use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::{cached_state::CachedState, state_api::StateReader},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        state_api::StateReader,
+        ExecutionResourcesManager,
+    },
     utils::{Address, ClassHash},
+    EntryPointType,
 };
-use starknet_in_rust::{utils::calculate_sn_keccak, EntryPointType};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 fn create_execute_extrypoint(
     address: Address,
@@ -60,13 +65,14 @@ fn storage_write_read() {
     let increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -76,7 +82,7 @@ fn storage_write_read() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -207,13 +213,14 @@ fn library_call() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -235,7 +242,7 @@ fn library_call() {
     let lib_class_hash: ClassHash = ClassHash([2; 32]);
     let lib_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         lib_class_hash,
         CompiledClass::Casm(Arc::new(lib_contract_class)),
     );
@@ -247,7 +254,7 @@ fn library_call() {
         .insert(lib_address, lib_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [
@@ -374,13 +381,14 @@ fn call_contract_storage_write_read() {
         &BigUint::from_bytes_be(&calculate_sn_keccak("increase_balance".as_bytes()));
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -411,7 +419,7 @@ fn call_contract_storage_write_read() {
     let simple_wallet_class_hash: ClassHash = ClassHash([2; 32]);
     let simple_wallet_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
         CompiledClass::Casm(Arc::new(simple_wallet_contract_class)),
     );
@@ -423,7 +431,7 @@ fn call_contract_storage_write_read() {
         .insert(simple_wallet_address.clone(), simple_wallet_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -571,13 +579,14 @@ fn emit_event() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -587,7 +596,7 @@ fn emit_event() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [].to_vec();
@@ -686,14 +695,15 @@ fn deploy_cairo1_from_cairo1() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.insert(
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Casm(Arc::new(test_contract_class.clone())),
     );
@@ -707,7 +717,7 @@ fn deploy_cairo1_from_cairo1() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -789,14 +799,15 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.insert(
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Deprecated(Arc::new(test_contract_class.clone())),
     );
@@ -810,7 +821,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -890,15 +901,16 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
     // simulate contract declare
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.insert(
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Deprecated(Arc::new(test_contract_class.clone())),
     );
@@ -912,7 +924,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt, address.0.clone(), Felt252::zero()].to_vec();
@@ -994,14 +1006,15 @@ fn deploy_cairo0_and_invoke() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.insert(
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Deprecated(Arc::new(test_contract_class.clone())),
     );
@@ -1015,7 +1028,8 @@ fn deploy_cairo0_and_invoke() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state: CachedState<_> = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state: CachedState<_, _> =
+        CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // arguments of deploy contract
     let calldata: Vec<_> = [test_felt_hash, salt].to_vec();
@@ -1123,13 +1137,14 @@ fn test_send_message_to_l1_syscall() {
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1140,7 +1155,7 @@ fn test_send_message_to_l1_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // RUN SEND_MSG
     // Create an execution entry point
@@ -1229,13 +1244,14 @@ fn test_get_execution_info() {
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -1245,7 +1261,7 @@ fn test_get_execution_info() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -1336,13 +1352,13 @@ fn replace_class_internal() {
     let upgrade_selector = &entrypoints_a.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash_a: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_a,
         CompiledClass::Casm(Arc::new(contract_class_a)),
     );
@@ -1363,13 +1379,13 @@ fn replace_class_internal() {
 
     let class_hash_b: ClassHash = ClassHash([2; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_b,
         CompiledClass::Casm(Arc::new(contract_class_b.clone())),
     );
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Run upgrade entrypoint and check that the storage was updated with the new contract class
     // Create an execution entry point
@@ -1440,13 +1456,13 @@ fn replace_class_contract_call() {
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_a: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_a,
         CompiledClass::Casm(Arc::new(contract_class_a)),
     );
@@ -1470,7 +1486,7 @@ fn replace_class_contract_call() {
 
     let class_hash_b: ClassHash = ClassHash([2; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_b,
         CompiledClass::Casm(Arc::new(contract_class_b)),
     );
@@ -1490,7 +1506,7 @@ fn replace_class_contract_call() {
     let wrapper_address = Address(Felt252::from(2));
     let wrapper_class_hash: ClassHash = ClassHash([3; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         wrapper_class_hash,
         CompiledClass::Casm(Arc::new(wrapper_contract_class)),
     );
@@ -1502,7 +1518,7 @@ fn replace_class_contract_call() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -1623,13 +1639,13 @@ fn replace_class_contract_call_same_transaction() {
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_a: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_a,
         CompiledClass::Casm(Arc::new(contract_class_a)),
     );
@@ -1653,7 +1669,7 @@ fn replace_class_contract_call_same_transaction() {
 
     let class_hash_b: ClassHash = ClassHash([2; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_b,
         CompiledClass::Casm(Arc::new(contract_class_b)),
     );
@@ -1672,7 +1688,7 @@ fn replace_class_contract_call_same_transaction() {
     let wrapper_address = Address(Felt252::from(2));
     let wrapper_class_hash: ClassHash = ClassHash([3; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         wrapper_class_hash,
         CompiledClass::Casm(Arc::new(wrapper_contract_class)),
     );
@@ -1684,7 +1700,7 @@ fn replace_class_contract_call_same_transaction() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -1748,13 +1764,13 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_c,
         CompiledClass::Deprecated(Arc::new(contract_class_c)),
     );
@@ -1778,7 +1794,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
 
     let class_hash_b: ClassHash = ClassHash::from(Felt252::from(2));
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_b,
         CompiledClass::Casm(Arc::new(contract_class_b)),
     );
@@ -1797,7 +1813,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let wrapper_address = Address(Felt252::from(2));
     let wrapper_class_hash: ClassHash = ClassHash([3; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         wrapper_class_hash,
         CompiledClass::Casm(Arc::new(wrapper_contract_class)),
     );
@@ -1809,7 +1825,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -1871,13 +1887,13 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_c,
         CompiledClass::Deprecated(Arc::new(contract_class_c)),
     );
@@ -1894,7 +1910,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
 
     let class_hash_b: ClassHash = ClassHash::from(Felt252::from(2));
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_b,
         CompiledClass::Casm(Arc::new(contract_class_b)),
     );
@@ -1920,7 +1936,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let wrapper_address = Address(Felt252::from(2));
     let wrapper_class_hash: ClassHash = ClassHash([3; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         wrapper_class_hash,
         CompiledClass::Casm(Arc::new(wrapper_contract_class)),
     );
@@ -1932,7 +1948,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -1994,13 +2010,13 @@ fn call_contract_replace_class_cairo_0() {
     let contract_class_c = ContractClass::from_path("starknet_programs/get_number_c.json").unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_c,
         CompiledClass::Deprecated(Arc::new(contract_class_c)),
     );
@@ -2013,7 +2029,7 @@ fn call_contract_replace_class_cairo_0() {
 
     let class_hash_d: ClassHash = ClassHash::from(Felt252::from(2));
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash_d,
         CompiledClass::Deprecated(Arc::new(contract_class_d)),
     );
@@ -2039,7 +2055,7 @@ fn call_contract_replace_class_cairo_0() {
     let wrapper_address = Address(Felt252::from(2));
     let wrapper_class_hash: ClassHash = ClassHash([3; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         wrapper_class_hash,
         CompiledClass::Casm(Arc::new(wrapper_contract_class)),
     );
@@ -2051,7 +2067,7 @@ fn call_contract_replace_class_cairo_0() {
         .insert(wrapper_address, nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // INITIALIZE STARKNET CONFIG
     let block_context = BlockContext::default();
@@ -2113,13 +2129,14 @@ fn test_out_of_gas_failure() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2129,7 +2146,7 @@ fn test_out_of_gas_failure() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [].to_vec();
@@ -2192,13 +2209,14 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2208,7 +2226,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [Felt252::zero()].to_vec();
@@ -2270,13 +2288,14 @@ fn deploy_syscall_failure_in_constructor() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2292,13 +2311,13 @@ fn deploy_syscall_failure_in_constructor() {
     let f_c_program_data = include_bytes!("../starknet_programs/cairo1/failing_constructor.casm");
     let f_c_contract_class: CasmContractClass = serde_json::from_slice(f_c_program_data).unwrap();
     let f_c_class_hash = Felt252::one();
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         ClassHash::from(f_c_class_hash.clone()),
         CompiledClass::Casm(Arc::new(f_c_contract_class)),
     );
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [f_c_class_hash].to_vec();
@@ -2362,13 +2381,14 @@ fn storage_read_no_value() {
     let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2378,7 +2398,7 @@ fn storage_read_no_value() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -2435,13 +2455,14 @@ fn storage_read_unavailable_address_domain() {
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2451,7 +2472,7 @@ fn storage_read_unavailable_address_domain() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -2511,13 +2532,14 @@ fn storage_write_unavailable_address_domain() {
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2527,7 +2549,7 @@ fn storage_write_unavailable_address_domain() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -2585,13 +2607,14 @@ fn library_call_failure() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2612,7 +2635,7 @@ fn library_call_failure() {
     let lib_class_hash: ClassHash = ClassHash([2; 32]);
     let lib_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         lib_class_hash,
         CompiledClass::Casm(Arc::new(lib_contract_class)),
     );
@@ -2624,7 +2647,7 @@ fn library_call_failure() {
         .insert(lib_address, lib_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash.0)].to_vec();
@@ -2699,13 +2722,14 @@ fn send_messages_to_l1_different_contract_calls() {
         .clone();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2726,7 +2750,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let send_msg_class_hash: ClassHash = ClassHash([2; 32]);
     let send_msg_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         send_msg_class_hash,
         CompiledClass::Casm(Arc::new(send_msg_contract_class)),
     );
@@ -2738,7 +2762,7 @@ fn send_messages_to_l1_different_contract_calls() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
@@ -2824,13 +2848,14 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         .clone();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2848,7 +2873,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     let send_msg_class_hash: ClassHash = ClassHash([2; 32]);
     let send_msg_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         send_msg_class_hash,
         CompiledClass::Deprecated(Arc::new(send_msg_contract_class)),
     );
@@ -2860,7 +2885,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
@@ -2941,13 +2966,13 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
         .to_owned();
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );
@@ -2971,7 +2996,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
     let send_msg_class_hash: ClassHash = ClassHash([2; 32]);
     let send_msg_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         send_msg_class_hash,
         CompiledClass::Casm(Arc::new(send_msg_contract_class)),
     );
@@ -2983,7 +3008,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
         .insert(send_msg_address, send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [25.into(), 50.into(), 75.into()].to_vec();
@@ -3063,13 +3088,14 @@ fn keccak_syscall() {
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3079,7 +3105,7 @@ fn keccak_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -3138,13 +3164,14 @@ fn library_call_recursive_50_calls() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3166,7 +3193,7 @@ fn library_call_recursive_50_calls() {
     let lib_class_hash: ClassHash = ClassHash([2; 32]);
     let lib_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         lib_class_hash,
         CompiledClass::Casm(Arc::new(lib_contract_class)),
     );
@@ -3178,7 +3205,7 @@ fn library_call_recursive_50_calls() {
         .insert(lib_address, lib_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [
@@ -3280,13 +3307,14 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     ));
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3317,7 +3345,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     let simple_wallet_class_hash: ClassHash = ClassHash([2; 32]);
     let simple_wallet_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
         CompiledClass::Casm(Arc::new(simple_wallet_contract_class)),
     );
@@ -3329,7 +3357,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
         .insert(simple_wallet_address.clone(), simple_wallet_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
@@ -3486,13 +3514,14 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     ));
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3523,7 +3552,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     let simple_wallet_class_hash: ClassHash = ClassHash([2; 32]);
     let simple_wallet_nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
         CompiledClass::Casm(Arc::new(simple_wallet_contract_class)),
     );
@@ -3535,7 +3564,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
         .insert(simple_wallet_address.clone(), simple_wallet_nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(

@@ -12,6 +12,7 @@ use crate::{
     },
     state::{
         cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
@@ -46,13 +47,11 @@ use cairo_vm::{
     },
 };
 use std::sync::Arc;
-#[cfg(feature = "cairo-native")]
-use std::{cell::RefCell, rc::Rc};
 
 #[cfg(feature = "cairo-native")]
 use {
     crate::syscalls::native_syscall_handler::NativeSyscallHandler,
-    cairo_native::metadata::syscall_handler::SyscallHandlerMeta,
+    cairo_native::metadata::syscall_handler::SyscallHandlerMeta, core::cell::RefCell, std::rc::Rc,
 };
 
 #[derive(Debug, Default)]
@@ -106,9 +105,9 @@ impl ExecutionEntryPoint {
     /// The information collected from this run (number of steps required, modifications to the
     /// contract storage, etc.) is saved on the resources manager.
     /// Returns a CallInfo object that represents the execution.
-    pub fn execute<T>(
+    pub fn execute<T, C>(
         &self,
-        state: &mut CachedState<T>,
+        state: &mut CachedState<T, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
         tx_execution_context: &mut TransactionExecutionContext,
@@ -120,6 +119,7 @@ impl ExecutionEntryPoint {
     ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
+        C: ContractClassCache,
     {
         // lookup the compiled class from the state.
         let class_hash = self.get_class_hash(state)?;
@@ -178,7 +178,7 @@ impl ExecutionEntryPoint {
             }
             #[cfg(feature = "cairo-native")]
             CompiledClass::Sierra(sierra_program_and_entrypoints) => {
-                let mut transactional_state = state.create_transactional();
+                let mut transactional_state = state.create_transactional()?;
 
                 let program_cache = program_cache.unwrap_or_else(|| {
                     Rc::new(RefCell::new(ProgramCache::new(
@@ -291,11 +291,11 @@ impl ExecutionEntryPoint {
             .ok_or(TransactionError::EntryPointNotFound)
     }
 
-    fn build_call_info_deprecated<S: StateReader>(
+    fn build_call_info_deprecated<S: StateReader, C: ContractClassCache>(
         &self,
         previous_cairo_usage: ExecutionResources,
         resources_manager: &ExecutionResourcesManager,
-        starknet_storage_state: ContractStorageState<S>,
+        starknet_storage_state: ContractStorageState<S, C>,
         events: Vec<OrderedEvent>,
         l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
         internal_calls: Vec<CallInfo>,
@@ -324,11 +324,11 @@ impl ExecutionEntryPoint {
         })
     }
 
-    fn build_call_info<S: StateReader>(
+    fn build_call_info<S: StateReader, C: ContractClassCache>(
         &self,
         previous_cairo_usage: ExecutionResources,
         resources_manager: &ExecutionResourcesManager,
-        starknet_storage_state: ContractStorageState<S>,
+        starknet_storage_state: ContractStorageState<S, C>,
         events: Vec<OrderedEvent>,
         l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
         internal_calls: Vec<CallInfo>,
@@ -383,9 +383,9 @@ impl ExecutionEntryPoint {
         get_deployed_address_class_hash_at_address(state, code_address)
     }
 
-    fn _execute_version0_class<S: StateReader>(
+    fn _execute_version0_class<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
@@ -406,7 +406,7 @@ impl ExecutionEntryPoint {
         // prepare OS context
         //let os_context = runner.prepare_os_context();
         let os_context =
-            StarknetRunner::<DeprecatedSyscallHintProcessor<S>>::prepare_os_context_cairo0(
+            StarknetRunner::<DeprecatedSyscallHintProcessor<S, C>>::prepare_os_context_cairo0(
                 &cairo_runner,
                 &mut vm,
             );
@@ -477,7 +477,7 @@ impl ExecutionEntryPoint {
 
         let retdata = runner.get_return_values()?;
 
-        self.build_call_info_deprecated::<S>(
+        self.build_call_info_deprecated::<S, C>(
             previous_cairo_usage,
             resources_manager,
             runner.hint_processor.syscall_handler.starknet_storage_state,
@@ -488,9 +488,9 @@ impl ExecutionEntryPoint {
         )
     }
 
-    fn _execute<S: StateReader>(
+    fn _execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
         tx_execution_context: &mut TransactionExecutionContext,
@@ -516,7 +516,7 @@ impl ExecutionEntryPoint {
         )?;
         validate_contract_deployed(state, &self.contract_address)?;
         // prepare OS context
-        let os_context = StarknetRunner::<SyscallHintProcessor<S>>::prepare_os_context_cairo1(
+        let os_context = StarknetRunner::<SyscallHintProcessor<S, C>>::prepare_os_context_cairo1(
             &cairo_runner,
             &mut vm,
             self.initial_gas.into(),
@@ -628,7 +628,7 @@ impl ExecutionEntryPoint {
         resources_manager.cairo_usage += &runner.get_execution_resources()?;
 
         let call_result = runner.get_call_result(self.initial_gas)?;
-        self.build_call_info::<S>(
+        self.build_call_info::<S, C>(
             previous_cairo_usage,
             resources_manager,
             runner.hint_processor.syscall_handler.starknet_storage_state,
@@ -642,9 +642,9 @@ impl ExecutionEntryPoint {
     #[cfg(not(feature = "cairo-native"))]
     #[inline(always)]
     #[allow(dead_code)]
-    fn native_execute<S: StateReader>(
+    fn native_execute<S: StateReader, C: ContractClassCache>(
         &self,
-        _state: &mut CachedState<S>,
+        _state: &mut CachedState<S, C>,
         _sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         _tx_execution_context: &mut TransactionExecutionContext,
         _block_context: &BlockContext,
@@ -656,9 +656,9 @@ impl ExecutionEntryPoint {
 
     #[cfg(feature = "cairo-native")]
     #[inline(always)]
-    fn native_execute<S: StateReader>(
+    fn native_execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         sierra_program_and_entrypoints: Arc<(SierraProgram, ContractEntryPoints)>,
         tx_execution_context: &TransactionExecutionContext,
         block_context: &BlockContext,
