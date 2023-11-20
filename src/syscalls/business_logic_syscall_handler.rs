@@ -727,7 +727,6 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
 
     // Returns the pointer to the segment with the execution info if it was already written.
     // If it wasn't, it writes the execution info into memory and returns its start address.
-    /// Gets execution info about the current transaction, block context, and contract details.
     fn get_or_allocate_execution_info(
         &mut self,
         vm: &mut VirtualMachine,
