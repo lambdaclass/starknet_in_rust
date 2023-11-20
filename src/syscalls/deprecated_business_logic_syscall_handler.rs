@@ -26,6 +26,7 @@ use crate::{
     },
     state::ExecutionResourcesManager,
     state::{
+        contract_class_cache::ContractClassCache,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
         BlockInfo,
@@ -44,12 +45,18 @@ use cairo_vm::{
 };
 use num_traits::{One, ToPrimitive, Zero};
 
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 //* -----------------------------------
 //* DeprecatedBLSyscallHandler implementation
 //* -----------------------------------
 /// Deprecated version of BusinessLogicSyscallHandler.
 #[derive(Debug)]
-pub struct DeprecatedBLSyscallHandler<'a, S: StateReader> {
+pub struct DeprecatedBLSyscallHandler<'a, S: StateReader, C: ContractClassCache> {
     /// Context of the transaction being executed
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
@@ -69,18 +76,18 @@ pub struct DeprecatedBLSyscallHandler<'a, S: StateReader> {
     /// Pointer to transaction information
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
     /// State of the storage related to Starknet contract
-    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     /// List of internal calls during the syscall execution
     pub(crate) internal_calls: Vec<CallInfo>,
     /// Get the expected pointer to the syscall
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
-impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S, C> {
     /// Constructor creates a new [DeprecatedBLSyscallHandler] instance
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -112,7 +119,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     }
 
     /// Constructor with default values, used for testing
-    pub fn default_with(state: &'a mut CachedState<S>) -> Self {
+    pub fn default_with(state: &'a mut CachedState<S, C>) -> Self {
         DeprecatedBLSyscallHandler::new_for_testing(BlockInfo::default(), Default::default(), state)
     }
 
@@ -128,7 +135,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
     ) -> Self {
         let syscalls = Vec::from([
             // Emits an event with a given set of keys and data.
@@ -217,6 +224,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(_) => Err(ContractClassError::NotADeprecatedContractClass.into()),
         }
     }
 
@@ -226,6 +234,9 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         contract_address: &Address,
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), StateError> {
         let contract_class = self
             .starknet_storage_state
@@ -234,7 +245,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 
         if self.constructor_entry_points_empty(contract_class)? {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorCalldataEmpty());
+                return Err(StateError::ConstructorCalldataEmpty);
             }
 
             let call_info = CallInfo::empty_constructor_call(
@@ -268,8 +279,10 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )
-            .map_err(|_| StateError::ExecutionEntryPoint())?;
+            .map_err(|_| StateError::ExecutionEntryPoint)?;
 
         if let Some(call_info) = call_info.call_info {
             self.internal_calls.push(call_info);
@@ -279,7 +292,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S, C> {
     /// Emits an event with a given set of keys and data.
     pub(crate) fn emit_event(
         &mut self,
@@ -324,6 +337,9 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<Address, SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::Deploy(request) => request,
@@ -376,6 +392,8 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
             &deploy_contract_address,
             class_hash_bytes,
             constructor_calldata,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
         Ok(deploy_contract_address)
     }
@@ -386,6 +404,9 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         syscall_name: &str,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<Vec<Felt252>, SyscallHandlerError> {
         let request = self.read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
@@ -486,6 +507,8 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )
             .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))?;
 
@@ -528,8 +551,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("delegate_l1_handler", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "delegate_l1_handler",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     /// Gets the address of the contract who raised the system call.
@@ -634,7 +666,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     /// Performs a storage write operation.
     pub(crate) fn storage_write(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request =
@@ -658,8 +690,16 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        let contract_address = self.syscall_deploy(vm, syscall_ptr)?;
+        let contract_address = self.syscall_deploy(
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )?;
 
         let response = DeprecatedDeployResponse::new(
             contract_address.0,
@@ -680,8 +720,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         syscall_name: &str,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        let retdata = self.syscall_call_contract(syscall_name, vm, syscall_ptr)?;
+        let retdata = self.syscall_call_contract(
+            syscall_name,
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )?;
 
         let retdata_maybe_reloc = retdata
             .clone()
@@ -832,8 +881,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("library_call", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "library_call",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     /// Calls the requested function specific to an L1 handler
@@ -841,8 +899,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("library_call_l1_handler", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "library_call_l1_handler",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     /// Executes a contract call
@@ -850,8 +917,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("call_contract", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "call_contract",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     /// Executes a delegate call
@@ -859,8 +935,17 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
-        self.call_contract_and_write_response("delegate_call", vm, syscall_ptr)
+        self.call_contract_and_write_response(
+            "delegate_call",
+            vm,
+            syscall_ptr,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     /// Reads a value from the storage state using the specified address.
@@ -868,9 +953,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         &mut self,
         address: Address,
     ) -> Result<Felt252, SyscallHandlerError> {
-        Ok(self
-            .starknet_storage_state
-            .read(&felt_to_hash(&address.0))?)
+        Ok(self.starknet_storage_state.read(address)?)
     }
 
     /// Writes a value to the storage state using the specified address.
@@ -879,9 +962,8 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
         address: Address,
         value: Felt252,
     ) -> Result<(), SyscallHandlerError> {
-        let address = felt_to_hash(&address.0);
-        self.starknet_storage_state.read(&address)?;
-        self.starknet_storage_state.write(&address, value);
+        self.starknet_storage_state.read(address.clone())?;
+        self.starknet_storage_state.write(address, value);
 
         Ok(())
     }
@@ -942,7 +1024,7 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
     /// Replaces class at the specified address with a new one based on the request.
     pub(crate) fn replace_class(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("replace_class", vm, syscall_ptr)
@@ -984,9 +1066,12 @@ impl<'a, S: StateReader> DeprecatedBLSyscallHandler<'a, S> {
 mod tests {
     use crate::{
         state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         syscalls::syscall_handler_errors::SyscallHandlerError,
-        utils::{felt_to_hash, test_utils::*, Address},
+        utils::{test_utils::*, Address},
     };
     use cairo_vm::felt::Felt252;
     use cairo_vm::hint_processor::hint_processor_definition::HintProcessorLogic;
@@ -1005,7 +1090,7 @@ mod tests {
     use std::{any::Any, borrow::Cow, collections::HashMap, sync::Arc};
 
     type DeprecatedBLSyscallHandler<'a> =
-        super::DeprecatedBLSyscallHandler<'a, InMemoryStateReader>;
+        super::DeprecatedBLSyscallHandler<'a, InMemoryStateReader, PermanentContractClassCache>;
 
     /// Tests that the hint application doesn't allow inconsistency in memory.
     #[test]
@@ -1028,7 +1113,7 @@ mod tests {
     /// Tests error handling when trying to deploy from address zero.
     #[test]
     fn deploy_from_zero_error() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
@@ -1047,7 +1132,12 @@ mod tests {
         );
 
         assert_matches!(
-            syscall.syscall_deploy(&vm, relocatable!(1, 0)),
+            syscall.syscall_deploy(
+                &vm,
+                relocatable!(1, 0),
+                #[cfg(feature = "cairo-native")]
+                None,
+            ),
             Err(SyscallHandlerError::DeployFromZero(4))
         )
     }
@@ -1055,7 +1145,7 @@ mod tests {
     /// Tests if a segment can be allocated successfully.
     #[test]
     fn can_allocate_segment() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         let data = vec![MaybeRelocatable::Int(7.into())];
@@ -1072,7 +1162,7 @@ mod tests {
     /// Tests if the block number can be retrieved successfully.
     #[test]
     fn test_get_block_number() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
@@ -1093,7 +1183,7 @@ mod tests {
     /// Tests if the contract address can be retrieved successfully.
     #[test]
     fn test_get_contract_address_ok() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 
@@ -1111,7 +1201,7 @@ mod tests {
     /// Tests if the empty storage read returns zero.
     #[test]
     fn test_storage_read_empty() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
 
         assert_matches!(
@@ -1125,11 +1215,14 @@ mod tests {
         // Initialize state reader with value
         let mut state_reader = InMemoryStateReader::default();
         state_reader.address_to_storage.insert(
-            (Address(Felt252::one()), felt_to_hash(&Felt252::one())),
+            (Address(Felt252::one()), Felt252::one().to_be_bytes()),
             Felt252::zero(),
         );
         // Create empty-cached state
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         // Perform write
         assert!(syscall_handler
@@ -1139,7 +1232,7 @@ mod tests {
         assert_eq!(
             state.cache().storage_initial_values,
             HashMap::from([(
-                (Address(Felt252::one()), felt_to_hash(&Felt252::one())),
+                (Address(Felt252::one()), Felt252::one().to_be_bytes()),
                 Felt252::zero()
             )])
         )

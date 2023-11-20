@@ -1,16 +1,13 @@
-use std::{collections::HashMap, sync::Arc};
-
 use lazy_static::lazy_static;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-    },
-    state::{
-        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
-    },
+    services::api::contract_classes::compiled_class::CompiledClass,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
+    state::{contract_class_cache::PermanentContractClassCache, state_api::State},
     transaction::{Deploy, Transaction},
 };
+use std::sync::Arc;
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
@@ -32,7 +29,10 @@ fn main() {
     let block_context = BlockContext::default();
     let state_reader = Arc::new(InMemoryStateReader::default());
 
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
     let call_data = vec![];
 
     for n in 0..RUNS {
@@ -55,6 +55,13 @@ fn main() {
             .unwrap();
         let tx = Transaction::Deploy(deploy);
 
-        tx.execute(&mut state, &block_context, 0).unwrap();
+        tx.execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
     }
 }

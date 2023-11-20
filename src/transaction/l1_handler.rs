@@ -12,6 +12,7 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
         cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
@@ -22,8 +23,16 @@ use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
 #[allow(dead_code)]
 #[derive(Debug, Getters, Clone)]
+/// Represents an L1Handler transaction in the StarkNet network.
 pub struct L1Handler {
     #[getset(get = "pub")]
     hash_value: Felt252,
@@ -38,6 +47,7 @@ pub struct L1Handler {
 }
 
 impl L1Handler {
+    /// Constructor creates a new [L1Handler] instance.
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt252,
@@ -66,7 +76,12 @@ impl L1Handler {
             hash_value,
         )
     }
-
+    /// Creates a new [L1Handler] instance with a specified transaction hash.
+    ///
+    /// # Safety
+    ///
+    /// `tx_hash` will be assumed to be the same as would result from calling
+    /// `calculate_transaction_hash_common`. Non-compliance will result in silent misbehavior.
     pub fn new_with_tx_hash(
         contract_address: Address,
         entry_point_selector: Felt252,
@@ -88,18 +103,21 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::L1Handler,
         self.hash_value = ?self.hash_value,
         self.contract_address = ?self.contract_address,
         self.entry_point_selector = ?self.entry_point_selector,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let entrypoint = ExecutionEntryPoint::new(
@@ -127,10 +145,12 @@ impl L1Handler {
                 &mut self.get_execution_context(block_context.invoke_tx_max_n_steps)?,
                 true,
                 block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )?
         };
 
-        let changes = state.count_actual_storage_changes(None)?;
+        let changes = state.count_actual_state_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
@@ -191,11 +211,9 @@ impl L1Handler {
             L1_HANDLER_VERSION.into(),
         ))
     }
-    pub(crate) fn create_for_simulation(
-        &self,
-        skip_validate: bool,
-        skip_execute: bool,
-    ) -> Transaction {
+
+    /// Creates a L1Handler for simulation purposes.
+    pub fn create_for_simulation(&self, skip_validate: bool, skip_execute: bool) -> Transaction {
         let tx = L1Handler {
             skip_validate,
             skip_execute,
@@ -204,36 +222,57 @@ impl L1Handler {
 
         Transaction::L1Handler(tx)
     }
+
+    /// Creates a `L1Handler` from a starknet api `L1HandlerTransaction`.
+    pub fn from_sn_api_tx(
+        tx: starknet_api::transaction::L1HandlerTransaction,
+        tx_hash: Felt252,
+        paid_fee_on_l1: Option<Felt252>,
+    ) -> Result<Self, TransactionError> {
+        L1Handler::new_with_tx_hash(
+            Address(Felt252::from_bytes_be(tx.contract_address.0.key().bytes())),
+            Felt252::from_bytes_be(tx.entry_point_selector.0.bytes()),
+            tx.calldata
+                .0
+                .as_ref()
+                .iter()
+                .map(|f| Felt252::from_bytes_be(f.bytes()))
+                .collect(),
+            Felt252::from_bytes_be(tx.nonce.0.bytes()),
+            paid_fee_on_l1,
+            tx_hash,
+        )
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use crate::{
+        definitions::{block_context::BlockContext, transaction_type::TransactionType},
+        execution::{CallInfo, TransactionExecutionInfo},
+        services::api::contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader, state_api::State,
+        },
+        transaction::l1_handler::L1Handler,
+        utils::{Address, ClassHash},
+    };
     use std::{
         collections::{HashMap, HashSet},
         sync::Arc,
     };
 
-    use crate::services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
-    };
     use cairo_vm::{
         felt::{felt_str, Felt252},
         vm::runners::cairo_runner::ExecutionResources,
     };
     use num_traits::{Num, Zero};
 
-    use crate::{
-        definitions::{block_context::BlockContext, transaction_type::TransactionType},
-        execution::{CallInfo, TransactionExecutionInfo},
-        services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-            state_api::State,
-        },
-        transaction::l1_handler::L1Handler,
-        utils::Address,
-    };
-
+    /// Test the correct execution of the L1Handler.
     #[test]
     fn test_execute_l1_handler() {
         let l1_handler = L1Handler::new(
@@ -257,9 +296,9 @@ mod test {
         // Instantiate CachedState
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
-        let class_hash = [1; 32];
+        let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
-        // Set contact_state
+        // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::zero();
 
@@ -270,10 +309,10 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let mut state = CachedState::new(Arc::new(state_reader), HashMap::new());
-
-        // Initialize state.contract_classes
-        state.set_contract_classes(HashMap::new()).unwrap();
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         state
             .set_contract_class(
@@ -286,13 +325,21 @@ mod test {
         block_context.starknet_os_config.gas_price = 1;
 
         let tx_exec = l1_handler
-            .execute(&mut state, &block_context, 100000)
+            .execute(
+                &mut state,
+                &block_context,
+                100000,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         let expected_tx_exec = expected_tx_exec_info();
         assert_eq!(tx_exec, expected_tx_exec)
     }
 
+    /// Helper function to construct the expected transaction execution info.
+    /// Expected output of the L1Handler's execution.
     fn expected_tx_exec_info() -> TransactionExecutionInfo {
         TransactionExecutionInfo {
             validate_info: None,
@@ -301,10 +348,10 @@ mod test {
                 call_type: Some(crate::execution::CallType::Call),
                 contract_address: Address(0.into()),
                 code_address: None,
-                class_hash: Some([
+                class_hash: Some(ClassHash([
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1,
-                ]),
+                ])),
                 entry_point_selector: Some(felt_str!(
                     "352040181584456735608515580760888541466059565068553383579463728554843487745"
                 )),
@@ -315,21 +362,21 @@ mod test {
                     10.into(),
                 ],
                 retdata: vec![],
-                execution_resources: ExecutionResources {
+                execution_resources: Some(ExecutionResources {
                     n_steps: 141,
                     n_memory_holes: 20,
                     builtin_instance_counter: HashMap::from([
                         ("range_check_builtin".to_string(), 6),
                         ("pedersen_builtin".to_string(), 2),
                     ]),
-                },
+                }),
                 events: vec![],
                 l2_to_l1_messages: vec![],
                 storage_read_values: vec![0.into(), 0.into()],
-                accessed_storage_keys: HashSet::from([[
+                accessed_storage_keys: HashSet::from([ClassHash([
                     4, 40, 11, 247, 0, 35, 63, 18, 141, 159, 101, 81, 182, 2, 213, 216, 100, 110,
                     5, 5, 101, 122, 13, 252, 204, 72, 77, 8, 58, 226, 194, 24,
-                ]]),
+                ])]),
                 internal_calls: vec![],
                 gas_consumed: 0,
                 failure_flag: false,

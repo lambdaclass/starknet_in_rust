@@ -1,5 +1,6 @@
 #![deny(warnings)]
 
+use cairo_native::cache::ProgramCache;
 use cairo_vm::felt;
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
@@ -14,24 +15,30 @@ use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::in_memory_state_reader::InMemoryStateReader,
     state::{cached_state::CachedState, state_api::State},
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader,
+    },
     transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
-    utils::Address,
+    utils::{Address, ClassHash},
 };
-use std::{collections::HashMap, hint::black_box, sync::Arc};
+use std::{hint::black_box, sync::Arc};
+
+#[cfg(feature = "cairo-native")]
+use std::{cell::RefCell, rc::Rc};
 
 lazy_static! {
     // include_str! doesn't seem to work in CI
     static ref CONTRACT_CLASS: ContractClass = ContractClass::from_path(
         "starknet_programs/account_without_validation.json",
     ).unwrap();
-    static ref CLASS_HASH: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
-    static ref CLASS_HASH_BYTES: [u8; 32] = CLASS_HASH.clone().to_be_bytes();
+    static ref CLASS_HASH_FELT: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
+    static ref CLASS_HASH: ClassHash = ClassHash(CLASS_HASH_FELT.to_be_bytes());
     static ref SALT: Felt252 = felt_str!(
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
     );
-    static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT.clone(), &CLASS_HASH.clone(), &[], Address(0.into())).unwrap());
+    static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT, &CLASS_HASH_FELT, &[], Address(0.into())).unwrap());
     static ref SIGNATURE: Vec<Felt252> = vec![
         felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
         felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
@@ -48,10 +55,15 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
-    deploy_account();
-    declare();
-    deploy();
-    invoke();
+    #[cfg(feature = "cairo-native")]
+    let program_cache = Rc::new(RefCell::new(ProgramCache::new(
+        starknet_in_rust::utils::get_native_context(),
+    )));
+
+    deploy_account(program_cache.clone());
+    declare(program_cache.clone());
+    deploy(program_cache.clone());
+    invoke(program_cache.clone());
 
     // The black_box ensures there's no tail-call optimization.
     // If not, the flamegraph ends up less nice.
@@ -59,15 +71,20 @@ fn main() {
 }
 
 #[inline(never)]
-fn deploy_account() {
+fn deploy_account(
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) {
     const RUNS: usize = 500;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &CLASS_HASH,
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();
@@ -75,15 +92,15 @@ fn deploy_account() {
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
-        let class_hash = *CLASS_HASH_BYTES;
+        let mut state_copy = state.clone_for_testing();
+        let class_hash = *CLASS_HASH;
         let signature = SIGNATURE.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
             let internal_deploy_account = DeployAccount::new(
                 class_hash,
                 0,
-                0.into(),
+                1.into(),
                 Felt252::zero(),
                 vec![],
                 signature,
@@ -91,23 +108,31 @@ fn deploy_account() {
                 StarknetChainId::TestNet.to_felt(),
             )
             .unwrap();
-            internal_deploy_account.execute(&mut state_copy, block_context)
+            internal_deploy_account.execute(
+                &mut state_copy,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                Some(program_cache.clone()),
+            )
         })
         .unwrap();
     }
 }
 
 #[inline(never)]
-fn declare() {
+fn declare(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let state = CachedState::new(state_reader, HashMap::new());
+    let state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut cloned_state = state.clone();
+        let mut cloned_state = state.clone_for_testing();
         let class = CONTRACT_CLASS.clone();
         let address = CONTRACT_ADDRESS.clone();
         scope(|| {
@@ -123,22 +148,30 @@ fn declare() {
             )
             .expect("couldn't create transaction");
 
-            declare_tx.execute(&mut cloned_state, block_context)
+            declare_tx.execute(
+                &mut cloned_state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                Some(program_cache.clone()),
+            )
         })
         .unwrap();
     }
 }
 
 #[inline(never)]
-fn deploy() {
+fn deploy(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &CLASS_HASH,
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();
@@ -146,7 +179,7 @@ fn deploy() {
     let block_context = &Default::default();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let salt = felt_str!(
             "2669425616857739096022668060305620640217901643963991674344872184515580705509"
         );
@@ -161,22 +194,30 @@ fn deploy() {
                 0.into(),
             )
             .unwrap();
-            internal_deploy.execute(&mut state_copy, block_context)
+            internal_deploy.execute(
+                &mut state_copy,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                Some(program_cache.clone()),
+            )
         })
         .unwrap();
     }
 }
 
 #[inline(never)]
-fn invoke() {
+fn invoke(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     state
         .set_contract_class(
-            &CLASS_HASH_BYTES,
+            &CLASS_HASH,
             &CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
         )
         .unwrap();
@@ -195,10 +236,17 @@ fn invoke() {
     )
     .unwrap();
 
-    let _deploy_exec_info = deploy.execute(&mut state, block_context).unwrap();
+    let _deploy_exec_info = deploy
+        .execute(
+            &mut state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            Some(program_cache.clone()),
+        )
+        .unwrap();
 
     for _ in 0..RUNS {
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let address = CONTRACT_ADDRESS.clone();
         let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
         let signature = SIGNATURE.clone();
@@ -216,7 +264,13 @@ fn invoke() {
                 Some(Felt252::zero()),
             )
             .unwrap();
-            internal_invoke.execute(&mut state_copy, block_context, 2_000_000)
+            internal_invoke.execute(
+                &mut state_copy,
+                block_context,
+                2_000_000,
+                #[cfg(feature = "cairo-native")]
+                Some(program_cache.clone()),
+            )
         })
         .unwrap();
     }
