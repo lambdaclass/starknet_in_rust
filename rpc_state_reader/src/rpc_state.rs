@@ -238,10 +238,11 @@ where
         let builtin_counter_str: Option<String> = value
             .get(format!("{}_applications", name))
             .and_then(|a| serde_json::from_value(a.clone()).ok());
-        let builtin_counter = builtin_counter_str
+        if let Some(builtin_counter) = builtin_counter_str
             .and_then(|s| usize::from_str_radix(&s.trim_start_matches("0x"), 16).ok())
-            .unwrap_or_default();
-        builtin_instance_counter.insert(name.to_string(), builtin_counter);
+        {
+            builtin_instance_counter.insert(name.to_string(), builtin_counter);
+        };
     }
     Ok(VmExecutionResources {
         n_steps,
