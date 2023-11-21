@@ -22,10 +22,8 @@ use starknet_in_rust::{
     execution::TransactionExecutionInfo,
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::{CachedState, ContractClassCache},
-        state_api::StateReader,
-        state_cache::StorageEntry,
-        BlockInfo,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        state_api::StateReader, state_cache::StorageEntry, BlockInfo,
     },
     transaction::{
         error::TransactionError, Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler,
@@ -51,7 +49,7 @@ impl RpcStateReader {
 
 impl StateReader for RpcStateReader {
     fn get_contract_class(&self, class_hash: &ClassHash) -> Result<CompiledClass, StateError> {
-        let hash = SNClassHash(StarkHash::new(*class_hash).unwrap());
+        let hash = SNClassHash(StarkHash::new(class_hash.0).unwrap());
         let contract_class = self
             .0
             .get_contract_class(&hash)
@@ -68,7 +66,7 @@ impl StateReader for RpcStateReader {
         );
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(self.0.get_class_hash_at(&address).0.bytes());
-        Ok(bytes)
+        Ok(ClassHash(bytes))
     }
 
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
@@ -95,7 +93,7 @@ impl StateReader for RpcStateReader {
         Ok(Felt252::from_bytes_be(value.bytes()))
     }
 
-    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<[u8; 32], StateError> {
+    fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
         Ok(*class_hash)
     }
 }
@@ -169,8 +167,9 @@ pub fn execute_tx_configurable(
             let next_block_state_reader = RpcStateReader(
                 RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
             );
+            let class_hash = tx.class_hash().0.bytes().try_into().unwrap();
             let contract_class = next_block_state_reader
-                .get_contract_class(tx.class_hash().0.bytes().try_into().unwrap())
+                .get_contract_class(&ClassHash(class_hash))
                 .unwrap();
 
             if tx.version() != TransactionVersion(2_u8.into()) {
@@ -179,6 +178,7 @@ pub fn execute_tx_configurable(
                     _ => unreachable!(),
                 };
 
+                let class_hash = tx.class_hash().0.bytes().try_into().unwrap();
                 let declare = Declare::new_with_tx_and_class_hash(
                     contract_class,
                     Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
@@ -191,7 +191,7 @@ pub fn execute_tx_configurable(
                         .collect(),
                     Felt252::from_bytes_be(tx.nonce().0.bytes()),
                     Felt252::from_bytes_be(tx_hash.0.bytes()),
-                    tx.class_hash().0.bytes().try_into().unwrap(),
+                    ClassHash(class_hash),
                 )
                 .unwrap();
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
@@ -236,8 +236,8 @@ pub fn execute_tx_configurable(
     let trace = rpc_reader.0.get_transaction_trace(&tx_hash).unwrap();
     let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash).unwrap();
 
-    let class_cache = ContractClassCache::default();
-    let mut state = CachedState::new(Arc::new(rpc_reader), class_cache);
+    let class_cache = PermanentContractClassCache::default();
+    let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
 
     let block_context = BlockContext::new(
         starknet_os_config,
@@ -251,7 +251,11 @@ pub fn execute_tx_configurable(
         true,
     );
 
+    #[cfg(not(feature = "cairo-native"))]
     let sir_execution = tx.execute(&mut state, &block_context, u128::MAX)?;
+    #[cfg(feature = "cairo-native")]
+    let sir_execution = tx.execute(&mut state, &block_context, u128::MAX, None)?;
+
     Ok((sir_execution, trace, receipt))
 }
 

@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 default = ["starknet_in_rust"]
 starknet_in_rust = []
+cairo-native = ["starknet_in_rust/cairo-native"]
 
 [dependencies]
 ureq = { version = "2.7.1", features = ["json"] }

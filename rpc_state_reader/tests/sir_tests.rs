@@ -1,5 +1,6 @@
 #![cfg(feature = "starknet_in_rust")]
 
+use cairo_vm::felt::Felt252;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use rpc_state_reader::{
     execute_tx, execute_tx_configurable, execute_tx_without_validate, rpc_state::*,
@@ -139,6 +140,11 @@ fn test_get_gas_price() {
     889897, // real block 889898
     RpcChain::TestNet
 )]
+#[test_case(
+    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
+    895707, // real block 895708
+    RpcChain::TestNet
+)]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
 
@@ -214,6 +220,12 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     RpcChain::MainNet,
     197000,
     3
+)]
+#[test_case(
+    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
+    RpcChain::TestNet,
+    895707,
+    1
 )]
 fn test_sorted_events(
     tx_hash: &str,
@@ -360,4 +372,48 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
             );
         }
     }
+}
+
+#[test_case(
+    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
+    895707, // real block 895708
+    RpcChain::TestNet
+)]
+#[test_case(
+    "0x048ffc49f04504710e984923980fb63c4f17fb3022467251329adc75aae93c4b",
+    900795, // real block 900796
+    RpcChain::TestNet
+)]
+fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: RpcChain) {
+    let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
+
+    let TransactionExecutionInfo {
+        call_info,
+        actual_fee,
+        ..
+    } = tx_info;
+    let CallInfo { retdata, .. } = call_info.unwrap();
+
+    // check actual fee calculation
+    if receipt.actual_fee != actual_fee {
+        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+
+        if diff >= 5 {
+            assert_eq!(
+                actual_fee, receipt.actual_fee,
+                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            );
+        }
+    }
+
+    let rpc_retdata: Vec<Felt252> = trace
+        .function_invocation
+        .unwrap()
+        .retdata
+        .unwrap()
+        .into_iter()
+        .map(|sf| Felt252::from_bytes_be(sf.bytes()))
+        .collect();
+
+    assert_eq!(retdata, rpc_retdata);
 }
