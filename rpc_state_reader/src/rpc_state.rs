@@ -241,7 +241,9 @@ where
         if let Some(builtin_counter) = builtin_counter_str
             .and_then(|s| usize::from_str_radix(&s.trim_start_matches("0x"), 16).ok())
         {
-            builtin_instance_counter.insert(name.to_string(), builtin_counter);
+            if builtin_counter > 0 {
+                builtin_instance_counter.insert(name.to_string(), builtin_counter);
+            }
         };
     }
     Ok(VmExecutionResources {
