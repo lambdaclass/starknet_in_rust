@@ -372,11 +372,6 @@ impl RpcState {
         serde_json::from_value(response).map_err(|err| RpcStateError::RpcCall(err.to_string()))
     }
 
-    /// Gets the url of the feeder endpoint
-    fn get_feeder_endpoint(&self, path: &str) -> String {
-        format!("{}/{}", self.feeder_url, path)
-    }
-
     /// Requests the transaction trace to the Feeder Gateway API.
     /// It's useful for testing the transaction outputs like:
     /// - execution resources
@@ -414,19 +409,28 @@ impl RpcState {
 
     /// Gets the gas price of a given block.
     pub fn get_gas_price(&self, block_number: u64) -> Result<u128, RpcStateError> {
-        let response = ureq::get(&self.get_feeder_endpoint("get_block"))
-            .query("blockNumber", &block_number.to_string())
-            .call()
-            .map_err(|e| RpcStateError::Request(e.to_string()))?;
+        // let response = ureq::get(&self.get_feeder_endpoint("get_block"))
+        //     .query("blockNumber", &block_number.to_string())
+        //     .call()
+        //     .map_err(|e| RpcStateError::Request(e.to_string()))?;
 
-        let res: serde_json::Value = response.into_json().map_err(RpcStateError::Io)?;
-
-        let gas_price_hex =
-            res.get("gas_price")
-                .and_then(|gp| gp.as_str())
-                .ok_or(RpcStateError::Request(
-                    "Response has no field gas_price".to_string(),
-                ))?;
+        // let res: serde_json::Value = response.into_json().map_err(RpcStateError::Io)?;
+        let res = dbg!(self.rpc_call::<serde_json::Value>(
+            "starknet_getBlockWithTxHashes",
+            &json!({"block_id" : { "block_number": block_number }}),
+        )?)
+        .get("result")
+        .ok_or(RpcStateError::RpcCall(
+            "Response has no field result".into(),
+        ))?
+        .clone();
+        let gas_price_hex = res
+            .get("l1_gas_price")
+            .and_then(|gp| gp.get("price_in_wei"))
+            .and_then(|gp| gp.as_str())
+            .ok_or(RpcStateError::Request(
+                "Response has no field gas_price".to_string(),
+            ))?;
         let gas_price =
             u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).map_err(|_| {
                 RpcStateError::Request("Response field gas_price has wrong type".to_string())
