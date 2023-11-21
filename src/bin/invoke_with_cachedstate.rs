@@ -1,8 +1,6 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
 use cairo_vm::felt::{felt_str, Felt252};
+use lazy_static::lazy_static;
 use num_traits::Zero;
-
 use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -12,12 +10,13 @@ use starknet_in_rust::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::in_memory_state_reader::InMemoryStateReader,
-    state::{cached_state::CachedState, BlockInfo},
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
+    },
     transaction::InvokeFunction,
-    utils::Address,
+    utils::{Address, ClassHash},
 };
-
-use lazy_static::lazy_static;
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
@@ -34,7 +33,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/first_contract.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [5, 133, 114, 83, 104, 231, 159, 23, 87, 255, 235, 75, 170, 4, 84, 140, 49, 77, 101, 41, 147, 198, 201, 231, 38, 189, 215, 84, 231, 141, 140, 122];
+    static ref CONTRACT_CLASS_HASH: ClassHash = ClassHash([5, 133, 114, 83, 104, 231, 159, 23, 87, 255, 235, 75, 170, 4, 84, 140, 49, 77, 101, 41, 147, 198, 201, 231, 38, 189, 215, 84, 231, 141, 140, 122]);
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
@@ -66,7 +65,13 @@ fn main() {
             Some(Felt252::from(i * 2)),
         )
         .unwrap()
-        .execute(&mut cached_state, &block_context, 0)
+        .execute(
+            &mut cached_state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
         let tx_exec_info = InvokeFunction::new(
@@ -80,7 +85,13 @@ fn main() {
             Some(Felt252::from((i * 2) + 1)),
         )
         .unwrap()
-        .execute(&mut cached_state, &block_context, 0)
+        .execute(
+            &mut cached_state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
         assert_eq!(
@@ -90,7 +101,7 @@ fn main() {
     }
 }
 
-fn create_initial_state() -> CachedState<InMemoryStateReader> {
+fn create_initial_state() -> CachedState<InMemoryStateReader, PermanentContractClassCache> {
     let cached_state = CachedState::new(
         {
             let mut state_reader = InMemoryStateReader::default();
@@ -111,7 +122,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader> {
                 .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             Arc::new(state_reader)
         },
-        HashMap::new(),
+        Arc::new(PermanentContractClassCache::default()),
     );
 
     cached_state

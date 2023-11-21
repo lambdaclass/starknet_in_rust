@@ -1,22 +1,23 @@
-use crate::definitions::constants::QUERY_VERSION_BASE;
-use crate::execution::execution_entry_point::ExecutionResult;
+use crate::core::contract_address::compute_deprecated_class_hash;
+use crate::core::transaction_hash::calculate_declare_transaction_hash;
+use crate::definitions::block_context::BlockContext;
+use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
+use crate::definitions::transaction_type::TransactionType;
+use crate::execution::gas_usage::get_onchain_data_segment_length;
+use crate::execution::os_usage::ESTIMATED_DECLARE_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
+use crate::state::contract_class_cache::ContractClassCache;
+use crate::state::state_api::{State, StateChangesCount, StateReader};
 use crate::{
-    core::{
-        contract_address::compute_deprecated_class_hash,
-        transaction_hash::calculate_declare_transaction_hash,
-    },
-    definitions::{
-        block_context::BlockContext, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-        transaction_type::TransactionType,
-    },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::state_api::{State, StateReader},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::ExecutionResourcesManager,
     transaction::error::TransactionError,
     utils::{
@@ -25,13 +26,19 @@ use crate::{
     },
 };
 use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 
-use super::fee::charge_fee;
-use super::{verify_version, Transaction};
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
+use super::fee::{calculate_tx_fee, charge_fee};
+use super::{get_tx_version, Transaction};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
+
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
@@ -50,6 +57,7 @@ pub struct Declare {
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
+    pub skip_nonce_check: bool,
 }
 
 // ------------------------------------------------------------
@@ -66,6 +74,7 @@ impl Declare {
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
@@ -93,14 +102,8 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
-
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
 
         Ok(internal_declare)
     }
@@ -115,6 +118,8 @@ impl Declare {
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
+
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
@@ -133,40 +138,74 @@ impl Declare {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         };
 
-        verify_version(
-            &internal_declare.version,
-            internal_declare.max_fee,
-            &internal_declare.nonce,
-            &internal_declare.signature,
-        )?;
+        Ok(internal_declare)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_tx_and_class_hash(
+        contract_class: ContractClass,
+        sender_address: Address,
+        max_fee: u128,
+        version: Felt252,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
+        hash_value: Felt252,
+        class_hash: ClassHash,
+    ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
+        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+
+        let internal_declare = Declare {
+            class_hash,
+            sender_address,
+            validate_entry_point_selector,
+            version,
+            max_fee,
+            signature,
+            nonce,
+            hash_value,
+            contract_class,
+            skip_execute: false,
+            skip_validate: false,
+            skip_fee_transfer: false,
+            skip_nonce_check: false,
+        };
 
         Ok(internal_declare)
     }
 
     pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(&self.class_hash);
+        let bytes = Felt252::from_bytes_be(self.class_hash.to_bytes_be());
         Vec::from([bytes])
     }
 
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: StateReader>(
+    pub fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        verify_version(&self.version, self.max_fee, &self.nonce, &self.signature)?;
-
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info = if self.skip_validate {
             None
         } else {
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+            self.run_validate_entrypoint(
+                state,
+                &mut resources_manager,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )?
         };
-        let changes = state.count_actual_storage_changes(Some((
+        let changes = state.count_actual_state_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
             &self.sender_address,
         )))?;
@@ -204,13 +243,16 @@ impl Declare {
         )
     }
 
-    pub fn run_validate_entrypoint<S: StateReader>(
+    pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(None);
         }
 
@@ -234,6 +276,8 @@ impl Declare {
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps),
             false,
             block_context.validate_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
@@ -245,13 +289,13 @@ impl Declare {
     }
 
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() || self.version == *QUERY_VERSION_BASE {
+        if self.version.is_zero() {
             return Ok(());
         }
 
         let contract_address = &self.sender_address;
         let current_nonce = state.get_nonce_at(contract_address)?;
-        if current_nonce != self.nonce {
+        if current_nonce != self.nonce && !self.skip_nonce_check {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
                 self.nonce.to_string(),
@@ -263,9 +307,58 @@ impl Declare {
         Ok(())
     }
 
+    fn check_fee_balance<S: State + StateReader>(
+        &self,
+        state: &mut S,
+        block_context: &BlockContext,
+    ) -> Result<(), TransactionError> {
+        if self.max_fee.is_zero() {
+            return Ok(());
+        }
+        let minimal_fee = self.estimate_minimal_fee(block_context)?;
+        // Check max fee is at least the estimated constant overhead.
+        if self.max_fee < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        }
+        // Check that the current balance is high enough to cover the max_fee
+        let (balance_low, balance_high) =
+            state.get_fee_token_balance(block_context, &self.sender_address)?;
+        // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+            return Err(TransactionError::MaxFeeExceedsBalance(
+                self.max_fee,
+                balance_low,
+                balance_high,
+            ));
+        }
+        Ok(())
+    }
+
+    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
+        let n_estimated_steps = ESTIMATED_DECLARE_STEPS;
+        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        });
+        let resources = HashMap::from([
+            (
+                "l1_gas_usage".to_string(),
+                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
+            ),
+            ("n_steps".to_string(), n_estimated_steps),
+        ]);
+        calculate_tx_fee(
+            &resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )
+    }
+
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::Declare,
         self.version = ?self.version,
         self.class_hash = ?self.class_hash,
@@ -273,13 +366,33 @@ impl Declare {
         self.sender_address = ?self.sender_address,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
+        if self.version != Felt252::one() && self.version != Felt252::zero() {
+            return Err(TransactionError::UnsupportedTxVersion(
+                "Declare".to_string(),
+                self.version.clone(),
+                vec![0, 1],
+            ));
+        }
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context)?;
+        }
+
         self.handle_nonce(state)?;
-        let mut tx_exec_info = self.apply(state, block_context)?;
+
+        let mut tx_exec_info = self.apply(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+        )?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
@@ -290,6 +403,8 @@ impl Declare {
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         state.set_contract_class(
@@ -302,12 +417,13 @@ impl Declare {
         Ok(tx_exec_info)
     }
 
-    pub(crate) fn create_for_simulation(
+    pub fn create_for_simulation(
         &self,
         skip_validate: bool,
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = Declare {
             skip_validate,
@@ -319,6 +435,7 @@ impl Declare {
             } else {
                 self.max_fee
             },
+            skip_nonce_check,
             ..self.clone()
         };
 
@@ -333,13 +450,6 @@ impl Declare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::{
-        felt::{felt_str, Felt252},
-        vm::runners::cairo_runner::ExecutionResources,
-    };
-    use num_traits::{One, Zero};
-    use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
     use crate::{
         definitions::{
             block_context::{BlockContext, StarknetChainId},
@@ -350,12 +460,16 @@ mod tests {
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
-        state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::{felt_to_hash, Address},
     };
-
-    use super::Declare;
+    use cairo_vm::{
+        felt::{felt_str, Felt252},
+        vm::runners::cairo_runner::ExecutionResources,
+    };
+    use num_traits::{One, Zero};
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     #[test]
     fn declare_fibonacci() {
@@ -364,13 +478,13 @@ mod tests {
             ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let class_hash = ClassHash::from(hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class.clone())),
         );
@@ -389,7 +503,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -436,10 +550,10 @@ mod tests {
             entry_point_type: Some(EntryPointType::External),
             calldata,
             class_hash: Some(expected_class_hash),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 
@@ -464,187 +578,14 @@ mod tests {
         // ---------------------
         assert_eq!(
             internal_declare
-                .apply(&mut state, &BlockContext::default())
+                .apply(
+                    &mut state,
+                    &BlockContext::default(),
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
                 .unwrap(),
             transaction_exec_info
-        );
-    }
-
-    #[test]
-    fn verify_version_zero_should_fail_max_fee() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.insert(class_hash, contract_class);
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-        let max_fee = 1000;
-        let version = 0.into();
-
-        // Declare tx should fail because max_fee > 0 and version == 0
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::one()),
-            max_fee,
-            version,
-            Vec::new(),
-            Felt252::from(max_fee),
-        );
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidMaxFee
-        );
-    }
-
-    #[test]
-    fn verify_version_zero_should_fail_nonce() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.insert(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
-
-        let _state = CachedState::new(Arc::new(state_reader), contract_class_cache);
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-        let nonce = Felt252::from(148);
-        let version = 0.into();
-
-        // Declare tx should fail because nonce > 0 and version == 0
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::one()),
-            0,
-            version,
-            Vec::new(),
-            nonce,
-        );
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidNonce
-        );
-    }
-
-    #[test]
-    fn verify_signature_should_fail_not_empty_list() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.insert(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
-
-        let _state = CachedState::new(Arc::new(state_reader), contract_class_cache);
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-        let signature = vec![1.into(), 2.into()];
-
-        // Declare tx should fail because signature is not empty
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::one()),
-            0,
-            0.into(),
-            signature,
-            Felt252::zero(),
-        );
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert!(internal_declare.is_err());
-        assert_matches!(
-            internal_declare.unwrap_err(),
-            TransactionError::InvalidSignature
         );
     }
 
@@ -655,13 +596,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -680,7 +621,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -715,13 +656,23 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &BlockContext::default())
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         assert!(state.get_contract_class(&class_hash).is_ok());
 
         second_internal_declare
-            .execute(&mut state, &BlockContext::default())
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         assert!(state.get_contract_class(&class_hash).is_ok());
@@ -734,13 +685,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -759,7 +710,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -783,10 +734,20 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &BlockContext::default())
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
-        let expected_error = internal_declare.execute(&mut state, &BlockContext::default());
+        let expected_error = internal_declare.execute(
+            &mut state,
+            &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
 
         // ---------------------
         //      Comparison
@@ -802,11 +763,11 @@ mod tests {
     #[test]
     fn validate_transaction_should_fail() {
         // Instantiate CachedState
-        let contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         let state_reader = Arc::new(InMemoryStateReader::default());
 
-        let mut state = CachedState::new(state_reader, contract_class_cache);
+        let mut state = CachedState::new(state_reader, Arc::new(contract_class_cache));
 
         // There are no account contracts in the state, so the transaction should fail
         let fib_contract_class =
@@ -825,7 +786,12 @@ mod tests {
         )
         .unwrap();
 
-        let internal_declare_error = internal_declare.execute(&mut state, &BlockContext::default());
+        let internal_declare_error = internal_declare.execute(
+            &mut state,
+            &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
 
         assert!(internal_declare_error.is_err());
         assert_matches!(
@@ -841,13 +807,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -866,7 +832,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -891,8 +857,155 @@ mod tests {
 
         // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
-            internal_declare.execute(&mut state, &BlockContext::default()),
-            Err(TransactionError::FeeTransferError(_))
+            internal_declare.execute(
+                &mut state,
+                &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
+            ),
+            Err(TransactionError::MaxFeeExceedsBalance(_, _, _))
         );
+    }
+
+    #[test]
+    fn declare_v1_with_validation_fee_higher_than_no_validation() {
+        // accounts contract class must be stored before running declaration of fibonacci
+        let contract_class = ContractClass::from_path("starknet_programs/Account.json").unwrap();
+
+        // Instantiate CachedState
+        let contract_class_cache = PermanentContractClassCache::default();
+
+        //  ------------ contract data --------------------
+        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = ClassHash::from(hash);
+
+        contract_class_cache.set_contract_class(
+            class_hash,
+            CompiledClass::Deprecated(Arc::new(contract_class)),
+        );
+
+        // store sender_address
+        let sender_address = Address(1.into());
+        // this is not conceptually correct as the sender address would be an
+        // Account contract (not the contract that we are currently declaring)
+        // but for testing reasons its ok
+
+        let mut state_reader = InMemoryStateReader::default();
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(sender_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(sender_address.clone(), Felt252::new(1));
+
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+        // Insert pubkey storage var to pass validation
+        let storage_entry = &(
+            sender_address,
+            felt_str!(
+                "1672321442399497129215646424919402195095307045612040218489019266998007191460"
+            )
+            .to_be_bytes(),
+        );
+        state.set_storage_at(
+            storage_entry,
+            felt_str!(
+                "1735102664668487605176656616876767369909409133946409161569774794110049207117"
+            ),
+        );
+
+        //* ---------------------------------------
+        //*    Test declare with previous data
+        //* ---------------------------------------
+
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        // Signature & tx hash values are hand-picked for account validations to pass
+        let mut declare = Declare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            60000,
+            1.into(),
+            vec![
+                felt_str!(
+                    "3086480810278599376317923499561306189851900463386393948998357832163236918254"
+                ),
+                felt_str!(
+                    "598673427589502599949712887611119751108407514580626464031881322743364689811"
+                ),
+            ],
+            Felt252::one(),
+        )
+        .unwrap();
+        declare.skip_fee_transfer = true;
+        declare.hash_value = felt_str!("2718");
+
+        let simulate_declare = declare
+            .clone()
+            .create_for_simulation(true, false, true, false, false);
+
+        // ---------------------
+        //      Comparison
+        // ---------------------
+        let mut state_copy = state.clone_for_testing();
+        let mut bock_context = BlockContext::default();
+        bock_context.starknet_os_config.gas_price = 12;
+        assert!(
+            declare
+                .execute(
+                    &mut state,
+                    &bock_context,
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
+                .unwrap()
+                .actual_fee
+                > simulate_declare
+                    .execute(
+                        &mut state_copy,
+                        &bock_context,
+                        0,
+                        #[cfg(feature = "cairo-native")]
+                        None,
+                    )
+                    .unwrap()
+                    .actual_fee,
+        );
+    }
+
+    #[test]
+    fn declare_wrong_version() {
+        let fib_contract_class =
+            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+
+        let chain_id = StarknetChainId::TestNet.to_felt();
+
+        // declare tx
+        let internal_declare = Declare::new(
+            fib_contract_class,
+            chain_id,
+            Address(Felt252::one()),
+            0,
+            2.into(),
+            Vec::new(),
+            Felt252::zero(),
+        )
+        .unwrap();
+        let result = internal_declare.execute(
+            &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
+            &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
+
+        assert_matches!(
+        result,
+        Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
+        if tx == "Declare" && ver == 2.into() && supp == vec![0, 1]);
     }
 }

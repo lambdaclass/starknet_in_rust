@@ -1,24 +1,31 @@
 use crate::complex_contracts::utils::*;
-use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use num_traits::Zero;
 use starknet_crypto::FieldElement;
-use starknet_in_rust::definitions::block_context::BlockContext;
-use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
+    definitions::block_context::BlockContext,
     execution::{CallInfo, CallType},
-    state::{cached_state::CachedState, state_api::StateReader},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
+    EntryPointType,
 };
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 #[test]
 fn amm_proxy_init_pool_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+    let mut state = CachedState::new(
+        Arc::new(InMemoryStateReader::default()),
+        Arc::new(PermanentContractClassCache::default()),
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -29,7 +36,7 @@ fn amm_proxy_init_pool_test() {
     )
     .unwrap();
     // Deploy proxy
-    let (proxy_address, proxy_class_hash) = deploy(
+    let (proxy_address, proxy_class_hash_bytes) = deploy(
         &mut state,
         "starknet_programs/amm_proxy.json",
         &[],
@@ -37,7 +44,7 @@ fn amm_proxy_init_pool_test() {
         None,
     )
     .unwrap();
-
+    let proxy_class_hash = proxy_class_hash_bytes;
     let proxy_entry_points_by_type =
         TryInto::<ContractClass>::try_into(state.get_contract_class(&proxy_class_hash).unwrap())
             .unwrap()
@@ -75,14 +82,14 @@ fn amm_proxy_init_pool_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 232,
             n_memory_holes: 20,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 2),
                 ("range_check_builtin".to_string(), 14),
             ]),
-        },
+        }),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         storage_read_values: vec![Felt252::zero(), Felt252::zero()],
@@ -97,14 +104,14 @@ fn amm_proxy_init_pool_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 280,
             n_memory_holes: 20,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 2),
                 ("range_check_builtin".to_string(), 14),
             ]),
-        },
+        }),
         class_hash: Some(proxy_class_hash),
         internal_calls,
         ..Default::default()
@@ -116,7 +123,10 @@ fn amm_proxy_init_pool_test() {
 #[test]
 fn amm_proxy_get_pool_token_balance_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+    let mut state = CachedState::new(
+        Arc::new(InMemoryStateReader::default()),
+        Arc::new(PermanentContractClassCache::default()),
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -180,14 +190,14 @@ fn amm_proxy_get_pool_token_balance_test() {
         calldata: calldata.clone()[1..].to_vec(),
         retdata: [555.into()].to_vec(),
         storage_read_values: [555.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 84,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 1),
                 ("range_check_builtin".to_string(), 3),
             ]),
-        },
+        }),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -201,14 +211,14 @@ fn amm_proxy_get_pool_token_balance_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: [555.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 140,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 1),
                 ("range_check_builtin".to_string(), 3),
             ]),
-        },
+        }),
         class_hash: Some(proxy_class_hash),
         internal_calls,
         ..Default::default()
@@ -220,7 +230,10 @@ fn amm_proxy_get_pool_token_balance_test() {
 #[test]
 fn amm_proxy_add_demo_token_test() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+    let mut state = CachedState::new(
+        Arc::new(InMemoryStateReader::default()),
+        Arc::new(PermanentContractClassCache::default()),
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -291,14 +304,14 @@ fn amm_proxy_add_demo_token_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone()[1..].to_vec(),
         storage_read_values: vec![0.into(), 0.into(), 0.into(), 0.into()],
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 397,
             n_memory_holes: 42,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 8),
                 ("range_check_builtin".to_string(), 20),
             ]),
-        },
+        }),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -311,14 +324,14 @@ fn amm_proxy_add_demo_token_test() {
         entry_point_selector: Some(amm_proxy_entrypoint_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 445,
             n_memory_holes: 42,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 8),
                 ("range_check_builtin".to_string(), 20),
             ]),
-        },
+        }),
         class_hash: Some(proxy_class_hash),
         internal_calls,
         ..Default::default()
@@ -330,7 +343,10 @@ fn amm_proxy_add_demo_token_test() {
 #[test]
 fn amm_proxy_get_account_token_balance() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+    let mut state = CachedState::new(
+        Arc::new(InMemoryStateReader::default()),
+        Arc::new(PermanentContractClassCache::default()),
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -413,14 +429,14 @@ fn amm_proxy_get_account_token_balance() {
         calldata: calldata.clone()[1..].to_vec(),
         retdata: [200.into()].to_vec(),
         storage_read_values: [200.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 92,
             n_memory_holes: 11,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 2),
                 ("range_check_builtin".to_string(), 3),
             ]),
-        },
+        }),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -434,14 +450,14 @@ fn amm_proxy_get_account_token_balance() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: [200.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 151,
             n_memory_holes: 11,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 2),
                 ("range_check_builtin".to_string(), 3),
             ]),
-        },
+        }),
         class_hash: Some(proxy_class_hash),
         internal_calls,
         ..Default::default()
@@ -453,7 +469,10 @@ fn amm_proxy_get_account_token_balance() {
 #[test]
 fn amm_proxy_swap() {
     let block_context = BlockContext::default();
-    let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+    let mut state = CachedState::new(
+        Arc::new(InMemoryStateReader::default()),
+        Arc::new(PermanentContractClassCache::default()),
+    );
     // Deploy contract
     let (contract_address, contract_class_hash) = deploy(
         &mut state,
@@ -553,14 +572,14 @@ fn amm_proxy_swap() {
             1000.into(),
         ]
         .to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 826,
             n_memory_holes: 92,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 14),
                 ("range_check_builtin".to_string(), 41),
             ]),
-        },
+        }),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
         ..Default::default()
@@ -574,14 +593,14 @@ fn amm_proxy_swap() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_result,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 885,
             n_memory_holes: 92,
             builtin_instance_counter: HashMap::from([
                 ("pedersen_builtin".to_string(), 14),
                 ("range_check_builtin".to_string(), 41),
             ]),
-        },
+        }),
         class_hash: Some(proxy_class_hash),
         internal_calls,
         ..Default::default()

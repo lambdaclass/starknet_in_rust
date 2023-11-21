@@ -426,7 +426,10 @@ mod test {
     use super::StarknetRunner;
     use crate::{
         state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         syscalls::{
             deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler,
             deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
@@ -448,7 +451,12 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let mut vm = VirtualMachine::new(true);
 
-        let os_context = StarknetRunner::<SyscallHintProcessor<CachedState::<InMemoryStateReader>>>::prepare_os_context_cairo0(&cairo_runner, &mut vm);
+        let os_context = StarknetRunner::<
+            SyscallHintProcessor<
+                CachedState<InMemoryStateReader, PermanentContractClassCache>,
+                PermanentContractClassCache,
+            >,
+        >::prepare_os_context_cairo0(&cairo_runner, &mut vm);
 
         // is expected to return a pointer to the first segment as there is nothing more in the vm
         let expected = Vec::from([MaybeRelocatable::from((0, 0))]);
@@ -462,7 +470,7 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -478,7 +486,7 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -497,7 +505,7 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -519,7 +527,7 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -541,7 +549,7 @@ mod test {
         let cairo_runner = CairoRunner::new(&program, "starknet", false).unwrap();
         let vm = VirtualMachine::new(true);
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -563,7 +571,7 @@ mod test {
         vm.add_memory_segment();
         vm.compute_segments_effective_sizes();
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -586,7 +594,7 @@ mod test {
         vm.add_memory_segment();
         vm.compute_segments_effective_sizes();
 
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let hint_processor = DeprecatedSyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
