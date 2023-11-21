@@ -1,5 +1,3 @@
-use std::{collections::HashMap, sync::Arc};
-
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::Zero;
 use starknet_in_rust::{
@@ -10,18 +8,19 @@ use starknet_in_rust::{
     },
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
-        ExecutionResourcesManager,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State, ExecutionResourcesManager,
     },
     transaction::DeployAccount,
     utils::{calculate_sn_keccak, Address, ClassHash},
     CasmContractClass, EntryPointType,
 };
+use std::sync::Arc;
 
 #[test]
 fn test_erc20_cairo2() {
     // data to deploy
-    let erc20_class_hash: ClassHash = [2; 32];
+    let erc20_class_hash: ClassHash = ClassHash([2; 32]);
     let test_data = include_bytes!("../../starknet_programs/cairo2/erc20.casm");
     let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
 
@@ -32,17 +31,19 @@ fn test_erc20_cairo2() {
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = Arc::new(PermanentContractClassCache::default());
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
-    contract_class_cache.insert(
-        erc20_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class)),
-    );
+    contract_class_cache.extend([
+        (class_hash, CompiledClass::Casm(Arc::new(contract_class))),
+        (
+            erc20_class_hash,
+            CompiledClass::Casm(Arc::new(test_contract_class)),
+        ),
+    ]);
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -64,7 +65,7 @@ fn test_erc20_cairo2() {
     let erc20_salt = felt_str!("1234");
     // arguments of deploy contract
     let calldata = vec![
-        Felt252::from_bytes_be(&erc20_class_hash),
+        Felt252::from_bytes_be(erc20_class_hash.to_bytes_be()),
         erc20_salt,
         recipient,
         name_,
@@ -109,6 +110,8 @@ fn test_erc20_cairo2() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
@@ -121,19 +124,19 @@ fn test_erc20_cairo2() {
 
     state
         .set_contract_class(
-            &felt_str!("1").to_be_bytes(),
+            &ClassHash::from(felt_str!("1")),
             &CompiledClass::Casm(Arc::new(contract_class_account)),
         )
         .unwrap();
     state
-        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash))
+        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash.0))
         .unwrap();
 
     let contract_address_salt =
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
 
     let internal_deploy_account = DeployAccount::new(
-        felt_str!("1").to_be_bytes(),
+        ClassHash::from(felt_str!("1")),
         0,
         1.into(),
         Felt252::zero(),
@@ -152,7 +155,12 @@ fn test_erc20_cairo2() {
     .unwrap();
 
     let account_address_1 = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("failed to execute internal_deploy_account")
         .validate_info
         .expect("validate_info missing")
@@ -166,18 +174,18 @@ fn test_erc20_cairo2() {
 
     state
         .set_contract_class(
-            &felt_str!("1").to_be_bytes(),
+            &ClassHash::from(felt_str!("1")),
             &CompiledClass::Casm(Arc::new(contract_class_account)),
         )
         .unwrap();
     state
-        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash))
+        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash.0))
         .unwrap();
 
     let contract_address_salt = felt_str!("123123123123123");
 
     let internal_deploy_account = DeployAccount::new(
-        felt_str!("1").to_be_bytes(),
+        ClassHash::from(felt_str!("1")),
         0,
         1.into(),
         Felt252::zero(),
@@ -196,7 +204,12 @@ fn test_erc20_cairo2() {
     .unwrap();
 
     let account_address_2 = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap()
         .validate_info
         .unwrap()
@@ -213,6 +226,8 @@ fn test_erc20_cairo2() {
         &mut state,
         BlockContext::default(),
         account_address_1.clone(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )
     .unwrap();
 
@@ -227,6 +242,8 @@ fn test_erc20_cairo2() {
         &mut state,
         BlockContext::default(),
         account_address_1.clone(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )
     .unwrap();
 
@@ -241,6 +258,8 @@ fn test_erc20_cairo2() {
         &mut state,
         BlockContext::default(),
         account_address_1,
+        #[cfg(feature = "cairo-native")]
+        None,
     )
     .unwrap();
 

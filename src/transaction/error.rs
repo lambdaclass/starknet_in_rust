@@ -9,6 +9,7 @@ use crate::{
     utils::ClassHash,
 };
 use cairo_vm::{
+    felt::Felt252,
     types::{
         errors::{math_errors::MathError, program_errors::ProgramError},
         relocatable::Relocatable,
@@ -147,4 +148,14 @@ pub enum TransactionError {
     InvalidCompiledClassHash(String, String),
     #[error(transparent)]
     FromByteArrayError(#[from] FromByteArrayError),
+    #[error("DeclareV2 transaction has neither Sierra nor Casm contract class set")]
+    DeclareV2NoSierraOrCasm,
+    #[error("Unsupported {0} transaction version: {1}. Supported versions:{2:?}")]
+    UnsupportedTxVersion(String, Felt252, Vec<usize>),
+    #[error("The `validate` entry point should return `VALID`.")]
+    WrongValidateRetdata,
+    #[error("Max fee ({0}) is too low. Minimum fee: {1}.")]
+    MaxFeeTooLow(u128, u128),
+    #[error("Max fee ({0}) exceeds balance (Uint256({1}, {2})).")]
+    MaxFeeExceedsBalance(u128, Felt252, Felt252),
 }

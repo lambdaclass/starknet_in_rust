@@ -8,6 +8,7 @@ use crate::services::api::contract_classes::deprecated_contract_class::AbiType;
 use crate::{ContractEntryPoint, EntryPointType};
 
 use super::deprecated_contract_class::ContractClass;
+use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::abi::Contract;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::{
@@ -24,6 +25,7 @@ use starknet::core::types::ContractClass::{Legacy, Sierra};
 pub enum CompiledClass {
     Deprecated(Arc<ContractClass>),
     Casm(Arc<CasmContractClass>),
+    Sierra(Arc<(SierraProgram, ContractEntryPoints)>),
 }
 
 impl TryInto<CasmContractClass> for CompiledClass {
@@ -129,7 +131,7 @@ impl From<StarknetRsContractClass> for CompiledClass {
                         )
                     })
                     .collect::<Vec<ContractEntryPoint>>();
-                entry_points_by_type.insert(EntryPointType::Constructor, l1_handler_entries);
+                entry_points_by_type.insert(EntryPointType::L1Handler, l1_handler_entries);
 
                 let v = serde_json::to_value(&_deprecated_contract_class.abi).unwrap();
                 let abi: Option<AbiType> = serde_json::from_value(v).unwrap();

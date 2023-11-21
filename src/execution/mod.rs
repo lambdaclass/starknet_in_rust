@@ -1,8 +1,6 @@
 pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
-
-use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::utils::parse_felt_array;
 use crate::{
@@ -43,7 +41,7 @@ pub struct CallInfo {
     pub entry_point_type: Option<EntryPointType>,
     pub calldata: Vec<Felt252>,
     pub retdata: Vec<Felt252>,
-    pub execution_resources: ExecutionResources,
+    pub execution_resources: Option<ExecutionResources>,
     pub events: Vec<OrderedEvent>,
     pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub storage_read_values: Vec<Felt252>,
@@ -73,11 +71,11 @@ impl CallInfo {
             entry_point_type,
             calldata: Vec::new(),
             retdata: Vec::new(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 0,
                 builtin_instance_counter: HashMap::new(),
                 n_memory_holes: 0,
-            },
+            }),
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
             storage_read_values: Vec::new(),
@@ -193,8 +191,8 @@ impl CallInfo {
         let storage_entries = self
             .accessed_storage_keys
             .into_iter()
-            .map(|key| (self.contract_address.clone(), key))
-            .collect::<HashSet<(Address, ClassHash)>>();
+            .map(|key| (self.contract_address.clone(), key.0))
+            .collect::<HashSet<(Address, [u8; 32])>>();
 
         let internal_visited_storage_entries =
             CallInfo::get_visited_storage_entries_of_many(self.internal_calls);
@@ -229,7 +227,7 @@ impl Default for CallInfo {
             call_type: None,
             contract_address: Address(0.into()),
             code_address: None,
-            class_hash: Some([0; 32]),
+            class_hash: Some(ClassHash::default()),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
             storage_read_values: Vec::new(),
@@ -238,11 +236,11 @@ impl Default for CallInfo {
             l2_to_l1_messages: Vec::new(),
             accessed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 0,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::new(),
-            },
+            }),
             events: Vec::new(),
             gas_consumed: 0,
             failure_flag: false,
@@ -291,7 +289,7 @@ impl<'de> Deserialize<'de> for CallInfo {
         }
 
         Ok(CallInfo {
-            execution_resources,
+            execution_resources: Some(execution_resources),
             retdata,
             calldata,
             internal_calls,
@@ -370,6 +368,7 @@ pub struct TransactionExecutionContext {
     pub(crate) nonce: Felt252,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
+    // pub(crate) use_cairo_native: bool,
 }
 
 impl TransactionExecutionContext {
@@ -382,8 +381,8 @@ impl TransactionExecutionContext {
         n_steps: u64,
         version: Felt252,
     ) -> Self {
-        let nonce = if version == 0.into() || version == *QUERY_VERSION_BASE {
-            0.into()
+        let nonce = if version == 0.into() {
+            Felt252::zero()
         } else {
             nonce
         };
@@ -962,7 +961,7 @@ mod tests {
 
         assert_eq!(
             call_root.get_visited_storage_entries(),
-            HashSet::from([(addr1, hash1), (addr2.clone(), hash3), (addr2, hash4)])
+            HashSet::from([(addr1, hash1.0), (addr2.clone(), hash3.0), (addr2, hash4.0)])
         )
     }
 
@@ -1022,11 +1021,11 @@ mod tests {
         assert_eq!(
             txexecinfo.get_visited_storage_entries(),
             HashSet::from([
-                (addr1.clone(), hash1),
-                (addr1, hash2),
-                (addr2.clone(), hash3),
-                (addr2, hash4),
-                (Address(0.into()), hash5)
+                (addr1.clone(), hash1.0),
+                (addr1, hash2.0),
+                (addr2.clone(), hash3.0),
+                (addr2, hash4.0),
+                (Address(0.into()), hash5.0)
             ])
         )
     }

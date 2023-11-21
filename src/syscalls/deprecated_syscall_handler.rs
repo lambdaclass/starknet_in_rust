@@ -2,23 +2,26 @@ use super::{
     deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, other_syscalls,
     syscall_handler::HintProcessorPostRun,
 };
-use crate::{state::state_api::StateReader, syscalls::syscall_handler_errors::SyscallHandlerError};
-use cairo_vm::{
-    felt::Felt252,
-    hint_processor::hint_processor_definition::HintProcessorLogic,
-    vm::runners::cairo_runner::{ResourceTracker, RunResources},
+use crate::{
+    state::{contract_class_cache::ContractClassCache, state_api::StateReader},
+    syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use cairo_vm::{
+    felt::Felt252,
     hint_processor::{
         builtin_hint_processor::{
             builtin_hint_processor_definition::{BuiltinHintProcessor, HintProcessorData},
             hint_utils::get_relocatable_from_var_name,
         },
-        hint_processor_definition::HintReference,
+        hint_processor_definition::{HintProcessorLogic, HintReference},
     },
     serde::deserialize_program::ApTracking,
     types::{exec_scope::ExecutionScopes, relocatable::Relocatable},
-    vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
+    vm::{
+        errors::hint_errors::HintError,
+        runners::cairo_runner::{ResourceTracker, RunResources},
+        vm_core::VirtualMachine,
+    },
 };
 use std::{any::Any, collections::HashMap};
 
@@ -48,17 +51,17 @@ pub enum Hint {
 }
 
 /// Definition of the deprecated syscall hint processor with associated structs
-pub struct DeprecatedSyscallHintProcessor<'a, S: StateReader> {
+pub(crate) struct DeprecatedSyscallHintProcessor<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
-    pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
+    pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, S, C>,
     run_resources: RunResources,
 }
 
 /// Implementations and methods for DeprecatedSyscallHintProcessor
-impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'a, S, C> {
     /// Constructor for DeprecatedSyscallHintProcessor
     pub fn new(
-        syscall_handler: DeprecatedBLSyscallHandler<'a, S>,
+        syscall_handler: DeprecatedBLSyscallHandler<'a, S, C>,
         run_resources: RunResources,
     ) -> Self {
         DeprecatedSyscallHintProcessor {
@@ -100,83 +103,126 @@ impl<'a, S: StateReader> DeprecatedSyscallHintProcessor<'a, S> {
             .downcast_ref::<HintProcessorData>()
             .ok_or(SyscallHandlerError::WrongHintData)?;
 
-        let hint_code = &hint_data.code;
-        let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-        if let Some(syscall) = super::hint_code_map::HINTCODE.get(hint_code) {
-            match syscall {
-                Hint::AddrBoundPrime => {
-                    other_syscalls::addr_bound_prime(vm, hint_data, constants)?;
-                }
-                Hint::AddrIs250 => {
-                    other_syscalls::addr_is_250(vm, hint_data)?;
-                }
-                Hint::Deploy => {
-                    self.syscall_handler.deploy(vm, syscall_ptr)?;
-                }
-                Hint::EmitEvent => {
-                    self.syscall_handler.emit_event(vm, syscall_ptr)?;
-                }
-                Hint::GetBlockNumber => {
-                    self.syscall_handler.get_block_number(vm, syscall_ptr)?;
-                }
-                Hint::GetBlockTimestamp => {
-                    self.syscall_handler.get_block_timestamp(vm, syscall_ptr)?;
-                }
-                Hint::GetCallerAddress => {
-                    self.syscall_handler.get_caller_address(vm, syscall_ptr)?;
-                }
-                Hint::GetSequencerAddress => {
-                    self.syscall_handler
-                        .get_sequencer_address(vm, syscall_ptr)?;
-                }
-                Hint::LibraryCall => {
-                    self.syscall_handler.library_call(vm, syscall_ptr)?;
-                }
-                Hint::LibraryCallL1Handler => {
-                    self.syscall_handler
-                        .library_call_l1_handler(vm, syscall_ptr)?;
-                }
-                Hint::CallContract => {
-                    self.syscall_handler.call_contract(vm, syscall_ptr)?;
-                }
-                Hint::StorageRead => {
-                    self.syscall_handler.storage_read(vm, syscall_ptr)?;
-                }
-                Hint::StorageWrite => {
-                    self.syscall_handler.storage_write(vm, syscall_ptr)?;
-                }
-                Hint::SendMessageToL1 => {
-                    self.syscall_handler.send_message_to_l1(vm, syscall_ptr)?;
-                }
-                Hint::GetTxSignature => {
-                    self.syscall_handler.get_tx_signature(vm, syscall_ptr)?;
-                }
-                Hint::GetTxInfo => {
-                    self.syscall_handler.get_tx_info(vm, syscall_ptr)?;
-                }
-                Hint::GetContractAddress => {
-                    self.syscall_handler.get_contract_address(vm, syscall_ptr)?;
-                }
-                Hint::DelegateCall => {
-                    self.syscall_handler.delegate_call(vm, syscall_ptr)?;
-                }
-                Hint::DelegateCallL1Handler => {
-                    self.syscall_handler.delegate_l1_handler(vm, syscall_ptr)?;
-                }
-                Hint::ReplaceClass => {
-                    self.syscall_handler.replace_class(vm, syscall_ptr)?;
-                }
-            };
-            Ok(())
-        } else {
-            // Make sure to return a Result type here
-            Err(SyscallHandlerError::NotImplemented(hint_data.code.clone()))
+        match hint_data.code.as_str() {
+            ADDR_BOUND_PRIME => other_syscalls::addr_bound_prime(vm, hint_data, constants),
+            ADDR_IS_250 => other_syscalls::addr_is_250(vm, hint_data),
+            DEPLOY => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.deploy(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
+            }
+            EMIT_EVENT_CODE => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.emit_event(vm, syscall_ptr)
+            }
+            GET_BLOCK_NUMBER => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_block_number(vm, syscall_ptr)
+            }
+            GET_BLOCK_TIMESTAMP => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_block_timestamp(vm, syscall_ptr)
+            }
+            GET_CALLER_ADDRESS => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_caller_address(vm, syscall_ptr)
+            }
+            GET_SEQUENCER_ADDRESS => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_sequencer_address(vm, syscall_ptr)
+            }
+            LIBRARY_CALL => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.library_call(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
+            }
+            LIBRARY_CALL_L1_HANDLER => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.library_call_l1_handler(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
+            }
+            CALL_CONTRACT => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.call_contract(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
+            }
+            STORAGE_READ => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.storage_read(vm, syscall_ptr)
+            }
+            STORAGE_WRITE => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.storage_write(vm, syscall_ptr)
+            }
+            SEND_MESSAGE_TO_L1 => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.send_message_to_l1(vm, syscall_ptr)
+            }
+            GET_TX_SIGNATURE => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_tx_signature(vm, syscall_ptr)
+            }
+            GET_TX_INFO => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_tx_info(vm, syscall_ptr)
+            }
+            GET_CONTRACT_ADDRESS => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.get_contract_address(vm, syscall_ptr)
+            }
+            DELEGATE_CALL => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.delegate_call(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
+            }
+            DELEGATE_L1_HANDLER => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.delegate_l1_handler(
+                    vm,
+                    syscall_ptr,
+                    // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
+            }
+            REPLACE_CLASS => {
+                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+                self.syscall_handler.replace_class(vm, syscall_ptr)
+            }
+            _ => Err(SyscallHandlerError::NotImplemented(hint_data.code.clone())),
         }
     }
 }
 
 /// Implement the HintProcessorLogic trait for DeprecatedSyscallHintProcessor
-impl<'a, S: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> HintProcessorLogic
+    for DeprecatedSyscallHintProcessor<'a, S, C>
+{
     /// Executes the received hint
     fn execute_hint(
         &mut self,
@@ -199,7 +245,9 @@ impl<'a, S: StateReader> HintProcessorLogic for DeprecatedSyscallHintProcessor<'
 }
 
 /// Implement the ResourceTracker trait for DeprecatedSyscallHintProcessor
-impl<'a, S: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> ResourceTracker
+    for DeprecatedSyscallHintProcessor<'a, S, C>
+{
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }
@@ -218,7 +266,9 @@ impl<'a, S: StateReader> ResourceTracker for DeprecatedSyscallHintProcessor<'a, 
 }
 
 /// Implement the HintProcessorPostRun trait for DeprecatedSyscallHintProcessor
-impl<'a, S: StateReader> HintProcessorPostRun for DeprecatedSyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> HintProcessorPostRun
+    for DeprecatedSyscallHintProcessor<'a, S, C>
+{
     /// Validates the execution post run
     fn post_run(
         &self,
@@ -243,12 +293,11 @@ fn get_syscall_ptr(
 /// Unit tests for this module
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use super::*;
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::state::StateDiff;
+    use crate::utils::ClassHash;
     use crate::{
         add_segments, allocate_selector, any_box,
         definitions::{
@@ -258,33 +307,37 @@ mod tests {
         execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
         memory_insert,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::in_memory_state_reader::InMemoryStateReader,
-        state::{cached_state::CachedState, state_api::State},
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader, state_api::State,
+        },
         syscalls::deprecated_syscall_request::{
             DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
             DeprecatedSyscallRequest,
         },
         transaction::InvokeFunction,
         utils::{
-            felt_to_hash, get_big_int, get_integer, get_relocatable,
+            get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
             Address,
         },
     };
     use cairo_vm::relocatable;
     use num_traits::Num;
+    use std::sync::Arc;
 
     type DeprecatedBLSyscallHandler<'a> =
         crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             InMemoryStateReader,
+            PermanentContractClassCache,
         >;
-    type SyscallHintProcessor<'a, T> = super::DeprecatedSyscallHintProcessor<'a, T>;
+    type SyscallHintProcessor<'a, T, C> = super::DeprecatedSyscallHintProcessor<'a, T, C>;
 
     /// Test checks if the send_message_to_l1 syscall is read correctly.
     #[test]
     fn read_send_message_to_l1_request() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 3);
@@ -307,7 +360,7 @@ mod tests {
     /// Test verifies if the read syscall can correctly read a deploy request.
     #[test]
     fn read_deploy_syscall_request() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
@@ -340,7 +393,7 @@ mod tests {
     /// Test checks the get block timestamp for business logic.
     #[test]
     fn get_block_timestamp_for_business_logic() {
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
         add_segments!(vm, 2);
@@ -362,7 +415,7 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -400,7 +453,7 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -458,7 +511,7 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -521,7 +574,7 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -633,7 +686,7 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -678,7 +731,7 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -730,7 +783,7 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::<InMemoryStateReader>::default();
+        let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -779,7 +832,10 @@ mod tests {
             ]
         );
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -822,7 +878,10 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -868,7 +927,10 @@ mod tests {
         );
 
         // invoke syscall
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -940,7 +1002,10 @@ mod tests {
             ids_data,
         );
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -1009,7 +1074,10 @@ mod tests {
             ids_data,
         );
 
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
@@ -1042,7 +1110,7 @@ mod tests {
         let write = syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
-            .read(&felt_to_hash(&address))
+            .read(Address(address))
             .unwrap();
 
         assert_eq!(write, Felt252::new(45));
@@ -1073,7 +1141,7 @@ mod tests {
             16,
         )
         .unwrap();
-        let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
+        let class_hash: ClassHash = ClassHash::from(class_hash_felt.clone());
 
         vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
@@ -1086,18 +1154,14 @@ mod tests {
         );
 
         // Create SyscallHintProcessor
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
         );
-        // Initialize state.set_contract_classes
-        syscall_handler_hint_processor
-            .syscall_handler
-            .starknet_storage_state
-            .state
-            .set_contract_classes(HashMap::new())
-            .unwrap();
 
         // Set contract class
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
@@ -1174,7 +1238,7 @@ mod tests {
             16,
         )
         .unwrap();
-        let class_hash: [u8; 32] = class_hash_felt.to_bytes_be().try_into().unwrap();
+        let class_hash: ClassHash = ClassHash::from(class_hash_felt.clone());
 
         vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
@@ -1187,18 +1251,14 @@ mod tests {
         );
 
         // Create SyscallHintProcessor
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut syscall_handler_hint_processor = SyscallHintProcessor::new(
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
         );
-        // Initialize state.set_contract_classes
-        syscall_handler_hint_processor
-            .syscall_handler
-            .starknet_storage_state
-            .state
-            .set_contract_classes(HashMap::new())
-            .unwrap();
 
         // Set contract class
         let contract_class =
@@ -1265,14 +1325,20 @@ mod tests {
         )
         .unwrap();
 
-        let mut transactional = state.create_transactional();
+        let mut transactional = state.create_transactional().unwrap();
         // Invoke result
         let result = internal_invoke_function
-            .apply(&mut transactional, &BlockContext::default(), 0)
+            .apply(
+                &mut transactional,
+                &BlockContext::default(),
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         state
-            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
+            .apply_state_update(&StateDiff::from_cached_state(transactional.cache()).unwrap())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();
