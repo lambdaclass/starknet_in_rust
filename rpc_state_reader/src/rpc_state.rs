@@ -299,8 +299,12 @@ impl RpcState {
             env::var("INFURA_API_KEY").map_err(|_| RpcStateError::MissingInfuraApiKey)?
         );
 
-        let chain_id: ChainId = chain.into();
-        let feeder_url = format!("https://{}.starknet.io/feeder_gateway", chain_id);
+        let chain_name = match chain {
+            RpcChain::MainNet => "mainnet",
+            RpcChain::TestNet => "goerli",
+            RpcChain::TestNet2 => todo!(),
+        };
+        let feeder_url = format!("limited-rpc.nethermind.io/{}-juno", chain_name);
 
         Ok(Self::new(chain, block, &rpc_endpoint, &feeder_url))
     }
