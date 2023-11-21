@@ -55,11 +55,19 @@ use cairo_vm::{
 use lazy_static::lazy_static;
 
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::contract_class_cache::ContractClassCache;
 use num_traits::{One, ToPrimitive, Zero};
 
-const STEP: u128 = 100;
-const SYSCALL_BASE: u128 = 100 * STEP;
-const KECCAK_ROUND_COST: u128 = 180000;
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
+
+pub(crate) const STEP: u128 = 100;
+pub(crate) const SYSCALL_BASE: u128 = 100 * STEP;
+pub(crate) const KECCAK_ROUND_COST: u128 = 180000;
+
 lazy_static! {
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
     static ref SELECTOR_TO_SYSCALL: HashMap<Felt252, &'static str> = {
@@ -71,6 +79,7 @@ lazy_static! {
                 94901967946959054011942058057773508207_u128.into(),
                 "get_execution_info",
             );
+            map.insert(22096086224907272360718070632_u128.into(), "get_block_hash");
             map.insert(100890693370601760042082660_u128.into(), "storage_read");
             map.insert(20853273475220472486191784820_u128.into(), "call_contract");
             map.insert(
@@ -91,7 +100,7 @@ lazy_static! {
     // Taken from starkware/starknet/constants.py in cairo-lang
     // See further documentation on cairo_programs/constants.cairo
     /// Maps syscall name to gas costs
-    static ref SYSCALL_GAS_COST: HashMap<&'static str, u128> = {
+    pub(crate) static ref SYSCALL_GAS_COST: HashMap<&'static str, u128> = {
         let mut map = HashMap::new();
 
         map.insert("initial", 100_000_000 * STEP);
@@ -112,13 +121,14 @@ lazy_static! {
         map.insert("send_message_to_l1", SYSCALL_BASE + 50 * STEP);
         map.insert("get_block_timestamp", 0);
         map.insert("keccak", 0);
+        map.insert("get_block_hash", SYSCALL_BASE + 50 * STEP);
 
         map
     };
 }
 
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
+pub struct BusinessLogicSyscallHandler<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) expected_syscall_ptr: Relocatable,
     pub(crate) resources_manager: ExecutionResourcesManager,
@@ -129,19 +139,20 @@ pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) block_context: BlockContext,
-    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     pub(crate) support_reverted: bool,
     pub(crate) entry_point_selector: Felt252,
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
+    pub(crate) execution_info_ptr: Option<Relocatable>,
 }
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, S, C> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -171,9 +182,11 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             support_reverted,
             entry_point_selector,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
+            execution_info_ptr: None,
         }
     }
-    pub fn default_with_state(state: &'a mut CachedState<S>) -> Self {
+
+    pub fn default_with_state(state: &'a mut CachedState<S, C>) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
             Default::default(),
@@ -184,7 +197,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
     ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
@@ -227,6 +240,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             support_reverted: false,
             entry_point_selector,
             selector_to_syscall: &SELECTOR_TO_SYSCALL,
+            execution_info_ptr: None,
         }
     }
 
@@ -241,6 +255,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         remaining_gas: u128,
         execution_entry_point: ExecutionEntryPoint,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let ExecutionResult {
             call_info,
@@ -254,11 +271,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 &mut self.tx_execution_context,
                 false,
                 self.block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )
             .map_err(|err| SyscallHandlerError::ExecutionError(err.to_string()))?;
 
         let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
-            revert_error.unwrap_or("Execution error".to_string()),
+            revert_error.unwrap_or_else(|| "Execution error".to_string()),
         ))?;
 
         let retdata_maybe_reloc = call_info
@@ -286,6 +305,14 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             }))
         };
 
+        // update syscall handler information
+        self.starknet_storage_state
+            .read_values
+            .extend(call_info.storage_read_values.clone());
+        self.starknet_storage_state
+            .accessed_keys
+            .extend(call_info.accessed_storage_keys.clone());
+
         self.internal_calls.push(call_info);
 
         Ok(SyscallResponse { gas, body })
@@ -302,6 +329,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(class_and_entrypoints) => {
+                Ok(class_and_entrypoints.1.constructor.is_empty())
+            }
         }
     }
 
@@ -310,7 +340,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         contract_address: &Address,
         class_hash_bytes: ClassHash,
         constructor_calldata: Vec<Felt252>,
-        remainig_gas: u128,
+        remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<CallResult, StateError> {
         let compiled_class = if let Ok(compiled_class) = self
             .starknet_storage_state
@@ -328,7 +361,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
 
         if self.constructor_entry_points_empty(compiled_class)? {
             if !constructor_calldata.is_empty() {
-                return Err(StateError::ConstructorCalldataEmpty());
+                return Err(StateError::ConstructorCalldataEmpty);
             }
 
             let call_info = CallInfo::empty_constructor_call(
@@ -349,7 +382,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             EntryPointType::Constructor,
             Some(CallType::Call),
             None,
-            remainig_gas,
+            remaining_gas,
         );
 
         let ExecutionResult {
@@ -364,11 +397,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 &mut self.tx_execution_context,
                 self.support_reverted,
                 self.block_context.invoke_tx_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )
-            .map_err(|_| StateError::ExecutionEntryPoint())?;
+            .map_err(|_| StateError::ExecutionEntryPoint)?;
 
         let call_info = call_info.ok_or(StateError::CustomError(
-            revert_error.unwrap_or("Execution error".to_string()),
+            revert_error.unwrap_or_else(|| "Execution error".to_string()),
         ))?;
 
         self.internal_calls.push(call_info.clone());
@@ -377,13 +412,16 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
-        self.starknet_storage_state.write(&key.to_be_bytes(), value)
+        self.starknet_storage_state.write(Address(key), value)
     }
 
     pub fn syscall(
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let selector = get_big_int(vm, syscall_ptr)?;
         let syscall_name = self.selector_to_syscall.get(&selector).ok_or(
@@ -425,7 +463,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         } else {
             // Execute with remaining gas.
             let remaining_gas = initial_gas - required_gas;
-            self.execute_syscall(request, remaining_gas, vm)?
+            self.execute_syscall(
+                request,
+                remaining_gas,
+                vm,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )?
         };
 
         // Write response to the syscall segment.
@@ -442,11 +486,32 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         request: SyscallRequest,
         remaining_gas: u128,
         vm: &mut VirtualMachine,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         match request {
-            SyscallRequest::LibraryCall(req) => self.library_call(vm, req, remaining_gas),
-            SyscallRequest::CallContract(req) => self.call_contract(vm, req, remaining_gas),
-            SyscallRequest::Deploy(req) => self.deploy(vm, req, remaining_gas),
+            SyscallRequest::LibraryCall(req) => self.library_call(
+                vm,
+                req,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            SyscallRequest::CallContract(req) => self.call_contract(
+                vm,
+                req,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
+            SyscallRequest::Deploy(req) => self.deploy(
+                vm,
+                req,
+                remaining_gas,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            ),
             SyscallRequest::StorageRead(req) => self.storage_read(vm, req, remaining_gas),
             SyscallRequest::StorageWrite(req) => self.storage_write(vm, req, remaining_gas),
             SyscallRequest::GetExecutionInfo => self.get_execution_info(vm, remaining_gas),
@@ -524,10 +589,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     /// them as accessed.
     pub(crate) fn validate_read_only_segments(
         &self,
-        runner: &mut VirtualMachine,
+        vm: &mut VirtualMachine,
     ) -> Result<(), TransactionError> {
         for (segment_ptr, segment_size) in self.read_only_segments.clone() {
-            let used_size = runner
+            let used_size = vm
                 .get_segment_used_size(segment_ptr.segment_index as usize)
                 .ok_or(TransactionError::InvalidSegmentSize)?;
 
@@ -539,13 +604,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             if seg_size != used_size.into() {
                 return Err(TransactionError::OutOfBound);
             }
-            runner.mark_address_range_as_accessed(segment_ptr, used_size)?;
+            vm.mark_address_range_as_accessed(segment_ptr, used_size)?;
         }
         Ok(())
     }
 }
 
-impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, S, C> {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -579,7 +644,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        match self.starknet_storage_state.read(&key) {
+        match self
+            .starknet_storage_state
+            .read(Address(Felt252::from_bytes_be(&key)))
+        {
             Ok(value) => Ok(value),
             Err(e @ StateError::Io(_)) => Err(e),
             Err(_) => Ok(Felt252::zero()),
@@ -616,63 +684,69 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         })
     }
 
+    // Returns the pointer to the segment with the execution info if it was already written.
+    // If it wasn't, it writes the execution info into memory and returns its start address.
+    fn get_or_allocate_execution_info(
+        &mut self,
+        vm: &mut VirtualMachine,
+    ) -> Result<Relocatable, SyscallHandlerError> {
+        if let Some(ptr) = self.execution_info_ptr {
+            return Ok(ptr);
+        }
+
+        // Allocate block_info
+        let block_info = &self.block_context.block_info;
+        let block_info_data = vec![
+            MaybeRelocatable::from(Felt252::from(block_info.block_number)),
+            MaybeRelocatable::from(Felt252::from(block_info.block_timestamp)),
+            MaybeRelocatable::from(&block_info.sequencer_address.0),
+        ];
+        let block_info_ptr = self.allocate_segment(vm, block_info_data)?;
+
+        // Allocate signature
+        let signature: Vec<MaybeRelocatable> = self
+            .tx_execution_context
+            .signature
+            .iter()
+            .map(MaybeRelocatable::from)
+            .collect();
+        let signature_start_ptr = self.allocate_segment(vm, signature)?;
+        let signature_end_ptr = (signature_start_ptr + self.tx_execution_context.signature.len())?;
+
+        // Allocate tx info
+        let tx_info = &self.tx_execution_context;
+        let tx_info_data = vec![
+            MaybeRelocatable::from(&tx_info.version),
+            MaybeRelocatable::from(&tx_info.account_contract_address.0),
+            MaybeRelocatable::from(Felt252::from(tx_info.max_fee)),
+            signature_start_ptr.into(),
+            signature_end_ptr.into(),
+            MaybeRelocatable::from(&tx_info.transaction_hash),
+            MaybeRelocatable::from(&self.block_context.starknet_os_config.chain_id),
+            MaybeRelocatable::from(&tx_info.nonce),
+        ];
+        let tx_info_ptr = self.allocate_segment(vm, tx_info_data)?;
+
+        // Allocate execution_info
+        let execution_info = vec![
+            block_info_ptr.into(),
+            tx_info_ptr.into(),
+            MaybeRelocatable::from(&self.caller_address.0),
+            MaybeRelocatable::from(&self.contract_address.0),
+            MaybeRelocatable::from(&self.entry_point_selector),
+        ];
+        let execution_info_ptr = self.allocate_segment(vm, execution_info)?;
+
+        self.execution_info_ptr = Some(execution_info_ptr);
+        Ok(execution_info_ptr)
+    }
+
     fn get_execution_info(
-        &self,
+        &mut self,
         vm: &mut VirtualMachine,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let tx_info = &self.tx_execution_context;
-        let block_info = &self.block_context.block_info;
-
-        let mut res_segment = vm.add_memory_segment();
-
-        let signature_start = res_segment;
-        for s in tx_info.signature.iter() {
-            vm.insert_value(res_segment, s)?;
-            res_segment = (res_segment + 1)?;
-        }
-        let signature_end = res_segment;
-
-        let tx_info_ptr = res_segment;
-        vm.insert_value::<Felt252>(res_segment, tx_info.version.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, tx_info.account_contract_address.0.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, tx_info.max_fee.into())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, signature_start)?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, signature_end)?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, tx_info.transaction_hash.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(
-            res_segment,
-            self.block_context.starknet_os_config.chain_id.clone(),
-        )?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, tx_info.nonce.clone())?;
-        res_segment = (res_segment + 1)?;
-
-        let block_info_ptr = res_segment;
-        vm.insert_value::<Felt252>(res_segment, block_info.block_number.into())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, block_info.block_timestamp.into())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, block_info.sequencer_address.0.clone())?;
-        res_segment = (res_segment + 1)?;
-
-        let exec_info_ptr = res_segment;
-        vm.insert_value(res_segment, block_info_ptr)?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value(res_segment, tx_info_ptr)?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, self.caller_address.0.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, self.contract_address.0.clone())?;
-        res_segment = (res_segment + 1)?;
-        vm.insert_value::<Felt252>(res_segment, self.entry_point_selector.clone())?;
-
+        let exec_info_ptr = self.get_or_allocate_execution_info(vm)?;
         Ok(SyscallResponse {
             gas: remaining_gas,
             body: Some(ResponseBody::GetExecutionInfo { exec_info_ptr }),
@@ -684,6 +758,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         request: CallContractRequest,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
         let execution_entry_point = ExecutionEntryPoint::new(
@@ -697,7 +774,13 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             remaining_gas,
         );
 
-        self.call_contract_helper(vm, remaining_gas, execution_entry_point)
+        self.call_contract_helper(
+            vm,
+            remaining_gas,
+            execution_entry_point,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     fn storage_read(
@@ -735,6 +818,9 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &VirtualMachine,
         request: DeployRequest,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(Address, CallResult), SyscallHandlerError> {
         if !(request.deploy_from_zero.is_zero() || request.deploy_from_zero.is_one()) {
             return Err(SyscallHandlerError::DeployFromZero(
@@ -783,6 +869,8 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             class_hash_bytes,
             constructor_calldata,
             remaining_gas,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         Ok((contract_address, result))
@@ -793,8 +881,17 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         syscall_request: DeployRequest,
         mut remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        let (contract_address, result) = self.syscall_deploy(vm, syscall_request, remaining_gas)?;
+        let (contract_address, result) = self.syscall_deploy(
+            vm,
+            syscall_request,
+            remaining_gas,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )?;
 
         remaining_gas -= result.gas_consumed;
 
@@ -839,6 +936,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             "library_call" => LibraryCallRequest::from_ptr(vm, syscall_ptr),
             "deploy" => DeployRequest::from_ptr(vm, syscall_ptr),
             "get_block_number" => Ok(SyscallRequest::GetBlockNumber),
+            "get_block_hash" => GetBlockHashRequest::from_ptr(vm, syscall_ptr),
             "storage_write" => StorageWriteRequest::from_ptr(vm, syscall_ptr),
             "get_execution_info" => Ok(SyscallRequest::GetExecutionInfo),
             "send_message_to_l1" => SendMessageToL1Request::from_ptr(vm, syscall_ptr),
@@ -866,7 +964,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
 
     fn send_message_to_l1(
         &mut self,
-        vm: &mut VirtualMachine,
+        vm: &VirtualMachine,
         request: SendMessageToL1Request,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
@@ -904,8 +1002,12 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         vm: &mut VirtualMachine,
         request: LibraryCallRequest,
         remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
+        let class_hash = ClassHash::from(request.class_hash);
         let execution_entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             calldata,
@@ -913,11 +1015,17 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            Some(request.class_hash.to_be_bytes()),
+            Some(class_hash),
             remaining_gas,
         );
 
-        self.call_contract_helper(vm, remaining_gas, execution_entry_point)
+        self.call_contract_helper(
+            vm,
+            remaining_gas,
+            execution_entry_point,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
     }
 
     fn get_block_timestamp(
@@ -942,7 +1050,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         self.starknet_storage_state.state.set_class_hash_at(
             self.contract_address.clone(),
-            request.class_hash.to_be_bytes(),
+            ClassHash::from(request.class_hash),
         )?;
         Ok(SyscallResponse {
             gas: remaining_gas,

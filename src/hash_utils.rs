@@ -125,9 +125,9 @@ pub fn compute_hash_on_elements(vec: &[Felt252]) -> Result<Felt252, HashError> {
     let felt_result = felt_vec
         .into_iter()
         .reduce(|x, y| pedersen_hash(&x, &y))
-        .ok_or(HashError::FailedToComputeHash(
-            "Failed to compute Pedersen hash.".to_string(),
-        ))?;
+        .ok_or_else(|| {
+            HashError::FailedToComputeHash("Failed to compute Pedersen hash.".to_string())
+        })?;
 
     let result = Felt252::from_bytes_be(&felt_result.to_bytes_be());
     Ok(result)
