@@ -1091,13 +1091,6 @@ mod tests {
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
         );
-        // Initialize state.set_contract_classes
-        syscall_handler_hint_processor
-            .syscall_handler
-            .starknet_storage_state
-            .state
-            .set_contract_classes(HashMap::new())
-            .unwrap();
 
         // Set contract class
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
@@ -1192,13 +1185,6 @@ mod tests {
             DeprecatedBLSyscallHandler::default_with(&mut state),
             RunResources::default(),
         );
-        // Initialize state.set_contract_classes
-        syscall_handler_hint_processor
-            .syscall_handler
-            .starknet_storage_state
-            .state
-            .set_contract_classes(HashMap::new())
-            .unwrap();
 
         // Set contract class
         let contract_class =
@@ -1272,7 +1258,7 @@ mod tests {
             .unwrap();
 
         state
-            .apply_state_update(&StateDiff::from_cached_state(transactional).unwrap())
+            .apply_state_update(&StateDiff::from_cached_state(transactional.cache()).unwrap())
             .unwrap();
 
         let result_call_info = result.call_info.unwrap();

@@ -3,6 +3,7 @@
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::{One, Zero};
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -11,20 +12,21 @@ use starknet_in_rust::{
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
     state::{
-        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
         ExecutionResourcesManager,
     },
     utils::Address,
 };
-use std::sync::Arc;
-use std::{collections::HashMap, path::PathBuf};
+use std::{path::PathBuf, sync::Arc};
 
 #[test]
 fn delegate_l1_handler() {
     //* --------------------------------------------
     //*    Create state reader with class hash data
     //* --------------------------------------------
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
     let nonce = Felt252::zero();
 
     // Add get_number.cairo contract to the state
@@ -33,9 +35,9 @@ fn delegate_l1_handler() {
     let contract_class = ContractClass::from_path(path).unwrap();
 
     let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
-    let class_hash = [2; 32];
+    let class_hash: ClassHash = ClassHash([2; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );
@@ -61,9 +63,9 @@ fn delegate_l1_handler() {
     //  ------------ contract data --------------------
 
     let address = Address(1111.into());
-    let class_hash = [1; 32];
+    let class_hash = ClassHash([1; 32]);
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );
@@ -78,7 +80,7 @@ fn delegate_l1_handler() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -120,7 +122,9 @@ fn delegate_l1_handler() {
             &mut resources_manager,
             &mut tx_execution_context,
             false,
-            block_context.invoke_tx_max_n_steps()
+            block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .is_ok());
 }

@@ -1,10 +1,12 @@
 use super::state_cache::StorageEntry;
 use crate::{
     core::errors::state_errors::StateError,
+    definitions::block_context::BlockContext,
     services::api::contract_classes::compiled_class::CompiledClass,
     state::StateDiff,
-    utils::{Address, ClassHash, CompiledClassHash},
+    utils::{get_erc20_balance_var_addresses, Address, ClassHash, CompiledClassHash},
 };
+use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::felt::Felt252;
 
 pub trait StateReader {
@@ -23,6 +25,38 @@ pub trait StateReader {
         &self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError>;
+    /// Returns the storage value representing the balance (in fee token) at the given address as a (low, high) pair
+    fn get_fee_token_balance(
+        &mut self,
+        block_context: &BlockContext,
+        contract_address: &Address,
+    ) -> Result<(Felt252, Felt252), StateError> {
+        let (low_key, high_key) = get_erc20_balance_var_addresses(contract_address)?;
+        let low = self.get_storage_at(&(
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
+            low_key,
+        ))?;
+        let high = self.get_storage_at(&(
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
+            high_key,
+        ))?;
+
+        Ok((low, high))
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct StateChangesCount {
+    pub n_storage_updates: usize,
+    pub n_class_hash_updates: usize,
+    pub n_compiled_class_hash_updates: usize,
+    pub n_modified_contracts: usize,
 }
 
 pub trait State {
@@ -53,13 +87,20 @@ pub trait State {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError>;
+
+    fn set_sierra_program(
+        &mut self,
+        compiled_class_hash: &Felt252,
+        sierra_program: Vec<BigUintAsHex>,
+    ) -> Result<(), StateError>;
+
     fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
 
-    /// Counts the amount of modified contracts and the updates to the storage
-    fn count_actual_storage_changes(
+    /// Counts the amount of state changes
+    fn count_actual_state_changes(
         &mut self,
         fee_token_and_sender_address: Option<(&Address, &Address)>,
-    ) -> Result<(usize, usize), StateError>;
+    ) -> Result<StateChangesCount, StateError>;
 
     /// Returns the class hash of the contract class at the given address.
     /// Returns zero by default if the value is not present
@@ -75,4 +116,9 @@ pub trait State {
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError>;
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError>;
+
+    fn get_sierra_program(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> Result<Vec<BigUintAsHex>, StateError>;
 }

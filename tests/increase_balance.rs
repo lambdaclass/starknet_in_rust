@@ -1,9 +1,9 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use num_traits::Zero;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -11,15 +11,16 @@ use starknet_in_rust::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{cached_state::CachedState, state_cache::StorageEntry},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        state_cache::StorageEntry,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
 };
-use std::sync::Arc;
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 #[test]
 fn hello_starknet_increase_balance() {
@@ -44,17 +45,17 @@ fn hello_starknet_increase_balance() {
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     //  ------------ contract data --------------------
 
     let address = Address(1111.into());
-    let class_hash = [1; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
     let storage = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.set_contract_class(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
     );
@@ -73,7 +74,7 @@ fn hello_starknet_increase_balance() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -108,8 +109,8 @@ fn hello_starknet_increase_balance() {
         TRANSACTION_VERSION.clone(),
     );
     let mut resources_manager = ExecutionResourcesManager::default();
-    let expected_key = calculate_sn_keccak("balance".as_bytes());
-
+    let expected_key_bytes = calculate_sn_keccak("balance".as_bytes());
+    let expected_key: ClassHash = ClassHash(expected_key_bytes);
     let mut expected_accessed_storage_keys = HashSet::new();
     expected_accessed_storage_keys.insert(expected_key);
     let expected_storage_read_values = vec![Felt252::zero(), Felt252::zero()];
@@ -122,10 +123,10 @@ fn hello_starknet_increase_balance() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 65,
             ..Default::default()
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys: expected_accessed_storage_keys,
         storage_read_values: expected_storage_read_values,
@@ -140,7 +141,9 @@ fn hello_starknet_increase_balance() {
                 &mut resources_manager,
                 &mut tx_execution_context,
                 false,
-                block_context.invoke_tx_max_n_steps()
+                block_context.invoke_tx_max_n_steps(),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap()
             .call_info

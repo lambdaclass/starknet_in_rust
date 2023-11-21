@@ -1,24 +1,25 @@
-pub mod cached_state;
-pub(crate) mod contract_storage_state;
-pub mod in_memory_state_reader;
-pub mod state_api;
-pub mod state_cache;
-
+use self::{
+    cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
+    state_cache::StateCache,
+};
 use crate::{
     core::errors::state_errors::StateError,
-    services::api::contract_classes::compiled_class::CompiledClass,
-    utils::{get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping},
+    transaction::error::TransactionError,
+    utils::{
+        get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, Address,
+        ClassHash, CompiledClassHash,
+    },
 };
 use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use getset::Getters;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{
-    transaction::error::TransactionError,
-    utils::{Address, ClassHash},
-};
-
-use self::{cached_state::CachedState, state_api::StateReader};
+pub mod cached_state;
+pub mod contract_class_cache;
+pub(crate) mod contract_storage_state;
+pub mod in_memory_state_reader;
+pub mod state_api;
+pub mod state_cache;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockInfo {
@@ -106,7 +107,7 @@ impl ExecutionResourcesManager {
 pub struct StateDiff {
     pub(crate) address_to_class_hash: HashMap<Address, ClassHash>,
     pub(crate) address_to_nonce: HashMap<Address, Felt252>,
-    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+    pub(crate) class_hash_to_compiled_class: HashMap<ClassHash, CompiledClassHash>,
     pub(crate) storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
 }
 
@@ -114,7 +115,7 @@ impl StateDiff {
     pub const fn new(
         address_to_class_hash: HashMap<Address, ClassHash>,
         address_to_nonce: HashMap<Address, Felt252>,
-        class_hash_to_compiled_class: HashMap<ClassHash, CompiledClass>,
+        class_hash_to_compiled_class: HashMap<ClassHash, CompiledClassHash>,
         storage_updates: HashMap<Address, HashMap<Felt252, Felt252>>,
     ) -> Self {
         StateDiff {
@@ -125,18 +126,13 @@ impl StateDiff {
         }
     }
 
-    pub fn from_cached_state<T>(cached_state: CachedState<T>) -> Result<Self, StateError>
-    where
-        T: StateReader,
-    {
-        let state_cache = cached_state.cache().to_owned();
-
-        let substracted_maps = state_cache.storage_writes;
+    pub fn from_cached_state(state_cache: &StateCache) -> Result<Self, StateError> {
+        let substracted_maps = &state_cache.storage_writes;
         let storage_updates = to_state_diff_storage_mapping(substracted_maps);
 
-        let address_to_nonce = state_cache.nonce_writes;
-        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes;
-        let address_to_class_hash = state_cache.class_hash_writes;
+        let address_to_nonce = state_cache.nonce_writes.clone();
+        let class_hash_to_compiled_class = state_cache.compiled_class_hash_writes.clone();
+        let address_to_class_hash = state_cache.class_hash_writes.clone();
 
         Ok(StateDiff {
             address_to_class_hash,
@@ -146,11 +142,16 @@ impl StateDiff {
         })
     }
 
-    pub fn to_cached_state<T>(&self, state_reader: Arc<T>) -> Result<CachedState<T>, StateError>
+    pub fn to_cached_state<T, C>(
+        &self,
+        state_reader: Arc<T>,
+        contract_class_cache: Arc<C>,
+    ) -> Result<CachedState<T, C>, StateError>
     where
         T: StateReader + Clone,
+        C: ContractClassCache,
     {
-        let mut cache_state = CachedState::new(state_reader, HashMap::new());
+        let mut cache_state = CachedState::new(state_reader, contract_class_cache);
         let cache_storage_mapping = to_cache_state_storage_mapping(&self.storage_updates);
 
         cache_state.cache_mut().set_initial_values(
@@ -217,26 +218,26 @@ fn test_validate_legal_progress() {
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, sync::Arc};
-
     use super::StateDiff;
     use crate::{
-        state::in_memory_state_reader::InMemoryStateReader,
         state::{
             cached_state::CachedState,
+            contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
             state_api::StateReader,
             state_cache::{StateCache, StorageEntry},
         },
-        utils::Address,
+        utils::{Address, ClassHash},
     };
     use cairo_vm::felt::Felt252;
+    use std::{collections::HashMap, sync::Arc};
 
     #[test]
     fn test_from_cached_state_without_updates() {
         let mut state_reader = InMemoryStateReader::default();
 
         let contract_address = Address(32123.into());
-        let class_hash = [9; 32];
+        let class_hash = ClassHash([9; 32]);
         let nonce = Felt252::new(42);
 
         state_reader
@@ -246,9 +247,12 @@ mod test {
             .address_to_nonce
             .insert(contract_address, nonce);
 
-        let cached_state = CachedState::new(Arc::new(state_reader), HashMap::new());
+        let cached_state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
-        let diff = StateDiff::from_cached_state(cached_state).unwrap();
+        let diff = StateDiff::from_cached_state(&cached_state.cache).unwrap();
 
         assert_eq!(0, diff.storage_updates.len());
     }
@@ -306,7 +310,7 @@ mod test {
         let mut state_reader = InMemoryStateReader::default();
 
         let contract_address = Address(32123.into());
-        let class_hash = [9; 32];
+        let class_hash = ClassHash([9; 32]);
         let nonce = Felt252::new(42);
 
         state_reader
@@ -316,16 +320,27 @@ mod test {
             .address_to_nonce
             .insert(contract_address.clone(), nonce);
 
-        let cached_state_original =
-            CachedState::new(Arc::new(state_reader.clone()), HashMap::new());
+        let cached_state_original = CachedState::new(
+            Arc::new(state_reader.clone()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
-        let diff = StateDiff::from_cached_state(cached_state_original.clone()).unwrap();
+        let diff = StateDiff::from_cached_state(cached_state_original.cache()).unwrap();
 
-        let cached_state = diff.to_cached_state(Arc::new(state_reader)).unwrap();
+        let cached_state = diff
+            .to_cached_state::<_, PermanentContractClassCache>(
+                Arc::new(state_reader),
+                Arc::new(PermanentContractClassCache::default()),
+            )
+            .unwrap();
 
         assert_eq!(
-            cached_state_original.contract_classes(),
-            cached_state.contract_classes()
+            (&*cached_state_original.contract_class_cache().clone())
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+            (&*cached_state.contract_class_cache().clone())
+                .into_iter()
+                .collect::<HashMap<_, _>>()
         );
         assert_eq!(
             cached_state_original
@@ -340,7 +355,7 @@ mod test {
         let mut state_reader = InMemoryStateReader::default();
 
         let contract_address = Address(32123.into());
-        let class_hash = [9; 32];
+        let class_hash = ClassHash([9; 32]);
         let nonce = Felt252::new(42);
 
         state_reader
@@ -364,10 +379,13 @@ mod test {
             storage_writes,
             HashMap::new(),
         );
-        let cached_state =
-            CachedState::new_for_testing(Arc::new(state_reader), cache, HashMap::new());
+        let cached_state = CachedState::new_for_testing(
+            Arc::new(state_reader),
+            cache,
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
-        let mut diff = StateDiff::from_cached_state(cached_state).unwrap();
+        let mut diff = StateDiff::from_cached_state(cached_state.cache()).unwrap();
 
         let diff_squashed = diff.squash(diff.clone());
 
