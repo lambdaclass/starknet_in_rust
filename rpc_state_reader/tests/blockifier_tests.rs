@@ -268,18 +268,11 @@ fn blockifier_test_recent_tx() {
     } = execute_call_info.unwrap();
 
     assert_eq!(actual_fee.0, receipt.actual_fee);
-    assert_eq!(
-        vm_resources,
-        trace
-            .function_invocation
-            .as_ref()
-            .unwrap()
-            .execution_resources
-    );
+    assert_eq!(vm_resources, receipt.execution_resources);
     assert_eq!(
         inner_calls.len(),
         trace
-            .function_invocation
+            .execute_invocation
             .as_ref()
             .unwrap()
             .internal_calls
@@ -403,18 +396,11 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
         }
     }
 
-    assert_eq_sorted!(
-        vm_resources,
-        trace
-            .function_invocation
-            .as_ref()
-            .unwrap()
-            .execution_resources
-    );
+    assert_eq_sorted!(vm_resources, receipt.execution_resources);
     assert_eq!(
         inner_calls.len(),
         trace
-            .function_invocation
+            .execute_invocation
             .as_ref()
             .unwrap()
             .internal_calls

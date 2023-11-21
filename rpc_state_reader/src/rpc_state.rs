@@ -1,4 +1,10 @@
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources as VmExecutionResources;
+use cairo_vm::vm::runners::{
+    builtin_runner::{
+        BITWISE_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME, OUTPUT_BUILTIN_NAME,
+        POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
+    },
+    cairo_runner::ExecutionResources as VmExecutionResources,
+};
 use core::fmt;
 use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
@@ -150,9 +156,8 @@ pub struct RpcResponse<T> {
 #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
 pub struct TransactionTrace {
     pub validate_invocation: Option<RpcCallInfo>,
-    pub function_invocation: Option<RpcCallInfo>,
+    pub execute_invocation: Option<RpcCallInfo>,
     pub fee_transfer_invocation: Option<RpcCallInfo>,
-    pub signature: Vec<StarkFelt>,
     pub revert_error: Option<String>,
 }
 
@@ -165,7 +170,6 @@ pub struct RpcExecutionResources {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RpcCallInfo {
-    pub execution_resources: VmExecutionResources,
     pub retdata: Option<Vec<StarkFelt>>,
     pub calldata: Option<Vec<StarkFelt>>,
     pub internal_calls: Vec<RpcCallInfo>,
@@ -181,6 +185,8 @@ pub struct RpcTransactionReceipt {
     pub execution_status: String,
     #[serde(rename = "type")]
     pub tx_type: String,
+    #[serde(deserialize_with = "vm_execution_resources_deser")]
+    pub execution_resources: VmExecutionResources,
 }
 
 fn actual_fee_deser<'de, D>(deserializer: D) -> Result<u128, D::Error>
@@ -191,50 +197,65 @@ where
     u128::from_str_radix(&hex[2..], 16).map_err(serde::de::Error::custom)
 }
 
+fn vm_execution_resources_deser<'de, D>(deserializer: D) -> Result<VmExecutionResources, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+    // Parse n_steps
+    let n_steps_str: String = serde_json::from_value(
+        value
+            .get("steps")
+            .ok_or(serde::de::Error::custom("Missing field steps"))?
+            .clone(),
+    )
+    .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+    let n_steps = usize::from_str_radix(&n_steps_str.trim_start_matches("0x"), 16)
+        .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+
+    // Parse n_memory_holes
+    let n_memory_holes_str: String = serde_json::from_value(
+        value
+            .get("memory_holes")
+            .ok_or(serde::de::Error::custom("Missing field memory_holes"))?
+            .clone(),
+    )
+    .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+    let n_memory_holes = usize::from_str_radix(&n_memory_holes_str.trim_start_matches("0x"), 16)
+        .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+    // Parse builtin instance counter
+    const BUILTIN_NAMES: [&str; 7] = [
+        OUTPUT_BUILTIN_NAME,
+        RANGE_CHECK_BUILTIN_NAME,
+        HASH_BUILTIN_NAME,
+        SIGNATURE_BUILTIN_NAME,
+        KECCAK_BUILTIN_NAME,
+        BITWISE_BUILTIN_NAME,
+        POSEIDON_BUILTIN_NAME,
+    ];
+    let mut builtin_instance_counter = HashMap::new();
+    for name in BUILTIN_NAMES {
+        let builtin_counter_str: Option<String> = value
+            .get(format!("{}_applications", name))
+            .and_then(|a| serde_json::from_value(a.clone()).ok());
+        let builtin_counter = builtin_counter_str
+            .and_then(|s| usize::from_str_radix(&s.trim_start_matches("0x"), 16).ok())
+            .unwrap_or_default();
+        builtin_instance_counter.insert(name.to_string(), builtin_counter);
+    }
+    Ok(VmExecutionResources {
+        n_steps,
+        n_memory_holes,
+        builtin_instance_counter,
+    })
+}
+
 impl<'de> Deserialize<'de> for RpcCallInfo {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
-
-        // Parse execution_resources
-        let execution_resources_value = value
-            .get("execution_resources")
-            .ok_or(serde::de::Error::custom(
-                "Missing field execution_resources",
-            ))?
-            .clone();
-
-        let execution_resources = VmExecutionResources {
-            n_steps: serde_json::from_value(
-                execution_resources_value
-                    .get("n_steps")
-                    .ok_or(serde::de::Error::custom(
-                        "Missing field execution_resources.n_steps",
-                    ))?
-                    .clone(),
-            )
-            .map_err(serde::de::Error::custom)?,
-            n_memory_holes: serde_json::from_value(
-                execution_resources_value
-                    .get("n_memory_holes")
-                    .ok_or(serde::de::Error::custom(
-                        "Missing field execution_resources.n_memory_holes",
-                    ))?
-                    .clone(),
-            )
-            .map_err(serde::de::Error::custom)?,
-            builtin_instance_counter: serde_json::from_value(
-                execution_resources_value
-                    .get("builtin_instance_counter")
-                    .ok_or(serde::de::Error::custom(
-                        "Missing field execution_resources.builtin_instance_counter",
-                    ))?
-                    .clone(),
-            )
-            .map_err(serde::de::Error::custom)?,
-        };
 
         // Parse retdata
         let retdata_value = value
@@ -254,8 +275,8 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
 
         // Parse internal calls
         let internal_calls_value = value
-            .get("internal_calls")
-            .ok_or(serde::de::Error::custom("Missing field internal_calls"))?
+            .get("calls")
+            .ok_or(serde::de::Error::custom("Missing field calls"))?
             .clone();
         let mut internal_calls = vec![];
 
@@ -270,7 +291,6 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         }
 
         Ok(RpcCallInfo {
-            execution_resources,
             retdata,
             calldata,
             internal_calls,
@@ -304,7 +324,10 @@ impl RpcState {
             RpcChain::TestNet => "goerli",
             RpcChain::TestNet2 => todo!(),
         };
-        let feeder_url = format!("limited-rpc.nethermind.io/{}-juno", chain_name);
+        let feeder_url = format!(
+            "TBA{}",
+            chain_name
+        );
 
         Ok(Self::new(chain, block, &rpc_endpoint, &feeder_url))
     }
@@ -336,7 +359,7 @@ impl RpcState {
         &self,
         params: &serde_json::Value,
     ) -> Result<ureq::Response, RpcStateError> {
-        ureq::post(&self.rpc_endpoint)
+        ureq::post(&self.feeder_url)
             .set("Content-Type", "application/json")
             .set("accept", "application/json")
             .send_json(params)
@@ -364,13 +387,14 @@ impl RpcState {
         &self,
         hash: &TransactionHash,
     ) -> Result<TransactionTrace, RpcStateError> {
-        let response = ureq::get(&self.get_feeder_endpoint("get_transaction_trace"))
-            .query("transactionHash", &hash.0.to_string())
-            .call()
-            .map_err(|e| RpcStateError::Request(e.to_string()))?;
-
-        serde_json::from_value(response.into_json().map_err(RpcStateError::Io)?)
-            .map_err(|e| RpcStateError::Request(e.to_string()))
+        let result = self
+            .rpc_call::<serde_json::Value>("starknet_traceTransaction", &json!([hash.to_string()]))?
+            .get("result")
+            .ok_or(RpcStateError::RpcCall(
+                "Response has no field result".into(),
+            ))?
+            .clone();
+        serde_json::from_value(result).map_err(|e| RpcStateError::Request(e.to_string()))
     }
 
     /// Requests the given transaction to the Feeder Gateway API.

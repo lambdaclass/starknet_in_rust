@@ -4,7 +4,6 @@ pub mod utils;
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         class_hash,
@@ -17,7 +16,6 @@ mod tests {
     use starknet_in_rust::{
         definitions::block_context::StarknetChainId, transaction::InvokeFunction,
     };
-    use std::collections::HashMap;
 
     use crate::rpc_state::*;
 
@@ -131,14 +129,6 @@ mod tests {
         let tx_trace = rpc_state.get_transaction_trace(&tx_hash).unwrap();
 
         assert_eq!(
-            tx_trace.signature,
-            vec![
-                stark_felt!("0x1bb2bc03d7f5faccc0e159ea2bbf54cdd1e983fc6362545391bf8fda5d8e669"),
-                stark_felt!("0x4517da2856095584a30640bf14ad59cca3ff91dded42be7e3e40e5ea2f51045"),
-            ]
-        );
-
-        assert_eq!(
             tx_trace.validate_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("1"),
@@ -163,22 +153,6 @@ mod tests {
             tx_trace.validate_invocation.as_ref().unwrap().retdata,
             Some(vec![])
         );
-        assert_eq_sorted!(
-            tx_trace
-                .validate_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources,
-            ExecutionResources {
-                n_steps: 672,
-                n_memory_holes: 74,
-                builtin_instance_counter: HashMap::from([
-                    ("range_check_builtin".to_string(), 11),
-                    ("ecdsa_builtin".to_string(), 1),
-                    ("pedersen_builtin".to_string(), 1),
-                ]),
-            }
-        );
         assert_eq!(
             tx_trace
                 .validate_invocation
@@ -190,7 +164,7 @@ mod tests {
         );
 
         assert_eq!(
-            tx_trace.function_invocation.as_ref().unwrap().calldata,
+            tx_trace.execute_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("0x1"),
                 stark_felt!("0x45dc42889b6292c540de9def0341364bd60c2d8ccced459fac8b1bfc24fa1f5"),
@@ -211,29 +185,12 @@ mod tests {
             ])
         );
         assert_eq!(
-            tx_trace.function_invocation.as_ref().unwrap().retdata,
+            tx_trace.execute_invocation.as_ref().unwrap().retdata,
             Some(vec![0u128.into()])
         );
-        assert_eq_sorted!(
-            tx_trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources,
-            ExecutionResources {
-                n_steps: 3525,
-                n_memory_holes: 421,
-                builtin_instance_counter: HashMap::from([
-                    ("range_check_builtin".to_string(), 83),
-                    ("pedersen_builtin".to_string(), 16),
-                    ("poseidon_builtin".to_string(), 4),
-                    ("ec_op_builtin".to_string(), 3),
-                ]),
-            }
-        );
         assert_eq!(
             tx_trace
-                .function_invocation
+                .execute_invocation
                 .as_ref()
                 .unwrap()
                 .internal_calls
@@ -241,22 +198,13 @@ mod tests {
             1
         );
         assert_eq!(
-            tx_trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .internal_calls[0]
+            tx_trace.execute_invocation.as_ref().unwrap().internal_calls[0]
                 .internal_calls
                 .len(),
             1
         );
         assert_eq!(
-            tx_trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .internal_calls[0]
-                .internal_calls[0]
+            tx_trace.execute_invocation.as_ref().unwrap().internal_calls[0].internal_calls[0]
                 .internal_calls
                 .len(),
             0
@@ -273,21 +221,6 @@ mod tests {
         assert_eq!(
             tx_trace.fee_transfer_invocation.as_ref().unwrap().retdata,
             Some(vec![1u128.into()])
-        );
-        assert_eq_sorted!(
-            tx_trace
-                .fee_transfer_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources,
-            ExecutionResources {
-                n_steps: 590,
-                n_memory_holes: 40,
-                builtin_instance_counter: HashMap::from([
-                    ("range_check_builtin".to_string(), 21),
-                    ("pedersen_builtin".to_string(), 4),
-                ]),
-            }
         );
         assert_eq!(
             tx_trace

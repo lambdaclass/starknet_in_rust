@@ -417,13 +417,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     // check Cairo VM execution resources
     assert_eq_sorted!(
         execution_resources.as_ref(),
-        Some(
-            &trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources
-        ),
+        Some(&receipt.execution_resources),
         "execution resources mismatch"
     );
 
@@ -431,7 +425,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     assert_eq!(
         internal_calls.len(),
         trace
-            .function_invocation
+            .execute_invocation
             .as_ref()
             .unwrap()
             .internal_calls
@@ -592,13 +586,7 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
     // check Cairo VM execution resources
     assert_eq_sorted!(
         execution_resources.as_ref(),
-        Some(
-            &trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources
-        ),
+        Some(&receipt.execution_resources),
         "execution resources mismatch"
     );
 
@@ -606,7 +594,7 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
     assert_eq!(
         internal_calls.len(),
         trace
-            .function_invocation
+            .execute_invocation
             .as_ref()
             .unwrap()
             .internal_calls
@@ -660,7 +648,7 @@ fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: 
     }
 
     let rpc_retdata: Vec<Felt252> = trace
-        .function_invocation
+        .execute_invocation
         .unwrap()
         .retdata
         .unwrap()
