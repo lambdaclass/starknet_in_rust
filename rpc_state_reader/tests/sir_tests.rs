@@ -236,8 +236,14 @@ pub fn execute_tx_configurable(
     );
 
     (
-        tx.execute(&mut state, &block_context, u128::MAX, None)
-            .unwrap(),
+        tx.execute(
+            &mut state,
+            &block_context,
+            u128::MAX,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap(),
         trace,
         receipt,
     )
