@@ -1,0 +1,20 @@
+[package]
+name = "replay"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# starknet specific crates
+starknet_in_rust = { path = "../", version = "0.4.0" }
+rpc_state_reader = { path = "../rpc_state_reader", features = ["starknet_in_rust"] }
+starknet_api = { workspace = true }
+# CLI specific crates
+clap = { version = "4.4.6", features = ["derive"] }
+indicatif = "0.17.7"
+# logs
+tracing = "0.1"
+tracing-subscriber = "0.3.17"
+# error handling
+anyhow = "1.0"
