@@ -412,16 +412,10 @@ impl RpcState {
 
     /// Gets the gas price of a given block.
     pub fn get_gas_price(&self, block_number: u64) -> Result<u128, RpcStateError> {
-        // let response = ureq::get(&self.get_feeder_endpoint("get_block"))
-        //     .query("blockNumber", &block_number.to_string())
-        //     .call()
-        //     .map_err(|e| RpcStateError::Request(e.to_string()))?;
-
-        // let res: serde_json::Value = response.into_json().map_err(RpcStateError::Io)?;
-        let res = dbg!(self.rpc_call::<serde_json::Value>(
+        let res = self.rpc_call::<serde_json::Value>(
             "starknet_getBlockWithTxHashes",
             &json!({"block_id" : { "block_number": block_number }}),
-        )?)
+        )?
         .get("result")
         .ok_or(RpcStateError::RpcCall(
             "Response has no field result".into(),
