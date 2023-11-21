@@ -1,13 +1,14 @@
 [package]
 name = "fuzzer"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+cairo-native = ["starknet_in_rust/cairo-native"]
 
 [dependencies]
 honggfuzz = "0.5.55"
-starknet_in_rust = { path = "../", version = "0.3.1" }
+starknet_in_rust = { path = "../", version = "0.4.0" }
 num-traits = { workspace = true }
 starknet_api = { workspace = true }
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }

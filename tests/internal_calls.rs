@@ -1,20 +1,26 @@
 #![deny(warnings)]
 
-use std::sync::Arc;
-
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{cached_state::CachedState, state_cache::StorageEntry},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        state_cache::StorageEntry,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address, ClassHash},
+    EntryPointType,
 };
+use std::sync::Arc;
 
 #[test]
 fn test_internal_calls() {
@@ -31,7 +37,7 @@ fn test_internal_calls() {
     );
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [0x01; 32];
+    let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
     let storage = Felt252::zero();
@@ -47,8 +53,14 @@ fn test_internal_calls() {
 
     let mut state = CachedState::new(
         Arc::new(state_reader),
-        Some([([0x01; 32], contract_class)].into_iter().collect()),
-        None,
+        Arc::new({
+            let cache = PermanentContractClassCache::default();
+            cache.set_contract_class(
+                ClassHash([0x01; 32]),
+                CompiledClass::Deprecated(Arc::new(contract_class)),
+            );
+            cache
+        }),
     );
 
     let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"a"));
@@ -59,7 +71,7 @@ fn test_internal_calls() {
         Address(1111.into()),
         EntryPointType::External,
         CallType::Delegate.into(),
-        Some([0x01; 32]),
+        Some(ClassHash([1; 32])),
         0,
     );
 
@@ -73,6 +85,8 @@ fn test_internal_calls() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .expect("Could not execute contract");
 

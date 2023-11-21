@@ -1,9 +1,4 @@
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::deprecated_contract_class::{
-    ContractClass, EntryPointType,
-};
-use crate::state::cached_state::CachedState;
-use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
+use super::Transaction;
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
@@ -14,22 +9,38 @@ use crate::{
         transaction_type::TransactionType,
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
     hash_utils::calculate_contract_address,
     services::api::{
-        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+        contract_class_errors::ContractClassError,
+        contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
     },
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
+    syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
+use std::sync::Arc;
 
-use super::Transaction;
+use std::fmt::Debug;
+
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 /// Represents a Deploy Transaction in the starknet network
 #[derive(Debug, Clone)]
@@ -41,7 +52,6 @@ pub struct Deploy {
     pub contract_hash: ClassHash,
     pub contract_class: CompiledClass,
     pub constructor_calldata: Vec<Felt252>,
-    pub tx_type: TransactionType,
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
@@ -80,9 +90,8 @@ impl Deploy {
             contract_address,
             contract_address_salt,
             contract_hash,
-            contract_class: CompiledClass::Deprecated(Box::new(contract_class)),
+            contract_class: CompiledClass::Deprecated(Arc::new(contract_class)),
             constructor_calldata,
-            tx_type: TransactionType::Deploy,
             skip_validate: false,
             skip_execute: false,
             skip_fee_transfer: false,
@@ -114,8 +123,7 @@ impl Deploy {
             contract_address_salt,
             contract_hash,
             constructor_calldata,
-            contract_class: CompiledClass::Deprecated(Box::new(contract_class)),
-            tx_type: TransactionType::Deploy,
+            contract_class: CompiledClass::Deprecated(Arc::new(contract_class)),
             skip_validate: false,
             skip_execute: false,
             skip_fee_transfer: false,
@@ -123,7 +131,7 @@ impl Deploy {
     }
 
     /// Returns the class hash of the deployed contract
-    pub fn class_hash(&self) -> ClassHash {
+    pub const fn class_hash(&self) -> ClassHash {
         self.contract_hash
     }
 
@@ -138,26 +146,25 @@ impl Deploy {
                 .ok_or(ContractClassError::NoneEntryPointType)?
                 .is_empty()),
             CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
+            CompiledClass::Sierra(_) => todo!(),
         }
     }
     /// Deploys the contract in the starknet network and calls its constructor if it has one.
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn apply<S: StateReader>(
+    pub fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        match self.contract_class.clone() {
-            CompiledClass::Casm(contract_class) => {
-                state.set_compiled_class(
-                    &Felt252::from_bytes_be(&self.contract_hash),
-                    *contract_class,
-                )?;
-            }
-            CompiledClass::Deprecated(contract_class) => {
-                state.set_contract_class(&self.contract_hash, &contract_class)?;
+        match self.contract_class {
+            CompiledClass::Sierra(_) => todo!(),
+            _ => {
+                state.set_contract_class(&self.contract_hash, &self.contract_class)?;
             }
         }
 
@@ -167,13 +174,18 @@ impl Deploy {
             // Contract has no constructors
             Ok(self.handle_empty_constructor(state)?)
         } else {
-            self.invoke_constructor(state, block_context)
+            self.invoke_constructor(
+                state,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )
         }
     }
+
     /// Executes the contract without constructor
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
-
     pub fn handle_empty_constructor<S: State + StateReader>(
         &self,
         state: &mut S,
@@ -191,11 +203,11 @@ impl Deploy {
 
         let resources_manager = ExecutionResourcesManager::default();
 
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_state_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[Some(call_info.clone())],
-            self.tx_type,
+            TransactionType::Deploy,
             changes,
             None,
             0,
@@ -206,7 +218,7 @@ impl Deploy {
             Some(call_info),
             None,
             actual_resources,
-            Some(self.tx_type),
+            Some(TransactionType::Deploy),
         ))
     }
 
@@ -214,10 +226,13 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn invoke_constructor<S: StateReader>(
+    pub fn invoke_constructor<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -252,13 +267,15 @@ impl Deploy {
             &mut tx_execution_context,
             true,
             block_context.validate_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
-        let changes = state.count_actual_storage_changes();
+        let changes = state.count_actual_state_changes(None)?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
             &[call_info.clone()],
-            self.tx_type,
+            TransactionType::Deploy,
             changes,
             None,
             n_reverted_steps,
@@ -269,7 +286,7 @@ impl Deploy {
             call_info,
             revert_error,
             actual_resources,
-            Some(self.tx_type),
+            Some(TransactionType::Deploy),
         ))
     }
 
@@ -278,12 +295,28 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    pub fn execute<S: StateReader>(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
+        tx_type = ?TransactionType::Deploy,
+        self.version = ?self.version,
+        self.contract_hash = ?self.contract_hash,
+        self.hash_value = ?self.hash_value,
+        self.contract_address = ?self.contract_address,
+        self.contract_address_salt = ?self.contract_address_salt,
+    ))]
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        let mut tx_exec_info = self.apply(state, block_context)?;
+        let mut tx_exec_info = self.apply(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )?;
         let (fee_transfer_info, actual_fee) = (None, 0);
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
@@ -314,26 +347,30 @@ impl Deploy {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::Arc};
-
     use super::*;
     use crate::{
-        state::cached_state::CachedState, state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         utils::calculate_sn_keccak,
     };
+    use std::{collections::HashMap, sync::Arc};
 
     #[test]
     fn invoke_constructor_test() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         // Set contract_class
         let contract_class =
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
-        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
-        //transform class_hash to [u8; 32]
-        let class_hash_bytes = class_hash.to_be_bytes();
+        let class_hash_felt: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = ClassHash::from(class_hash_felt);
 
         let internal_deploy = Deploy::new(
             0.into(),
@@ -346,21 +383,28 @@ mod tests {
 
         let block_context = Default::default();
 
-        let _result = internal_deploy.apply(&mut state, &block_context).unwrap();
+        let _result = internal_deploy
+            .apply(
+                &mut state,
+                &block_context,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .unwrap();
 
         assert_eq!(
-            state.get_contract_class(&class_hash_bytes).unwrap(),
-            CompiledClass::Deprecated(Box::new(contract_class))
+            state.get_contract_class(&class_hash).unwrap(),
+            CompiledClass::Deprecated(Arc::new(contract_class))
         );
 
         assert_eq!(
             state
                 .get_class_hash_at(&internal_deploy.contract_address)
                 .unwrap(),
-            class_hash_bytes
+            class_hash
         );
 
-        let storage_key = calculate_sn_keccak("owner".as_bytes());
+        let storage_key = calculate_sn_keccak(b"owner");
 
         assert_eq!(
             state
@@ -374,17 +418,22 @@ mod tests {
     fn invoke_constructor_no_calldata_should_fail() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let contract_class =
             ContractClass::from_path("starknet_programs/constructor.json").unwrap();
 
-        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
-        //transform class_hash to [u8; 32]
-        let class_hash_bytes = class_hash.to_be_bytes();
+        let class_hash_felt: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = ClassHash::from(class_hash_felt);
 
         state
-            .set_contract_class(&class_hash_bytes, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+            )
             .unwrap();
 
         let internal_deploy =
@@ -392,7 +441,12 @@ mod tests {
 
         let block_context = Default::default();
 
-        let result = internal_deploy.execute(&mut state, &block_context);
+        let result = internal_deploy.execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
         assert_matches!(result.unwrap_err(), TransactionError::CairoRunner(..))
     }
 
@@ -400,18 +454,22 @@ mod tests {
     fn deploy_contract_without_constructor_should_fail() {
         // Instantiate CachedState
         let state_reader = Arc::new(InMemoryStateReader::default());
-        let mut state = CachedState::new(state_reader, Some(Default::default()), None);
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let contract_path = "starknet_programs/amm.json";
         let contract_class = ContractClass::from_path(contract_path).unwrap();
 
-        let class_hash: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
-        //transform class_hash to [u8; 32]
-        let mut class_hash_bytes = [0u8; 32];
-        class_hash_bytes.copy_from_slice(&class_hash.to_bytes_be());
+        let class_hash_felt: Felt252 = compute_deprecated_class_hash(&contract_class).unwrap();
+        let class_hash = ClassHash::from(class_hash_felt);
 
         state
-            .set_contract_class(&class_hash_bytes, &contract_class)
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+            )
             .unwrap();
 
         let internal_deploy = Deploy::new(
@@ -425,7 +483,12 @@ mod tests {
 
         let block_context = Default::default();
 
-        let result = internal_deploy.execute(&mut state, &block_context);
+        let result = internal_deploy.execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
         assert_matches!(
             result.unwrap_err(),
             TransactionError::EmptyConstructorCalldata

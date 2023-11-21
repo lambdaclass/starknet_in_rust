@@ -3,7 +3,7 @@
 
 ### 🦀 Starknet in Rust 🦀
 
-Starknet library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdaclass/cairo-vm)
+Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdaclass/cairo-vm)
 
 [Report Bug](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=bug&title=bug%3A+) · [Request Feature](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+)
 
@@ -13,8 +13,8 @@ Starknet library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdacl
 [![Telegram Chat][tg-badge]][tg-url]
 
 [pr-welcome]: https://img.shields.io/static/v1?color=orange&label=PRs&style=flat&message=welcome
-[tg-badge]: https://img.shields.io/static/v1?color=green&logo=telegram&label=chat&style=flat&message=join
-[tg-url]: https://t.me/starknet_rs
+[tg-badge]: https://img.shields.io/endpoint?url=https%3A%2F%2Ftg.sumanjay.workers.dev%2FLambdaStarkNet%2F&logo=telegram&label=chat&color=neon
+[tg-url]: https://t.me/LambdaStarkNet
 
 </div>
 
@@ -28,7 +28,7 @@ Starknet library in Rust, featuring [⚡cairo-vm⚡](https://github.com/lambdacl
     - [How to manually install the script dependencies](#how-to-manually-install-the-script-dependencies)
 - [🚀 Usage](#-usage)
   - [Running simple contracts](#running-simple-contracts)
-  - [Using the Cli](#using-the-cli)
+  - [Using the CLI](#using-the-cli)
   - [Testing](#testing)
   - [Profiling](#profiling)
   - [Benchmarking](#benchmarking)
@@ -52,24 +52,27 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 ### Dependencies
 - Rust 1.70
 - A working installation of cairo-lang 0.12 (for compiling the cairo files)
-- [Optional, for testing purposes] Heaptrack 
+- [Optional, for testing purposes] Heaptrack
 
 ### Installation
 
+If you run `make` on it's own it will print out the main targets and their description.
+
 Run the following make targets to have a working environment (if in Mac or if you encounter an error, see the subsection below):
+
+#### Linux (x86-64)
 ```bash
 $ make deps
 $ make build
 ```
+
+#### OSX (Apple Silicon)
+```bash
+$ make deps-macos
+$ make build
+```
+
 Check the [Makefile](/Makefile) for additional targets.
-
-#### RPC State Reader
-
-In order to use the RPC state reader add an Infura API key in a `.env` file at root:
-
-```
-INFURA_API_KEY={some_key}
-```
 
 #### How to manually install the script dependencies
 
@@ -89,7 +92,19 @@ In Mac you'll also need to tell the script where to find the gmp lib:
 export CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib
 ```
 
+### Cairo Native support
 
+Starknet in Rust can be integrated with [Cairo Native](https://github.com/lambdaclass/cairo_native), which makes the execution of sierra programs possible through native machine code. To use it, the following needs to be setup:
+
+- LLVM `17` needs to be installed and the `MLIR_SYS_170_PREFIX` and `TABLEGEN_170_PREFIX` environment variable needs to point to said installation. In macOS, run
+  ```
+  brew install llvm@17
+  export MLIR_SYS_170_PREFIX=/opt/homebrew/opt/llvm@17
+  export TABLEGEN_170_PREFIX=/opt/homebrew/opt/llvm@17
+  ```
+  and you're set.
+
+Afterwards, compiling with the feature flag `cairo-native` will enable native execution. You can check out some example test code that uses it under `tests/cairo_native.rs`.
 
 ## 🚀 Usage
 
@@ -100,14 +115,85 @@ You can find a tutorial on running contracts [here](/examples/contract_execution
 ### Using the CLI
 You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
+### Customization
+
+#### Contract class cache behavior
+
+`starknet_in_rust` supports caching contracts in memory. Caching the contracts is useful for
+avoiding excessive RPC API usage and keeping the contract class deserialization overhead to the
+minimum. The project provides two builtin cache policies: null and permanent. The null cache behaves
+as if there was no cache at all. The permanent cache caches everything in memory forever.
+
+In addition to those two, an example is provided that implements and uses an LRU cache policy.
+Long-running applications should ideally implement a cache algorithm suited to their needs or
+alternatively use our example's implementation to avoid spamming the API when using the null cache
+or blowing the memory usage when running with the permanent cache.
+
+Customized cache policies may be used by implementing the `ContractClassCache` trait. Check out our
+[LRU cache example](examples/lru_cache/main.rs) for more details. Updating the cache requires
+manually merging the local state cache into the shared cache manually. This can be done by calling
+the `drain_private_contract_class_cache` on the `CachedState` instance.
+
+```rs
+// To use the null cache (aka. no cache at all), create the state as follows:
+let cache = Arc::new(NullContractClassCache::default());
+let state1 = CachedState::new(state_reader.clone(), cache.clone());
+let state2 = CachedState::new(state_reader.clone(), cache.clone()); // Cache is reused.
+
+// Insert state usage here.
+
+// The null cache doesn't have any method to extend it since it has no data.
+```
+
+```rs
+// If the permanent cache is preferred, then use `PermanentContractClassCache` instead:
+let cache = Arc::new(PermanentContractClassCache::default());
+let state1 = CachedState::new(state_reader.clone(), cache.clone());
+let state2 = CachedState::new(state_reader.clone(), cache.clone()); // Cache is reused.
+
+// Insert state usage here.
+
+// Extend the shared cache with the states' contracts after using them.
+cache.extend(state1.state.drain_private_contract_class_cache());
+cache.extend(state2.state.drain_private_contract_class_cache());
+```
+
+#### Logging configuration
+
+This project uses the [`tracing`](https://crates.io/crates/tracing) crate as a library. Check out
+its documentation for more information.
+
 ### Testing
 
-[Add an Infura API key.](#rpc-state-reader)
+#### Logging configuration
+
+This project uses the [`tracing`](https://crates.io/crates/tracing) crate as a library. Check out
+its documentation for more information.
+
+### Testing
 
 Run the following command:
 ```bash
 $ make test
 ```
+Take into account that some tests use the [RPC State Reader](#rpc-state-reader) so you need a full-node instance or an Infura API key.
+
+
+### RPC State Reader
+
+[The RPC State Reader](/rpc_state_reader/) provides a way of reading the real Starknet State when using Starknet in Rust.
+So you can re-execute an existing transaction in any of the Starknet networks in an easy way, just providing the transaction hash, the block number and the network in which the transaction was executed.
+Every time it needs to read a storage value, a contract class or contract, it goes to an RPC to fetch them.
+
+Right now we are using it for internal testing but we plan to release it as a library soon.
+
+#### How to configure it
+In order to use the RPC state reader add an Infura API key in a `.env` file at root:
+
+```
+INFURA_API_KEY={some_key}
+```
+
 
 ### Profiling
 
@@ -129,7 +215,7 @@ $ make benchmark
 
 ## 🛠 Contributing
 
-The open source community is a fantastic place for learning, inspiration, and creation, and this is all thanks to contributions from people like you. Your contributions are **greatly appreciated**. 
+The open source community is a fantastic place for learning, inspiration, and creation, and this is all thanks to contributions from people like you. Your contributions are **greatly appreciated**.
 
 If you have any suggestions for how to improve the project, please feel free to fork the repo and create a pull request, or [open an issue](https://github.com/lambdaclass/starknet_in_rust/issues/new?labels=enhancement&title=feat%3A+) with the tag 'enhancement'.
 

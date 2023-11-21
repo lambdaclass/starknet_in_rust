@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::{self, Read};
+use std::sync::Arc;
 
 use crate::core::contract_address::{compute_hinted_class_hash, CairoProgramToHash};
 use crate::services::api::contract_class_errors::ContractClassError;
@@ -7,6 +8,7 @@ use crate::services::api::contract_classes::deprecated_contract_class::AbiType;
 use crate::{ContractEntryPoint, EntryPointType};
 
 use super::deprecated_contract_class::ContractClass;
+use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::abi::Contract;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::{
@@ -21,15 +23,16 @@ use starknet::core::types::ContractClass::{Legacy, Sierra};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CompiledClass {
-    Deprecated(Box<ContractClass>),
-    Casm(Box<CasmContractClass>),
+    Deprecated(Arc<ContractClass>),
+    Casm(Arc<CasmContractClass>),
+    Sierra(Arc<(SierraProgram, ContractEntryPoints)>),
 }
 
 impl TryInto<CasmContractClass> for CompiledClass {
     type Error = ContractClassError;
     fn try_into(self) -> Result<CasmContractClass, ContractClassError> {
         match self {
-            CompiledClass::Casm(boxed) => Ok(*boxed),
+            CompiledClass::Casm(arc) => Ok((*arc).clone()),
             _ => Err(ContractClassError::NotACasmContractClass),
         }
     }
@@ -39,7 +42,7 @@ impl TryInto<ContractClass> for CompiledClass {
     type Error = ContractClassError;
     fn try_into(self) -> Result<ContractClass, ContractClassError> {
         match self {
-            CompiledClass::Deprecated(boxed) => Ok(*boxed),
+            CompiledClass::Deprecated(arc) => Ok((*arc).clone()),
             _ => Err(ContractClassError::NotADeprecatedContractClass),
         }
     }
@@ -77,7 +80,7 @@ impl From<StarknetRsContractClass> for CompiledClass {
 
                 let casm_cc = CasmContractClass::from_contract_class(sierra_cc, true).unwrap();
 
-                CompiledClass::Casm(Box::new(casm_cc))
+                CompiledClass::Casm(Arc::new(casm_cc))
             }
             Legacy(_deprecated_contract_class) => {
                 let as_str = decode_reader(_deprecated_contract_class.program).unwrap();
@@ -128,7 +131,7 @@ impl From<StarknetRsContractClass> for CompiledClass {
                         )
                     })
                     .collect::<Vec<ContractEntryPoint>>();
-                entry_points_by_type.insert(EntryPointType::Constructor, l1_handler_entries);
+                entry_points_by_type.insert(EntryPointType::L1Handler, l1_handler_entries);
 
                 let v = serde_json::to_value(&_deprecated_contract_class.abi).unwrap();
                 let abi: Option<AbiType> = serde_json::from_value(v).unwrap();
@@ -148,7 +151,7 @@ impl From<StarknetRsContractClass> for CompiledClass {
                 let v = serde_json::to_value(serialized_cc).unwrap();
                 let hinted_class_hash = compute_hinted_class_hash(&v).unwrap();
 
-                CompiledClass::Deprecated(Box::new(ContractClass {
+                CompiledClass::Deprecated(Arc::new(ContractClass {
                     program,
                     entry_points_by_type,
                     abi,
