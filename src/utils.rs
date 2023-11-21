@@ -527,8 +527,8 @@ pub mod test_utils {
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
         state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-            state_cache::StorageEntry, BlockInfo,
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader, state_cache::StorageEntry, BlockInfo,
         },
         utils::Address,
     };
@@ -781,8 +781,13 @@ pub mod test_utils {
         )
     }
 
-    pub(crate) fn create_account_tx_test_state(
-    ) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+    pub(crate) fn create_account_tx_test_state() -> Result<
+        (
+            BlockContext,
+            CachedState<InMemoryStateReader, PermanentContractClassCache>,
+        ),
+        Box<dyn std::error::Error>,
+    > {
         let block_context = new_starknet_block_context_for_testing();
 
         let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
@@ -859,7 +864,7 @@ pub mod test_utils {
                 }
                 Arc::new(state_reader)
             },
-            HashMap::new(),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         Ok((block_context, cached_state))
