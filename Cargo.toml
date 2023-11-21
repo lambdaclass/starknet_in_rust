@@ -12,7 +12,13 @@ cairo_1_tests = []
 metrics = []
 
 [workspace]
-members = ["cli", "fuzzer", "rpc_state_reader", "examples/contract_execution"]
+members = [
+    "cli",
+    "fuzzer",
+    "rpc_state_reader",
+    "replay",
+    "examples/contract_execution"
+]
 
 [workspace.dependencies]
 cairo-lang-casm = "2.2.0"
@@ -77,3 +83,7 @@ path = "bench/native_bench.rs"
 name = "cairo_native"
 required-features = ["cairo-native"]
 harness = false
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
