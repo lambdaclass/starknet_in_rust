@@ -202,7 +202,6 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         }
     }
 
-
     /// Constructor with default values, used for testing
     pub fn default_with_state(state: &'a mut CachedState<S, C>) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
