@@ -1,6 +1,8 @@
 use cairo_vm::felt::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
+use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -8,15 +10,15 @@ use starknet_in_rust::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
     services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::cached_state::CachedState,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
 };
-use std::sync::Arc;
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 #[test]
 fn integration_storage_test() {
@@ -40,17 +42,20 @@ fn integration_storage_test() {
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     //  ------------ contract data --------------------
 
     let address = Address(1111.into());
-    let class_hash = [1; 32];
+    let class_hash = ClassHash([1; 32]);
     let nonce = Felt252::new(88);
     let storage_entry = (address.clone(), [90; 32]);
     let storage_value = Felt252::new(10902);
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -66,7 +71,7 @@ fn integration_storage_test() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -102,8 +107,8 @@ fn integration_storage_test() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let expected_key = calculate_sn_keccak("_counter".as_bytes());
-
+    let expected_key_bytes = calculate_sn_keccak("_counter".as_bytes());
+    let expected_key = ClassHash(expected_key_bytes);
     let mut expected_accessed_storage_keys = HashSet::new();
     expected_accessed_storage_keys.insert(expected_key);
 
@@ -115,12 +120,12 @@ fn integration_storage_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [42.into()].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 68,
             ..Default::default()
-        },
+        }),
         class_hash: Some(class_hash),
-        storage_read_values: vec![42.into()],
+        storage_read_values: vec![0.into(), 42.into()],
         accessed_storage_keys: expected_accessed_storage_keys,
         ..Default::default()
     };
@@ -133,7 +138,9 @@ fn integration_storage_test() {
                 &mut resources_manager,
                 &mut tx_execution_context,
                 false,
-                block_context.invoke_tx_max_n_steps()
+                block_context.invoke_tx_max_n_steps(),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap()
             .call_info
@@ -146,7 +153,7 @@ fn integration_storage_test() {
         state
             .cache()
             .storage_writes()
-            .get(&(address, expected_key))
+            .get(&(address, expected_key.0))
             .cloned(),
         Some(Felt252::new(42))
     );

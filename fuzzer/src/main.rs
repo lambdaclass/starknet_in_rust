@@ -3,32 +3,30 @@
 #[macro_use]
 extern crate honggfuzz;
 
-use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
 use num_traits::Zero;
 use starknet_in_rust::execution::execution_entry_point::ExecutionResult;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::cached_state::CachedState,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
 };
-
-use std::sync::Arc;
 use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
+    collections::HashSet, fs, path::PathBuf, process::Command, sync::Arc, thread, time::Duration,
 };
-
-use std::fs;
-use std::process::Command;
-use std::thread;
-use std::time::Duration;
 
 fn main() {
     println!("Starting fuzzer");
@@ -44,11 +42,11 @@ fn main() {
             let file_content1 = "
             %lang starknet
             from starkware.cairo.common.cairo_builtins import HashBuiltin
-            
+
             @storage_var
             func _counter() -> (res: felt) {
             }
-            
+
             @external
             func write_and_read{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (res:felt) {
                 _counter.write('";
@@ -109,14 +107,17 @@ fn main() {
             //*    Create state reader with class hash data
             //* --------------------------------------------
 
-            let mut contract_class_cache = HashMap::new();
+            let contract_class_cache = PermanentContractClassCache::default();
 
             //  ------------ contract data --------------------
 
             let address = Address(1111.into());
-            let class_hash = [1; 32];
+            let class_hash: ClassHash = ClassHash([1; 32]);
 
-            contract_class_cache.insert(class_hash, contract_class);
+            contract_class_cache.set_contract_class(
+                class_hash,
+                CompiledClass::Deprecated(Arc::new(contract_class)),
+            );
             let mut state_reader = InMemoryStateReader::default();
             state_reader
                 .address_to_class_hash_mut()
@@ -127,7 +128,7 @@ fn main() {
             //* ---------------------------------------
 
             let mut state =
-                CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+                CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
             //* ------------------------------------
             //*    Create execution entry point
@@ -163,7 +164,8 @@ fn main() {
             );
             let mut resources_manager = ExecutionResourcesManager::default();
 
-            let expected_key = calculate_sn_keccak("_counter".as_bytes());
+            let expected_key_bytes = calculate_sn_keccak("_counter".as_bytes());
+            let expected_key = ClassHash(expected_key_bytes);
 
             let mut expected_accessed_storage_keys = HashSet::new();
             expected_accessed_storage_keys.insert(expected_key);
@@ -176,7 +178,7 @@ fn main() {
                 entry_point_type: Some(EntryPointType::External),
                 calldata,
                 retdata: [Felt252::from_bytes_be(data_to_ascii(data).as_bytes())].to_vec(),
-                execution_resources: ExecutionResources::default(),
+                execution_resources: Some(ExecutionResources::default()),
                 class_hash: Some(class_hash),
                 storage_read_values: vec![Felt252::from_bytes_be(data_to_ascii(data).as_bytes())],
                 accessed_storage_keys: expected_accessed_storage_keys,
@@ -191,6 +193,8 @@ fn main() {
                     &mut tx_execution_context,
                     false,
                     block_context.invoke_tx_max_n_steps(),
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
                 .unwrap();
             assert_eq!(call_info.unwrap(), expected_call_info);
@@ -200,7 +204,7 @@ fn main() {
                 state
                     .cache()
                     .storage_writes()
-                    .get(&(address, expected_key))
+                    .get(&(address, expected_key_bytes))
                     .cloned(),
                 Some(Felt252::from_bytes_be(data_to_ascii(data).as_bytes()))
             );

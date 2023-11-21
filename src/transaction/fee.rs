@@ -1,35 +1,43 @@
 use super::error::TransactionError;
-use crate::definitions::constants::{FEE_FACTOR, QUERY_VERSION_BASE};
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::execution::CallType;
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::cached_state::CachedState;
 use crate::{
     definitions::{
         block_context::BlockContext,
-        constants::{INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
+        constants::{FEE_FACTOR, INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
     },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, CallType, TransactionExecutionContext,
     },
-    state::state_api::StateReader,
-    state::ExecutionResourcesManager,
+    services::api::contract_classes::deprecated_contract_class::EntryPointType,
+    state::{
+        cached_state::CachedState, contract_class_cache::ContractClassCache,
+        state_api::StateReader, ExecutionResourcesManager,
+    },
 };
 use cairo_vm::felt::Felt252;
 use num_traits::{ToPrimitive, Zero};
-use std::cmp::min;
 use std::collections::HashMap;
+
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 // second element is the actual fee that the transaction uses
 pub type FeeInfo = (Option<CallInfo>, u128);
 
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
-pub(crate) fn execute_fee_transfer<S: StateReader>(
-    state: &mut CachedState<S>,
+pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
+    state: &mut CachedState<S, C>,
     block_context: &BlockContext,
     tx_execution_context: &mut TransactionExecutionContext,
     actual_fee: u128,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<CallInfo, TransactionError> {
     if actual_fee > tx_execution_context.max_fee {
         return Err(TransactionError::ActualFeeExceedsMaxFee(
@@ -67,17 +75,17 @@ pub(crate) fn execute_fee_transfer<S: StateReader>(
             tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )
         .map_err(|e| TransactionError::FeeTransferError(Box::new(e)))?;
 
     call_info.ok_or(TransactionError::CallInfoIsNone)
 }
 
-// ----------------------------------------------------------------------------------------
 /// Calculates the fee of a transaction given its execution resources.
 /// We add the l1_gas_usage (which may include, for example, the direct cost of L2-to-L1
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
-
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
     gas_price: u128,
@@ -94,11 +102,9 @@ pub fn calculate_tx_fee(
     Ok(total_l1_gas_usage.ceil() as u128 * gas_price)
 }
 
-// ----------------------------------------------------------------------------------------
 /// Calculates the L1 gas consumed when submitting the underlying Cairo program to SHARP.
 /// I.e., returns the heaviest Cairo resource weight (in terms of L1 gas), as the size of
 /// a proof is determined similarly - by the (normalized) largest segment.
-
 pub(crate) fn calculate_l1_gas_by_cairo_usage(
     block_context: &BlockContext,
     cairo_resource_usage: &HashMap<String, usize>,
@@ -117,6 +123,7 @@ pub(crate) fn calculate_l1_gas_by_cairo_usage(
     ))
 }
 
+/// Calculates the maximum weighted value from a given resource usage mapping.
 fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64>) -> f64 {
     let mut max = 0.0_f64;
     for (k, v) in weights {
@@ -136,13 +143,21 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 /// - `tx_execution_context`: The transaction's execution context.
 /// - `skip_fee_transfer`: Whether to skip the fee transfer.
 ///
-pub fn charge_fee<S: StateReader>(
-    state: &mut CachedState<S>,
+/// # Errors
+/// - [TransactionError::ActualFeeExceedsMaxFee] - If the actual fee is bigger than the maximal fee.
+///
+/// # Returns
+/// The [FeeInfo] with the given actual fee.
+pub fn charge_fee<S: StateReader, C: ContractClassCache>(
+    state: &mut CachedState<S, C>,
     resources: &HashMap<String, usize>,
     block_context: &BlockContext,
     max_fee: u128,
     tx_execution_context: &mut TransactionExecutionContext,
     skip_fee_transfer: bool,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
 ) -> Result<FeeInfo, TransactionError> {
     if max_fee.is_zero() {
         return Ok((None, 0));
@@ -154,17 +169,17 @@ pub fn charge_fee<S: StateReader>(
         block_context,
     )?;
 
-    let actual_fee = if tx_execution_context.version != 0.into()
-        && tx_execution_context.version != *QUERY_VERSION_BASE
-    {
-        min(actual_fee, max_fee) * FEE_FACTOR
-    } else {
-        if actual_fee > max_fee {
-            return Err(TransactionError::ActualFeeExceedsMaxFee(
-                actual_fee, max_fee,
-            ));
+    let actual_fee = {
+        let version_0 = tx_execution_context.version.is_zero();
+        let fee_exceeded_max = actual_fee > max_fee;
+
+        if version_0 && fee_exceeded_max {
+            0
+        } else if version_0 && !fee_exceeded_max {
+            actual_fee
+        } else {
+            actual_fee.min(max_fee) * FEE_FACTOR
         }
-        actual_fee
     };
 
     let fee_transfer_info = if skip_fee_transfer {
@@ -175,25 +190,35 @@ pub fn charge_fee<S: StateReader>(
             block_context,
             tx_execution_context,
             actual_fee,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?)
     };
+
     Ok((fee_transfer_info, actual_fee))
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::Arc};
-
     use crate::{
         definitions::block_context::BlockContext,
         execution::TransactionExecutionContext,
-        state::{cached_state::CachedState, in_memory_state_reader::InMemoryStateReader},
-        transaction::{error::TransactionError, fee::charge_fee},
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
+        transaction::fee::charge_fee,
     };
+    use std::{collections::HashMap, sync::Arc};
 
+    /// Tests the behavior of the charge_fee function when the actual fee exceeds the maximum fee
+    /// for version 0. It expects to return an ActualFeeExceedsMaxFee error.
     #[test]
-    fn test_charge_fee_v0_actual_fee_exceeds_max_fee_should_return_error() {
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+    fn charge_fee_v0_max_fee_exceeded_should_charge_nothing() {
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config.gas_price = 1;
@@ -211,15 +236,22 @@ mod tests {
             max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
-        .unwrap_err();
+        .unwrap();
 
-        assert_matches!(result, TransactionError::ActualFeeExceedsMaxFee(_, _));
+        assert_eq!(result.1, 0);
     }
 
+    /// Tests the behavior of the charge_fee function when the actual fee exceeds the maximum fee
+    /// for version 1. It expects the function to return the maximum fee.
     #[test]
-    fn test_charge_fee_v1_actual_fee_exceeds_max_fee_should_return_max_fee() {
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+    fn charge_fee_v1_max_fee_exceeded_should_charge_max_fee() {
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let mut tx_execution_context = TransactionExecutionContext {
             version: 1.into(),
             ..Default::default()
@@ -240,6 +272,8 @@ mod tests {
             max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
