@@ -46,8 +46,7 @@ use std::sync::Arc;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::syscalls::native_syscall_handler::NativeSyscallHandler,
-    cairo_native::metadata::syscall_handler::SyscallHandlerMeta, core::cell::RefCell, std::rc::Rc,
+    crate::syscalls::native_syscall_handler::NativeSyscallHandler, core::cell::RefCell, std::rc::Rc,
 };
 
 #[derive(Debug, Default)]
@@ -687,11 +686,10 @@ impl ExecutionEntryPoint {
         class_hash: &ClassHash,
         program_cache: Rc<RefCell<cairo_native::cache::ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
-        use cairo_native::values::JITValue;
-
         use crate::{
             syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
         };
+        use cairo_native::values::JitValue;
 
         // Ensure we're using the global context, if initialized.
         if let Some(native_context) = NATIVE_CONTEXT.get() {
@@ -745,16 +743,6 @@ impl ExecutionEntryPoint {
             resources_manager: Default::default(),
         };
 
-        // Store the current syscall handler so that it can be restored later on.
-        let parent_syscall_handler = native_executor
-            .borrow_mut()
-            .get_module_mut()
-            .remove_metadata::<SyscallHandlerMeta>();
-        native_executor
-            .borrow_mut()
-            .get_module_mut()
-            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler));
-
         let entry_point_fn = &sierra_program
             .funcs
             .iter()
@@ -767,24 +755,17 @@ impl ExecutionEntryPoint {
             .calldata
             .iter()
             .cloned()
-            .map(JITValue::Felt252)
+            .map(JitValue::Felt252)
             .collect();
 
         let value = native_executor
-            .borrow()
-            .execute_contract(entry_point_id, &calldata, self.initial_gas)
+            .execute_contract(
+                entry_point_id,
+                &calldata,
+                &mut syscall_handler,
+                Some(self.initial_gas),
+            )
             .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
-
-        native_executor
-            .borrow_mut()
-            .get_module_mut()
-            .remove_metadata::<SyscallHandlerMeta>();
-        if let Some(parent_syscall_handler) = parent_syscall_handler {
-            native_executor
-                .borrow_mut()
-                .get_module_mut()
-                .insert_metadata(parent_syscall_handler);
-        }
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
