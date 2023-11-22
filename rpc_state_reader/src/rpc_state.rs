@@ -1,7 +1,7 @@
 use cairo_vm::vm::runners::{
     builtin_runner::{
         BITWISE_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME, OUTPUT_BUILTIN_NAME,
-        POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME,
+        POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME, EC_OP_BUILTIN_NAME,
     },
     cairo_runner::ExecutionResources as VmExecutionResources,
 };
@@ -224,13 +224,14 @@ where
     let n_memory_holes = usize::from_str_radix(&n_memory_holes_str.trim_start_matches("0x"), 16)
         .map_err(|e| serde::de::Error::custom(e.to_string()))?;
     // Parse builtin instance counter
-    const BUILTIN_NAMES: [&str; 7] = [
+    const BUILTIN_NAMES: [&str; 8] = [
         OUTPUT_BUILTIN_NAME,
         RANGE_CHECK_BUILTIN_NAME,
         HASH_BUILTIN_NAME,
         SIGNATURE_BUILTIN_NAME,
         KECCAK_BUILTIN_NAME,
         BITWISE_BUILTIN_NAME,
+        EC_OP_BUILTIN_NAME,
         POSEIDON_BUILTIN_NAME,
     ];
     let mut builtin_instance_counter = HashMap::new();
