@@ -315,37 +315,26 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
 }
 
 impl RpcState {
-    pub fn new(chain: RpcChain, block: BlockValue, rpc_endpoint: &str, feeder_url: &str) -> Self {
+    pub fn new(chain: RpcChain, block: BlockValue, rpc_endpoint: &str) -> Self {
         Self {
             chain,
             rpc_endpoint: rpc_endpoint.to_string(),
-            feeder_url: feeder_url.to_string(),
             block,
         }
     }
 
-    pub fn new_infura(chain: RpcChain, block: BlockValue) -> Result<Self, RpcStateError> {
-        if env::var("INFURA_API_KEY").is_err() {
-            dotenv().map_err(|_| RpcStateError::MissingEnvFile)?;
-        }
-
-        let rpc_endpoint = format!(
-            "https://{}.infura.io/v3/{}",
-            chain,
-            env::var("INFURA_API_KEY").map_err(|_| RpcStateError::MissingInfuraApiKey)?
-        );
-
+    pub fn new_juno(chain: RpcChain, block: BlockValue) -> Result<Self, RpcStateError> {
         let chain_name = match chain {
             RpcChain::MainNet => "mainnet",
             RpcChain::TestNet => "goerli",
-            RpcChain::TestNet2 => todo!(),
+            RpcChain::TestNet2 => unimplemented!(),
         };
-        let feeder_url = format!(
+        let rpc_endpoint = format!(
             "TBA{}",
             chain_name
         );
 
-        Ok(Self::new(chain, block, &rpc_endpoint, &feeder_url))
+        Ok(Self::new(chain, block, &rpc_endpoint))
     }
 
     fn rpc_call_result<T: for<'a> Deserialize<'a>>(
