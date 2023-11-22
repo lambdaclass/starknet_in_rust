@@ -71,9 +71,13 @@ pub fn compute_sierra_class_hash(
             .abi
             .as_ref()
             .ok_or(ContractAddressError::MissingAbi)?
-            .items
-            .serialize(&mut fmt)
-            .map_err(|_| ContractAddressError::MissingAbi)?;
+            .clone()
+            .into_iter()
+            .for_each(|item| {
+                let _ = item
+                    .serialize(&mut fmt)
+                    .map_err(|_| ContractAddressError::MissingAbi);
+            });
 
         // Note: The following unwrap should never be triggered as long as serde_json generates
         //   UTF-8 encoded data, which in practice means it should never panic.
