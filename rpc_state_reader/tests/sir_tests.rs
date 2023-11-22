@@ -611,3 +611,10 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
         }
     }
 }
+
+#[test]
+fn test_failing_tx() {
+    let tx_hash = "0x00e33abef9126a0fa34175bd5a190873b2c6494b156014a4791e0476fa6de87f";
+    let number: u64 = 300000;
+    let starknet_in_rust_test_case_tx_skip_nonce_check(tx_hash, number - 1, RpcChain::MainNet);
+}
