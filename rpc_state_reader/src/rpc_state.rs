@@ -157,6 +157,7 @@ pub struct RpcResponse<T> {
 #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
 pub struct TransactionTrace {
     pub validate_invocation: Option<RpcCallInfo>,
+    #[serde(alias = "execute_invocation", alias = "constructor_invocation")]
     pub execute_invocation: Option<RpcCallInfo>,
     pub fee_transfer_invocation: Option<RpcCallInfo>,
 }
