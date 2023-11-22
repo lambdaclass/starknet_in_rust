@@ -261,7 +261,7 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         D: Deserializer<'de>,
     {
         let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
-        dbg!(&value);
+
         // In case of a revert error, the struct will only contain the revert_reason field
         if let Some(revert_error) = value.get("revert_reason") {
             return Ok(RpcCallInfo {
