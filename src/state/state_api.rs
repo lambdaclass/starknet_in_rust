@@ -6,10 +6,7 @@ use crate::{
     state::StateDiff,
     utils::{get_erc20_balance_var_addresses, Address, ClassHash, CompiledClassHash},
 };
-use cairo_lang_sierra::program::Program as SierraProgram;
-use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::felt::Felt252;
-use std::sync::Arc;
 
 pub trait StateReader {
     /// Returns the contract class of the given class hash or compiled class hash.
@@ -90,12 +87,6 @@ pub trait State {
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError>;
 
-    fn set_sierra_program(
-        &mut self,
-        compiled_class_hash: &Felt252,
-        sierra_program: Arc<(SierraProgram, ContractEntryPoints)>,
-    );
-
     fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
 
     /// Counts the amount of state changes
@@ -118,9 +109,4 @@ pub trait State {
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError>;
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError>;
-
-    fn get_sierra_program(
-        &mut self,
-        class_hash: &ClassHash,
-    ) -> Option<Arc<(SierraProgram, ContractEntryPoints)>>;
 }

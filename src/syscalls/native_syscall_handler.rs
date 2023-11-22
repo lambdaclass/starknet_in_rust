@@ -1,3 +1,4 @@
+use crate::ContractClassCache;
 use std::{cell::RefCell, rc::Rc};
 
 use cairo_native::{
@@ -36,11 +37,12 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct NativeSyscallHandler<'a, 'cache, S>
+pub struct NativeSyscallHandler<'a, 'cache, S, C>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
-    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     pub(crate) contract_address: Address,
     pub(crate) caller_address: Address,
     pub(crate) entry_point_selector: Felt252,
@@ -53,7 +55,7 @@ where
     pub(crate) program_cache: Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
 }
 
-impl<'a, 'cache, S: StateReader> NativeSyscallHandler<'a, 'cache, S> {
+impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a, 'cache, S, C> {
     /// Generic code that needs to be run on all syscalls.
     fn handle_syscall_request(&mut self, gas: &mut u128, syscall_name: &str) -> SyscallResult<()> {
         let required_gas = SYSCALL_GAS_COST
@@ -76,7 +78,9 @@ impl<'a, 'cache, S: StateReader> NativeSyscallHandler<'a, 'cache, S> {
     }
 }
 
-impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler<'a, 'cache, S> {
+impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
+    for NativeSyscallHandler<'a, 'cache, S, C>
+{
     fn get_block_hash(
         &mut self,
         block_number: u64,
@@ -198,7 +202,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         match self
             .starknet_storage_state
             .state
-            .set_class_hash_at(self.contract_address.clone(), class_hash.to_be_bytes())
+            .set_class_hash_at(self.contract_address.clone(), ClassHash::from(class_hash))
         {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -228,7 +232,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            Some(class_hash.to_be_bytes()),
+            Some(ClassHash::from(class_hash)),
             *gas,
         );
 
@@ -335,9 +339,9 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         address: cairo_vm::felt::Felt252,
         gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
+        tracing::debug!("Called `storage_read({address_domain}, {address})` from Cairo Native");
         self.handle_syscall_request(gas, "storage_read")?;
-
-        let value = match self.starknet_storage_state.read(&address.to_be_bytes()) {
+        let value = match self.starknet_storage_state.read(Address(address.clone())) {
             Ok(value) => Ok(value),
             Err(_e @ StateError::Io(_)) => todo!(),
             Err(_) => Ok(Felt252::zero()),
@@ -361,9 +365,7 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
         );
 
         self.handle_syscall_request(gas, "storage_write")?;
-
-        self.starknet_storage_state
-            .write(&address.to_be_bytes(), value);
+        self.starknet_storage_state.write(Address(address), value);
         Ok(())
     }
 
@@ -594,9 +596,10 @@ impl<'a, 'cache, S: StateReader> StarkNetSyscallHandler for NativeSyscallHandler
     }
 }
 
-impl<'a, 'cache, S> NativeSyscallHandler<'a, 'cache, S>
+impl<'a, 'cache, S, C> NativeSyscallHandler<'a, 'cache, S, C>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     fn execute_constructor_entry_point(
         &mut self,
@@ -655,7 +658,7 @@ where
                 u64::MAX,
                 Some(self.program_cache.clone()),
             )
-            .map_err(|_| StateError::ExecutionEntryPoint())?;
+            .map_err(|_| StateError::ExecutionEntryPoint)?;
 
         let call_info = call_info.ok_or(StateError::CustomError("Execution error".to_string()))?;
 

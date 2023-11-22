@@ -8,7 +8,9 @@ use starknet::core::utils::get_selector_from_name;
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::block_context::{BlockContext, StarknetChainId},
-    state::{cached_state::CachedState, state_api::StateReader},
+    state::{
+        cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
+    },
     transaction::{DeclareV2, InvokeFunction},
     utils::Address,
 };
@@ -303,12 +305,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn declare_erc20<S>(
-    state: &mut CachedState<S>,
+fn declare_erc20<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("ERC20")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
@@ -343,12 +346,13 @@ where
     Ok(casm_class_hash)
 }
 
-fn declare_yas_factory<S>(
-    state: &mut CachedState<S>,
+fn declare_yas_factory<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASFactory")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
@@ -383,12 +387,13 @@ where
     Ok(casm_class_hash)
 }
 
-fn declare_yas_router<S>(
-    state: &mut CachedState<S>,
+fn declare_yas_router<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASRouter")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
@@ -423,12 +428,13 @@ where
     Ok(casm_class_hash)
 }
 
-fn declare_yas_pool<S>(
-    state: &mut CachedState<S>,
+fn declare_yas_pool<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASPool")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
@@ -463,8 +469,8 @@ where
     Ok(casm_class_hash)
 }
 
-fn deploy_erc20<S>(
-    state: &mut CachedState<S>,
+fn deploy_erc20<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     erc20_class_hash: &Felt252,
     name: &str,
@@ -474,6 +480,7 @@ fn deploy_erc20<S>(
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let contract_address = Address(ACCOUNT_ADDRESS.clone());
     let nonce = state.get_nonce_at(&contract_address).unwrap();
@@ -514,8 +521,8 @@ where
     Ok(call_info.retdata[0].clone())
 }
 
-fn deploy_yas_factory<S>(
-    state: &mut CachedState<S>,
+fn deploy_yas_factory<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     yas_factory_class_hash: &Felt252,
     owner_address: Felt252,
@@ -523,6 +530,7 @@ fn deploy_yas_factory<S>(
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let contract_address = Address(ACCOUNT_ADDRESS.clone());
     let nonce = state.get_nonce_at(&contract_address).unwrap();
@@ -560,13 +568,14 @@ where
     Ok(call_info.retdata[0].clone())
 }
 
-fn deploy_yas_router<S>(
-    state: &mut CachedState<S>,
+fn deploy_yas_router<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     yas_router_class_hash: &Felt252,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let contract_address = Address(ACCOUNT_ADDRESS.clone());
     let nonce = state.get_nonce_at(&contract_address).unwrap();
@@ -603,8 +612,8 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn deploy_yas_pool<S>(
-    state: &mut CachedState<S>,
+fn deploy_yas_pool<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     yas_pool_class_hash: &Felt252,
     yas_factory_address: Felt252,
@@ -615,6 +624,7 @@ fn deploy_yas_pool<S>(
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let contract_address = Address(ACCOUNT_ADDRESS.clone());
     let nonce = state.get_nonce_at(&contract_address).unwrap();
@@ -656,8 +666,8 @@ where
     Ok(call_info.retdata[0].clone())
 }
 
-fn initialize_pool<S>(
-    state: &mut CachedState<S>,
+fn initialize_pool<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     yas_pool_address: &Felt252,
     price_sqrt: (u128, u128),
@@ -665,6 +675,7 @@ fn initialize_pool<S>(
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let contract_address = Address(yas_pool_address.clone());
     let nonce = state.get_nonce_at(&contract_address).unwrap();
@@ -700,8 +711,8 @@ where
     Ok(())
 }
 
-fn approve_max<S>(
-    state: &mut CachedState<S>,
+fn approve_max<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     account_address: &Felt252,
     token_address: Felt252,
@@ -709,6 +720,7 @@ fn approve_max<S>(
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let account_address = Address(account_address.clone());
     let nonce = state.get_nonce_at(&account_address).unwrap();
@@ -749,8 +761,8 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn mint<S>(
-    state: &mut CachedState<S>,
+fn mint<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     account_address: &Felt252,
     yas_router_address: Felt252,
@@ -762,6 +774,7 @@ fn mint<S>(
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let account_address = Address(account_address.clone());
     let nonce = state.get_nonce_at(&account_address).unwrap();
@@ -806,8 +819,8 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn swap<S>(
-    state: &mut CachedState<S>,
+fn swap<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     account_address: &Felt252,
     yas_router_address: Felt252,
@@ -819,6 +832,7 @@ fn swap<S>(
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let account_address = Address(account_address.clone());
     let nonce = state.get_nonce_at(&account_address).unwrap();
@@ -864,14 +878,15 @@ where
     Ok(())
 }
 
-fn balance_of<S>(
-    state: &mut CachedState<S>,
+fn balance_of<S, C>(
+    state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
     token_address: &Felt252,
     wallet_address: Felt252,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
+    C: ContractClassCache,
 {
     let contract_address = Address(token_address.clone());
     let nonce = state.get_nonce_at(&contract_address).unwrap();
@@ -911,13 +926,13 @@ mod utils {
         core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash},
         services::api::contract_classes::compiled_class::CompiledClass,
         state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-            state_api::State,
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader, state_api::State,
         },
-        utils::Address,
+        utils::{Address, ClassHash},
         CasmContractClass, ContractClass as SierraContractClass,
     };
-    use std::{collections::HashMap, fs, path::Path, sync::Arc};
+    use std::{fs, path::Path, sync::Arc};
 
     const BASE_DIR: &str = "bench/yas/";
 
@@ -940,34 +955,43 @@ mod utils {
         )
     }
 
-    pub fn default_state() -> Result<CachedState<InMemoryStateReader>, Box<dyn std::error::Error>> {
+    pub fn default_state() -> Result<
+        CachedState<InMemoryStateReader, PermanentContractClassCache>,
+        Box<dyn std::error::Error>,
+    > {
         let (sierra_contract_class, casm_contract_class) = load_contract("YasCustomAccount")?;
         let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?.to_be_bytes();
+        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class)?.to_be_bytes();
 
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
-            .insert(Address(ACCOUNT_ADDRESS.clone()), casm_class_hash);
+            .insert(Address(ACCOUNT_ADDRESS.clone()), ClassHash(casm_class_hash));
         state_reader
             .address_to_nonce_mut()
             .insert(Address(ACCOUNT_ADDRESS.clone()), Felt252::one());
 
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
-            HashMap::from([(
-                casm_class_hash,
-                CompiledClass::Casm(Arc::new(casm_contract_class)),
-            )]),
+            Arc::new({
+                let contract_class_cache = PermanentContractClassCache::default();
+                contract_class_cache.extend([
+                    (
+                        ClassHash(casm_class_hash),
+                        CompiledClass::Casm(Arc::new(casm_contract_class)),
+                    ),
+                    (
+                        ClassHash(sierra_class_hash),
+                        CompiledClass::Sierra(Arc::new((
+                            sierra_contract_class.extract_sierra_program()?,
+                            sierra_contract_class.entry_points_by_type,
+                        ))),
+                    ),
+                ]);
+                contract_class_cache
+            }),
         );
 
-        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class)?.to_be_bytes();
-        cached_state.set_sierra_program(
-            &Felt252::from_bytes_be(&sierra_class_hash),
-            Arc::new((
-                sierra_contract_class.extract_sierra_program()?,
-                sierra_contract_class.entry_points_by_type,
-            )),
-        );
         cached_state.set_compiled_class_hash(
             &Felt252::from_bytes_be(&sierra_class_hash),
             &Felt252::from_bytes_be(&casm_class_hash),

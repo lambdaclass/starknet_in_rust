@@ -1,20 +1,19 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
 use cairo_vm::felt::{felt_str, Felt252};
+use lazy_static::lazy_static;
 use num_traits::Zero;
-
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::cached_state::CachedState,
-    state::in_memory_state_reader::InMemoryStateReader,
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader,
+    },
     transaction::{InvokeFunction, Transaction},
-    utils::Address,
+    utils::{Address, ClassHash},
 };
-
-use lazy_static::lazy_static;
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
@@ -31,7 +30,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/first_contract.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [1; 32];
+    static ref CONTRACT_CLASS_HASH: ClassHash = ClassHash([1; 32]);
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
@@ -65,7 +64,7 @@ fn main() {
                 .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
             Arc::new(state_reader)
         },
-        HashMap::new(),
+        Arc::new(PermanentContractClassCache::default()),
     );
     let chain_id = block_context.starknet_os_config().chain_id().clone();
     let signature = Vec::new();
