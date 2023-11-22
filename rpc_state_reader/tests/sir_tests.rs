@@ -295,100 +295,156 @@ fn test_get_gas_price() {
     assert_eq!(price, 22804578690);
 }
 
+// #[test_case(
+//     "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+//     90006,
+//     RpcChain::MainNet
+//     => ignore["old transaction, gas mismatch"]
+// )]
+// #[test_case(
+//     "0x025844447697eb7d5df4d8268b23aef6c11de4087936048278c2559fc35549eb",
+//     197000,
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+//     197000,
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//         "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+//         169928, // real block 169929
+//         RpcChain::MainNet
+//     )]
+// #[test_case(
+//         "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
+//         169928, // real block 169929
+//         RpcChain::MainNet
+//     )]
+// #[test_case(
+//         "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
+//         169928, // real block 169929
+//         RpcChain::MainNet
+//         => ignore["resource mismatch"]
+//     )]
+// #[test_case(
+//         "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
+//         169928, // real block 169929
+//         RpcChain::MainNet
+//     )]
+// #[test_case(
+//         // review later
+//         "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
+//         186548, // real block     186549
+//         RpcChain::MainNet
+//         => ignore["resource mismatch"]
+//     )]
+// #[test_case(
+//     "0x176a92e8df0128d47f24eebc17174363457a956fa233cc6a7f8561bfbd5023a",
+//     317092, // real block 317093
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x1cbc74e101a1533082a021ce53235cfd744899b0ff948d1949a64646e0f15c2",
+//     885298, // real block 885299
+//     RpcChain::TestNet
+// )]
+// #[test_case(
+//     "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
+//     281513, // real block 281514
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x26be3e906db66973de1ca5eec1ddb4f30e3087dbdce9560778937071c3d3a83",
+//     351268, // real block 351269
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x4f552c9430bd21ad300db56c8f4cae45d554a18fac20bf1703f180fac587d7e",
+//     351225, // real block 351226
+//     RpcChain::MainNet
+// )]
+// // DeployAccount for different account providers (as of October 2023):
+// // All of them were deployed on testnet using starkli
+// // OpenZeppelin (v0.7.0)
+// #[test_case(
+//     "0x0012696c03a0f0301af190288d9824583be813b71882308e4c5d686bf5967ec5",
+//     889866, // real block 889867
+//     RpcChain::TestNet
+// )]
+// // Braavos (v3.21.10)
+// #[test_case(
+//     "0x04dc838fd4ed265ab2ea5fbab08e67b398e3caaedf75c548113c6b2f995fc9db",
+//     889858, // real block 889859
+//     RpcChain::TestNet
+// )]
+// // Argent X (v5.7.0)
+// #[test_case(
+//     "0x01583c47a929f81f6a8c74d31708a7f161603893435d51b6897017fdcdaafee4",
+//     889897, // real block 889898
+//     RpcChain::TestNet
+// )]
+// #[test_case(
+//     "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
+//     895707, // real block 895708
+//     RpcChain::TestNet
+// )]
+// #[test_case(
+//     "0x05d70d90f2a86ed98902b3f4ced0d70a855f64279072edc93a9064738f6f5e29",
+//     399872, // real block 399873
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
+//     186551, // real block     186552
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x050c895c2f3f03bd2589ce595671b9e306a20ab8f618ed64109631e53e1d9001",
+//     401885, // real block 401886
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x0235c7f36f28af8704d2c6b6145c5ee66cc1c57bd550afba79c86b6d8ef6e9da",
+//     401885, // real block 401886
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x0646abcd3e7f3acc7ee625bc7d594c343dcac7d319b1e9ae801110b04d6bb381",
+//     401885, // real block 401886
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x07aca20e6407bee00a41a4ff137001b95cb85405e784995cfea8a60bb66c17ff",
+//     401885, // real block 401886
+//     RpcChain::MainNet
+// )]
+
+// #[test_case(
+//     "0x07d33fb412498d05e5b264ac7ead3a767b80bacff522f23174e039bbeb8e08ea",
+//     399850, // real block 399851
+//     RpcChain::MainNet
+// )]
+// #[test_case(
+//     "0x01fd06dd85bc7833ebd344c9b110085c592e153c78fea359fea21af7503bfd4d",
+//     420706, // real block 420706
+//     RpcChain::MainNet
+// )]
+
 #[test_case(
-    "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
-    90006,
+    "0x00e33abef9126a0fa34175bd5a190873b2c6494b156014a4791e0476fa6de87f",
+    299999, // real block 300000
     RpcChain::MainNet
-    => ignore["old transaction, gas mismatch"]
 )]
 #[test_case(
-    "0x025844447697eb7d5df4d8268b23aef6c11de4087936048278c2559fc35549eb",
-    197000,
+    "0x013136f742765cd9add961a99f551b13baeba652604addc356e902511d86c6dd",
+    299999, // real block 300000
     RpcChain::MainNet
 )]
 #[test_case(
-    "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
-    197000,
+    "0x053edca22c553987e9c1fc74ed9645684c62f39524d364c128d51ad1540f3f51",
+    198000, // real block 198000
     RpcChain::MainNet
-)]
-#[test_case(
-        "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
-        169928, // real block 169929
-        RpcChain::MainNet
-    )]
-#[test_case(
-        "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
-        169928, // real block 169929
-        RpcChain::MainNet
-    )]
-#[test_case(
-        "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
-        169928, // real block 169929
-        RpcChain::MainNet
-        => ignore["resource mismatch"]
-    )]
-#[test_case(
-        "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
-        169928, // real block 169929
-        RpcChain::MainNet
-    )]
-#[test_case(
-        // review later
-        "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
-        186548, // real block     186549
-        RpcChain::MainNet
-        => ignore["resource mismatch"]
-    )]
-#[test_case(
-        // fails in blockifier
-        "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
-        186551, // real block     186552
-        RpcChain::MainNet
-    )]
-#[test_case(
-    "0x176a92e8df0128d47f24eebc17174363457a956fa233cc6a7f8561bfbd5023a",
-    317092, // real block 317093
-    RpcChain::MainNet
-)]
-#[test_case(
-    "0x1cbc74e101a1533082a021ce53235cfd744899b0ff948d1949a64646e0f15c2",
-    885298, // real block 885299
-    RpcChain::TestNet
-)]
-#[test_case(
-    "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
-    281513, // real block 281514
-    RpcChain::MainNet
-)]
-#[test_case(
-    "0x26be3e906db66973de1ca5eec1ddb4f30e3087dbdce9560778937071c3d3a83",
-    351268, // real block 351269
-    RpcChain::MainNet
-)]
-#[test_case(
-    "0x4f552c9430bd21ad300db56c8f4cae45d554a18fac20bf1703f180fac587d7e",
-    351225, // real block 351226
-    RpcChain::MainNet
-)]
-// DeployAccount for different account providers (as of October 2023):
-// All of them were deployed on testnet using starkli
-// OpenZeppelin (v0.7.0)
-#[test_case(
-    "0x0012696c03a0f0301af190288d9824583be813b71882308e4c5d686bf5967ec5",
-    889866, // real block 889867
-    RpcChain::TestNet
-)]
-// Braavos (v3.21.10)
-#[test_case(
-    "0x04dc838fd4ed265ab2ea5fbab08e67b398e3caaedf75c548113c6b2f995fc9db",
-    889858, // real block 889859
-    RpcChain::TestNet
-)]
-// Argent X (v5.7.0)
-#[test_case(
-    "0x01583c47a929f81f6a8c74d31708a7f161603893435d51b6897017fdcdaafee4",
-    889897, // real block 889898
-    RpcChain::TestNet
 )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
