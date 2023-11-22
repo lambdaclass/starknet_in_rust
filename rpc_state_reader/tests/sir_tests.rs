@@ -106,7 +106,7 @@ pub fn execute_tx_configurable(
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     // Instantiate the RPC StateReader and the CachedState
-    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
+    let rpc_reader = RpcStateReader(RpcState::new_juno(network, block_number.into()).unwrap());
     let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
@@ -150,9 +150,8 @@ pub fn execute_tx_configurable(
         }
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
-            let next_block_state_reader = RpcStateReader(
-                RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
-            );
+            let next_block_state_reader =
+                RpcStateReader(RpcState::new_juno(network, (block_number.next()).into()).unwrap());
             let contract_class = next_block_state_reader
                 .get_contract_class(&ClassHash(tx.class_hash().0.bytes().try_into().unwrap()))
                 .unwrap();
@@ -275,7 +274,7 @@ pub fn execute_tx_without_validate(
 
 #[test]
 fn test_get_transaction_try_from() {
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+    let rpc_state = RpcState::new_juno(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
     let str_hash = stark_felt!("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91");
     let tx_hash = TransactionHash(str_hash);
 
@@ -294,7 +293,7 @@ fn test_get_transaction_try_from() {
 #[test]
 fn test_get_gas_price() {
     let block = BlockValue::Number(BlockNumber(169928));
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, block).unwrap();
+    let rpc_state = RpcState::new_juno(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
     assert_eq!(price, 22804578690);

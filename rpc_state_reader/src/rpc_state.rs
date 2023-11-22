@@ -7,7 +7,6 @@ use cairo_vm::vm::runners::{
     cairo_runner::ExecutionResources as VmExecutionResources,
 };
 use core::fmt;
-use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use starknet::core::types::ContractClass as SNContractClass;
@@ -19,7 +18,7 @@ use starknet_api::{
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
 use starknet_in_rust::definitions::block_context::StarknetChainId;
-use std::{collections::HashMap, env, fmt::Display};
+use std::{collections::HashMap, fmt::Display};
 
 use crate::{rpc_state_errors::RpcStateError, utils};
 
@@ -72,8 +71,6 @@ pub struct RpcState {
     pub chain: RpcChain,
     /// RPC Endpoint URL.
     rpc_endpoint: String,
-    /// The url to the starknet feeder.
-    feeder_url: String,
     /// Struct that holds information on the block where we are going to use to read the state.
     pub block: BlockValue,
 }
@@ -157,7 +154,11 @@ pub struct RpcResponse<T> {
 #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
 pub struct TransactionTrace {
     pub validate_invocation: Option<RpcCallInfo>,
-    #[serde(alias = "execute_invocation", alias = "constructor_invocation", alias = "function_invocation")]
+    #[serde(
+        alias = "execute_invocation",
+        alias = "constructor_invocation",
+        alias = "function_invocation"
+    )]
     pub execute_invocation: Option<RpcCallInfo>,
     pub fee_transfer_invocation: Option<RpcCallInfo>,
 }
@@ -374,7 +375,7 @@ impl RpcState {
         &self,
         params: &serde_json::Value,
     ) -> Result<ureq::Response, RpcStateError> {
-        ureq::post(&self.feeder_url)
+        ureq::post(&self.rpc_endpoint)
             .set("Content-Type", "application/json")
             .set("accept", "application/json")
             .send_json(params)
