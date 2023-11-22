@@ -1,7 +1,8 @@
 use cairo_vm::vm::runners::{
     builtin_runner::{
-        BITWISE_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME, OUTPUT_BUILTIN_NAME,
-        POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME, SIGNATURE_BUILTIN_NAME, EC_OP_BUILTIN_NAME,
+        BITWISE_BUILTIN_NAME, EC_OP_BUILTIN_NAME, HASH_BUILTIN_NAME, KECCAK_BUILTIN_NAME,
+        OUTPUT_BUILTIN_NAME, POSEIDON_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME,
+        SIGNATURE_BUILTIN_NAME,
     },
     cairo_runner::ExecutionResources as VmExecutionResources,
 };
@@ -158,7 +159,6 @@ pub struct TransactionTrace {
     pub validate_invocation: Option<RpcCallInfo>,
     pub execute_invocation: Option<RpcCallInfo>,
     pub fee_transfer_invocation: Option<RpcCallInfo>,
-    pub revert_error: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
@@ -168,11 +168,12 @@ pub struct RpcExecutionResources {
     pub builtin_instance_counter: HashMap<String, usize>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct RpcCallInfo {
     pub retdata: Option<Vec<StarkFelt>>,
     pub calldata: Option<Vec<StarkFelt>>,
     pub internal_calls: Vec<RpcCallInfo>,
+    pub revert_reason: Option<String>,
 }
 
 #[allow(unused)]
@@ -260,7 +261,15 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         D: Deserializer<'de>,
     {
         let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
-
+        dbg!(&value);
+        // In case of a revert error, the struct will only contain the revert_reason field
+        if let Some(revert_error) = value.get("revert_reason") {
+            return Ok(RpcCallInfo {
+                revert_reason: serde_json::from_value(revert_error.clone())
+                    .map_err(|e| serde::de::Error::custom(e.to_string()))?,
+                ..Default::default()
+            });
+        }
         // Parse retdata
         let retdata_value = value
             .get("result")
@@ -298,6 +307,7 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
             retdata,
             calldata,
             internal_calls,
+            revert_reason: None,
         })
     }
 }
@@ -413,15 +423,16 @@ impl RpcState {
 
     /// Gets the gas price of a given block.
     pub fn get_gas_price(&self, block_number: u64) -> Result<u128, RpcStateError> {
-        let res = self.rpc_call::<serde_json::Value>(
-            "starknet_getBlockWithTxHashes",
-            &json!({"block_id" : { "block_number": block_number }}),
-        )?
-        .get("result")
-        .ok_or(RpcStateError::RpcCall(
-            "Response has no field result".into(),
-        ))?
-        .clone();
+        let res = self
+            .rpc_call::<serde_json::Value>(
+                "starknet_getBlockWithTxHashes",
+                &json!({"block_id" : { "block_number": block_number }}),
+            )?
+            .get("result")
+            .ok_or(RpcStateError::RpcCall(
+                "Response has no field result".into(),
+            ))?
+            .clone();
         let gas_price_hex = res
             .get("l1_gas_price")
             .and_then(|gp| gp.get("price_in_wei"))

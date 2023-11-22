@@ -371,7 +371,6 @@ fn blockifier_test_recent_tx() {
 )]
 fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
-
     let TransactionExecutionInfo {
         execute_call_info,
         actual_fee,
@@ -422,7 +421,10 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
 fn blockifier_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
-    assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
+    assert_eq!(
+        tx_info.revert_error.is_some(),
+        trace.execute_invocation.unwrap().revert_reason.is_some()
+    );
 
     let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee.0) / receipt.actual_fee;
 
