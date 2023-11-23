@@ -51,13 +51,7 @@ use std::sync::Arc;
 #[cfg(feature = "cairo-native")]
 use {
     crate::syscalls::native_syscall_handler::NativeSyscallHandler,
-    cairo_native::{
-        execution_result::NativeExecutionResult, metadata::syscall_handler::SyscallHandlerMeta,
-        utils::felt252_bigint,
-    },
-    core::cell::RefCell,
-    serde_json::Value,
-    std::rc::Rc,
+    cairo_native::metadata::syscall_handler::SyscallHandlerMeta, core::cell::RefCell, std::rc::Rc,
 };
 
 #[derive(Debug, Default)]
@@ -678,14 +672,11 @@ impl ExecutionEntryPoint {
         class_hash: &ClassHash,
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
+        use cairo_native::values::JITValue;
+
         use crate::{
             syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
         };
-        use cairo_lang_sierra::{
-            extensions::core::{CoreLibfunc, CoreType, CoreTypeConcrete},
-            program_registry::ProgramRegistry,
-        };
-        use serde_json::json;
 
         // Ensure we're using the global context, if initialized.
         if let Some(native_context) = NATIVE_CONTEXT.get() {
@@ -712,9 +703,6 @@ impl ExecutionEntryPoint {
                 .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
                 .unwrap(),
         };
-
-        let program_registry: ProgramRegistry<CoreType, CoreLibfunc> =
-            ProgramRegistry::new(sierra_program).unwrap();
 
         let native_executor = {
             let mut cache = program_cache.borrow_mut();
@@ -751,84 +739,25 @@ impl ExecutionEntryPoint {
             .get_module_mut()
             .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler));
 
-        let syscall_addr = native_executor
-            .borrow()
-            .get_module()
-            .get_metadata::<SyscallHandlerMeta>()
-            .unwrap()
-            .as_ptr()
-            .as_ptr() as *const () as usize;
-
         let entry_point_fn = &sierra_program
             .funcs
             .iter()
             .find(|x| x.id.id == (entry_point.function_idx as u64))
             .unwrap();
-        let ret_types: Vec<&CoreTypeConcrete> = entry_point_fn
-            .signature
-            .ret_types
-            .iter()
-            .map(|x| program_registry.get_type(x).unwrap())
-            .collect();
-        let entry_point_id = &entry_point_fn.id;
 
-        let required_init_gas = native_executor
-            .borrow()
-            .get_module()
-            .get_required_init_gas(entry_point_id);
+        let entry_point_id = &entry_point_fn.id;
 
         let calldata: Vec<_> = self
             .calldata
             .iter()
-            .map(|felt| felt252_bigint(felt.to_bigint()))
+            .cloned()
+            .map(JITValue::Felt252)
             .collect();
 
-        /*
-            Below we construct `params`, the Serde value that MLIR expects. It consists of the following:
-
-            - One `null` value for each builtin that is going to be used.
-            - The maximum amout of gas allowed by the call.
-            - `syscall_addr`, the address of the syscall handler.
-            - `calldata`, an array of Felt arguments to the method being called.
-        */
-
-        let wrapped_calldata = vec![calldata];
-        let params: Vec<Value> = sierra_program.funcs[entry_point_id.id as usize]
-            .params
-            .iter()
-            .map(|param| {
-                match param.ty.debug_name.as_ref().unwrap().as_str() {
-                    "GasBuiltin" => {
-                        json!(self.initial_gas)
-                    }
-                    "Pedersen" | "SegmentArena" | "RangeCheck" | "Bitwise" | "Poseidon" => {
-                        json!(null)
-                    }
-                    "System" => {
-                        json!(syscall_addr)
-                    }
-                    // calldata
-                    "core::array::Span::<core::felt252>" => json!(wrapped_calldata),
-                    x => {
-                        unimplemented!("unhandled param type: {:?}", x);
-                    }
-                }
-            })
-            .collect();
-
-        let mut writer: Vec<u8> = Vec::new();
-        let returns = &mut serde_json::Serializer::new(&mut writer);
-
-        native_executor
+        let value = native_executor
             .borrow()
-            .execute(entry_point_id, json!(params), returns, required_init_gas)
+            .execute_contract(entry_point_id, &calldata, self.initial_gas)
             .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
-
-        let value = NativeExecutionResult::deserialize_from_ret_types(
-            &mut serde_json::Deserializer::from_slice(&writer),
-            &ret_types,
-        )
-        .expect("failed to serialize starknet execution result");
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
