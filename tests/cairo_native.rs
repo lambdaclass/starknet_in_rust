@@ -896,7 +896,7 @@ fn replace_class_test() {
     let casm_replace_selector = &casm_entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
     let casm_address = Address(2222.into());
@@ -906,7 +906,7 @@ fn replace_class_test() {
 
     let nonce = Felt252::zero();
 
-    insert_sierra_class_into_cache(&mut contract_class_cache, CLASS_HASH_A, contract_class_a);
+    insert_sierra_class_into_cache(&contract_class_cache, CLASS_HASH_A, contract_class_a);
 
     contract_class_cache.set_contract_class(
         CASM_CLASS_HASH_A,
@@ -1066,7 +1066,7 @@ fn replace_class_contract_call() {
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
-    let mut native_contract_class_cache = PermanentContractClassCache::default();
+    let native_contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(Felt252::one());
     let class_hash_a: ClassHash = ClassHash([1; 32]);
@@ -1076,11 +1076,7 @@ fn replace_class_contract_call() {
         class_hash_a,
         CompiledClass::Casm(Arc::new(casm_contract_class_a)),
     );
-    insert_sierra_class_into_cache(
-        &mut native_contract_class_cache,
-        class_hash_a,
-        sierra_class_a,
-    );
+    insert_sierra_class_into_cache(&native_contract_class_cache, class_hash_a, sierra_class_a);
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1114,11 +1110,7 @@ fn replace_class_contract_call() {
         class_hash_b,
         CompiledClass::Casm(Arc::new(contract_class_b)),
     );
-    insert_sierra_class_into_cache(
-        &mut native_contract_class_cache,
-        class_hash_b,
-        sierra_class_b,
-    );
+    insert_sierra_class_into_cache(&native_contract_class_cache, class_hash_b, sierra_class_b);
 
     // SET GET_NUMBER_WRAPPER
 
@@ -1151,7 +1143,7 @@ fn replace_class_contract_call() {
         CompiledClass::Casm(Arc::new(wrapper_contract_class)),
     );
     insert_sierra_class_into_cache(
-        &mut native_contract_class_cache,
+        &native_contract_class_cache,
         wrapper_class_hash,
         wrapper_sierra_class,
     );
@@ -1776,14 +1768,14 @@ fn get_execution_info_test() {
     let selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = PermanentContractClassCache::default();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     // Contract data
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::zero();
 
-    insert_sierra_class_into_cache(&mut contract_class_cache, class_hash, sierra_contract_class);
+    insert_sierra_class_into_cache(&contract_class_cache, class_hash, sierra_contract_class);
 
     let mut state_reader = InMemoryStateReader::default();
 
