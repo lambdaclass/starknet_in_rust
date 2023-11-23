@@ -5,7 +5,6 @@ use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
-use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
     felt::Felt252,
     hint_processor::{
@@ -17,6 +16,7 @@ use cairo_vm::{
     },
     vm::{
         errors::{hint_errors::HintError, vm_errors::VirtualMachineError},
+        runners::cairo_runner::{ResourceTracker, RunResources},
         vm_core::VirtualMachine,
     },
 };
@@ -56,7 +56,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> SyscallHintProcessor<'a,
         hints: &[(usize, Vec<Hint>)],
         run_resources: RunResources,
         #[cfg(feature = "cairo-native")] program_cache: Option<
-            Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
+            std::rc::Rc<
+                std::cell::RefCell<
+                    cairo_native::cache::ProgramCache<'cache, crate::utils::ClassHash>,
+                >,
+            >,
         >,
     ) -> Self {
         #[cfg(not(feature = "cairo-native"))]
