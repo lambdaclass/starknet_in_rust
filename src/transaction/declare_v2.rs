@@ -460,13 +460,6 @@ impl DeclareV2 {
             ));
         }
         if let Some(ref class) = self.sierra_contract_class {
-            // state.set_sierra_program(
-            //     &self.sierra_class_hash,
-            //     Arc::new((
-            //         class.extract_sierra_program().unwrap(),
-            //         class.entry_points_by_type.clone(),
-            //     )),
-            // );
             state.set_contract_class(
                 &ClassHash(self.sierra_class_hash.to_be_bytes()),
                 &CompiledClass::Sierra(Arc::new((

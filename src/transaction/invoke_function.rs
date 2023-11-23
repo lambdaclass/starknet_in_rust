@@ -201,7 +201,11 @@ impl InvokeFunction {
             EntryPointType::External,
             None,
             None,
+            #[cfg(not(feature = "cairo-native"))]
             0,
+            // FIXME: Native will report an error because it has no gas to run the program.
+            #[cfg(feature = "cairo-native")]
+            u128::MAX
         );
 
         let ExecutionResult { call_info, .. } = call.execute(

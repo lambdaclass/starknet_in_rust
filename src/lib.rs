@@ -1,6 +1,7 @@
 #![deny(warnings)]
-// #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+// TODO: Remove condition once the `unsafe` on native has been fixed.
+#![cfg_attr(not(feature = "cairo-native"), forbid(unsafe_code))]
 
 use crate::{
     definitions::block_context::BlockContext,
