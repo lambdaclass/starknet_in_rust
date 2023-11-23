@@ -2,6 +2,16 @@ pub mod rpc_state;
 pub mod rpc_state_errors;
 pub mod utils;
 
+// only export the sir_state_reader module when the starknet_in_rust feature
+// is enabled.
+#[cfg(feature = "starknet_in_rust")]
+mod sir_state_reader;
+#[cfg(feature = "starknet_in_rust")]
+pub use sir_state_reader::{
+    execute_tx, execute_tx_configurable, execute_tx_without_validate, get_transaction_hashes,
+    RpcStateReader,
+};
+
 #[cfg(test)]
 mod tests {
     use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
