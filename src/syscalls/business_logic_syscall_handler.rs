@@ -55,6 +55,7 @@ use cairo_vm::{
 use lazy_static::lazy_static;
 
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::state::contract_class_cache::ContractClassCache;
 use num_traits::{One, ToPrimitive, Zero};
 
 #[cfg(feature = "cairo-native")]
@@ -127,7 +128,7 @@ lazy_static! {
 }
 
 #[derive(Debug)]
-pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
+pub struct BusinessLogicSyscallHandler<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) expected_syscall_ptr: Relocatable,
     pub(crate) resources_manager: ExecutionResourcesManager,
@@ -138,7 +139,7 @@ pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) block_context: BlockContext,
-    pub(crate) starknet_storage_state: ContractStorageState<'a, S>,
+    pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     pub(crate) support_reverted: bool,
     pub(crate) entry_point_selector: Felt252,
     pub(crate) selector_to_syscall: &'a HashMap<Felt252, &'static str>,
@@ -147,11 +148,11 @@ pub struct BusinessLogicSyscallHandler<'a, S: StateReader> {
 
 // TODO: execution entry point may no be a parameter field, but there is no way to generate a default for now
 
-impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, S, C> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
         resources_manager: ExecutionResourcesManager,
         caller_address: Address,
         contract_address: Address,
@@ -184,7 +185,8 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             execution_info_ptr: None,
         }
     }
-    pub fn default_with_state(state: &'a mut CachedState<S>) -> Self {
+
+    pub fn default_with_state(state: &'a mut CachedState<S, C>) -> Self {
         BusinessLogicSyscallHandler::new_for_testing(
             BlockInfo::default(),
             Default::default(),
@@ -195,7 +197,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
-        state: &'a mut CachedState<S>,
+        state: &'a mut CachedState<S, C>,
     ) -> Self {
         let syscalls = Vec::from([
             "emit_event".to_string(),
@@ -398,7 +400,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
                 #[cfg(feature = "cairo-native")]
                 program_cache,
             )
-            .map_err(|_| StateError::ExecutionEntryPoint())?;
+            .map_err(|_| StateError::ExecutionEntryPoint)?;
 
         let call_info = call_info.ok_or(StateError::CustomError(
             revert_error.unwrap_or_else(|| "Execution error".to_string()),
@@ -410,7 +412,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn syscall_storage_write(&mut self, key: Felt252, value: Felt252) {
-        self.starknet_storage_state.write(&key.to_be_bytes(), value)
+        self.starknet_storage_state.write(Address(key), value)
     }
 
     pub fn syscall(
@@ -608,7 +610,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, S, C> {
     fn emit_event(
         &mut self,
         vm: &VirtualMachine,
@@ -642,7 +644,10 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     }
 
     fn _storage_read(&mut self, key: [u8; 32]) -> Result<Felt252, StateError> {
-        match self.starknet_storage_state.read(&key) {
+        match self
+            .starknet_storage_state
+            .read(Address(Felt252::from_bytes_be(&key)))
+        {
             Ok(value) => Ok(value),
             Err(e @ StateError::Io(_)) => Err(e),
             Err(_) => Ok(Felt252::zero()),
@@ -1002,6 +1007,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
         >,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         let calldata = get_felt_range(vm, request.calldata_start, request.calldata_end)?;
+        let class_hash = ClassHash::from(request.class_hash);
         let execution_entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             calldata,
@@ -1009,7 +1015,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
             self.caller_address.clone(),
             EntryPointType::External,
             Some(CallType::Delegate),
-            Some(request.class_hash.to_be_bytes()),
+            Some(class_hash),
             remaining_gas,
         );
 
@@ -1044,7 +1050,7 @@ impl<'a, S: StateReader> BusinessLogicSyscallHandler<'a, S> {
     ) -> Result<SyscallResponse, SyscallHandlerError> {
         self.starknet_storage_state.state.set_class_hash_at(
             self.contract_address.clone(),
-            request.class_hash.to_be_bytes(),
+            ClassHash::from(request.class_hash),
         )?;
         Ok(SyscallResponse {
             gas: remaining_gas,

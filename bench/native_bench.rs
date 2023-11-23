@@ -16,6 +16,8 @@ use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::definitions::block_context::StarknetChainId;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
+use starknet_in_rust::state::contract_class_cache::ContractClassCache;
+use starknet_in_rust::state::contract_class_cache::PermanentContractClassCache;
 use starknet_in_rust::state::state_api::State;
 use starknet_in_rust::transaction::DeployAccount;
 use starknet_in_rust::utils::calculate_sn_keccak;
@@ -32,7 +34,6 @@ use starknet_in_rust::{
     utils::{Address, ClassHash},
 };
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -62,8 +63,8 @@ pub fn main() {
 
 fn bench_fibo(executions: usize, native: bool) {
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    static CASM_CLASS_HASH: ClassHash = [2; 32];
+    let contract_class_cache = PermanentContractClassCache::default();
+    static CASM_CLASS_HASH: ClassHash = ClassHash([2; 32]);
 
     let (contract_class, constructor_selector) = match native {
         true => {
@@ -96,7 +97,7 @@ fn bench_fibo(executions: usize, native: bool) {
 
     let caller_address = Address(123456789.into());
 
-    contract_class_cache.insert(CASM_CLASS_HASH, contract_class);
+    contract_class_cache.set_contract_class(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     let nonce = Felt252::zero();
 
@@ -109,7 +110,7 @@ fn bench_fibo(executions: usize, native: bool) {
 
     // Create state from the state_reader and contract cache.
     let state_reader = Arc::new(state_reader);
-    let state = CachedState::new(state_reader, contract_class_cache);
+    let state = CachedState::new(state_reader, Arc::new(contract_class_cache));
 
     /* f0, f1, N */
     let mut calldata = [1.into(), 1.into(), 2000000.into()];
@@ -120,7 +121,7 @@ fn bench_fibo(executions: usize, native: bool) {
     for _ in 0..executions {
         calldata[2] = &calldata[2] + 1usize;
         let result = execute(
-            &mut state.clone(),
+            &mut state.clone_for_testing(),
             &caller_address,
             &caller_address,
             &Felt252::new(constructor_selector.clone()),
@@ -136,8 +137,8 @@ fn bench_fibo(executions: usize, native: bool) {
 
 fn bench_fact(executions: usize, native: bool) {
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
-    static CASM_CLASS_HASH: ClassHash = [2; 32];
+    let contract_class_cache = PermanentContractClassCache::default();
+    static CASM_CLASS_HASH: ClassHash = ClassHash([2; 32]);
 
     let (contract_class, constructor_selector) = match native {
         true => {
@@ -172,7 +173,7 @@ fn bench_fact(executions: usize, native: bool) {
     // FACT 1M
     // FIBO 2M
 
-    contract_class_cache.insert(CASM_CLASS_HASH, contract_class);
+    contract_class_cache.set_contract_class(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
     let nonce = Felt252::zero();
 
@@ -185,7 +186,7 @@ fn bench_fact(executions: usize, native: bool) {
 
     // Create state from the state_reader and contract cache.
     let state_reader = Arc::new(state_reader);
-    let state = CachedState::new(state_reader, contract_class_cache);
+    let state = CachedState::new(state_reader, Arc::new(contract_class_cache));
 
     /* N */
     let mut calldata = [2000000.into()];
@@ -196,7 +197,7 @@ fn bench_fact(executions: usize, native: bool) {
     for _ in 0..executions {
         calldata[0] = &calldata[0] + 1usize;
         let result = execute(
-            &mut state.clone(),
+            &mut state.clone_for_testing(),
             &caller_address,
             &caller_address,
             &Felt252::new(constructor_selector.clone()),
@@ -213,12 +214,12 @@ fn bench_fact(executions: usize, native: bool) {
 fn bench_erc20(executions: usize, native: bool) {
     // 1. setup ERC20 contract and state.
     // Create state reader and preload the contract classes.
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     lazy_static! {
-        static ref ERC20_CLASS_HASH: ClassHash = felt_str!("2").to_be_bytes();
-        static ref DEPLOYER_CLASS_HASH: ClassHash = felt_str!("10").to_be_bytes();
-        static ref ACCOUNT1_CLASS_HASH: ClassHash = felt_str!("1").to_be_bytes();
+        static ref ERC20_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("2"));
+        static ref DEPLOYER_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("10"));
+        static ref ACCOUNT1_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("1"));
         static ref DEPLOYER_ADDRESS: Address = Address(1111.into());
         static ref ERC20_NAME: Felt252 = Felt252::from_bytes_be(b"be");
         static ref ERC20_SYMBOL: Felt252 = Felt252::from_bytes_be(b"be");
@@ -227,7 +228,7 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_RECIPIENT: Felt252 = felt_str!("111");
         static ref ERC20_SALT: Felt252 = felt_str!("1234");
         static ref ERC20_DEPLOYER_CALLDATA: [Felt252; 7] = [
-            Felt252::from_bytes_be(&ERC20_CLASS_HASH.clone()),
+            Felt252::from_bytes_be(ERC20_CLASS_HASH.to_bytes_be()),
             ERC20_SALT.clone(),
             ERC20_RECIPIENT.clone(),
             ERC20_NAME.clone(),
@@ -239,7 +240,10 @@ fn bench_erc20(executions: usize, native: bool) {
     }
 
     let program_cache = Rc::new(RefCell::new(ProgramCache::new(get_native_context())));
-    let (erc20_address, mut state): (Address, CachedState<InMemoryStateReader>) = match native {
+    let (erc20_address, mut state): (
+        Address,
+        CachedState<InMemoryStateReader, PermanentContractClassCache>,
+    ) = match native {
         true => {
             let erc20_sierra_class = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
             let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
@@ -259,11 +263,11 @@ fn bench_erc20(executions: usize, native: bool) {
             let deploy_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
             // insert deployer and erc20 classes into the cache.
-            contract_class_cache.insert(
+            contract_class_cache.set_contract_class(
                 *DEPLOYER_CLASS_HASH,
                 CompiledClass::Casm(Arc::new(erc20_deployer_class)),
             );
-            contract_class_cache.insert(*ERC20_CLASS_HASH, erc20_contract_class);
+            contract_class_cache.set_contract_class(*ERC20_CLASS_HASH, erc20_contract_class);
 
             let mut state_reader = InMemoryStateReader::default();
             // setup deployer nonce and address into the state reader
@@ -275,7 +279,8 @@ fn bench_erc20(executions: usize, native: bool) {
                 .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
 
             // Create state from the state_reader and contract cache.
-            let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+            let mut state =
+                CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
             // deploy the erc20 contract by calling the deployer contract.
 
@@ -338,11 +343,11 @@ fn bench_erc20(executions: usize, native: bool) {
             let deploy_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
             // insert deployer and erc20 classes into the cache.
-            contract_class_cache.insert(
+            contract_class_cache.set_contract_class(
                 *DEPLOYER_CLASS_HASH,
                 CompiledClass::Casm(Arc::new(erc20_deployer_class)),
             );
-            contract_class_cache.insert(*ERC20_CLASS_HASH, erc20_contract_class);
+            contract_class_cache.set_contract_class(*ERC20_CLASS_HASH, erc20_contract_class);
 
             let mut state_reader = InMemoryStateReader::default();
             // setup deployer nonce and address into the state reader
@@ -354,7 +359,8 @@ fn bench_erc20(executions: usize, native: bool) {
                 .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
 
             // Create state from the state_reader and contract cache.
-            let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+            let mut state =
+                CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
             // deploy the erc20 contract by calling the deployer contract.
 
@@ -419,8 +425,8 @@ fn bench_erc20(executions: usize, native: bool) {
         .unwrap();
     state
         .set_compiled_class_hash(
-            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH.clone()),
-            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH.clone()),
+            &Felt252::from_bytes_be(ACCOUNT1_CLASS_HASH.to_bytes_be()),
+            &Felt252::from_bytes_be(ACCOUNT1_CLASS_HASH.to_bytes_be()),
         )
         .unwrap();
 
@@ -493,7 +499,7 @@ fn bench_erc20(executions: usize, native: bool) {
 
     for _ in 0..executions {
         let result = execute(
-            &mut state.clone(),
+            &mut state.clone_for_testing(),
             &account1_address,
             &erc20_address,
             &transfer_entrypoint_selector.clone(),
@@ -510,7 +516,7 @@ fn bench_erc20(executions: usize, native: bool) {
 #[inline(never)]
 #[allow(clippy::too_many_arguments)]
 fn execute(
-    state: &mut CachedState<InMemoryStateReader>,
+    state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     caller_address: &Address,
     callee_address: &Address,
     selector: &Felt252,

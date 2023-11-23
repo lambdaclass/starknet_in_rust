@@ -1,9 +1,7 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
 use cairo_vm::felt::{felt_str, Felt252};
-use num_traits::Zero;
-
 use lazy_static::lazy_static;
+use num_traits::Zero;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -13,10 +11,14 @@ use starknet_in_rust::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::cached_state::CachedState,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager,
+    },
     utils::Address,
     EntryPointType,
 };
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
@@ -33,7 +35,7 @@ lazy_static! {
 
     static ref CONTRACT_PATH: PathBuf = PathBuf::from("starknet_programs/fibonacci.json");
 
-    static ref CONTRACT_CLASS_HASH: [u8; 32] = [1; 32];
+    static ref CONTRACT_CLASS_HASH: ClassHash = ClassHash([1; 32]);
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
@@ -60,7 +62,7 @@ fn main() {
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = Arc::new(PermanentContractClassCache::default());
 
     //  ------------ contract data --------------------
 
@@ -68,10 +70,10 @@ fn main() {
     let class_hash = *CONTRACT_CLASS_HASH;
     let nonce = Felt252::zero();
 
-    contract_class_cache.insert(
+    contract_class_cache.extend([(
         class_hash,
         CompiledClass::Deprecated(Arc::new(contract_class)),
-    );
+    )]);
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()

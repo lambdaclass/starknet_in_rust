@@ -1,3 +1,20 @@
+use crate::{
+    definitions::block_context::BlockContext,
+    definitions::constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    execution::TransactionExecutionInfo,
+    state::{
+        cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
+    },
+    utils::Address,
+};
+pub use declare::Declare;
+pub use declare_v2::DeclareV2;
+pub use deploy::Deploy;
+pub use deploy_account::DeployAccount;
+use error::TransactionError;
+pub use invoke_function::InvokeFunction;
+pub use l1_handler::L1Handler;
+
 pub mod declare;
 pub mod declare_v2;
 pub mod deploy;
@@ -8,24 +25,7 @@ pub mod invoke_function;
 pub mod l1_handler;
 
 use cairo_vm::felt::Felt252;
-pub use declare::Declare;
-pub use declare_v2::DeclareV2;
-pub use deploy::Deploy;
-pub use deploy_account::DeployAccount;
-pub use invoke_function::InvokeFunction;
-pub use l1_handler::L1Handler;
 use num_traits::{One, Zero};
-
-use crate::{
-    definitions::{
-        block_context::BlockContext,
-        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
-    },
-    execution::TransactionExecutionInfo,
-    state::{cached_state::CachedState, state_api::StateReader},
-    utils::Address,
-};
-use error::TransactionError;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -76,9 +76,9 @@ impl Transaction {
     ///- state: a structure that implements State and StateReader traits.
     ///- block_context: The block context of the transaction that is about to be executed.
     ///- remaining_gas: The gas supplied to execute the transaction.
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         remaining_gas: u128,
         #[cfg(feature = "cairo-native")] program_cache: Option<
