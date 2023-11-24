@@ -1,6 +1,8 @@
 #![deny(warnings)]
 
+#[cfg(feature = "cairo-native")]
 use cairo_native::cache::ProgramCache;
+
 use cairo_vm::felt;
 use felt::{felt_str, Felt252};
 use lazy_static::lazy_static;
@@ -56,14 +58,16 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
     #[cfg(feature = "cairo-native")]
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(
-        starknet_in_rust::utils::get_native_context(),
-    )));
+    {
+        let program_cache = Rc::new(RefCell::new(ProgramCache::new(
+            starknet_in_rust::utils::get_native_context(),
+        )));
 
-    deploy_account(program_cache.clone());
-    declare(program_cache.clone());
-    deploy(program_cache.clone());
-    invoke(program_cache.clone());
+        deploy_account(program_cache.clone());
+        declare(program_cache.clone());
+        deploy(program_cache.clone());
+        invoke(program_cache.clone());
+    }
 
     // The black_box ensures there's no tail-call optimization.
     // If not, the flamegraph ends up less nice.
@@ -71,7 +75,7 @@ fn main() {
 }
 
 #[inline(never)]
-fn deploy_account(
+pub fn deploy_account(
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
 ) {
     const RUNS: usize = 500;
@@ -120,7 +124,9 @@ fn deploy_account(
 }
 
 #[inline(never)]
-fn declare(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
+pub fn declare(
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) {
     const RUNS: usize = 5;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
@@ -160,7 +166,9 @@ fn declare(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCac
 }
 
 #[inline(never)]
-fn deploy(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
+pub fn deploy(
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) {
     const RUNS: usize = 8;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
@@ -206,7 +214,9 @@ fn deploy(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCach
 }
 
 #[inline(never)]
-fn invoke(#[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>) {
+pub fn invoke(
+    #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+) {
     const RUNS: usize = 100;
 
     let state_reader = Arc::new(InMemoryStateReader::default());
