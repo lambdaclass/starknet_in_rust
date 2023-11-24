@@ -17,13 +17,14 @@ use starknet_in_rust::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::{
-        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
     transaction::{DeclareV2, DeployAccount, InvokeFunction},
     utils::{calculate_sn_keccak, felt_to_hash, Address},
     CasmContractClass, SierraContractClass,
 };
-use std::{collections::HashMap, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc};
+use std::{fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc};
 
 fn main() {
     // replace this with the path to your compiled contract
@@ -67,7 +68,10 @@ fn test_contract(
     //*             Initialize state
     //* --------------------------------------------
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     //* --------------------------------------------
     //*             Deploy deployer contract
@@ -119,7 +123,12 @@ fn test_contract(
     .unwrap();
 
     let account_contract_address = internal_deploy
-        .execute(&mut state, &block_context)
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("Account Deploy Failed")
         .call_info
         .unwrap()
@@ -155,7 +164,12 @@ fn test_contract(
     .expect("couldn't create declare transaction");
 
     declare_tx
-        .execute(&mut state, &block_context)
+        .execute(
+            &mut state,
+            &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("could not declare the contract class");
 
     //* ----------------------------------------------------------
@@ -175,7 +189,13 @@ fn test_contract(
     .unwrap();
 
     let contract_address = deploy
-        .execute(&mut state, &block_context, 0)
+        .execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .expect("could not deploy contract")
         .call_info
         .unwrap()
@@ -218,7 +238,15 @@ fn test_contract(
     )
     .unwrap();
 
-    let tx_exec_info = invoke_tx.execute(&mut state, &block_context, 0).unwrap();
+    let tx_exec_info = invoke_tx
+        .execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     //* --------------------------------------------
     //*          Extract return values

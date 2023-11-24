@@ -30,8 +30,85 @@ use std::{
     hash::Hash,
 };
 
-pub type ClassHash = [u8; 32];
-pub type CompiledClassHash = [u8; 32];
+#[derive(Clone, PartialEq, Hash, Default, Serialize, Deserialize, Copy)]
+pub struct ClassHash(pub [u8; 32]);
+
+impl ClassHash {
+    pub fn new(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+
+    pub fn to_bytes_be(&self) -> &[u8] {
+        &self.0
+    }
+
+    pub fn as_slice(&self) -> [u8; 32] {
+        self.0
+    }
+}
+
+impl fmt::Display for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let hex_string = hex::encode(self.0);
+        let trimmed_hex_string = hex_string.trim_start_matches('0');
+        write!(f, "0x{}", trimmed_hex_string)?;
+        Ok(())
+    }
+}
+
+impl fmt::Debug for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl From<Felt252> for ClassHash {
+    fn from(felt: Felt252) -> Self {
+        felt_to_hash(&felt)
+    }
+}
+
+impl From<[u8; 32]> for ClassHash {
+    fn from(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+}
+
+impl Eq for ClassHash {}
+
+impl PartialEq<[u8; 32]> for ClassHash {
+    fn eq(&self, other: &[u8; 32]) -> bool {
+        &self.0 == other
+    }
+}
+
+pub type CompiledClassHash = ClassHash;
+
+#[cfg(feature = "cairo-native")]
+pub(crate) static NATIVE_CONTEXT: std::sync::OnceLock<cairo_native::context::NativeContext> =
+    std::sync::OnceLock::new();
+
+/// Set the global native context.
+///
+/// Use this function to set the global native context. It must be called before anything else to
+/// avoid the global context to be automatically initialized with a different context.
+///
+/// When using a program cache, the global native context should remain uninitialized.
+#[cfg(feature = "cairo-native")]
+pub fn set_native_context(
+    context: cairo_native::context::NativeContext,
+) -> Result<(), cairo_native::context::NativeContext> {
+    NATIVE_CONTEXT.set(context)
+}
+
+/// Return the global native context.
+///
+/// This function may initialize it with a new context if it wasn't already initialized.
+#[cfg(feature = "cairo-native")]
+pub fn get_native_context() -> &'static cairo_native::context::NativeContext {
+    use cairo_native::context::NativeContext;
+    NATIVE_CONTEXT.get_or_init(NativeContext::new)
+}
 
 //* -------------------
 //*      Address
@@ -127,7 +204,7 @@ pub fn felt_to_hash(value: &Felt252) -> ClassHash {
     let bytes = value.to_bytes_be();
     output[32 - bytes.len()..].copy_from_slice(&bytes);
 
-    output
+    ClassHash(output)
 }
 
 pub fn string_to_hash(class_string: &String) -> ClassHash {
@@ -275,7 +352,7 @@ pub fn to_cache_state_storage_mapping(
     let mut storage_writes = HashMap::new();
     for (address, contract_storage) in map {
         for (key, value) in contract_storage {
-            storage_writes.insert((address.clone(), felt_to_hash(key)), value.clone());
+            storage_writes.insert((address.clone(), key.to_be_bytes()), value.clone());
         }
     }
     storage_writes
@@ -383,10 +460,10 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     }
     Ok(())
 }
-pub fn calculate_sn_keccak(data: &[u8]) -> ClassHash {
+pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
     let mut hasher = Keccak256::default();
     hasher.update(data);
-    let mut result: ClassHash = hasher.finalize().into();
+    let mut result: [u8; 32] = hasher.finalize().into();
     // Only the first 250 bits from the hash are used.
     result[0] &= 0b0000_0011;
     result
@@ -450,8 +527,8 @@ pub mod test_utils {
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
         state::{
-            cached_state::CachedState, in_memory_state_reader::InMemoryStateReader,
-            state_cache::StorageEntry, BlockInfo,
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader, state_cache::StorageEntry, BlockInfo,
         },
         utils::Address,
     };
@@ -704,8 +781,13 @@ pub mod test_utils {
         )
     }
 
-    pub(crate) fn create_account_tx_test_state(
-    ) -> Result<(BlockContext, CachedState<InMemoryStateReader>), Box<dyn std::error::Error>> {
+    pub(crate) fn create_account_tx_test_state() -> Result<
+        (
+            BlockContext,
+            CachedState<InMemoryStateReader, PermanentContractClassCache>,
+        ),
+        Box<dyn std::error::Error>,
+    > {
         let block_context = new_starknet_block_context_for_testing();
 
         let test_contract_class_hash = felt_to_hash(&TEST_CLASS_HASH.clone());
@@ -753,11 +835,11 @@ pub mod test_utils {
             {
                 let mut state_reader = InMemoryStateReader::default();
                 for (contract_address, class_hash) in address_to_class_hash {
-                    let storage_keys: HashMap<(Address, ClassHash), Felt252> = storage_view
+                    let storage_keys: HashMap<(Address, [u8; 32]), Felt252> = storage_view
                         .iter()
                         .filter_map(|((address, storage_key), storage_value)| {
                             (address == &contract_address).then_some((
-                                (address.clone(), felt_to_hash(storage_key)),
+                                (address.clone(), felt_to_hash(storage_key).0),
                                 storage_value.clone(),
                             ))
                         })
@@ -782,7 +864,7 @@ pub mod test_utils {
                 }
                 Arc::new(state_reader)
             },
-            HashMap::new(),
+            Arc::new(PermanentContractClassCache::default()),
         );
 
         Ok((block_context, cached_state))
@@ -869,7 +951,7 @@ mod test {
 
     #[test]
     fn to_cache_state_storage_mapping_test() {
-        let mut storage: HashMap<(Address, ClassHash), Felt252> = HashMap::new();
+        let mut storage: HashMap<(Address, [u8; 32]), Felt252> = HashMap::new();
         let address1: Address = Address(1.into());
         let key1 = [0; 32];
         let value1: Felt252 = 2.into();
@@ -926,5 +1008,11 @@ mod test {
     fn test_address_display() {
         let address = Address(Felt252::from(123456789));
         assert_eq!(format!("{}", address), "0x75bcd15".to_string());
+    }
+
+    #[test]
+    pub fn test_class_hash_display() {
+        let class_hash = ClassHash::from(Felt252::from(123456789));
+        assert_eq!(format!("{}", class_hash), "0x75bcd15".to_string());
     }
 }

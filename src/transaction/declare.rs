@@ -1,25 +1,23 @@
-use crate::execution::execution_entry_point::ExecutionResult;
+use crate::core::contract_address::compute_deprecated_class_hash;
+use crate::core::transaction_hash::calculate_declare_transaction_hash;
+use crate::definitions::block_context::BlockContext;
+use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
+use crate::definitions::transaction_type::TransactionType;
 use crate::execution::gas_usage::get_onchain_data_segment_length;
 use crate::execution::os_usage::ESTIMATED_DECLARE_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
-use crate::state::state_api::StateChangesCount;
+use crate::state::contract_class_cache::ContractClassCache;
+use crate::state::state_api::{State, StateChangesCount, StateReader};
 use crate::{
-    core::{
-        contract_address::compute_deprecated_class_hash,
-        transaction_hash::calculate_declare_transaction_hash,
-    },
-    definitions::{
-        block_context::BlockContext, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-        transaction_type::TransactionType,
-    },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, TransactionExecutionContext,
-        TransactionExecutionInfo,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::state_api::{State, StateReader},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::ExecutionResourcesManager,
     transaction::error::TransactionError,
     utils::{
@@ -32,10 +30,15 @@ use num_traits::{One, Zero};
 
 use super::fee::{calculate_tx_fee, charge_fee};
 use super::{get_tx_version, Transaction};
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
+
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
@@ -175,23 +178,32 @@ impl Declare {
     }
 
     pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(&self.class_hash);
+        let bytes = Felt252::from_bytes_be(self.class_hash.to_bytes_be());
         Vec::from([bytes])
     }
 
     /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: StateReader>(
+    pub fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info = if self.skip_validate {
             None
         } else {
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+            self.run_validate_entrypoint(
+                state,
+                &mut resources_manager,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )?
         };
         let changes = state.count_actual_state_changes(Some((
             &block_context.starknet_os_config.fee_token_address,
@@ -231,11 +243,14 @@ impl Declare {
         )
     }
 
-    pub fn run_validate_entrypoint<S: StateReader>(
+    pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<Option<CallInfo>, TransactionError> {
         if self.version.is_zero() {
             return Ok(None);
@@ -261,6 +276,8 @@ impl Declare {
             &mut self.get_execution_context(block_context.invoke_tx_max_n_steps),
             false,
             block_context.validate_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
@@ -341,7 +358,7 @@ impl Declare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::Declare,
         self.version = ?self.version,
         self.class_hash = ?self.class_hash,
@@ -349,10 +366,13 @@ impl Declare {
         self.sender_address = ?self.sender_address,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if self.version != Felt252::one() && self.version != Felt252::zero() {
             return Err(TransactionError::UnsupportedTxVersion(
@@ -367,7 +387,12 @@ impl Declare {
 
         self.handle_nonce(state)?;
 
-        let mut tx_exec_info = self.apply(state, block_context)?;
+        let mut tx_exec_info = self.apply(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+        )?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
@@ -378,6 +403,8 @@ impl Declare {
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         state.set_contract_class(
@@ -423,13 +450,6 @@ impl Declare {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::{
-        felt::{felt_str, Felt252},
-        vm::runners::cairo_runner::ExecutionResources,
-    };
-    use num_traits::{One, Zero};
-    use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
     use crate::{
         definitions::{
             block_context::{BlockContext, StarknetChainId},
@@ -440,12 +460,16 @@ mod tests {
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
-        state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::{felt_to_hash, Address},
     };
-
-    use super::Declare;
+    use cairo_vm::{
+        felt::{felt_str, Felt252},
+        vm::runners::cairo_runner::ExecutionResources,
+    };
+    use num_traits::{One, Zero};
+    use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     #[test]
     fn declare_fibonacci() {
@@ -454,13 +478,13 @@ mod tests {
             ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let class_hash = ClassHash::from(hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class.clone())),
         );
@@ -479,7 +503,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::new(1));
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -554,7 +578,12 @@ mod tests {
         // ---------------------
         assert_eq!(
             internal_declare
-                .apply(&mut state, &BlockContext::default())
+                .apply(
+                    &mut state,
+                    &BlockContext::default(),
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
                 .unwrap(),
             transaction_exec_info
         );
@@ -567,13 +596,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -592,7 +621,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -627,13 +656,23 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &BlockContext::default())
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         assert!(state.get_contract_class(&class_hash).is_ok());
 
         second_internal_declare
-            .execute(&mut state, &BlockContext::default())
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
         assert!(state.get_contract_class(&class_hash).is_ok());
@@ -646,13 +685,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -671,7 +710,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -695,10 +734,20 @@ mod tests {
         .unwrap();
 
         internal_declare
-            .execute(&mut state, &BlockContext::default())
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
             .unwrap();
 
-        let expected_error = internal_declare.execute(&mut state, &BlockContext::default());
+        let expected_error = internal_declare.execute(
+            &mut state,
+            &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
 
         // ---------------------
         //      Comparison
@@ -714,11 +763,11 @@ mod tests {
     #[test]
     fn validate_transaction_should_fail() {
         // Instantiate CachedState
-        let contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         let state_reader = Arc::new(InMemoryStateReader::default());
 
-        let mut state = CachedState::new(state_reader, contract_class_cache);
+        let mut state = CachedState::new(state_reader, Arc::new(contract_class_cache));
 
         // There are no account contracts in the state, so the transaction should fail
         let fib_contract_class =
@@ -737,7 +786,12 @@ mod tests {
         )
         .unwrap();
 
-        let internal_declare_error = internal_declare.execute(&mut state, &BlockContext::default());
+        let internal_declare_error = internal_declare.execute(
+            &mut state,
+            &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        );
 
         assert!(internal_declare_error.is_err());
         assert_matches!(
@@ -753,13 +807,13 @@ mod tests {
         let contract_class = ContractClass::from_path(path).unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let class_hash = felt_to_hash(&hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -778,7 +832,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address, Felt252::zero());
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
         //* ---------------------------------------
         //*    Test declare with previous data
@@ -803,7 +857,12 @@ mod tests {
 
         // We expect a fee transfer failure because the fee token contract is not set up
         assert_matches!(
-            internal_declare.execute(&mut state, &BlockContext::default()),
+            internal_declare.execute(
+                &mut state,
+                &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
+            ),
             Err(TransactionError::MaxFeeExceedsBalance(_, _, _))
         );
     }
@@ -814,13 +873,13 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/Account.json").unwrap();
 
         // Instantiate CachedState
-        let mut contract_class_cache = HashMap::new();
+        let contract_class_cache = PermanentContractClassCache::default();
 
         //  ------------ contract data --------------------
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = hash.to_be_bytes();
+        let class_hash = ClassHash::from(hash);
 
-        contract_class_cache.insert(
+        contract_class_cache.set_contract_class(
             class_hash,
             CompiledClass::Deprecated(Arc::new(contract_class)),
         );
@@ -839,7 +898,7 @@ mod tests {
             .address_to_nonce_mut()
             .insert(sender_address.clone(), Felt252::new(1));
 
-        let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
         // Insert pubkey storage var to pass validation
         let storage_entry = &(
             sender_address,
@@ -893,16 +952,27 @@ mod tests {
         // ---------------------
         //      Comparison
         // ---------------------
-        let mut state_copy = state.clone();
+        let mut state_copy = state.clone_for_testing();
         let mut bock_context = BlockContext::default();
         bock_context.starknet_os_config.gas_price = 12;
         assert!(
             declare
-                .execute(&mut state, &bock_context)
+                .execute(
+                    &mut state,
+                    &bock_context,
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
                 .unwrap()
                 .actual_fee
                 > simulate_declare
-                    .execute(&mut state_copy, &bock_context, 0)
+                    .execute(
+                        &mut state_copy,
+                        &bock_context,
+                        0,
+                        #[cfg(feature = "cairo-native")]
+                        None,
+                    )
                     .unwrap()
                     .actual_fee,
         );
@@ -926,9 +996,11 @@ mod tests {
             Felt252::zero(),
         )
         .unwrap();
-        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
-            &mut CachedState::default(),
+        let result = internal_declare.execute(
+            &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         assert_matches!(
