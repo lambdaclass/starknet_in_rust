@@ -4,6 +4,7 @@ use cairo_vm::{
 };
 use lazy_static::lazy_static;
 use num_traits::Zero;
+use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
@@ -13,20 +14,18 @@ use starknet_in_rust::{
     },
     execution::{CallInfo, CallType, TransactionExecutionInfo},
     hash_utils::calculate_contract_address,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::in_memory_state_reader::InMemoryStateReader,
-    state::{cached_state::CachedState, state_api::State},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State,
+    },
     transaction::DeployAccount,
-    utils::Address,
+    utils::{Address, ClassHash},
     CasmContractClass,
 };
-use starknet_in_rust::{
-    services::api::contract_classes::compiled_class::CompiledClass, EntryPointType,
-};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashSet, sync::Arc};
 
 lazy_static! {
     static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
@@ -35,19 +34,20 @@ lazy_static! {
 #[test]
 fn internal_deploy_account() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
-
-    state.set_contract_classes(Default::default()).unwrap();
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     let contract_class =
         ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
-    let class_hash = compute_deprecated_class_hash(&contract_class).unwrap();
-    let class_hash_bytes = class_hash.to_be_bytes();
+    let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
+    let class_hash = ClassHash::from(class_hash_felt.clone());
 
     state
         .set_contract_class(
-            &class_hash_bytes,
+            &class_hash,
             &CompiledClass::Deprecated(Arc::new(contract_class)),
         )
         .unwrap();
@@ -56,7 +56,7 @@ fn internal_deploy_account() {
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
 
     let internal_deploy_account = DeployAccount::new(
-        class_hash_bytes,
+        class_hash,
         0,
         1.into(),
         Felt252::zero(),
@@ -75,12 +75,17 @@ fn internal_deploy_account() {
     .unwrap();
 
     let tx_info = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
     let contract_address = calculate_contract_address(
         &contract_address_salt,
-        &class_hash,
+        &class_hash_felt,
         &[],
         Address(Felt252::zero()),
     )
@@ -92,10 +97,13 @@ fn internal_deploy_account() {
             Some(CallInfo {
                 call_type: Some(CallType::Call),
                 contract_address: Address(contract_address.clone()),
-                class_hash: Some(class_hash_bytes),
+                class_hash: Some(class_hash),
                 entry_point_selector: Some(VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone()),
                 entry_point_type: Some(EntryPointType::External),
-                calldata: vec![class_hash, contract_address_salt],
+                calldata: vec![
+                    Felt252::from_bytes_be(class_hash.to_bytes_be()),
+                    contract_address_salt
+                ],
                 execution_resources: Some(ExecutionResources {
                     n_steps: 13,
                     n_memory_holes: 0,
@@ -106,7 +114,7 @@ fn internal_deploy_account() {
             Some(CallInfo {
                 call_type: Some(CallType::Call),
                 contract_address: Address(contract_address),
-                class_hash: Some(class_hash_bytes),
+                class_hash: Some(class_hash),
                 entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
@@ -131,9 +139,10 @@ fn internal_deploy_account() {
 #[test]
 fn internal_deploy_account_cairo1() {
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::default());
-
-    state.set_contract_classes(Default::default()).unwrap();
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");
@@ -143,7 +152,7 @@ fn internal_deploy_account_cairo1() {
 
     state
         .set_contract_class(
-            &TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes(),
+            &ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes()),
             &CompiledClass::Casm(Arc::new(contract_class)),
         )
         .unwrap();
@@ -158,9 +167,7 @@ fn internal_deploy_account_cairo1() {
         felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
 
     let internal_deploy_account = DeployAccount::new(
-        TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH
-            .clone()
-            .to_be_bytes(),
+        ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes()),
         0,
         1.into(),
         Felt252::zero(),
@@ -179,14 +186,19 @@ fn internal_deploy_account_cairo1() {
     .unwrap();
 
     let tx_info = internal_deploy_account
-        .execute(&mut state, &Default::default())
+        .execute(
+            &mut state,
+            &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
         .unwrap();
 
-    let accessed_keys: [u8; 32] = [
+    let accessed_keys: ClassHash = ClassHash([
         3, 178, 128, 25, 204, 253, 189, 48, 255, 198, 89, 81, 217, 75, 184, 92, 158, 43, 132, 52,
         17, 26, 0, 11, 90, 253, 83, 60, 230, 95, 87, 164,
-    ];
-    let keys: HashSet<[u8; 32]> = [accessed_keys].iter().copied().collect();
+    ]);
+    let keys: HashSet<ClassHash> = [accessed_keys].iter().copied().collect();
 
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -212,10 +224,10 @@ fn internal_deploy_account_cairo1() {
                 gas_consumed: 15540,
                 #[cfg(feature="cairo_1_tests")]
                 gas_consumed: 16770,
-                class_hash: Some([
+                class_hash: Some(ClassHash([
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 1
-                ]),
+                ])),
                 entry_point_selector: Some(felt_str!(
                     "1554466106298962091002569854891683800203193677547440645928814916929210362005"
                 )),
@@ -249,9 +261,8 @@ fn internal_deploy_account_cairo1() {
                     "397149464972449753182583229366244826403270781177748543857889179957856017275"
                 )),
                 class_hash: Some(
-                    TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH
-                        .clone()
-                        .to_be_bytes()
+                    ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes()),
+
                 ),
                 entry_point_selector: Some(felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556")),
                 entry_point_type: Some(EntryPointType::Constructor),

@@ -3,8 +3,12 @@ use super::get_tx_version;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
+use crate::execution::gas_usage::get_onchain_data_segment_length;
+use crate::execution::os_usage::ESTIMATED_DEPLOY_ACCOUNT_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
+use crate::state::state_api::StateChangesCount;
 use crate::state::StateDiff;
 use crate::{
     core::{
@@ -27,8 +31,11 @@ use crate::{
     services::api::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
+    state::{
+        contract_class_cache::ContractClassCache,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
@@ -36,7 +43,14 @@ use crate::{
 use cairo_vm::felt::Felt252;
 use getset::Getters;
 use num_traits::{One, Zero};
+use std::collections::HashMap;
 use std::fmt::Debug;
+
+#[cfg(feature = "cairo-native")]
+use {
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
@@ -64,6 +78,7 @@ pub struct DeployAccount {
     skip_validate: bool,
     skip_execute: bool,
     skip_fee_transfer: bool,
+    skip_nonce_check: bool,
 }
 
 impl DeployAccount {
@@ -81,7 +96,7 @@ impl DeployAccount {
         let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
-            &Felt252::from_bytes_be(&class_hash),
+            &Felt252::from_bytes_be(class_hash.to_bytes_be()),
             &constructor_calldata,
             Address(Felt252::zero()),
         )?);
@@ -89,7 +104,7 @@ impl DeployAccount {
         let hash_value = calculate_deploy_account_transaction_hash(
             version.clone(),
             &contract_address,
-            Felt252::from_bytes_be(&class_hash),
+            Felt252::from_bytes_be(class_hash.to_bytes_be()),
             &constructor_calldata,
             max_fee,
             nonce.clone(),
@@ -110,6 +125,7 @@ impl DeployAccount {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 
@@ -124,9 +140,10 @@ impl DeployAccount {
         contract_address_salt: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
+        let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
-            &Felt252::from_bytes_be(&class_hash),
+            &Felt252::from_bytes_be(class_hash.to_bytes_be()),
             &constructor_calldata,
             Address(Felt252::zero()),
         )?);
@@ -144,6 +161,7 @@ impl DeployAccount {
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
+            skip_nonce_check: false,
         })
     }
 
@@ -154,7 +172,7 @@ impl DeployAccount {
         }
     }
 
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::DeployAccount,
         self.version = ?self.version,
         self.class_hash = ?self.class_hash,
@@ -163,10 +181,13 @@ impl DeployAccount {
         self.contract_address_salt = ?self.contract_address_salt,
         self.nonce = ?self.nonce,
     ))]
-    pub fn execute<S: StateReader>(
+    pub fn execute<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if self.version != Felt252::one() {
             return Err(TransactionError::UnsupportedTxVersion(
@@ -176,10 +197,19 @@ impl DeployAccount {
             ));
         }
 
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context)?;
+        }
+
         self.handle_nonce(state)?;
 
-        let mut transactional_state = state.create_transactional();
-        let mut tx_exec_info = self.apply(&mut transactional_state, block_context)?;
+        let mut transactional_state = state.create_transactional()?;
+        let mut tx_exec_info = self.apply(
+            &mut transactional_state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+        )?;
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
@@ -213,6 +243,8 @@ impl DeployAccount {
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
         )?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
@@ -237,23 +269,38 @@ impl DeployAccount {
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
     /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    fn apply<S: StateReader>(
+    fn apply<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
         state.deploy_contract(self.contract_address.clone(), self.class_hash)?;
 
         let mut resources_manager = ExecutionResourcesManager::default();
-        let constructor_call_info =
-            self.handle_constructor(contract_class, state, block_context, &mut resources_manager)?;
+        let constructor_call_info = self.handle_constructor(
+            contract_class,
+            state,
+            block_context,
+            &mut resources_manager,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+        )?;
 
         let validate_info = if self.skip_validate {
             None
         } else {
-            self.run_validate_entrypoint(state, &mut resources_manager, block_context)?
+            self.run_validate_entrypoint(
+                state,
+                &mut resources_manager,
+                block_context,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )?
         };
 
         let actual_resources = calculate_tx_resources(
@@ -278,12 +325,15 @@ impl DeployAccount {
         ))
     }
 
-    pub fn handle_constructor<S: StateReader>(
+    pub fn handle_constructor<S: StateReader, C: ContractClassCache>(
         &self,
         contract_class: CompiledClass,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<CallInfo, TransactionError> {
         if self.constructor_entry_points_empty(contract_class)? {
             if !self.constructor_calldata.is_empty() {
@@ -296,7 +346,13 @@ impl DeployAccount {
                 Some(self.class_hash),
             ))
         } else {
-            self.run_constructor_entrypoint(state, block_context, resources_manager)
+            self.run_constructor_entrypoint(
+                state,
+                block_context,
+                resources_manager,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )
         }
     }
 
@@ -307,7 +363,7 @@ impl DeployAccount {
 
         // In blockifier, get_nonce_at returns zero if no entry is found.
         let current_nonce = state.get_nonce_at(&self.contract_address)?;
-        if current_nonce != self.nonce {
+        if current_nonce != self.nonce && !self.skip_nonce_check {
             return Err(TransactionError::InvalidTransactionNonce(
                 current_nonce.to_string(),
                 self.nonce.to_string(),
@@ -317,11 +373,63 @@ impl DeployAccount {
         Ok(())
     }
 
-    pub fn run_constructor_entrypoint<S: StateReader>(
+    fn check_fee_balance<S: State + StateReader>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut S,
+        block_context: &BlockContext,
+    ) -> Result<(), TransactionError> {
+        if self.max_fee.is_zero() {
+            return Ok(());
+        }
+        let minimal_fee = self.estimate_minimal_fee(block_context)?;
+        // Check max fee is at least the estimated constant overhead.
+        if self.max_fee < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        }
+        // Check that the current balance is high enough to cover the max_fee
+        let (balance_low, balance_high) =
+            state.get_fee_token_balance(block_context, self.contract_address())?;
+        // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+            return Err(TransactionError::MaxFeeExceedsBalance(
+                self.max_fee,
+                balance_low,
+                balance_high,
+            ));
+        }
+        Ok(())
+    }
+
+    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
+        let n_estimated_steps = ESTIMATED_DEPLOY_ACCOUNT_STEPS;
+        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 1,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        });
+        let resources = HashMap::from([
+            (
+                "l1_gas_usage".to_string(),
+                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
+            ),
+            ("n_steps".to_string(), n_estimated_steps),
+        ]);
+        calculate_tx_fee(
+            &resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )
+    }
+
+    pub fn run_constructor_entrypoint<S: StateReader, C: ContractClassCache>(
+        &self,
+        state: &mut CachedState<S, C>,
         block_context: &BlockContext,
         resources_manager: &mut ExecutionResourcesManager,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<CallInfo, TransactionError> {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -344,6 +452,8 @@ impl DeployAccount {
                 &mut self.get_execution_context(block_context.validate_max_n_steps),
                 false,
                 block_context.validate_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )?
         };
 
@@ -364,16 +474,19 @@ impl DeployAccount {
         )
     }
 
-    pub fn run_validate_entrypoint<S: StateReader>(
+    pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        state: &mut CachedState<S>,
+        state: &mut CachedState<S, C>,
         resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<Option<CallInfo>, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             [
-                Felt252::from_bytes_be(&self.class_hash),
+                Felt252::from_bytes_be(self.class_hash.to_bytes_be()),
                 self.contract_address_salt.clone(),
             ]
             .into_iter()
@@ -397,6 +510,8 @@ impl DeployAccount {
                 &mut self.get_execution_context(block_context.validate_max_n_steps),
                 false,
                 block_context.validate_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
             )?
         };
 
@@ -429,6 +544,7 @@ impl DeployAccount {
         skip_execute: bool,
         skip_fee_transfer: bool,
         ignore_max_fee: bool,
+        skip_nonce_check: bool,
     ) -> Transaction {
         let tx = DeployAccount {
             skip_validate,
@@ -439,6 +555,7 @@ impl DeployAccount {
             } else {
                 self.max_fee
             },
+            skip_nonce_check,
             ..self.clone()
         };
 
@@ -452,7 +569,7 @@ impl DeployAccount {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
         let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
+        let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
         let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
 
         let signature = value
@@ -495,7 +612,7 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
         let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-        let class_hash: [u8; 32] = value.class_hash.0.bytes().try_into().unwrap();
+        let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
         let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
 
         let signature = value
@@ -529,17 +646,16 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
     use super::*;
     use crate::{
         core::{contract_address::compute_deprecated_class_hash, errors::state_errors::StateError},
         definitions::block_context::StarknetChainId,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
-        state::cached_state::CachedState,
         state::in_memory_state_reader::InMemoryStateReader,
+        state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::felt_to_hash,
     };
+    use std::{path::PathBuf, sync::Arc};
 
     #[test]
     fn get_state_selector() {
@@ -550,7 +666,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut _state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut _state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -582,7 +701,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -612,10 +734,22 @@ mod tests {
         state
             .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
             .unwrap();
-        internal_deploy.execute(&mut state, &block_context).unwrap();
+        internal_deploy
+            .execute(
+                &mut state,
+                &block_context,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .unwrap();
         assert_matches!(
             internal_deploy_error
-                .execute(&mut state, &block_context)
+                .execute(
+                    &mut state,
+                    &block_context,
+                    #[cfg(feature = "cairo-native")]
+                    None,
+                )
                 .unwrap_err(),
             TransactionError::State(StateError::ContractAddressUnavailable(..))
         )
@@ -632,7 +766,10 @@ mod tests {
         let class_hash = felt_to_hash(&hash);
 
         let block_context = BlockContext::default();
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), HashMap::new());
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
 
         let internal_deploy = DeployAccount::new(
             class_hash,
@@ -650,7 +787,14 @@ mod tests {
         state
             .set_contract_class(class_hash, &CompiledClass::Deprecated(Arc::new(contract)))
             .unwrap();
-        internal_deploy.execute(&mut state, &block_context).unwrap();
+        internal_deploy
+            .execute(
+                &mut state,
+                &block_context,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .unwrap();
     }
 
     #[test]
@@ -659,7 +803,7 @@ mod tests {
 
         // declare tx
         let internal_declare = DeployAccount::new(
-            [2; 32],
+            ClassHash([2; 32]),
             9000,
             2.into(),
             Felt252::zero(),
@@ -669,9 +813,11 @@ mod tests {
             chain_id,
         )
         .unwrap();
-        let result = internal_declare.execute::<CachedState<InMemoryStateReader>>(
-            &mut CachedState::default(),
+        let result = internal_declare.execute(
+            &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         assert_matches!(

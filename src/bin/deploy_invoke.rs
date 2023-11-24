@@ -1,21 +1,19 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-
 use cairo_vm::felt::{felt_str, Felt252};
+use lazy_static::lazy_static;
 use num_traits::Zero;
-
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::{
-        cached_state::CachedState, in_memory_state_reader::InMemoryStateReader, state_api::State,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
     transaction::{Deploy, InvokeFunction, Transaction},
     utils::Address,
 };
-
-use lazy_static::lazy_static;
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(feature = "with_mimalloc")]
 use mimalloc::MiMalloc;
@@ -46,7 +44,10 @@ fn main() {
 
     let block_context = BlockContext::default();
     let state_reader = Arc::new(InMemoryStateReader::default());
-    let mut state = CachedState::new(state_reader, HashMap::new());
+    let mut state = CachedState::new(
+        state_reader,
+        Arc::new(PermanentContractClassCache::default()),
+    );
 
     let call_data = vec![];
     let contract_address_salt = 1.into();
@@ -70,7 +71,15 @@ fn main() {
         .unwrap();
     let deploy_tx = Transaction::Deploy(deploy);
 
-    let _tx_exec_info = deploy_tx.execute(&mut state, &block_context, 0).unwrap();
+    let _tx_exec_info = deploy_tx
+        .execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
     let signature = Vec::new();
 
@@ -97,7 +106,14 @@ fn main() {
         .unwrap();
 
         let tx = Transaction::InvokeFunction(invoke_first);
-        tx.execute(&mut state, &block_context, 0).unwrap();
+        tx.execute(
+            &mut state,
+            &block_context,
+            0,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
 
         let invoke_second = InvokeFunction::new(
             contract_address.clone(),
@@ -112,7 +128,15 @@ fn main() {
         .unwrap();
 
         let tx = Transaction::InvokeFunction(invoke_second);
-        let tx_exec_info = tx.execute(&mut state, &block_context, 0).unwrap();
+        let tx_exec_info = tx
+            .execute(
+                &mut state,
+                &block_context,
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .unwrap();
 
         assert_eq!(
             tx_exec_info.call_info.unwrap().retdata,
