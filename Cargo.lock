@@ -1320,7 +1320,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=f668096bd6382066392cd563873dda5e7885a388#f668096bd6382066392cd563873dda5e7885a388"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=9b669cf8fefbff5e3dced87b70a5d957bdc3e85c#9b669cf8fefbff5e3dced87b70a5d957bdc3e85c"
 dependencies = [
  "bumpalo",
  "cairo-felt",
@@ -1338,15 +1338,15 @@ dependencies = [
  "cairo-native-runtime",
  "cc",
  "clap",
+ "educe",
  "id-arena",
- "itertools 0.11.0",
+ "itertools 0.12.0",
  "lazy_static",
  "libc",
  "melior",
  "mlir-sys",
  "num-bigint",
- "serde",
- "serde_json",
+ "num-traits 0.2.17",
  "thiserror",
  "tracing",
  "tracing-subscriber",
@@ -1355,7 +1355,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=f668096bd6382066392cd563873dda5e7885a388#f668096bd6382066392cd563873dda5e7885a388"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=9b669cf8fefbff5e3dced87b70a5d957bdc3e85c#9b669cf8fefbff5e3dced87b70a5d957bdc3e85c"
 dependencies = [
  "cairo-felt",
  "cairo-lang-runner",
@@ -1970,6 +1970,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23d2f3407d9a573d666de4b5bdf10569d73ca9478087346697dcbae6244bfbcd"
 
 [[package]]
+name = "educe"
+version = "0.4.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f0042ff8246a363dbe77d2ceedb073339e85a804b9a47636c6e016a9a32c05f"
+dependencies = [
+ "enum-ordinalize",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2004,6 +2016,19 @@ name = "entities"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5320ae4c3782150d900b79807611a59a99fc9a1d61d686faafc24b93fc8d7ca"
+
+[[package]]
+name = "enum-ordinalize"
+version = "3.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bf1fa3f06bbff1ea5b1a9c7b14aa992a39657db60a2759457328d7e058f49ee"
+dependencies = [
+ "num-bigint",
+ "num-traits 0.2.17",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.38",
+]
 
 [[package]]
 name = "equivalent"
@@ -2678,6 +2703,15 @@ name = "itertools"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25db6b064527c5d482d0423354fcd07a89a2dfe07b67892e62411946db7f07b0"
 dependencies = [
  "either",
 ]
