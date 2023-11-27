@@ -15,12 +15,12 @@ metrics = []
 members = ["cli", "fuzzer", "rpc_state_reader"]
 
 [workspace.dependencies]
-cairo-lang-casm = "2.2.0"
-cairo-lang-runner = "2.2.0"
-cairo-lang-sierra = "2.2.0"
-cairo-lang-starknet = "2.2.0"
-cairo-lang-utils = "2.2.0"
-cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "403fbfd261887954ce75ce0e038bda2c40fe9001", features = ["cairo-1-hints"] }
+cairo-lang-casm = "2.3.1"
+cairo-lang-runner = "2.3.1"
+cairo-lang-sierra = "2.3.1"
+cairo-lang-starknet = "2.3.1"
+cairo-lang-utils = "2.3.1"
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "bc3d9b9303480dab7f2ef2833a119d828cfd3190", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
 starknet = "0.5.0"
 starknet_api = "0.4.1"
@@ -56,7 +56,7 @@ serde_json = { version = "1.0", features = [
 serde_json_pythonic = "0.1.2"
 starknet = { workspace = true }
 starknet_api = { workspace = true }
-starknet-crypto = "0.5.1"
+starknet-crypto = "0.6.1"
 thiserror = { workspace = true }
 tracing = "0.1.37"
 
