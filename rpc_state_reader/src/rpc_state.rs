@@ -7,6 +7,7 @@ use cairo_vm::vm::runners::{
     cairo_runner::ExecutionResources as VmExecutionResources,
 };
 use core::fmt;
+use dotenv::dotenv;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use starknet::core::types::ContractClass as SNContractClass;
@@ -18,7 +19,7 @@ use starknet_api::{
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
 use starknet_in_rust::definitions::block_context::StarknetChainId;
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, env, fmt::Display};
 
 use crate::{rpc_state_errors::RpcStateError, utils};
 
@@ -324,15 +325,19 @@ impl RpcState {
     }
 
     pub fn new_juno(chain: RpcChain, block: BlockValue) -> Result<Self, RpcStateError> {
-        let chain_name = match chain {
-            RpcChain::MainNet => "mainnet",
-            RpcChain::TestNet => "goerli",
-            RpcChain::TestNet2 => unimplemented!(),
-        };
-        let rpc_endpoint = format!(
-            "TBA{}",
-            chain_name
-        );
+        if env::var("JUNO_ENDPOINT_MAINNET").is_err() || env::var("JUNO_ENDPOINT_TESTNET").is_err()
+        {
+            dotenv().map_err(|_| RpcStateError::MissingEnvFile)?;
+        }
+
+        let rpc_endpoint =
+            match chain {
+                RpcChain::MainNet => env::var("JUNO_ENDPOINT_MAINNET")
+                    .map_err(|_| RpcStateError::MissingJunoEndpoints)?,
+                RpcChain::TestNet => env::var("JUNO_ENDPOINT_TESTNET")
+                    .map_err(|_| RpcStateError::MissingJunoEndpoints)?,
+                RpcChain::TestNet2 => unimplemented!(),
+            };
 
         Ok(Self::new(chain, block, &rpc_endpoint))
     }

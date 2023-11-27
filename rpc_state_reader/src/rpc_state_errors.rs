@@ -4,8 +4,8 @@ use thiserror::Error;
 pub enum RpcStateError {
     #[error("Missing .env file")]
     MissingEnvFile,
-    #[error("Missing infura api key")]
-    MissingInfuraApiKey,
+    #[error("Missing juno endpoints")]
+    MissingJunoEndpoints,
     #[error("RPC call failed with error: {0}")]
     RpcCall(String),
     #[error("Request failed with error: {0}")]
