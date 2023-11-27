@@ -169,7 +169,6 @@ deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	cargo install cargo-nextest --version 0.9.49
 
 deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
-	brew install python@3.9
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	-pyenv install -s pypy3.9-7.3.9
