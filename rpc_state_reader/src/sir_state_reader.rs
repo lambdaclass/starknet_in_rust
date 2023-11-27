@@ -115,8 +115,11 @@ pub fn execute_tx_configurable(
     let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
     let class_cache = PermanentContractClassCache::default();
     let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
+    let tx_hash = TransactionHash(stark_felt!(tx_hash.strip_prefix("0x").unwrap()));
+    let tx = state.state_reader.0.get_transaction(&tx_hash).unwrap();
     execute_tx_configurable_with_state(
-        tx_hash,
+        &tx_hash,
+        tx,
         network,
         block_number,
         skip_validate,
@@ -126,7 +129,8 @@ pub fn execute_tx_configurable(
 }
 
 pub fn execute_tx_configurable_with_state(
-    tx_hash: &str,
+    tx_hash: &TransactionHash,
+    tx: SNTransaction,
     network: RpcChain,
     block_number: BlockNumber,
     skip_validate: bool,
@@ -144,8 +148,6 @@ pub fn execute_tx_configurable_with_state(
         "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
         16
     ));
-
-    let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();
 
@@ -178,8 +180,7 @@ pub fn execute_tx_configurable_with_state(
     };
 
     // Get transaction before giving ownership of the reader
-    let tx_hash = TransactionHash(stark_felt!(tx_hash));
-    let tx = match state.state_reader.0.get_transaction(&tx_hash).unwrap() {
+    let tx = match tx {
         SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
@@ -262,12 +263,12 @@ pub fn execute_tx_configurable_with_state(
     let trace = state
         .state_reader
         .0
-        .get_transaction_trace(&tx_hash)
+        .get_transaction_trace(tx_hash)
         .unwrap();
     let receipt = state
         .state_reader
         .0
-        .get_transaction_receipt(&tx_hash)
+        .get_transaction_receipt(tx_hash)
         .unwrap();
 
     let block_context = BlockContext::new(
