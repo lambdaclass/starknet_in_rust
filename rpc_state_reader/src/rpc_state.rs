@@ -214,7 +214,7 @@ where
             .clone(),
     )
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
-    let n_steps = usize::from_str_radix(&n_steps_str.trim_start_matches("0x"), 16)
+    let n_steps = usize::from_str_radix(n_steps_str.trim_start_matches("0x"), 16)
         .map_err(|e| serde::de::Error::custom(e.to_string()))?;
 
     // Parse n_memory_holes
@@ -225,7 +225,7 @@ where
             .clone(),
     )
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
-    let n_memory_holes = usize::from_str_radix(&n_memory_holes_str.trim_start_matches("0x"), 16)
+    let n_memory_holes = usize::from_str_radix(n_memory_holes_str.trim_start_matches("0x"), 16)
         .map_err(|e| serde::de::Error::custom(e.to_string()))?;
     // Parse builtin instance counter
     const BUILTIN_NAMES: [&str; 8] = [
@@ -244,7 +244,7 @@ where
             .get(format!("{}_applications", name))
             .and_then(|a| serde_json::from_value(a.clone()).ok());
         if let Some(builtin_counter) = builtin_counter_str
-            .and_then(|s| usize::from_str_radix(&s.trim_start_matches("0x"), 16).ok())
+            .and_then(|s| usize::from_str_radix(s.trim_start_matches("0x"), 16).ok())
         {
             if builtin_counter > 0 {
                 builtin_instance_counter.insert(name.to_string(), builtin_counter);
