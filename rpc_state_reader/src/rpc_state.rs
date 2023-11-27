@@ -330,14 +330,13 @@ impl RpcState {
             dotenv().map_err(|_| RpcStateError::MissingEnvFile)?;
         }
 
-        let rpc_endpoint =
-            match chain {
-                RpcChain::MainNet => env::var("JUNO_ENDPOINT_MAINNET")
-                    .map_err(|_| RpcStateError::MissingJunoEndpoints)?,
-                RpcChain::TestNet => env::var("JUNO_ENDPOINT_TESTNET")
-                    .map_err(|_| RpcStateError::MissingJunoEndpoints)?,
-                RpcChain::TestNet2 => unimplemented!(),
-            };
+        let rpc_endpoint = match chain {
+            RpcChain::MainNet => env::var("JUNO_ENDPOINT_MAINNET")
+                .map_err(|_| RpcStateError::MissingJunoEndpoints)?,
+            RpcChain::TestNet => env::var("JUNO_ENDPOINT_TESTNET")
+                .map_err(|_| RpcStateError::MissingJunoEndpoints)?,
+            RpcChain::TestNet2 => unimplemented!(),
+        };
 
         Ok(Self::new(chain, block, &rpc_endpoint))
     }
@@ -574,4 +573,38 @@ impl RpcState {
         self.rpc_call_result("starknet_getTransactionReceipt", &json!([hash.to_string()]))
             .map_err(|e| RpcStateError::RpcCall(e.to_string()))
     }
+
+    pub fn get_transaction_hashes(&self) -> Result<Vec<String>, RpcStateError> {
+        let params = &json![vec![self.block.to_value()?]];
+        let payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "starknet_getBlockWithTxHashes",
+            "params": params,
+            "id": 1
+        });
+        let response: serde_json::Value = self
+            .rpc_call_no_deserialize(&payload)
+            .unwrap()
+            .into_json()?;
+        let hashes: Vec<String> = response
+            .get("result")
+            .and_then(|res| res.get("transactions"))
+            .and_then(|txs| txs.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|tx| tx.as_str().map(|x| x.to_string()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        Ok(hashes)
+    }
+}
+
+#[test]
+fn test_tx_hashes() {
+    let rpc_state =
+        RpcState::new_juno(RpcChain::MainNet, BlockValue::Number(BlockNumber(397709))).unwrap();
+
+    let hashes = rpc_state.get_transaction_hashes().unwrap();
+    assert_eq!(hashes.len(), 211);
 }
