@@ -409,7 +409,10 @@ impl InvokeFunction {
             let (balance_low, balance_high) =
                 state.get_fee_token_balance(block_context, self.contract_address())?;
             // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-            if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+            if balance_high.is_zero()
+                && balance_low < Felt252::from(self.max_fee)
+                && !self.skip_fee_transfer
+            {
                 tx_exec_info = tx_exec_info.to_revert_error("Insufficient fee token balance");
             } else {
                 state.apply_state_update(&StateDiff::from_cached_state(
