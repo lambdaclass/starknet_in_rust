@@ -112,6 +112,34 @@ pub fn execute_tx_configurable(
     ),
     TransactionError,
 > {
+    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
+    let class_cache = PermanentContractClassCache::default();
+    let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
+    execute_tx_configurable_with_state(
+        tx_hash,
+        network,
+        block_number,
+        skip_validate,
+        skip_nonce_check,
+        &mut state,
+    )
+}
+
+pub fn execute_tx_configurable_with_state(
+    tx_hash: &str,
+    network: RpcChain,
+    block_number: BlockNumber,
+    skip_validate: bool,
+    skip_nonce_check: bool,
+    state: &mut CachedState<RpcStateReader, PermanentContractClassCache>,
+) -> Result<
+    (
+        TransactionExecutionInfo,
+        TransactionTrace,
+        RpcTransactionReceipt,
+    ),
+    TransactionError,
+> {
     let fee_token_address = Address(felt_str!(
         "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
         16
@@ -119,12 +147,10 @@ pub fn execute_tx_configurable(
 
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
-    // Instantiate the RPC StateReader and the CachedState
-    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
-    let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
+    let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
-    let chain_id = match rpc_reader.0.chain {
+    let chain_id = match state.state_reader.0.chain {
         RpcChain::MainNet => StarknetChainId::MainNet,
         RpcChain::TestNet => StarknetChainId::TestNet,
         RpcChain::TestNet2 => StarknetChainId::TestNet2,
@@ -137,7 +163,7 @@ pub fn execute_tx_configurable(
             block_timestamp,
             sequencer_address,
             ..
-        } = rpc_reader.0.get_block_info().unwrap();
+        } = state.state_reader.0.get_block_info().unwrap();
 
         let block_number = block_number.0;
         let block_timestamp = block_timestamp.0;
@@ -153,7 +179,7 @@ pub fn execute_tx_configurable(
 
     // Get transaction before giving ownership of the reader
     let tx_hash = TransactionHash(stark_felt!(tx_hash));
-    let tx = match rpc_reader.0.get_transaction(&tx_hash).unwrap() {
+    let tx = match state.state_reader.0.get_transaction(&tx_hash).unwrap() {
         SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
@@ -233,11 +259,16 @@ pub fn execute_tx_configurable(
         SNTransaction::Deploy(_) => unimplemented!(),
     };
 
-    let trace = rpc_reader.0.get_transaction_trace(&tx_hash).unwrap();
-    let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash).unwrap();
-
-    let class_cache = PermanentContractClassCache::default();
-    let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
+    let trace = state
+        .state_reader
+        .0
+        .get_transaction_trace(&tx_hash)
+        .unwrap();
+    let receipt = state
+        .state_reader
+        .0
+        .get_transaction_receipt(&tx_hash)
+        .unwrap();
 
     let block_context = BlockContext::new(
         starknet_os_config,
@@ -252,9 +283,9 @@ pub fn execute_tx_configurable(
     );
 
     #[cfg(not(feature = "cairo-native"))]
-    let sir_execution = tx.execute(&mut state, &block_context, u128::MAX)?;
+    let sir_execution = tx.execute(state, &block_context, u128::MAX)?;
     #[cfg(feature = "cairo-native")]
-    let sir_execution = tx.execute(&mut state, &block_context, u128::MAX, None)?;
+    let sir_execution = tx.execute(state, &block_context, u128::MAX, None)?;
 
     Ok((sir_execution, trace, receipt))
 }
