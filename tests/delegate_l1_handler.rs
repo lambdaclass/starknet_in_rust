@@ -27,14 +27,14 @@ fn delegate_l1_handler() {
     //*    Create state reader with class hash data
     //* --------------------------------------------
     let contract_class_cache = PermanentContractClassCache::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     // Add get_number.cairo contract to the state
 
     let path = PathBuf::from("starknet_programs/get_number_l1_handler.json");
     let contract_class = ContractClass::from_path(path).unwrap();
 
-    let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
+    let address = Address(Felt252::ONE); // const CONTRACT_ADDRESS = 1;
     let class_hash: ClassHash = ClassHash([2; 32]);
 
     contract_class_cache.set_contract_class(
@@ -107,7 +107,7 @@ fn delegate_l1_handler() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),

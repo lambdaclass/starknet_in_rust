@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_in_rust::{
@@ -121,7 +121,7 @@ pub fn execute_entry_point(
     //* ---------------------
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),

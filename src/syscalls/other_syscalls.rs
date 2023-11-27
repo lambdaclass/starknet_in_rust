@@ -1,5 +1,5 @@
 use crate::syscalls::syscall_handler_errors::SyscallHandlerError;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     hint_processor::builtin_hint_processor::{
         builtin_hint_processor_definition::HintProcessorData,
@@ -34,9 +34,9 @@ pub fn addr_bound_prime(
 
     let addr = get_integer_from_var_name("addr", vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
     let is_small = if addr.as_ref() < addr_bound {
-        Felt252::one()
+        Felt252::ONE
     } else {
-        Felt252::zero()
+        Felt252::ZERO
     };
 
     insert_value_from_var_name(
@@ -56,9 +56,9 @@ pub fn addr_is_250(
 ) -> Result<(), SyscallHandlerError> {
     let addr = get_integer_from_var_name("addr", vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
     let is_250 = if addr.as_ref().bits() <= 250 {
-        Felt252::one()
+        Felt252::ONE
     } else {
-        Felt252::zero()
+        Felt252::ZERO
     };
 
     insert_value_from_var_name(

@@ -5,7 +5,7 @@ use cairo_native::{
     cache::ProgramCache,
     starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use starknet::core::utils::cairo_short_string_to_felt;
 
@@ -99,7 +99,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             .get_storage_at(&(block_hash_address, key.to_be_bytes()))
         {
             Ok(value) => Ok(value),
-            Err(_) => Ok(Felt252::zero()),
+            Err(_) => Ok(Felt252::ZERO),
         }
     }
 
@@ -344,7 +344,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         let value = match self.starknet_storage_state.read(Address(address.clone())) {
             Ok(value) => Ok(value),
             Err(_e @ StateError::Io(_)) => todo!(),
-            Err(_) => Ok(Felt252::zero()),
+            Err(_) => Ok(Felt252::ZERO),
         };
 
         tracing::debug!(" = {value:?}` from Cairo Native");

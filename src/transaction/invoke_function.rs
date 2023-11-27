@@ -32,7 +32,7 @@ use crate::{
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::{One, Zero};
 use std::{collections::HashMap, fmt::Debug};
@@ -163,7 +163,7 @@ impl InvokeFunction {
             self.signature.clone(),
             self.max_fee,
             if self.version.is_zero() {
-                Felt252::zero()
+                Felt252::ZERO
             } else {
                 self.nonce.clone().ok_or(TransactionError::MissingNonce)?
             },
@@ -254,7 +254,7 @@ impl InvokeFunction {
             self.contract_address.clone(),
             self.calldata.clone(),
             self.entry_point_selector.clone(),
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
             EntryPointType::External,
             None,
             None,
@@ -362,7 +362,7 @@ impl InvokeFunction {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::one() && self.version != Felt252::zero() {
+        if self.version != Felt252::ONE && self.version != Felt252::ZERO {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Invoke".to_string(),
                 self.version.clone(),
@@ -567,7 +567,7 @@ pub(crate) fn preprocess_invoke_function_fields(
         match nonce {
             Some(n) => {
                 let additional_data = vec![n];
-                let entry_point_selector_field = Felt252::zero();
+                let entry_point_selector_field = Felt252::ZERO;
                 Ok((entry_point_selector_field, additional_data))
             }
             None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
@@ -773,7 +773,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -856,7 +856,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -930,7 +930,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -998,7 +998,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1077,7 +1077,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1124,7 +1124,7 @@ mod tests {
         let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1215,7 +1215,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1291,7 +1291,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1368,7 +1368,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1515,7 +1515,7 @@ mod tests {
         let program_data = include_bytes!("../../starknet_programs/cairo1/factorial.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1583,14 +1583,14 @@ mod tests {
 
         // declare tx
         let internal_declare = InvokeFunction::new(
-            Address(Felt252::one()),
-            Felt252::one(),
+            Address(Felt252::ONE),
+            Felt252::ONE,
             9000,
             2.into(),
             vec![],
             vec![],
             chain_id,
-            Some(Felt252::zero()),
+            Some(Felt252::ZERO),
         )
         .unwrap();
         let result = internal_declare.execute(

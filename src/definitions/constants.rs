@@ -75,7 +75,7 @@ lazy_static! {
     pub static ref CONSTRUCTOR_ENTRY_POINT_SELECTOR: Felt252 =
         felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556");
     /// Value generated from `get_selector_from_name('__default__')`.
-    pub static ref DEFAULT_ENTRY_POINT_SELECTOR: Felt252 = Felt252::zero();
+    pub static ref DEFAULT_ENTRY_POINT_SELECTOR: Felt252 = Felt252::ZERO;
     /// Value generated from `get_selector_from_name('__execute__')`.
     pub static ref EXECUTE_ENTRY_POINT_SELECTOR: Felt252 =
         felt_str!("617075754465154585683856897856256838130216341506379215893724690153393808813");

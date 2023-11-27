@@ -59,7 +59,7 @@ fn internal_deploy_account() {
         class_hash,
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![],
         vec![
             felt_str!(
@@ -87,7 +87,7 @@ fn internal_deploy_account() {
         &contract_address_salt,
         &class_hash_felt,
         &[],
-        Address(Felt252::zero()),
+        Address(Felt252::ZERO),
     )
     .unwrap();
 
@@ -170,7 +170,7 @@ fn internal_deploy_account_cairo1() {
         ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes()),
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![2.into()],
         vec![
             felt_str!(

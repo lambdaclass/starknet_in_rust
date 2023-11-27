@@ -68,7 +68,7 @@ fn main() {
 
     let contract_address = CONTRACT_ADDRESS.clone();
     let class_hash = *CONTRACT_CLASS_HASH;
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.extend([(
         class_hash,
@@ -114,7 +114,7 @@ fn main() {
         let block_context = BlockContext::default();
         let mut tx_execution_context = TransactionExecutionContext::new(
             Address(0.into()),
-            Felt252::zero(),
+            Felt252::ZERO,
             Vec::new(),
             0,
             nonce.into(),

@@ -44,7 +44,7 @@ use crate::{
     },
     utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::{
         errors::math_errors::MathError,
@@ -554,7 +554,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         // FIXME: Update this after release.
         const V_0_12_0_FIRST_BLOCK: u64 = 0;
         let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
-            Felt252::zero()
+            Felt252::ZERO
         } else {
             self.starknet_storage_state.state.get_storage_at(&(
                 BLOCK_HASH_CONTRACT_ADDRESS.clone(),
@@ -650,7 +650,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         {
             Ok(value) => Ok(value),
             Err(e @ StateError::Io(_)) => Err(e),
-            Err(_) => Ok(Felt252::zero()),
+            Err(_) => Ok(Felt252::ZERO),
         }
     }
 
@@ -789,7 +789,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         request: StorageReadRequest,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        if request.reserved != Felt252::zero() {
+        if request.reserved != Felt252::ZERO {
             let retdata_start = self.allocate_segment(
                 vm,
                 vec![Felt252::from_bytes_be(b"Unsupported address domain").into()],

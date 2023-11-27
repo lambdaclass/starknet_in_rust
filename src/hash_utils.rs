@@ -1,6 +1,6 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
 use starknet_crypto::{pedersen_hash, FieldElement};

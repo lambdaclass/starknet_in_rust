@@ -92,7 +92,7 @@ fn amm_proxy_init_pool_test() {
         }),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
-        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
+        storage_read_values: vec![Felt252::ZERO, Felt252::ZERO],
         ..Default::default()
     }];
 

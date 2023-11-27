@@ -1,6 +1,6 @@
 #![cfg(feature = "starknet_in_rust")]
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use rpc_state_reader::{
     execute_tx, execute_tx_configurable, execute_tx_without_validate, rpc_state::*,

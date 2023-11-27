@@ -1,6 +1,6 @@
 // #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use lru::LruCache;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},

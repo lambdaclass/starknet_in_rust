@@ -500,7 +500,7 @@ fn erc721_test_approve() {
     let expected_read_result = vec![];
 
     // Checks only the storage variable ERC721_operator_approvals
-    let storage_read_values = vec![Felt252::from(666), Felt252::zero(), Felt252::from(666)];
+    let storage_read_values = vec![Felt252::from(666), Felt252::ZERO, Felt252::from(666)];
 
     // Ask for the owner of the token
     let mut accessed_storage_keys =
@@ -519,7 +519,7 @@ fn erc721_test_approve() {
             Felt252::from(666),
             Felt252::from(777),
             Felt252::from(1),
-            Felt252::zero(),
+            Felt252::ZERO,
         ],
     )];
 
@@ -606,7 +606,7 @@ fn erc721_set_approval_for_all() {
     let expected_read_result = vec![];
 
     // Only writes in operator_approvals
-    let storage_read_values = vec![Felt252::zero()];
+    let storage_read_values = vec![Felt252::ZERO];
 
     // Writes to the operator the new set value
     let accessed_storage_keys = get_accessed_keys(
@@ -698,7 +698,7 @@ fn erc721_transfer_from_test() {
         Felt252::from(666),
         Felt252::from(777),
         Felt252::from(1),
-        Felt252::zero(),
+        Felt252::ZERO,
     ]
     .to_vec();
 
@@ -750,9 +750,9 @@ fn erc721_transfer_from_test() {
         vec![approval_event_hash],
         vec![
             Felt252::from(666),
-            Felt252::zero(),
+            Felt252::ZERO,
             Felt252::from(1),
-            Felt252::zero(),
+            Felt252::ZERO,
         ],
     );
     let transfer_event_hash = Felt252::from_bytes_be(&calculate_sn_keccak("Transfer".as_bytes()));
@@ -763,7 +763,7 @@ fn erc721_transfer_from_test() {
             Felt252::from(666),
             Felt252::from(777),
             Felt252::from(1),
-            Felt252::zero(),
+            Felt252::ZERO,
         ],
     );
     let expected_events = vec![approval_event, transfer_event];
@@ -844,7 +844,7 @@ fn erc721_transfer_from_and_get_owner_test() {
         Felt252::from(666),
         Felt252::from(777),
         Felt252::from(1),
-        Felt252::zero(),
+        Felt252::ZERO,
     ]
     .to_vec();
     execute_entry_point("transferFrom", &calldata, &mut call_config).unwrap();
@@ -945,8 +945,8 @@ fn erc721_safe_transfer_from_should_fail_test() {
         Felt252::from(666),
         Felt252::from(1000000),
         Felt252::from(1),
-        Felt252::zero(),
-        Felt252::zero(),
+        Felt252::ZERO,
+        Felt252::ZERO,
     ]
     .to_vec();
 
@@ -1076,9 +1076,9 @@ fn erc721_transfer_fail_to_zero_address() {
 
     let calldata = [
         Felt252::from(666),
-        Felt252::zero(),
+        Felt252::ZERO,
         Felt252::from(1),
-        Felt252::zero(),
+        Felt252::ZERO,
     ]
     .to_vec();
     assert!(execute_entry_point("transferFrom", &calldata, &mut call_config).is_err());
@@ -1132,7 +1132,7 @@ fn erc721_transfer_fail_not_owner() {
         Felt252::from(777),
         Felt252::from(777),
         Felt252::from(1),
-        Felt252::zero(),
+        Felt252::ZERO,
     ]
     .to_vec();
 

@@ -10,7 +10,7 @@ use crate::{
     transaction::error::TransactionError,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
@@ -382,7 +382,7 @@ impl TransactionExecutionContext {
         version: Felt252,
     ) -> Self {
         let nonce = if version == 0.into() {
-            Felt252::zero()
+            Felt252::ZERO
         } else {
             nonce
         };
@@ -412,7 +412,7 @@ impl TransactionExecutionContext {
             version,
             account_contract_address,
             max_fee: 0,
-            transaction_hash: Felt252::zero(),
+            transaction_hash: Felt252::ZERO,
             signature: Vec::new(),
             nonce,
             n_sent_messages: 0,
@@ -697,7 +697,7 @@ mod tests {
 
     #[test]
     fn test_get_sorted_single_event() {
-        let address = Address(Felt252::zero());
+        let address = Address(Felt252::ZERO);
         let ordered_event = OrderedEvent::new(0, vec![], vec![]);
         let event = Event::new(ordered_event.clone(), address.clone());
         let internal_calls = vec![CallInfo {

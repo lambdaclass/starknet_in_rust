@@ -12,7 +12,7 @@ use crate::{
     hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use serde::Serialize;
 use sha3::Digest;
@@ -311,7 +311,7 @@ pub fn compute_deprecated_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt252, ContractAddressError> {
     // Deprecated API version.
-    let api_version = Felt252::zero();
+    let api_version = Felt252::ZERO;
 
     // Entrypoints by type, hashed.
     let external_functions =

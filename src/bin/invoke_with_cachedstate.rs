@@ -49,7 +49,7 @@ fn main() {
     cached_state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+        .insert(CONTRACT_ADDRESS.clone(), Felt252::ZERO);
 
     let block_context = new_starknet_block_context_for_testing();
 
@@ -111,7 +111,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader, PermanentContractC
 
             state_reader
                 .address_to_nonce_mut()
-                .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+                .insert(CONTRACT_ADDRESS.clone(), Felt252::ZERO);
             state_reader.class_hash_to_compiled_class_mut().insert(
                 *CONTRACT_CLASS_HASH,
                 CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
@@ -119,7 +119,7 @@ fn create_initial_state() -> CachedState<InMemoryStateReader, PermanentContractC
 
             state_reader
                 .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
+                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::ZERO);
             Arc::new(state_reader)
         },
         Arc::new(PermanentContractClassCache::default()),
@@ -132,7 +132,7 @@ pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet.to_felt(),
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
             0,
         ),
         0,

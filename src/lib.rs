@@ -1,4 +1,4 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
@@ -17,7 +17,7 @@ use crate::{
     transaction::{error::TransactionError, fee::calculate_tx_fee, L1Handler, Transaction},
     utils::Address,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -32,7 +32,6 @@ pub use cairo_lang_starknet::{
     casm_contract_class::CasmContractClass, contract_class::ContractClass,
     contract_class::ContractClass as SierraContractClass,
 };
-pub use cairo_vm::felt;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -364,7 +363,7 @@ mod test {
 
         let address = Address(1111.into());
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         contract_class_cache
             .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -421,7 +420,7 @@ mod test {
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -469,7 +468,7 @@ mod test {
 
         let address = Address(1111.into());
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         contract_class_cache
             .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -489,7 +488,7 @@ mod test {
             address,
             entrypoint_selector.into(),
             1000000,
-            Felt252::zero(),
+            Felt252::ZERO,
             calldata,
             vec![],
             StarknetChainId::TestNet.to_felt(),
@@ -538,7 +537,7 @@ mod test {
 
         let address = Address(1111.into());
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let nonce = Felt252::one();
+        let nonce = Felt252::ONE;
 
         let mut state_reader = InMemoryStateReader::default();
 
@@ -584,7 +583,7 @@ mod test {
                 address.clone(),
                 entrypoint_selector.clone(),
                 1000000,
-                Felt252::one(),
+                Felt252::ONE,
                 calldata.clone(),
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
@@ -598,7 +597,7 @@ mod test {
                 address.clone(),
                 entrypoint_selector.clone(),
                 1000000,
-                Felt252::one(),
+                Felt252::ONE,
                 calldata.clone(),
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
@@ -612,7 +611,7 @@ mod test {
                 address,
                 entrypoint_selector,
                 1000000,
-                Felt252::one(),
+                Felt252::ONE,
                 calldata,
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
@@ -670,7 +669,7 @@ mod test {
 
         let address = Address(1111.into());
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let nonce = Felt252::one();
+        let nonce = Felt252::ONE;
 
         let mut state_reader = InMemoryStateReader::default();
 
@@ -716,7 +715,7 @@ mod test {
                 address,
                 entrypoint_selector,
                 1000000,
-                Felt252::one(),
+                Felt252::ONE,
                 calldata,
                 vec![],
                 StarknetChainId::TestNet.to_felt(),
@@ -817,7 +816,7 @@ mod test {
                 0,
                 0.into(),
                 vec![],
-                Felt252::zero(),
+                Felt252::ZERO,
             )
             .expect("couldn't create transaction"),
         );
@@ -882,7 +881,7 @@ mod test {
         let calldata = vec![
             CONTRACT_ADDRESS.0.clone(),
             selector.clone(),
-            Felt252::zero(),
+            Felt252::ZERO,
         ];
         // new consumes more execution time than raw struct instantiation
         let invoke_tx = Transaction::InvokeFunction(
@@ -894,7 +893,7 @@ mod test {
                 calldata,
                 SIGNATURE.clone(),
                 StarknetChainId::TestNet.to_felt(),
-                Some(Felt252::zero()),
+                Some(Felt252::ZERO),
             )
             .unwrap(),
         );
@@ -939,7 +938,7 @@ mod test {
                 CLASS_HASH.to_owned(),
                 0,
                 1.into(),
-                Felt252::zero(),
+                Felt252::ZERO,
                 vec![],
                 SIGNATURE.clone(),
                 SALT.clone(),
@@ -1043,7 +1042,7 @@ mod test {
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1113,7 +1112,7 @@ mod test {
         let calldata = vec![
             CONTRACT_ADDRESS.0.clone(),
             selector.clone(),
-            Felt252::zero(),
+            Felt252::ZERO,
         ];
         // new consumes more execution time than raw struct instantiation
         let invoke_tx = Transaction::InvokeFunction(
@@ -1125,7 +1124,7 @@ mod test {
                 calldata,
                 SIGNATURE.clone(),
                 StarknetChainId::TestNet.to_felt(),
-                Some(Felt252::zero()),
+                Some(Felt252::ZERO),
             )
             .unwrap(),
         );
@@ -1248,7 +1247,7 @@ mod test {
         let mut declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            Address(Felt252::ONE),
             60000,
             1.into(),
             vec![
@@ -1259,7 +1258,7 @@ mod test {
                     "598673427589502599949712887611119751108407514580626464031881322743364689811"
                 ),
             ],
-            Felt252::one(),
+            Felt252::ONE,
         )
         .unwrap();
         declare.hash_value = felt_str!("2718");

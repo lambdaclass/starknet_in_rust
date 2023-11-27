@@ -1,4 +1,4 @@
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::Zero;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
@@ -98,7 +98,7 @@ fn integration_storage_test() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),

@@ -1136,7 +1136,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     ));
 
     // Create the deploy test data
-    let salt = Felt252::zero();
+    let salt = Felt252::ZERO;
     let test_class_hash: ClassHash = ClassHash([2; 32]);
     let test_felt_hash = Felt252::from_bytes_be(test_class_hash.to_bytes_be());
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -1150,7 +1150,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     // simulate contract declare
     contract_class_cache.set_contract_class(
@@ -1174,7 +1174,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // arguments of deploy contract
-    let calldata: Vec<_> = [test_felt_hash, salt, Felt252::one()].to_vec();
+    let calldata: Vec<_> = [test_felt_hash, salt, Felt252::ONE].to_vec();
 
     // set up remaining structures
 
@@ -1196,7 +1196,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -1241,7 +1241,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
         Felt252::from_bytes_be(&calculate_sn_keccak("test_deploy".as_bytes()));
 
     // Create the deploy test data
-    let salt = Felt252::zero();
+    let salt = Felt252::ZERO;
     let test_class_hash: ClassHash = ClassHash([2; 32]);
     let test_felt_hash = Felt252::from_bytes_be(test_class_hash.to_bytes_be());
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -1255,7 +1255,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     // simulate contract declare
     contract_class_cache.set_contract_class(
@@ -1301,7 +1301,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -1348,7 +1348,7 @@ fn deploy_cairo1_and_invoke() {
         Felt252::from_bytes_be(&calculate_sn_keccak("test_deploy".as_bytes()));
 
     // Create the deploy test data
-    let salt = Felt252::zero();
+    let salt = Felt252::ZERO;
     let test_class_hash: ClassHash = ClassHash([2; 32]);
     let test_felt_hash = Felt252::from_bytes_be(test_class_hash.to_bytes_be());
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -1362,7 +1362,7 @@ fn deploy_cairo1_and_invoke() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     // simulate contract declare
     contract_class_cache.set_contract_class(
@@ -1408,7 +1408,7 @@ fn deploy_cairo1_and_invoke() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -1493,7 +1493,7 @@ fn send_messages_to_l1_different_contract_calls() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash,
@@ -1514,7 +1514,7 @@ fn send_messages_to_l1_different_contract_calls() {
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
     let send_msg_class_hash: ClassHash = ClassHash([2; 32]);
-    let send_msg_nonce = Felt252::zero();
+    let send_msg_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         send_msg_class_hash,
@@ -1550,7 +1550,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),

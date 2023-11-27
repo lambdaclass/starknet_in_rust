@@ -87,7 +87,7 @@ fn main() {
     state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(contract_address.clone(), Felt252::zero());
+        .insert(contract_address.clone(), Felt252::ZERO);
 
     for i in 0..RUNS {
         let nonce_first = Felt252::from(i * 2);

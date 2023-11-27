@@ -155,7 +155,7 @@ fn main() {
             let block_context = BlockContext::default();
             let mut tx_execution_context = TransactionExecutionContext::new(
                 Address(0.into()),
-                Felt252::zero(),
+                Felt252::ZERO,
                 Vec::new(),
                 0,
                 10.into(),

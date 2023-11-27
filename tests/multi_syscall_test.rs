@@ -1,5 +1,5 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::{Num, Zero};
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -30,7 +30,7 @@ fn test_multiple_syscall() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -240,7 +240,7 @@ fn test_syscall(
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),

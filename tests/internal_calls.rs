@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -38,9 +38,9 @@ fn test_internal_calls() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
-    let storage = Felt252::zero();
+    let storage = Felt252::ZERO;
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader

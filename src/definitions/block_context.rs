@@ -3,7 +3,7 @@
 //! This module contains structs representing the context of a specific Starknet block.
 
 use crate::{state::BlockInfo, utils::Address};
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use core::fmt;
 use getset::{CopyGetters, Getters, MutGetters};
 use starknet_api::block::Block;

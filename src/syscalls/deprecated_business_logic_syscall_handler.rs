@@ -38,7 +38,7 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::cached_state::CachedState,
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::vm_core::VirtualMachine,
@@ -1073,7 +1073,7 @@ mod tests {
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},
     };
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
     use cairo_vm::hint_processor::hint_processor_definition::HintProcessorLogic;
     use cairo_vm::{
         hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
@@ -1205,8 +1205,8 @@ mod tests {
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
 
         assert_matches!(
-            syscall_handler.syscall_storage_read(Address(Felt252::zero())),
-            Ok(value) if value == Felt252::zero()
+            syscall_handler.syscall_storage_read(Address(Felt252::ZERO)),
+            Ok(value) if value == Felt252::ZERO
         );
     }
 
@@ -1215,8 +1215,8 @@ mod tests {
         // Initialize state reader with value
         let mut state_reader = InMemoryStateReader::default();
         state_reader.address_to_storage.insert(
-            (Address(Felt252::one()), Felt252::one().to_be_bytes()),
-            Felt252::zero(),
+            (Address(Felt252::ONE), Felt252::ONE.to_be_bytes()),
+            Felt252::ZERO,
         );
         // Create empty-cached state
         let mut state = CachedState::new(
@@ -1226,14 +1226,14 @@ mod tests {
         let mut syscall_handler = DeprecatedBLSyscallHandler::default_with(&mut state);
         // Perform write
         assert!(syscall_handler
-            .syscall_storage_write(Address(Felt252::one()), Felt252::one())
+            .syscall_storage_write(Address(Felt252::ONE), Felt252::ONE)
             .is_ok());
         // Check that initial values have beed updated in the cache
         assert_eq!(
             state.cache().storage_initial_values,
             HashMap::from([(
-                (Address(Felt252::one()), Felt252::one().to_be_bytes()),
-                Felt252::zero()
+                (Address(Felt252::ONE), Felt252::ONE.to_be_bytes()),
+                Felt252::ZERO
             )])
         )
     }

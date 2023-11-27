@@ -10,7 +10,7 @@
 use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
 use cairo_vm::felt::felt_str;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
@@ -99,7 +99,7 @@ fn bench_fibo(executions: usize, native: bool) {
 
     contract_class_cache.set_contract_class(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     state_reader
         .address_to_class_hash_mut()
@@ -175,7 +175,7 @@ fn bench_fact(executions: usize, native: bool) {
 
     contract_class_cache.set_contract_class(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     state_reader
         .address_to_class_hash_mut()
@@ -276,7 +276,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 .insert(DEPLOYER_ADDRESS.clone(), *DEPLOYER_CLASS_HASH);
             state_reader
                 .address_to_nonce_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
+                .insert(DEPLOYER_ADDRESS.clone(), Felt252::ZERO);
 
             // Create state from the state_reader and contract cache.
             let mut state =
@@ -299,7 +299,7 @@ fn bench_erc20(executions: usize, native: bool) {
             let block_context = BlockContext::default();
             let mut tx_execution_context = TransactionExecutionContext::new(
                 Address(0.into()),
-                Felt252::zero(),
+                Felt252::ZERO,
                 Vec::new(),
                 0,
                 10.into(),
@@ -356,7 +356,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 .insert(DEPLOYER_ADDRESS.clone(), *DEPLOYER_CLASS_HASH);
             state_reader
                 .address_to_nonce_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
+                .insert(DEPLOYER_ADDRESS.clone(), Felt252::ZERO);
 
             // Create state from the state_reader and contract cache.
             let mut state =
@@ -379,7 +379,7 @@ fn bench_erc20(executions: usize, native: bool) {
             let block_context = BlockContext::default();
             let mut tx_execution_context = TransactionExecutionContext::new(
                 Address(0.into()),
-                Felt252::zero(),
+                Felt252::ZERO,
                 Vec::new(),
                 0,
                 10.into(),
@@ -438,7 +438,7 @@ fn bench_erc20(executions: usize, native: bool) {
         *ACCOUNT1_CLASS_HASH, // class hash
         0,                    // max fee
         1.into(),             // tx version
-        Felt252::zero(),      // nonce
+        Felt252::ZERO,      // nonce
         vec![2.into()],       // constructor calldata
         vec![
             felt_str!(
@@ -468,7 +468,7 @@ fn bench_erc20(executions: usize, native: bool) {
         *ACCOUNT1_CLASS_HASH, // class hash
         0,                    // max fee
         1.into(),             // tx version
-        Felt252::zero(),      // nonce
+        Felt252::ZERO,      // nonce
         vec![3.into()],       // constructor calldata
         vec![
             felt_str!(
@@ -540,7 +540,7 @@ fn execute(
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),

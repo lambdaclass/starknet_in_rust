@@ -31,7 +31,7 @@ use crate::{
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -489,7 +489,7 @@ impl DeclareV2 {
             initial_gas: remaining_gas,
             entry_point_type: EntryPointType::External,
             calldata,
-            caller_address: Address(Felt252::zero()),
+            caller_address: Address(Felt252::ZERO),
             code_address: None,
             class_hash: None,
             call_type: CallType::Call,
@@ -585,7 +585,7 @@ mod tests {
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
     use num_traits::{One, Zero};
     use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
@@ -625,8 +625,8 @@ mod tests {
             0,
             version,
             [1.into()].to_vec(),
-            Felt252::zero(),
-            Felt252::one(),
+            Felt252::ZERO,
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -695,8 +695,8 @@ mod tests {
             0,
             version,
             [1.into()].to_vec(),
-            Felt252::zero(),
-            Felt252::one(),
+            Felt252::ZERO,
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -767,8 +767,8 @@ mod tests {
             0,
             version,
             vec![],
-            Felt252::zero(),
-            Felt252::zero(),
+            Felt252::ZERO,
+            Felt252::ZERO,
         )
         .unwrap();
 
@@ -837,8 +837,8 @@ mod tests {
             0,
             version,
             [1.into()].to_vec(),
-            Felt252::zero(),
-            Felt252::one(),
+            Felt252::ZERO,
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -908,8 +908,8 @@ mod tests {
             0,
             version,
             [1.into()].to_vec(),
-            Felt252::zero(),
-            Felt252::one(),
+            Felt252::ZERO,
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -955,13 +955,13 @@ mod tests {
         let internal_declare = DeclareV2::new(
             &sierra_contract_class,
             None,
-            Felt252::one(),
+            Felt252::ONE,
             chain_id,
-            Address(Felt252::one()),
+            Address(Felt252::ONE),
             0,
             1.into(),
             Vec::new(),
-            Felt252::zero(),
+            Felt252::ZERO,
         )
         .unwrap();
         let result = internal_declare.execute(

@@ -1,4 +1,4 @@
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
 
 /// Abstracts every response variant body for each syscall.

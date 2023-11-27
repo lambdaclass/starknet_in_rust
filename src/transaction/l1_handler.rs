@@ -19,7 +19,7 @@ use crate::{
     transaction::{error::TransactionError, fee::calculate_tx_fee},
     utils::{calculate_tx_resources, Address},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
 
@@ -300,7 +300,7 @@ mod test {
         let contract_class = ContractClass::from_path("starknet_programs/l1l2.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()

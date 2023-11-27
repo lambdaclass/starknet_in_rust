@@ -51,9 +51,9 @@ fn hello_starknet_increase_balance() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
-    let storage = Felt252::zero();
+    let storage = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash,
@@ -101,7 +101,7 @@ fn hello_starknet_increase_balance() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -113,7 +113,7 @@ fn hello_starknet_increase_balance() {
     let expected_key: ClassHash = ClassHash(expected_key_bytes);
     let mut expected_accessed_storage_keys = HashSet::new();
     expected_accessed_storage_keys.insert(expected_key);
-    let expected_storage_read_values = vec![Felt252::zero(), Felt252::zero()];
+    let expected_storage_read_values = vec![Felt252::ZERO, Felt252::ZERO];
 
     let expected_call_info = CallInfo {
         caller_address: Address(0.into()),

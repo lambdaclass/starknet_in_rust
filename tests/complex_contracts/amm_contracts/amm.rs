@@ -105,7 +105,7 @@ fn amm_init_pool_test() {
         }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
-        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
+        storage_read_values: vec![Felt252::ZERO, Felt252::ZERO],
         ..Default::default()
     };
 
@@ -195,10 +195,10 @@ fn amm_add_demo_tokens_test() {
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys_add_demo_token,
         storage_read_values: vec![
-            Felt252::zero(),
-            Felt252::zero(),
-            Felt252::zero(),
-            Felt252::zero(),
+            Felt252::ZERO,
+            Felt252::ZERO,
+            Felt252::ZERO,
+            Felt252::ZERO,
         ],
         ..Default::default()
     };
@@ -449,7 +449,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::zero(), Felt252::new(10)].to_vec();
+    let calldata = [Felt252::ZERO, Felt252::new(10)].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();

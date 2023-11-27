@@ -105,7 +105,7 @@ pub fn deploy_account(
                 class_hash,
                 0,
                 1.into(),
-                Felt252::zero(),
+                Felt252::ZERO,
                 vec![],
                 signature,
                 SALT.clone(),
@@ -150,7 +150,7 @@ pub fn declare(
                 0,
                 0.into(),
                 vec![],
-                Felt252::zero(),
+                Felt252::ZERO,
             )
             .expect("couldn't create transaction");
 
@@ -260,7 +260,7 @@ pub fn invoke(
         let address = CONTRACT_ADDRESS.clone();
         let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
         let signature = SIGNATURE.clone();
-        let calldata = vec![address.0.clone(), selector.clone(), Felt252::zero()];
+        let calldata = vec![address.0.clone(), selector.clone(), Felt252::ZERO];
         scope(|| {
             // new consumes more execution time than raw struct instantiation
             let internal_invoke = InvokeFunction::new(
@@ -271,7 +271,7 @@ pub fn invoke(
                 calldata,
                 signature,
                 StarknetChainId::TestNet.to_felt(),
-                Some(Felt252::zero()),
+                Some(Felt252::ZERO),
             )
             .unwrap();
             internal_invoke.execute(

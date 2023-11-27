@@ -6,7 +6,7 @@ use crate::{
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
@@ -141,7 +141,7 @@ mod tests {
         let state_reader = InMemoryStateReader::default();
         assert!(Felt252::from_bytes_be(
             state_reader
-                .get_class_hash_at(&Address(Felt252::one()))
+                .get_class_hash_at(&Address(Felt252::ONE))
                 .unwrap()
                 .to_bytes_be()
         )
@@ -152,7 +152,7 @@ mod tests {
     fn get_storage_returns_zero_if_missing() {
         let state_reader = InMemoryStateReader::default();
         assert!(state_reader
-            .get_storage_at(&(Address(Felt252::one()), Felt252::one().to_be_bytes()))
+            .get_storage_at(&(Address(Felt252::ONE), Felt252::ONE.to_be_bytes()))
             .unwrap()
             .is_zero())
     }

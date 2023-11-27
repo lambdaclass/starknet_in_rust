@@ -853,7 +853,7 @@ pub mod test_utils {
 
                     state_reader
                         .address_to_nonce_mut()
-                        .insert(contract_address.clone(), Felt252::zero());
+                        .insert(contract_address.clone(), Felt252::ZERO);
                     state_reader.address_to_storage_mut().extend(stored);
                 }
                 for (class_hash, contract_class) in class_hash_to_class {
@@ -977,9 +977,9 @@ mod test {
 
     #[test]
     fn test_felt_to_hash() {
-        assert_eq!(felt_to_hash(&Felt252::zero()), [0; 32]);
+        assert_eq!(felt_to_hash(&Felt252::ZERO), [0; 32]);
         assert_eq!(
-            felt_to_hash(&Felt252::one()),
+            felt_to_hash(&Felt252::ONE),
             [
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 1

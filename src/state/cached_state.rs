@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use cairo_lang_utils::bigint::BigUintAsHex;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
 use std::{
@@ -414,7 +414,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         Ok(self
             .cache
             .get_nonce(contract_address)
-            .unwrap_or(&Felt252::zero())
+            .unwrap_or(&Felt252::ZERO)
             .clone())
     }
 
@@ -880,7 +880,7 @@ mod tests {
             HashMap::new(),
         );
 
-        let address_one = Address(Felt252::one());
+        let address_one = Address(Felt252::ONE);
 
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
@@ -890,9 +890,9 @@ mod tests {
         let state_diff = StateDiff {
             address_to_class_hash: HashMap::from([(
                 address_one.clone(),
-                ClassHash::from(Felt252::one()),
+                ClassHash::from(Felt252::ONE),
             )]),
-            address_to_nonce: HashMap::from([(address_one.clone(), Felt252::one())]),
+            address_to_nonce: HashMap::from([(address_one.clone(), Felt252::ONE)]),
             class_hash_to_compiled_class: HashMap::new(),
             storage_updates: HashMap::new(),
         };

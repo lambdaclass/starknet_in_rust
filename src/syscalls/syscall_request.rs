@@ -1,4 +1,4 @@
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::ToPrimitive;
 

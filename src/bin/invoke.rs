@@ -53,7 +53,7 @@ fn main() {
 
             state_reader
                 .address_to_nonce_mut()
-                .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+                .insert(CONTRACT_ADDRESS.clone(), Felt252::ZERO);
             state_reader.class_hash_to_compiled_class_mut().insert(
                 *CONTRACT_CLASS_HASH,
                 CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
@@ -61,7 +61,7 @@ fn main() {
 
             state_reader
                 .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
+                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::ZERO);
             Arc::new(state_reader)
         },
         Arc::new(PermanentContractClassCache::default()),
@@ -72,7 +72,7 @@ fn main() {
     state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+        .insert(CONTRACT_ADDRESS.clone(), Felt252::ZERO);
 
     for i in 0..RUNS {
         let invoke_first = InvokeFunction::new(

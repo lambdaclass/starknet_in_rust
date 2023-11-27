@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use assert_matches::assert_matches;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},

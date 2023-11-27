@@ -4,7 +4,7 @@ use crate::CallType::Call;
 use cairo_lang_starknet::casm_contract_class::CasmContractEntryPoints;
 use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::with_std::collections::HashSet;
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
@@ -87,7 +87,7 @@ fn get_block_hash_test() {
     );
 
     let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     state_reader
         .address_to_class_hash_mut()
@@ -225,7 +225,7 @@ fn integration_test_erc20() {
         CompiledClass::Casm(Arc::new(casm_contract_class)),
     );
     let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     state_reader
         .address_to_class_hash_mut()
@@ -606,12 +606,12 @@ fn call_contract_test() {
     // Caller contract data
     let caller_address = Address(1111.into());
     let caller_class_hash: ClassHash = ClassHash([1; 32]);
-    let caller_nonce = Felt252::zero();
+    let caller_nonce = Felt252::ZERO;
 
     // Callee contract data
     let callee_address = Address(1112.into());
     let callee_class_hash: ClassHash = ClassHash([2; 32]);
-    let callee_nonce = Felt252::zero();
+    let callee_nonce = Felt252::ZERO;
 
     insert_sierra_class_into_cache(
         &contract_class_cache,
@@ -694,12 +694,12 @@ fn call_echo_contract_test() {
     // Caller contract data
     let caller_address = Address(1111.into());
     let caller_class_hash: ClassHash = ClassHash([1; 32]);
-    let caller_nonce = Felt252::zero();
+    let caller_nonce = Felt252::ZERO;
 
     // Callee contract data
     let callee_address = Address(1112.into());
     let callee_class_hash: ClassHash = ClassHash([2; 32]);
-    let callee_nonce = Felt252::zero();
+    let callee_nonce = Felt252::ZERO;
 
     insert_sierra_class_into_cache(
         &contract_class_cache,
@@ -784,12 +784,12 @@ fn call_events_contract_test() {
     // Caller contract data
     let caller_address = Address(1111.into());
     let caller_class_hash: ClassHash = ClassHash([1; 32]);
-    let caller_nonce = Felt252::zero();
+    let caller_nonce = Felt252::ZERO;
 
     // Callee contract data
     let callee_address = Address(1112.into());
     let callee_class_hash: ClassHash = ClassHash([2; 32]);
-    let callee_nonce = Felt252::zero();
+    let callee_nonce = Felt252::ZERO;
 
     insert_sierra_class_into_cache(
         &contract_class_cache,
@@ -904,7 +904,7 @@ fn replace_class_test() {
     static CLASS_HASH_A: ClassHash = ClassHash([1; 32]);
     static CASM_CLASS_HASH_A: ClassHash = ClassHash([2; 32]);
 
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     insert_sierra_class_into_cache(&contract_class_cache, CLASS_HASH_A, contract_class_a);
 
@@ -1068,9 +1068,9 @@ fn replace_class_contract_call() {
     let contract_class_cache = PermanentContractClassCache::default();
     let native_contract_class_cache = PermanentContractClassCache::default();
 
-    let address = Address(Felt252::one());
+    let address = Address(Felt252::ONE);
     let class_hash_a: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash_a,
@@ -1268,7 +1268,7 @@ fn keccak_syscall_test() {
     );
 
     let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     state_reader
         .address_to_nonce_mut()
@@ -1319,7 +1319,7 @@ fn execute(
 
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -1361,7 +1361,7 @@ fn library_call() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash,
@@ -1386,7 +1386,7 @@ fn library_call() {
 
     let lib_address = Address(1112.into());
     let lib_class_hash: ClassHash = ClassHash([2; 32]);
-    let lib_nonce = Felt252::zero();
+    let lib_nonce = Felt252::ZERO;
 
     insert_sierra_class_into_cache(&contract_class_cache, lib_class_hash, lib_contract_class);
 
@@ -1424,7 +1424,7 @@ fn library_call() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -1514,7 +1514,7 @@ fn execute_deploy(
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -1575,11 +1575,11 @@ fn deploy_syscall_test() {
     // Deployer contract data
     let deployer_address = Address(1111.into());
     let deployer_class_hash: ClassHash = ClassHash([1; 32]);
-    let deployer_nonce = Felt252::zero();
+    let deployer_nonce = Felt252::ZERO;
 
     // Deployee contract data
-    let deployee_class_hash: ClassHash = ClassHash::from(Felt252::one());
-    let _deployee_nonce = Felt252::zero();
+    let deployee_class_hash: ClassHash = ClassHash::from(Felt252::ONE);
+    let _deployee_nonce = Felt252::ZERO;
 
     insert_sierra_class_into_cache(
         &contract_class_cache,
@@ -1608,7 +1608,7 @@ fn deploy_syscall_test() {
 
     let calldata = [
         Felt252::from_bytes_be(deployee_class_hash.to_bytes_be()),
-        Felt252::one(),
+        Felt252::ONE,
     ]
     .to_vec();
     let result = execute_deploy(
@@ -1621,7 +1621,7 @@ fn deploy_syscall_test() {
     );
     let expected_deployed_contract_address = Address(
         calculate_contract_address(
-            &Felt252::one(),
+            &Felt252::ONE,
             &Felt252::from_bytes_be(deployee_class_hash.to_bytes_be()),
             &[100.into()],
             deployer_address,
@@ -1675,14 +1675,14 @@ fn deploy_syscall_address_unavailable_test() {
     // Deployer contract data
     let deployer_address = Address(1111.into());
     let deployer_class_hash: ClassHash = ClassHash([2; 32]);
-    let deployer_nonce = Felt252::zero();
+    let deployer_nonce = Felt252::ZERO;
 
     // Deployee contract data
-    let deployee_class_hash: ClassHash = felt_to_hash(&Felt252::one());
-    let deployee_nonce = Felt252::zero();
+    let deployee_class_hash: ClassHash = felt_to_hash(&Felt252::ONE);
+    let deployee_nonce = Felt252::ZERO;
     let expected_deployed_contract_address = Address(
         calculate_contract_address(
-            &Felt252::one(),
+            &Felt252::ONE,
             &Felt252::from_bytes_be(deployee_class_hash.to_bytes_be()),
             &[100.into()],
             deployer_address.clone(),
@@ -1727,7 +1727,7 @@ fn deploy_syscall_address_unavailable_test() {
 
     let calldata = [
         Felt252::from_bytes_be(deployee_class_hash.to_bytes_be()),
-        Felt252::one(),
+        Felt252::ONE,
     ]
     .to_vec();
     let result = execute_deploy(
@@ -1773,7 +1773,7 @@ fn get_execution_info_test() {
     // Contract data
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     insert_sierra_class_into_cache(&contract_class_cache, class_hash, sierra_contract_class);
 
@@ -1810,7 +1810,7 @@ fn get_execution_info_test() {
     // Create TransactionExecutionContext
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![22.into(), 33.into()],
         0,
         10.into(),

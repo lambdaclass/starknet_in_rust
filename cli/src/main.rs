@@ -1,5 +1,5 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer};
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use clap::{Args, Parser, Subcommand};
 use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
@@ -121,11 +121,11 @@ fn declare_parser(
 
     let tx_hash = calculate_declare_transaction_hash(
         &contract_class,
-        Felt252::zero(),
+        Felt252::ZERO,
         &Address(0.into()),
         0,
         DECLARE_VERSION.clone(),
-        Felt252::zero(),
+        Felt252::ZERO,
     )?;
     Ok((class_hash, tx_hash))
 }
@@ -151,7 +151,7 @@ fn deploy_parser(
         0.into(),
         &Address(address.clone()),
         &constructor_calldata,
-        Felt252::zero(),
+        Felt252::ZERO,
     )?;
     Ok((address, tx_hash))
 }
@@ -199,7 +199,7 @@ fn invoke_parser(
         TRANSACTION_VERSION.clone(),
         calldata.clone(),
         vec![],
-        Some(Felt252::zero()),
+        Some(Felt252::ZERO),
         transaction_hash.unwrap(),
     )?;
     let mut transactional_state = cached_state.create_transactional()?;
@@ -219,7 +219,7 @@ fn invoke_parser(
         entrypoint_selector,
         &calldata,
         0,
-        Felt252::zero(),
+        Felt252::ZERO,
         &[],
     )?;
 

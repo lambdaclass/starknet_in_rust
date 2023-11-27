@@ -35,7 +35,7 @@ fn test_erc20_cairo2() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.extend([
         (class_hash, CompiledClass::Casm(Arc::new(contract_class))),
@@ -93,7 +93,7 @@ fn test_erc20_cairo2() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -139,7 +139,7 @@ fn test_erc20_cairo2() {
         ClassHash::from(felt_str!("1")),
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![2.into()],
         vec![
             felt_str!(
@@ -188,7 +188,7 @@ fn test_erc20_cairo2() {
         ClassHash::from(felt_str!("1")),
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![2.into()],
         vec![
             felt_str!(

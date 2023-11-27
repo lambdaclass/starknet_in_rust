@@ -248,7 +248,7 @@ mod test {
         },
         utils::{Address, ClassHash},
     };
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
     use std::{collections::HashMap, sync::Arc};
 
     /// Ensures that a StateDiff constructed from a CachedState without any updates has no storage updates.
