@@ -192,7 +192,7 @@ Run the following command:
 ```bash
 $ make test
 ```
-Take into account that some tests use the [RPC State Reader](#rpc-state-reader) so you need a full-node instance.
+Take into account that some tests use the [RPC State Reader](#rpc-state-reader) so you need a full-node instance or an RPC provider that supports Starknet API version 0.5.0.
 
 ### RPC State Reader
 
@@ -203,11 +203,11 @@ Every time it needs to read a storage value, a contract class or contract, it go
 Right now we are using it for internal testing but we plan to release it as a library soon.
 
 #### How to configure it
-In order to use the RPC state reader add the [Juno](https://github.com/NethermindEth/juno) instance endpoints in a `.env` file at root:
+In order to use the RPC state reader add the endpoints to a full node instance or RPC provider supporting Starknet API version 0.5.0 in a `.env` file at root:
 
 ```
-JUNO_ENDPOINT_TESTNET={some endpoint}
-JUNO_ENDPOINT_MAINNET={some endpoint}
+RPC_ENDPOINT_TESTNET={some endpoint}
+RPC_ENDPOINT_MAINNET={some endpoint}
 ```
 
 ### Profiling
