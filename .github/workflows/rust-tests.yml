@@ -95,8 +95,8 @@ jobs:
 
   tests:
     env:
-      JUNO_ENDPOINT_TESTNET: ${{ secrets.JUNO_ENDPOINT_TESTNET }}
-      JUNO_ENDPOINT_MAINNET: ${{ secrets.JUNO_ENDPOINT_MAINNET }}
+      RPC_ENDPOINT_TESTNET: ${{ secrets.JUNO_ENDPOINT_TESTNET }}
+      RPC_ENDPOINT_MAINNET: ${{ secrets.JUNO_ENDPOINT_MAINNET }}
       MLIR_SYS_170_PREFIX: /usr/lib/llvm-17/
       TABLEGEN_170_PREFIX: /usr/lib/llvm-17/
     strategy:
