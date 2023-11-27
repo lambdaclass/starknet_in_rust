@@ -324,19 +324,19 @@ impl RpcState {
         }
     }
 
-    pub fn new_juno(chain: RpcChain, block: BlockValue) -> Result<Self, RpcStateError> {
-        if env::var("JUNO_ENDPOINT_MAINNET").is_err() || env::var("JUNO_ENDPOINT_TESTNET").is_err()
-        {
+    pub fn new_rpc(chain: RpcChain, block: BlockValue) -> Result<Self, RpcStateError> {
+        if env::var("RPC_ENDPOINT_MAINNET").is_err() || env::var("RPC_ENDPOINT_TESTNET").is_err() {
             dotenv().map_err(|_| RpcStateError::MissingEnvFile)?;
         }
 
-        let rpc_endpoint = match chain {
-            RpcChain::MainNet => env::var("JUNO_ENDPOINT_MAINNET")
-                .map_err(|_| RpcStateError::MissingJunoEndpoints)?,
-            RpcChain::TestNet => env::var("JUNO_ENDPOINT_TESTNET")
-                .map_err(|_| RpcStateError::MissingJunoEndpoints)?,
-            RpcChain::TestNet2 => unimplemented!(),
-        };
+        let rpc_endpoint =
+            match chain {
+                RpcChain::MainNet => env::var("RPC_ENDPOINT_MAINNET")
+                    .map_err(|_| RpcStateError::MissingRpcEndpoints)?,
+                RpcChain::TestNet => env::var("RPC_ENDPOINT_TESTNET")
+                    .map_err(|_| RpcStateError::MissingRpcEndpoints)?,
+                RpcChain::TestNet2 => unimplemented!(),
+            };
 
         Ok(Self::new(chain, block, &rpc_endpoint))
     }
@@ -603,7 +603,7 @@ impl RpcState {
 #[test]
 fn test_tx_hashes() {
     let rpc_state =
-        RpcState::new_juno(RpcChain::MainNet, BlockValue::Number(BlockNumber(397709))).unwrap();
+        RpcState::new_rpc(RpcChain::MainNet, BlockValue::Number(BlockNumber(397709))).unwrap();
 
     let hashes = rpc_state.get_transaction_hashes().unwrap();
     assert_eq!(hashes.len(), 211);

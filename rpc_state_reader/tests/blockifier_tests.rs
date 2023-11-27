@@ -123,7 +123,7 @@ pub fn execute_tx(
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     // Instantiate the RPC StateReader and the CachedState
-    let rpc_reader = RpcStateReader(RpcState::new_juno(network, block_number.into()).unwrap());
+    let rpc_reader = RpcStateReader(RpcState::new_rpc(network, block_number.into()).unwrap());
     let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
@@ -202,7 +202,7 @@ pub fn execute_tx(
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
             let mut next_block_state_reader =
-                RpcStateReader(RpcState::new_juno(network, (block_number.next()).into()).unwrap());
+                RpcStateReader(RpcState::new_rpc(network, (block_number.next()).into()).unwrap());
             let contract_class = next_block_state_reader
                 .get_compiled_contract_class(&tx.class_hash())
                 .unwrap();
@@ -240,7 +240,7 @@ pub fn execute_tx(
 #[test]
 fn test_get_gas_price() {
     let block = BlockValue::Number(BlockNumber(169928));
-    let rpc_state = RpcState::new_juno(RpcChain::MainNet, block).unwrap();
+    let rpc_state = RpcState::new_rpc(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
     assert_eq!(price, 22804578690);

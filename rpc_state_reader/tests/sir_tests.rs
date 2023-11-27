@@ -20,7 +20,7 @@ use test_case::test_case;
 
 #[test]
 fn test_get_transaction_try_from() {
-    let rpc_state = RpcState::new_juno(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+    let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
     let str_hash = stark_felt!("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91");
     let tx_hash = TransactionHash(str_hash);
 
@@ -39,7 +39,7 @@ fn test_get_transaction_try_from() {
 #[test]
 fn test_get_gas_price() {
     let block = BlockValue::Number(BlockNumber(169928));
-    let rpc_state = RpcState::new_juno(RpcChain::MainNet, block).unwrap();
+    let rpc_state = RpcState::new_rpc(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
     assert_eq!(price, 22804578690);
