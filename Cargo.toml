@@ -26,7 +26,7 @@ cairo-lang-runner = "2.3.1"
 cairo-lang-sierra = "2.3.1"
 cairo-lang-starknet = "2.3.1"
 cairo-lang-utils = "2.3.1"
-cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "bc3d9b9303480dab7f2ef2833a119d828cfd3190", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
 starknet = "0.5.0"
 starknet_api = "0.4.1"
