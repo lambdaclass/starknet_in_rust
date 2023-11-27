@@ -4,10 +4,9 @@ use cairo_lang_starknet::{
     contract_class::{ContractClass as SierraContractClass, ContractEntryPoint},
 };
 use cairo_vm::felt::Felt252;
-use serde::Serialize;
 use serde_json::ser::Formatter;
 use starknet_crypto::{poseidon_hash_many, FieldElement, PoseidonHasher};
-use std::io::{self, Cursor};
+use std::io::{self};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
 
@@ -63,27 +62,40 @@ pub fn compute_sierra_class_hash(
     hasher.update(constructors);
 
     // Hash abi
-    let abi = {
-        let mut buf = Cursor::new(Vec::new());
-        let mut fmt = serde_json::Serializer::with_formatter(&mut buf, PythonJsonFormatter);
+    let abi = contract_class
+        .abi
+        .as_ref()
+        .ok_or(ContractAddressError::MissingAbi)?
+        .json();
 
-        contract_class
-            .abi
-            .as_ref()
-            .ok_or(ContractAddressError::MissingAbi)?
-            .items
-            .serialize(&mut fmt)
-            .map_err(|_| ContractAddressError::MissingAbi)?;
+    let trimmed_abi: String = abi
+        .chars()
+        .enumerate()
+        .peekable()
+        .filter_map(|(i, c)| match c {
+            '\n' => {
+                if abi.chars().nth(i - 1) != Some(',') {
+                    None
+                } else {
+                    Some(' ')
+                }
+            }
+            ' ' => {
+                if abi.chars().nth(i - 1) != Some(':') {
+                    None
+                } else {
+                    Some(c)
+                }
+            }
+            _ => Some(c),
+        })
+        .collect();
 
-        // Note: The following unwrap should never be triggered as long as serde_json generates
-        //   UTF-8 encoded data, which in practice means it should never panic.
-        String::from_utf8(buf.into_inner()).unwrap()
-    };
-
-    let abi_hash = FieldElement::from_byte_slice_be(&starknet_keccak(abi.as_bytes()).to_bytes_be())
-        .map_err(|_err| {
-            ContractAddressError::Cast("&[u8]".to_string(), "FieldElement".to_string())
-        })?;
+    let abi_hash =
+        FieldElement::from_byte_slice_be(&starknet_keccak(trimmed_abi.as_bytes()).to_bytes_be())
+            .map_err(|_err| {
+                ContractAddressError::Cast("&[u8]".to_string(), "FieldElement".to_string())
+            })?;
 
     hasher.update(abi_hash);
 
