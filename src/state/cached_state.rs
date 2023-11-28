@@ -12,7 +12,6 @@ use crate::{
         to_cache_state_storage_mapping, Address, ClassHash,
     },
 };
-use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::felt::Felt252;
 use getset::{Getters, MutGetters};
 use num_traits::Zero;
@@ -546,28 +545,6 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             )?,
         }
         Ok(contract)
-    }
-
-    fn set_sierra_program(
-        &mut self,
-        compiled_class_hash: &Felt252,
-        _sierra_program: Vec<BigUintAsHex>,
-    ) -> Result<(), StateError> {
-        let _compiled_class_hash = compiled_class_hash.to_be_bytes();
-
-        // TODO implement
-        // self.sierra_programs
-        //     .as_mut()
-        //     .ok_or(StateError::MissingSierraProgramsCache)?
-        //     .insert(compiled_class_hash, sierra_program);
-        Ok(())
-    }
-
-    fn get_sierra_program(
-        &mut self,
-        _class_hash: &ClassHash,
-    ) -> Result<Vec<cairo_lang_utils::bigint::BigUintAsHex>, StateError> {
-        todo!()
     }
 }
 
