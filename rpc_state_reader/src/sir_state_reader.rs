@@ -22,8 +22,11 @@ use starknet_in_rust::{
     execution::TransactionExecutionInfo,
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
-        state_api::StateReader, state_cache::StorageEntry, BlockInfo,
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        state_api::StateReader,
+        state_cache::StorageEntry,
+        BlockInfo,
     },
     transaction::{
         error::TransactionError, Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler,
@@ -124,8 +127,7 @@ pub fn execute_tx_configurable(
         ..
     } = state.state_reader.0.get_block_info().unwrap();
     let sequencer_address = Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
-    let block_info =
-    BlockInfo {
+    let block_info = BlockInfo {
         block_number: block_number.0,
         block_timestamp: block_timestamp.0,
         gas_price,
@@ -141,7 +143,11 @@ pub fn execute_tx_configurable(
         skip_nonce_check,
         &mut state,
     )?;
-    let trace = state.state_reader.0.get_transaction_trace(&tx_hash).unwrap();
+    let trace = state
+        .state_reader
+        .0
+        .get_transaction_trace(&tx_hash)
+        .unwrap();
     let receipt = state
         .state_reader
         .0
@@ -159,10 +165,7 @@ pub fn execute_tx_configurable_with_state(
     skip_validate: bool,
     skip_nonce_check: bool,
     state: &mut CachedState<RpcStateReader, PermanentContractClassCache>,
-) -> Result<
-    TransactionExecutionInfo,
-    TransactionError,
-> {
+) -> Result<TransactionExecutionInfo, TransactionError> {
     let fee_token_address = Address(felt_str!(
         "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
         16
@@ -188,14 +191,26 @@ pub fn execute_tx_configurable_with_state(
                 .create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
         }
         SNTransaction::Declare(tx) => {
-            // Fetch the contract_class from the next block (as we don't have it in the previous one)
-            let next_block_state_reader = RpcStateReader(
-                RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
-            );
-            let class_hash = tx.class_hash().0.bytes().try_into().unwrap();
-            let contract_class = next_block_state_reader
-                .get_contract_class(&ClassHash(class_hash))
-                .unwrap();
+            // Try to fetch contract class from cache
+            let class_hash = ClassHash(tx.class_hash().0.bytes().try_into().unwrap());
+            let contract_class = if let Ok(contract_class) = state.get_contract_class(&class_hash) {
+                contract_class
+            } else {
+                // Fetch the contract_class from the next block (as we don't have it in the previous one)
+                let next_block_state_reader = RpcStateReader(
+                    RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
+                );
+
+                let contract_class = next_block_state_reader
+                    .get_contract_class(&class_hash)
+                    .unwrap();
+
+                // Manually add the contract class to the cache so we don't need to fetch it when benchmarking (replay crate)
+                state
+                    .contract_class_cache_mut()
+                    .set_contract_class(class_hash, contract_class.clone());
+                contract_class
+            };
 
             if tx.version() != TransactionVersion(2_u8.into()) {
                 let contract_class = match contract_class {
@@ -203,7 +218,6 @@ pub fn execute_tx_configurable_with_state(
                     _ => unreachable!(),
                 };
 
-                let class_hash = tx.class_hash().0.bytes().try_into().unwrap();
                 let declare = Declare::new_with_tx_and_class_hash(
                     contract_class,
                     Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
@@ -216,7 +230,7 @@ pub fn execute_tx_configurable_with_state(
                         .collect(),
                     Felt252::from_bytes_be(tx.nonce().0.bytes()),
                     Felt252::from_bytes_be(tx_hash.0.bytes()),
-                    ClassHash(class_hash),
+                    class_hash,
                 )
                 .unwrap();
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
