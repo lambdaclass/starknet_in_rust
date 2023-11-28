@@ -1,6 +1,28 @@
-use crate::ContractClassCache;
-use std::{cell::RefCell, rc::Rc};
-
+use crate::{
+    core::errors::state_errors::StateError,
+    definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    execution::{
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
+        TransactionExecutionContext,
+    },
+    hash_utils::calculate_contract_address,
+    services::api::{
+        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+    },
+    state::{
+        contract_storage_state::ContractStorageState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
+    syscalls::{
+        business_logic_syscall_handler::{KECCAK_ROUND_COST, SYSCALL_BASE, SYSCALL_GAS_COST},
+        syscall_handler_errors::SyscallHandlerError,
+    },
+    transaction::error::TransactionError,
+    utils::{felt_to_hash, Address, ClassHash},
+    ContractClassCache, EntryPointType,
+};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
@@ -8,33 +30,7 @@ use cairo_native::{
 use cairo_vm::felt::Felt252;
 use num_traits::Zero;
 use starknet::core::utils::cairo_short_string_to_felt;
-
-use crate::definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR;
-use crate::execution::CallResult;
-use crate::hash_utils::calculate_contract_address;
-use crate::services::api::contract_class_errors::ContractClassError;
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::state::state_api::State;
-use crate::syscalls::business_logic_syscall_handler::KECCAK_ROUND_COST;
-use crate::utils::felt_to_hash;
-use crate::utils::ClassHash;
-use crate::{
-    core::errors::state_errors::StateError,
-    definitions::block_context::BlockContext,
-    execution::{
-        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
-        CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
-    },
-    state::{
-        contract_storage_state::ContractStorageState, state_api::StateReader,
-        ExecutionResourcesManager,
-    },
-    syscalls::business_logic_syscall_handler::{SYSCALL_BASE, SYSCALL_GAS_COST},
-    syscalls::syscall_handler_errors::SyscallHandlerError,
-    transaction::error::TransactionError,
-    utils::Address,
-    EntryPointType,
-};
+use std::{cell::RefCell, rc::Rc};
 
 #[derive(Debug)]
 pub struct NativeSyscallHandler<'a, 'cache, S, C>
@@ -294,7 +290,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             address,
             calldata.to_vec(),
             entrypoint_selector,
-            self.caller_address.clone(),
+            self.contract_address.clone(),
             EntryPointType::External,
             Some(CallType::Call),
             None,
@@ -339,7 +335,6 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         address: cairo_vm::felt::Felt252,
         gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
-        tracing::debug!("Called `storage_read({address_domain}, {address})` from Cairo Native");
         self.handle_syscall_request(gas, "storage_read")?;
         let value = match self.starknet_storage_state.read(Address(address.clone())) {
             Ok(value) => Ok(value),
@@ -347,8 +342,9 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             Err(_) => Ok(Felt252::zero()),
         };
 
-        tracing::debug!(" = {value:?}` from Cairo Native");
-
+        tracing::debug!(
+            "Called `storage_read({address_domain}, {address}) = {value:?}` from Cairo Native"
+        );
         value
     }
 

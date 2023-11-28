@@ -836,7 +836,7 @@ fn call_events_contract_test() {
     );
 
     let internal_call = CallInfo {
-        caller_address: Address(1111.into()),
+        caller_address: Address(1112.into()),
         call_type: Some(Call),
         contract_address: Address(1112.into()),
         code_address: None,
