@@ -48,7 +48,7 @@ enum ReplayExecute {
     },
     #[clap(
         about = "Execute all the invoke transactions in a given range of blocks.
-    Runs the all transactions twice, once to fill up the caches and a second one to benchmark."
+Runs the all transactions twice, once to fill up the caches and a second one to benchmark."
     )]
     BenchBlockRange {
         block_start: u64,
@@ -156,7 +156,7 @@ fn main() {
                 let block_txs = transactions.get(&block_number).unwrap();
                 // Run txs
                 for (tx_hash, tx) in block_txs {
-                    execute_tx_configurable_with_state(
+                    let _ = execute_tx_configurable_with_state(
                         tx_hash,
                         tx.clone(),
                         network,
@@ -164,8 +164,7 @@ fn main() {
                         false,
                         true,
                         state,
-                    )
-                    .unwrap();
+                    );
                 }
             }
         }
