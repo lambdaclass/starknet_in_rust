@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use clap::{Parser, Subcommand};
 use rpc_state_reader::{
     execute_tx_configurable, execute_tx_configurable_with_state, get_transaction_hashes,
-    rpc_state::{RpcChain, RpcState, RpcTransactionReceipt},
+    rpc_state::{RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt},
     RpcStateReader,
 };
 use starknet_api::hash::StarkFelt;
@@ -14,7 +14,9 @@ use starknet_api::{
 };
 use starknet_in_rust::{
     execution::TransactionExecutionInfo,
+    felt::Felt252,
     state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
+    utils::Address,
 };
 
 #[derive(Debug, Parser)]
@@ -111,13 +113,15 @@ fn main() {
             let network = parse_network(&chain);
             // Create a single class_cache for all states
             let class_cache = Arc::new(PermanentContractClassCache::default());
-            // HashMaps to cache txs & states
+            // HashMaps to cache tx data & states
             let mut transactions =
                 HashMap::<BlockNumber, Vec<(TransactionHash, Transaction)>>::new();
             let mut cached_states = HashMap::<
                 BlockNumber,
                 CachedState<RpcStateReader, PermanentContractClassCache>,
             >::new();
+            let mut block_timestamps = HashMap::<BlockNumber, u64>::new();
+            let mut sequencer_addresses = HashMap::<BlockNumber, Address>::new();
             for block_number in block_start..=block_end {
                 // For each block:
                 let block_number = BlockNumber(block_number);
@@ -126,6 +130,18 @@ fn main() {
                     RpcState::new_infura(network, block_number.into()).unwrap(),
                 );
                 let mut state = CachedState::new(Arc::new(rpc_reader), class_cache.clone());
+                // Fetch block timestamps
+                let RpcBlockInfo {
+                    block_timestamp,
+                    sequencer_address,
+                    ..
+                } = state.state_reader.0.get_block_info().unwrap();
+                block_timestamps.insert(block_number, block_timestamp.0);
+                sequencer_addresses.insert(
+                    block_number,
+                    Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes())),
+                );
+
                 // Fetch txs for the block
                 let transaction_hashes = get_transaction_hashes(block_number, network)
                     .expect("Unable to fetch the transaction hashes.");
@@ -154,6 +170,10 @@ fn main() {
                 let state = cached_states.get_mut(&block_number).unwrap();
                 // Fetch txs
                 let block_txs = transactions.get(&block_number).unwrap();
+                // Fetch timestamp
+                let block_timestamp = *block_timestamps.get(&block_number).unwrap();
+                // Fetch sequencer address
+                let sequencer_address = sequencer_addresses.get(&block_number).unwrap();
                 // Run txs
                 for (tx_hash, tx) in block_txs {
                     let _ = execute_tx_configurable_with_state(
@@ -161,6 +181,8 @@ fn main() {
                         tx.clone(),
                         network,
                         block_number,
+                        block_timestamp,
+                        sequencer_address,
                         false,
                         true,
                         state,
