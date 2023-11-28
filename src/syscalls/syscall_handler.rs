@@ -38,7 +38,6 @@ pub(crate) trait HintProcessorPostRun {
     ) -> Result<(), TransactionError>;
 }
 
-#[allow(unused)]
 pub(crate) struct SyscallHintProcessor<'a, 'cache, S: StateReader, C: ContractClassCache> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
     pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S, C>,
@@ -137,7 +136,9 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> HintProcessorLogic
     }
 }
 
-impl<'a, 'cache, S: StateReader, C: ContractClassCache> ResourceTracker for SyscallHintProcessor<'a, 'cache, S, C> {
+impl<'a, 'cache, S: StateReader, C: ContractClassCache> ResourceTracker
+    for SyscallHintProcessor<'a, 'cache, S, C>
+{
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }

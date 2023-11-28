@@ -171,7 +171,6 @@ pub struct RpcCallInfo {
     pub internal_calls: Vec<RpcCallInfo>,
 }
 
-#[allow(unused)]
 #[derive(Debug, Deserialize)]
 pub struct RpcTransactionReceipt {
     #[serde(deserialize_with = "actual_fee_deser")]

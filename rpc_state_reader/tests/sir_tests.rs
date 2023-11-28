@@ -303,7 +303,6 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
 
     assert!(call_info.is_none());
 
-    let actual_fee = actual_fee;
     if receipt.actual_fee != actual_fee {
         let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
 

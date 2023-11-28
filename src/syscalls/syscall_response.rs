@@ -14,7 +14,6 @@ pub(crate) enum ResponseBody {
     Keccak(KeccakResponse),
 }
 /// Wraps around any response body. It also contains the remaining gas after the execution.
-#[allow(unused)]
 pub(crate) struct SyscallResponse {
     /// The amount of gas left after the syscall execution.
     pub gas: u128,
