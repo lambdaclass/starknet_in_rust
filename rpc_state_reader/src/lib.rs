@@ -8,8 +8,8 @@ pub mod utils;
 mod sir_state_reader;
 #[cfg(feature = "starknet_in_rust")]
 pub use sir_state_reader::{
-    execute_tx, execute_tx_configurable, execute_tx_without_validate, get_transaction_hashes,
-    RpcStateReader,
+    execute_tx, execute_tx_configurable, execute_tx_configurable_with_state,
+    execute_tx_without_validate, get_transaction_hashes, RpcStateReader,
 };
 
 #[cfg(test)]

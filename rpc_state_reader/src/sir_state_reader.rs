@@ -39,7 +39,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct RpcStateReader(RpcState);
+pub struct RpcStateReader(pub RpcState);
 
 impl RpcStateReader {
     pub fn new(state: RpcState) -> Self {
@@ -260,11 +260,7 @@ pub fn execute_tx_configurable_with_state(
         SNTransaction::Deploy(_) => unimplemented!(),
     };
 
-    let trace = state
-        .state_reader
-        .0
-        .get_transaction_trace(tx_hash)
-        .unwrap();
+    let trace = state.state_reader.0.get_transaction_trace(tx_hash).unwrap();
     let receipt = state
         .state_reader
         .0
