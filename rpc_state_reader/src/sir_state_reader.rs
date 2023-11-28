@@ -117,15 +117,37 @@ pub fn execute_tx_configurable(
     let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
     let tx_hash = TransactionHash(stark_felt!(tx_hash.strip_prefix("0x").unwrap()));
     let tx = state.state_reader.0.get_transaction(&tx_hash).unwrap();
-    execute_tx_configurable_with_state(
+    let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();
+    let RpcBlockInfo {
+        block_timestamp,
+        sequencer_address,
+        ..
+    } = state.state_reader.0.get_block_info().unwrap();
+    let sequencer_address = Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
+    let block_info =
+    BlockInfo {
+        block_number: block_number.0,
+        block_timestamp: block_timestamp.0,
+        gas_price,
+        sequencer_address,
+    };
+    let sir_exec_info = execute_tx_configurable_with_state(
         &tx_hash,
         tx,
         network,
         block_number,
+        block_info,
         skip_validate,
         skip_nonce_check,
         &mut state,
-    )
+    )?;
+    let trace = state.state_reader.0.get_transaction_trace(&tx_hash).unwrap();
+    let receipt = state
+        .state_reader
+        .0
+        .get_transaction_receipt(&tx_hash)
+        .unwrap();
+    Ok((sir_exec_info, trace, receipt))
 }
 
 pub fn execute_tx_configurable_with_state(
@@ -133,23 +155,18 @@ pub fn execute_tx_configurable_with_state(
     tx: SNTransaction,
     network: RpcChain,
     block_number: BlockNumber,
+    block_info: BlockInfo,
     skip_validate: bool,
     skip_nonce_check: bool,
     state: &mut CachedState<RpcStateReader, PermanentContractClassCache>,
 ) -> Result<
-    (
-        TransactionExecutionInfo,
-        TransactionTrace,
-        RpcTransactionReceipt,
-    ),
+    TransactionExecutionInfo,
     TransactionError,
 > {
     let fee_token_address = Address(felt_str!(
         "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
         16
     ));
-
-    let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
     let chain_id = match state.state_reader.0.chain {
@@ -158,26 +175,7 @@ pub fn execute_tx_configurable_with_state(
         RpcChain::TestNet2 => StarknetChainId::TestNet2,
     };
     let starknet_os_config =
-        StarknetOsConfig::new(chain_id.to_felt(), fee_token_address, gas_price);
-    let block_info = {
-        let RpcBlockInfo {
-            block_number,
-            block_timestamp,
-            sequencer_address,
-            ..
-        } = state.state_reader.0.get_block_info().unwrap();
-
-        let block_number = block_number.0;
-        let block_timestamp = block_timestamp.0;
-        let sequencer_address = Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
-
-        BlockInfo {
-            block_number,
-            block_timestamp,
-            gas_price,
-            sequencer_address,
-        }
-    };
+        StarknetOsConfig::new(chain_id.to_felt(), fee_token_address, block_info.gas_price);
 
     // Get transaction before giving ownership of the reader
     let tx = match tx {
@@ -260,13 +258,6 @@ pub fn execute_tx_configurable_with_state(
         SNTransaction::Deploy(_) => unimplemented!(),
     };
 
-    let trace = state.state_reader.0.get_transaction_trace(tx_hash).unwrap();
-    let receipt = state
-        .state_reader
-        .0
-        .get_transaction_receipt(tx_hash)
-        .unwrap();
-
     let block_context = BlockContext::new(
         starknet_os_config,
         DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
@@ -284,7 +275,7 @@ pub fn execute_tx_configurable_with_state(
     #[cfg(feature = "cairo-native")]
     let sir_execution = tx.execute(state, &block_context, u128::MAX, None)?;
 
-    Ok((sir_execution, trace, receipt))
+    Ok(sir_execution)
 }
 
 pub fn execute_tx(
