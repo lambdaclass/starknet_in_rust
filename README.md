@@ -24,6 +24,7 @@ Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https
 - [📖 About](#-about)
 - [🌅 Getting Started](#-getting-started)
   - [Dependencies](#dependencies)
+  - [Requirements](#requirements)
   - [Installation](#installation)
     - [How to manually install the script dependencies](#how-to-manually-install-the-script-dependencies)
 - [🚀 Usage](#-usage)
@@ -53,6 +54,21 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 - Rust 1.70
 - A working installation of cairo-lang 0.12 (for compiling the cairo files)
 - [Optional, for testing purposes] Heaptrack
+
+### Requirements
+
+You need to have a version of `Python 3` installed. If you don't have it, you can install it for Debian-based GNU/Linux distributions with:
+```shell
+sudo apt install python3.9
+```
+On MacOS you can use Homebrew:
+```shell
+brew install python@3.9
+```
+Optionally, for setting environment, you can install `pyenv` for MacOS:
+```shell
+brew install pyenv
+```
 
 ### Installation
 

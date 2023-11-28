@@ -57,23 +57,34 @@ use {
 /// Deprecated version of BusinessLogicSyscallHandler.
 #[derive(Debug)]
 pub struct DeprecatedBLSyscallHandler<'a, S: StateReader, C: ContractClassCache> {
+    /// Context of the transaction being executed
     pub(crate) tx_execution_context: TransactionExecutionContext,
     /// Events emitted by the current contract call.
     pub(crate) events: Vec<OrderedEvent>,
     /// A list of dynamically allocated segments that are expected to be read-only.
     pub(crate) read_only_segments: Vec<(Relocatable, MaybeRelocatable)>,
+    /// Manages execution resources
     pub(crate) resources_manager: ExecutionResourcesManager,
+    /// Address of the contract
     pub(crate) contract_address: Address,
+    /// Address of the caller
     pub(crate) caller_address: Address,
+    /// Messages from L2 to L1
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
+    /// Context information related to the current block
     pub(crate) block_context: BlockContext,
+    /// Pointer to transaction information
     pub(crate) tx_info_ptr: Option<MaybeRelocatable>,
+    /// State of the storage related to Starknet contract
     pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
+    /// List of internal calls during the syscall execution
     pub(crate) internal_calls: Vec<CallInfo>,
+    /// Get the expected pointer to the syscall
     pub(crate) expected_syscall_ptr: Relocatable,
 }
 
 impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S, C> {
+    /// Constructor creates a new [DeprecatedBLSyscallHandler] instance
     pub fn new(
         tx_execution_context: TransactionExecutionContext,
         state: &'a mut CachedState<S, C>,
@@ -107,6 +118,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         }
     }
 
+    /// Constructor with default values, used for testing
     pub fn default_with(state: &'a mut CachedState<S, C>) -> Self {
         DeprecatedBLSyscallHandler::new_for_testing(BlockInfo::default(), Default::default(), state)
     }
@@ -117,20 +129,32 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             .increment_syscall_counter(syscall_name, 1);
     }
 
+    ///  System calls allow a contract to requires services from the Starknet OS
+    ///  See further documentation on https://docs.starknet.io/documentation/architecture_and_concepts/Contracts/system-calls/
+    /// Constructor for testing purposes
     pub fn new_for_testing(
         block_info: BlockInfo,
         _contract_address: Address,
         state: &'a mut CachedState<S, C>,
     ) -> Self {
         let syscalls = Vec::from([
+            // Emits an event with a given set of keys and data.
             "emit_event".to_string(),
+            // Deploys a new instance of a previously declared class.
             "deploy".to_string(),
+            // Gets information about the original transaction.
             "get_tx_info".to_string(),
+            // Sends a message to L1.
             "send_message_to_l1".to_string(),
+            // Calls the requested function in any previously declared class.
             "library_call".to_string(),
+            // Returns the address of the calling contract, or 0 if the call was not initiated by another contract.
             "get_caller_address".to_string(),
+            // Gets the address of the contract who raised the system call.
             "get_contract_address".to_string(),
+            // Returns the address of the sequencer that generated the current block.
             "get_sequencer_address".to_string(),
+            // Gets the timestamp of the block in which the transaction is executed.
             "get_block_timestamp".to_string(),
         ]);
         let events = Vec::new();
@@ -188,6 +212,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(())
     }
 
+    /// Checks if constructor entry points are empty
     fn constructor_entry_points_empty(
         &self,
         contract_class: CompiledClass,
@@ -203,6 +228,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         }
     }
 
+    /// Executes a constructor entry point
     fn execute_constructor_entry_point(
         &mut self,
         contract_address: &Address,
@@ -267,16 +293,18 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
 }
 
 impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S, C> {
+    /// Emits an event with a given set of keys and data.
     pub(crate) fn emit_event(
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<(), SyscallHandlerError> {
+        // Read and validate the syscall request for emitting an event.
         let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
             Ok(DeprecatedSyscallRequest::EmitEvent(emit_event_struct)) => emit_event_struct,
             _ => return Err(SyscallHandlerError::InvalidSyscallReadRequest),
         };
-
+        // Extract keys and data.
         let keys_len = request.keys_len;
         let data_len = request.data_len;
         let order = self.tx_execution_context.n_emitted_events;
@@ -289,6 +317,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(())
     }
 
+    /// Allocate a segment in memory.
     pub(crate) fn allocate_segment(
         &mut self,
         vm: &mut VirtualMachine,
@@ -303,6 +332,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(segment_start)
     }
 
+    /// Deploys a new instance of a previously declared class.
     pub(crate) fn syscall_deploy(
         &mut self,
         vm: &VirtualMachine,
@@ -368,6 +398,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(deploy_contract_address)
     }
 
+    /// Call a contract.
     pub(crate) fn syscall_call_contract(
         &mut self,
         syscall_name: &str,
@@ -491,10 +522,12 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(retdata)
     }
 
+    /// Returns the block information associated with the current context.
     pub(crate) const fn get_block_info(&self) -> &BlockInfo {
         &self.block_context.block_info
     }
 
+    /// Returns the address of the calling contract, or 0 if the call was not initiated by another contract.
     pub(crate) fn syscall_get_caller_address(
         &mut self,
         vm: &VirtualMachine,
@@ -513,6 +546,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(self.caller_address.clone())
     }
 
+    /// Handles the delegation of an L1 handler call.
     pub(crate) fn delegate_l1_handler(
         &mut self,
         vm: &mut VirtualMachine,
@@ -530,6 +564,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         )
     }
 
+    /// Gets the address of the contract who raised the system call.
     pub(crate) fn syscall_get_contract_address(
         &mut self,
         vm: &VirtualMachine,
@@ -548,6 +583,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(self.contract_address.clone())
     }
 
+    /// Sends a message to L1.
     pub(crate) fn send_message_to_l1(
         &mut self,
         vm: &VirtualMachine,
@@ -577,6 +613,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(())
     }
 
+    /// Get the pointer to transaction information.
     pub(crate) fn syscall_get_tx_info_ptr(
         &mut self,
         vm: &mut VirtualMachine,
@@ -603,6 +640,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(tx_info_ptr_temp)
     }
 
+    /// Performs a storage read operation.
     pub(crate) fn storage_read(
         &mut self,
         vm: &mut VirtualMachine,
@@ -625,6 +663,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Performs a storage write operation.
     pub(crate) fn storage_write(
         &mut self,
         vm: &VirtualMachine,
@@ -646,6 +685,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(())
     }
 
+    /// Deploys a contract to the virtual machine.
     pub(crate) fn deploy(
         &mut self,
         vm: &mut VirtualMachine,
@@ -674,7 +714,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(())
     }
 
-    // Executes the contract call and fills the DeprecatedCallContractResponse struct.
+    /// Executes the contract call and fills the [DeprecatedCallContractResponse] struct.
     pub(crate) fn call_contract_and_write_response(
         &mut self,
         syscall_name: &str,
@@ -705,7 +745,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
 
         self.write_syscall_response(&response, vm, syscall_ptr)
     }
-
+    /// Writes the response of a syscall to the virtual machine.
     pub(crate) fn write_syscall_response<R: DeprecatedWriteSyscallResponse>(
         &self,
         response: &R,
@@ -715,6 +755,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Get the block number
     pub(crate) fn get_block_number(
         &mut self,
         vm: &mut VirtualMachine,
@@ -725,6 +766,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             .write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Gets information about the original transaction
     pub(crate) fn get_tx_info(
         &mut self,
         vm: &mut VirtualMachine,
@@ -742,6 +784,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Get the transaction signature.
     pub(crate) fn get_tx_signature(
         &mut self,
         vm: &mut VirtualMachine,
@@ -765,6 +808,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Gets the timestamp of the block in which the transaction is executed.
     pub(crate) fn get_block_timestamp(
         &mut self,
         vm: &mut VirtualMachine,
@@ -787,6 +831,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Get the caller address.
     pub(crate) fn get_caller_address(
         &mut self,
         vm: &mut VirtualMachine,
@@ -797,6 +842,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Get the contract address
     pub(crate) fn get_contract_address(
         &mut self,
         vm: &mut VirtualMachine,
@@ -807,6 +853,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Returns the address of the sequencer that generated the current block.
     pub(crate) fn get_sequencer_address(
         &mut self,
         vm: &mut VirtualMachine,
@@ -829,6 +876,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         response.write_syscall_response(vm, syscall_ptr)
     }
 
+    /// Calls the requested function in any previously declared class.
     pub(crate) fn library_call(
         &mut self,
         vm: &mut VirtualMachine,
@@ -846,6 +894,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         )
     }
 
+    /// Calls the requested function specific to an L1 handler
     pub(crate) fn library_call_l1_handler(
         &mut self,
         vm: &mut VirtualMachine,
@@ -863,6 +912,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         )
     }
 
+    /// Executes a contract call
     pub(crate) fn call_contract(
         &mut self,
         vm: &mut VirtualMachine,
@@ -880,6 +930,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         )
     }
 
+    /// Executes a delegate call
     pub(crate) fn delegate_call(
         &mut self,
         vm: &mut VirtualMachine,
@@ -897,6 +948,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         )
     }
 
+    /// Reads a value from the storage state using the specified address.
     pub(crate) fn syscall_storage_read(
         &mut self,
         address: Address,
@@ -904,6 +956,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(self.starknet_storage_state.read(address)?)
     }
 
+    /// Writes a value to the storage state using the specified address.
     pub(crate) fn syscall_storage_write(
         &mut self,
         address: Address,
@@ -915,6 +968,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(())
     }
 
+    /// Reads and validates a syscall request, and updates the expected syscall pointer offset.
     pub(crate) fn read_and_validate_syscall_request(
         &mut self,
         syscall_name: &str,
@@ -928,6 +982,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         Ok(syscall_request)
     }
 
+    /// Reads and validates syscall requests. Matches syscall names to their corresponding requests.
     pub(crate) fn read_syscall_request(
         &self,
         syscall_name: &str,
@@ -966,6 +1021,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         }
     }
 
+    /// Replaces class at the specified address with a new one based on the request.
     pub(crate) fn replace_class(
         &mut self,
         vm: &VirtualMachine,
@@ -987,7 +1043,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
 
         Ok(())
     }
-
+    /// Performs validation after the Virtual Machine run. Validates that the stopping pointer is as expected,
+    /// and validates that the read only segments have not been altered.
     pub(crate) fn post_run(
         &self,
         runner: &mut VirtualMachine,
@@ -1004,6 +1061,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
     }
 }
 
+/// Test module for the syscalls.
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -1034,6 +1092,7 @@ mod tests {
     type DeprecatedBLSyscallHandler<'a> =
         super::DeprecatedBLSyscallHandler<'a, InMemoryStateReader, PermanentContractClassCache>;
 
+    /// Tests that the hint application doesn't allow inconsistency in memory.
     #[test]
     fn run_alloc_hint_ap_is_not_empty() {
         let hint_code = "memory[ap] = segments.add()";
@@ -1051,6 +1110,7 @@ mod tests {
         );
     }
 
+    /// Tests error handling when trying to deploy from address zero.
     #[test]
     fn deploy_from_zero_error() {
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -1082,6 +1142,7 @@ mod tests {
         )
     }
 
+    /// Tests if a segment can be allocated successfully.
     #[test]
     fn can_allocate_segment() {
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -1098,6 +1159,7 @@ mod tests {
         assert_eq!(expected_value, 7.into());
     }
 
+    /// Tests if the block number can be retrieved successfully.
     #[test]
     fn test_get_block_number() {
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -1118,6 +1180,7 @@ mod tests {
         );
     }
 
+    /// Tests if the contract address can be retrieved successfully.
     #[test]
     fn test_get_contract_address_ok() {
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -1135,6 +1198,7 @@ mod tests {
         )
     }
 
+    /// Tests if the empty storage read returns zero.
     #[test]
     fn test_storage_read_empty() {
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();

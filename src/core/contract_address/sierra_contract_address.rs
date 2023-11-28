@@ -68,10 +68,11 @@ pub fn compute_sierra_class_hash(
         .ok_or(ContractAddressError::MissingAbi)?
         .json();
 
-    let abi_hash = FieldElement::from_byte_slice_be(&starknet_keccak(abi.as_bytes()).to_bytes_be())
-        .map_err(|_err| {
-            ContractAddressError::Cast("&[u8]".to_string(), "FieldElement".to_string())
-        })?;
+    let abi_hash =
+        FieldElement::from_byte_slice_be(&starknet_keccak(trimmed_abi.as_bytes()).to_bytes_be())
+            .map_err(|_err| {
+                ContractAddressError::Cast("&[u8]".to_string(), "FieldElement".to_string())
+            })?;
 
     hasher.update(abi_hash);
 

@@ -17,15 +17,15 @@ members = [
     "fuzzer",
     "rpc_state_reader",
     "replay",
-    "examples/contract_execution"
+    "examples/contract_execution",
 ]
 
 [workspace.dependencies]
-cairo-lang-casm = "2.2.0"
-cairo-lang-runner = "2.2.0"
-cairo-lang-sierra = "2.2.0"
-cairo-lang-starknet = "2.2.0"
-cairo-lang-utils = "2.2.0"
+cairo-lang-casm = "2.3.1"
+cairo-lang-runner = "2.3.1"
+cairo-lang-sierra = "2.3.1"
+cairo-lang-starknet = "2.3.1"
+cairo-lang-utils = "2.3.1"
 cairo-vm = { version = "0.8.5", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
 starknet = "0.5.0"
