@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cairo_vm::Felt252;
+use cairo_vm::{utils::biguint_to_felt, Felt252};
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -24,7 +24,7 @@ fn account_panic() {
     let account_class_hash = ClassHash(
         compute_casm_class_hash(&account_contract_class)
             .unwrap()
-            .to_be_bytes(),
+            .to_bytes_be(),
     );
 
     let contract_class: CasmContractClass = serde_json::from_slice(contract_data).unwrap();
@@ -85,7 +85,7 @@ fn account_panic() {
     let calldata: Vec<_> = [
         1.into(),
         contract_class_hash_felt,
-        selector_contract.into(),
+        biguint_to_felt(selector_contract).unwrap(),
         1.into(),
         2.into(),
     ]
@@ -95,7 +95,7 @@ fn account_panic() {
 
     let invoke = InvokeFunction::new(
         account_address,
-        Felt252::new(selector),
+        Felt252::from(selector),
         0,
         TRANSACTION_VERSION.clone(),
         calldata,

@@ -3,13 +3,13 @@
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    felt::{felt_str, Felt252},
+    utils::biguint_to_felt,
     vm::runners::{
         builtin_runner::{BITWISE_BUILTIN_NAME, HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
         cairo_runner::ExecutionResources,
     },
+    Felt252,
 };
-use num_traits::{Num, One, Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::{
     definitions::{
@@ -213,9 +213,9 @@ fn call_contract_syscall() {
                 call_type: Some(CallType::Call),
                 contract_address: Address(2222.into()),
                 class_hash: Some(ClassHash([2; 32])),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(Felt252::from_dec_str(
                     "546798550696557601108301130560784308389743068254417260590354407164968886745"
-                )),
+                ).unwrap()),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![21.into(), 2.into()],
                 retdata: vec![42.into()],
@@ -230,9 +230,9 @@ fn call_contract_syscall() {
                 call_type: Some(CallType::Call),
                 contract_address: Address(2222.into()),
                 class_hash: Some(ClassHash([2; 32])),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(Felt252::from_dec_str(
                     "1785358123477195475640323002883645042461033713657726545236059599395452130340"
-                )),
+                ).unwrap()),
                 entry_point_type: Some(EntryPointType::External),
                 storage_read_values: vec![10.into(), 10.into()],
                 accessed_storage_keys: [ClassHash([
@@ -252,9 +252,9 @@ fn call_contract_syscall() {
                 call_type: Some(CallType::Call),
                 contract_address: Address(2222.into()),
                 class_hash: Some(ClassHash([2; 32])),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(Felt252::from_dec_str(
                     "112922190346416634085028859628276991723232552244844834791336220661833684932"
-                )),
+                ).unwrap()),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
                 retdata: vec![2222.into()],
@@ -705,9 +705,9 @@ fn library_call_syscall() {
                 call_type: Some(CallType::Delegate),
                 contract_address: Address(1111.into()),
                 class_hash: Some(ClassHash([2; 32])),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(Felt252::from_dec_str(
                     "546798550696557601108301130560784308389743068254417260590354407164968886745"
-                )),
+                ).unwrap()),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![21.into(), 2.into()],
                 retdata: vec![42.into()],
@@ -723,9 +723,9 @@ fn library_call_syscall() {
                 call_type: Some(CallType::Delegate),
                 contract_address: Address(1111.into()),
                 class_hash: Some(ClassHash([2; 32])),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(Felt252::from_dec_str(
                     "1785358123477195475640323002883645042461033713657726545236059599395452130340"
-                )),
+                ).unwrap()),
                 entry_point_type: Some(EntryPointType::External),
                 storage_read_values: vec![10.into(), 10.into()],
                 accessed_storage_keys: [ClassHash([
@@ -746,9 +746,9 @@ fn library_call_syscall() {
                 call_type: Some(CallType::Delegate),
                 contract_address: Address(1111.into()),
                 class_hash: Some(ClassHash([2; 32])),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(Felt252::from_dec_str(
                     "112922190346416634085028859628276991723232552244844834791336220661833684932"
-                )),
+                ).unwrap()),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
                 retdata: vec![1111.into()],
@@ -794,9 +794,12 @@ fn library_call_l1_handler_syscall() {
             call_type: Some(CallType::Delegate),
             contract_address: Address(1111.into()),
             class_hash: Some(ClassHash([2; 32])),
-            entry_point_selector: Some(felt_str!(
-                "656009366490248190408749506916536936590180267800242448338092634532990158199"
-            )),
+            entry_point_selector: Some(
+                Felt252::from_dec_str(
+                    "656009366490248190408749506916536936590180267800242448338092634532990158199",
+                )
+                .unwrap(),
+            ),
             entry_point_type: Some(EntryPointType::L1Handler),
             calldata: vec![5.into()],
             accessed_storage_keys: [ClassHash([
@@ -863,8 +866,10 @@ fn send_message_to_l1_syscall() {
 
 #[test]
 fn deploy_syscall() {
-    let deploy_address =
-        felt_str!("2771739216117269195266211756239816992170608283088994568066688164855938378843");
+    let deploy_address = Felt252::from_dec_str(
+        "2771739216117269195266211756239816992170608283088994568066688164855938378843",
+    )
+    .unwrap();
 
     let deploy_class_hash = ClassHash([2u8; 32]);
     test_contract(
@@ -885,10 +890,7 @@ fn deploy_syscall() {
             None,
         )]
         .into_iter(),
-        [
-            Felt252::from_bytes_be(deploy_class_hash.to_bytes_be()),
-            0.into(),
-        ],
+        [Felt252::from_bytes_be(&deploy_class_hash.0), 0.into()],
         vec![CallInfo {
             caller_address: Address(0.into()),
             contract_address: Address(deploy_address.clone()),
@@ -909,14 +911,12 @@ fn deploy_syscall() {
 
 #[test]
 fn deploy_with_constructor_syscall() {
-    let deploy_address = Felt252::from_str_radix(
+    let deploy_address = Felt252::from_dec_str(
         "61956907203782517318335437536462535199340115817938156158070235163997828534",
-        10,
     )
     .unwrap();
-    let entry_point_selector = Felt252::from_str_radix(
+    let entry_point_selector = Felt252::from_dec_str(
         "1159040026212278395030414237414753050475174923702621880048416706425641521556",
-        10,
     )
     .unwrap();
 
@@ -942,7 +942,7 @@ fn deploy_with_constructor_syscall() {
         )]
         .into_iter(),
         [
-            Felt252::from_bytes_be(deploy_class_hash.to_bytes_be()),
+            Felt252::from_bytes_be(&deploy_class_hash.0),
             0.into(),
             550.into(),
         ],
@@ -977,17 +977,16 @@ fn deploy_with_constructor_syscall() {
 
 #[test]
 fn test_deploy_and_call_contract_syscall() {
-    let constructor_constant = Felt252::new(550);
-    let new_constant = Felt252::new(3);
+    let constructor_constant = Felt252::from(550);
+    let new_constant = Felt252::from(3);
     let constant_storage_key: ClassHash = ClassHash([
         2, 63, 76, 85, 114, 157, 43, 172, 36, 175, 107, 126, 158, 121, 114, 77, 194, 27, 162, 147,
         169, 199, 107, 53, 94, 246, 206, 221, 169, 114, 215, 255,
     ]);
     let deploy_class_hash = ClassHash([2u8; 32]);
     let deploy_address = Address(
-        Felt252::from_str_radix(
+        Felt252::from_dec_str(
             "61956907203782517318335437536462535199340115817938156158070235163997828534",
-            10,
         )
         .unwrap(),
     );
@@ -1010,7 +1009,7 @@ fn test_deploy_and_call_contract_syscall() {
         )]
         .into_iter(),
         [
-            Felt252::from_bytes_be(deploy_class_hash.to_bytes_be()),
+            Felt252::from_bytes_be(&deploy_class_hash.0),
             0.into(),
             constructor_constant.clone(),
             new_constant.clone(),
@@ -1024,9 +1023,8 @@ fn test_deploy_and_call_contract_syscall() {
                 code_address: None,
                 class_hash: Some(deploy_class_hash),
                 entry_point_selector: Some(
-                    Felt252::from_str_radix(
-                        "1159040026212278395030414237414753050475174923702621880048416706425641521556",
-                        10,
+                    Felt252::from_dec_str(
+                        "1159040026212278395030414237414753050475174923702621880048416706425641521556"
                     )
                     .unwrap(),
                 ),
@@ -1049,15 +1047,14 @@ fn test_deploy_and_call_contract_syscall() {
                 code_address: None,
                 class_hash: Some(deploy_class_hash),
                 entry_point_selector: Some(
-                    Felt252::from_str_radix(
-                        "1576037374104670872807053137865113122553607263175471701007015754752102201893",
-                        10,
+                    Felt252::from_dec_str(
+                        "1576037374104670872807053137865113122553607263175471701007015754752102201893"
                     )
                     .unwrap(),
                 ),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![4.into()],
-                retdata: vec![(constructor_constant.clone() * Felt252::new(4))],
+                retdata: vec![(constructor_constant.clone() * Felt252::from(4))],
                 storage_read_values: vec![constructor_constant.clone()],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
                 execution_resources: Some(ExecutionResources {
@@ -1074,9 +1071,8 @@ fn test_deploy_and_call_contract_syscall() {
                 code_address: None,
                 class_hash: Some(deploy_class_hash),
                 entry_point_selector: Some(
-                    Felt252::from_str_radix(
-                        "1201037417712951658445715615949920673423990292207294106968654696818998525373",
-                        10,
+                    Felt252::from_dec_str(
+                        "1201037417712951658445715615949920673423990292207294106968654696818998525373"
                     )
                     .unwrap(),
                 ),
@@ -1099,9 +1095,8 @@ fn test_deploy_and_call_contract_syscall() {
                 code_address: None,
                 class_hash: Some(deploy_class_hash),
                 entry_point_selector: Some(
-                    Felt252::from_str_radix(
-                        "915547745133109687566886827729966789818200062539892992518817034473866315209",
-                        10,
+                    Felt252::from_dec_str(
+                        "915547745133109687566886827729966789818200062539892992518817034473866315209"
                     )
                     .unwrap(),
                 ),
@@ -1138,7 +1133,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     // Create the deploy test data
     let salt = Felt252::ZERO;
     let test_class_hash: ClassHash = ClassHash([2; 32]);
-    let test_felt_hash = Felt252::from_bytes_be(test_class_hash.to_bytes_be());
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.0);
     #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/cairo2/contract_a.casm");
     #[cfg(feature = "cairo_1_tests")]
@@ -1184,7 +1179,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1218,9 +1213,12 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "3454846966442443238250078711203511197245006224544295074402370433368003323361"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "3454846966442443238250078711203511197245006224544295074402370433368003323361",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -1243,7 +1241,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     // Create the deploy test data
     let salt = Felt252::ZERO;
     let test_class_hash: ClassHash = ClassHash([2; 32]);
-    let test_felt_hash = Felt252::from_bytes_be(test_class_hash.to_bytes_be());
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.0);
     #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
     #[cfg(feature = "cairo_1_tests")]
@@ -1289,7 +1287,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1325,9 +1323,12 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     //assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "2771739216117269195266211756239816992170608283088994568066688164855938378843"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "2771739216117269195266211756239816992170608283088994568066688164855938378843",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -1350,7 +1351,7 @@ fn deploy_cairo1_and_invoke() {
     // Create the deploy test data
     let salt = Felt252::ZERO;
     let test_class_hash: ClassHash = ClassHash([2; 32]);
-    let test_felt_hash = Felt252::from_bytes_be(test_class_hash.to_bytes_be());
+    let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.0);
     #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/cairo2/factorial.casm");
     #[cfg(feature = "cairo_1_tests")]
@@ -1396,7 +1397,7 @@ fn deploy_cairo1_and_invoke() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector),
+        Felt252::from(entrypoint_selector),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1430,9 +1431,12 @@ fn deploy_cairo1_and_invoke() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "2771739216117269195266211756239816992170608283088994568066688164855938378843"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "2771739216117269195266211756239816992170608283088994568066688164855938378843",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -1450,7 +1454,7 @@ fn deploy_cairo1_and_invoke() {
     let exec_entry_point = ExecutionEntryPoint::new(
         ret_address,
         calldata,
-        Felt252::new(entrypoint_selector),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1604,37 +1608,49 @@ fn run_rabbitx_withdraw() {
     let mut context = BlockContext::default();
     context.block_info_mut().block_number = 68422;
 
-    let class_hash = felt_to_hash(&felt_str!(
-        "36e5b6081df2174189fb83800d2a09132286dcd1004ad960a0c8d69364e6e9a",
-        16
-    ));
-    let contract_address = Address(felt_str!(
-        "7ea517643afd3ad5adec2ed100526d150fe1c1a47f0d5b619c6a5a0d9dc8a4f",
-        16
-    ));
-    let caller_address = Address(felt_str!(
-        "26f4ac85c1beaca58892db37febc5966bec20348d28eb26e72d488cde4d33ba",
-        16
-    ));
+    let class_hash = felt_to_hash(
+        &Felt252::from_hex("0x36e5b6081df2174189fb83800d2a09132286dcd1004ad960a0c8d69364e6e9a")
+            .unwrap(),
+    );
+    let contract_address = Address(
+        Felt252::from_hex("0x7ea517643afd3ad5adec2ed100526d150fe1c1a47f0d5b619c6a5a0d9dc8a4f")
+            .unwrap(),
+    );
+    let caller_address = Address(
+        Felt252::from_hex("0x26f4ac85c1beaca58892db37febc5966bec20348d28eb26e72d488cde4d33ba")
+            .unwrap(),
+    );
 
     let path = PathBuf::from("starknet_programs/rabbit.json");
 
     let accessed_storage_keys = vec![
-        felt_to_hash(&felt_str!(
-            "1367069095827447039827047088548470265876654509711952295293583258706132856906"
-        )),
-        felt_to_hash(&felt_str!(
-            "572599358474361038141822261566078459352953201359689399281613308865211969583"
-        )),
-        felt_to_hash(&felt_str!(
-            "2833325496484508462806667236775853252972934682733721179164324551977103892769"
-        )),
+        felt_to_hash(
+            &Felt252::from_dec_str(
+                "1367069095827447039827047088548470265876654509711952295293583258706132856906",
+            )
+            .unwrap(),
+        ),
+        felt_to_hash(
+            &Felt252::from_dec_str(
+                "572599358474361038141822261566078459352953201359689399281613308865211969583",
+            )
+            .unwrap(),
+        ),
+        felt_to_hash(
+            &Felt252::from_dec_str(
+                "2833325496484508462806667236775853252972934682733721179164324551977103892769",
+            )
+            .unwrap(),
+        ),
     ];
 
     let storage_read_values = vec![
-        felt_str!("1101261852276144652095602730572450377483057153780879930360596579262965560250"),
+        Felt252::from_dec_str(
+            "1101261852276144652095602730572450377483057153780879930360596579262965560250",
+        )
+        .unwrap(),
         0.into(),
-        felt_str!("1fffffffffffffffffffffffffffffffffffffffffff", 16),
+        Felt252::from_hex("0x1fffffffffffffffffffffffffffffffffffffffffff").unwrap(),
     ];
 
     let storage = accessed_storage_keys
@@ -1673,7 +1689,7 @@ fn run_rabbitx_withdraw() {
             keys: vec![
                 8604536554778681719_u64.into(),
                 116775460801_u64.into(),
-                felt_str!("757168075437291671918614932549934236750872458288"),
+                Felt252::from_dec_str("757168075437291671918614932549934236750872458288").unwrap(),
             ],
             data: vec![42510000.into(), 1.into()],
         }],
@@ -1684,7 +1700,7 @@ fn run_rabbitx_withdraw() {
         [
             1.into(),
             0x1b305c1fc1_u128.into(),
-            felt_str!("84a0973c3fb15ae69447e70f1134968855d23430", 16),
+            Felt252::from_hex("0x84a0973c3fb15ae69447e70f1134968855d23430").unwrap(),
             0x288a6b0_u128.into(),
         ],
         vec![],

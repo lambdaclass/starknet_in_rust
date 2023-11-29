@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::{felt_str, Felt252};
-use num_traits::{One, Zero};
+use cairo_vm::Felt252;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
@@ -57,8 +56,10 @@ fn delegate_l1_handler() {
     let contract_class = ContractClass::from_path(path).unwrap();
 
     // External entry point, delegate_call function delegate.cairo:L13
-    let test_delegate_l1_handler_selector =
-        felt_str!("517623934924705024901038305335656287487647971342355715053765242809192309107");
+    let test_delegate_l1_handler_selector = Felt252::from_dec_str(
+        "517623934924705024901038305335656287487647971342355715053765242809192309107",
+    )
+    .unwrap();
 
     //  ------------ contract data --------------------
 

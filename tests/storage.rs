@@ -1,5 +1,5 @@
-use cairo_vm::Felt252;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::utils::ClassHash;
@@ -48,9 +48,9 @@ fn integration_storage_test() {
 
     let address = Address(1111.into());
     let class_hash = ClassHash([1; 32]);
-    let nonce = Felt252::new(88);
+    let nonce = Felt252::from(88);
     let storage_entry = (address.clone(), [90; 32]);
-    let storage_value = Felt252::new(10902);
+    let storage_value = Felt252::from(10902);
 
     contract_class_cache.set_contract_class(
         class_hash,
@@ -155,6 +155,6 @@ fn integration_storage_test() {
             .storage_writes()
             .get(&(address, expected_key.0))
             .cloned(),
-        Some(Felt252::new(42))
+        Some(Felt252::from(42))
     );
 }

@@ -1,7 +1,8 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    felt::{felt_str, Felt252},
+    utils::{biguint_to_felt, felt_to_biguint},
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
+    Felt252,
 };
 use num_bigint::BigUint;
 use num_traits::{Num, One, Zero};
@@ -41,7 +42,7 @@ fn create_execute_extrypoint(
     ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(selector.clone()),
+        biguint_to_felt(&selector).unwrap(),
         Address(0000.into()),
         entry_point_type,
         Some(CallType::Delegate),
@@ -257,18 +258,14 @@ fn library_call() {
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
-    let calldata = [
-        25.into(),
-        Felt252::from_bytes_be(lib_class_hash.to_bytes_be()),
-    ]
-    .to_vec();
+    let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash.0)].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -310,7 +307,7 @@ fn library_call() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(Felt252::new(entrypoint_selector)),
+        entry_point_selector: Some(biguint_to_felt(&entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
@@ -321,9 +318,8 @@ fn library_call() {
             call_type: Some(CallType::Delegate),
             contract_address: Address(1111.into()),
             entry_point_selector: Some(
-                Felt252::from_str_radix(
+                Felt252::from_dec_str(
                     "544923964202674311881044083303061611121949089655923191939299897061511784662",
-                    10,
                 )
                 .unwrap(),
             ),
@@ -455,7 +451,7 @@ fn call_contract_storage_write_read() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            Felt252::new(selector.clone()),
+            biguint_to_felt(&selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -606,7 +602,7 @@ fn emit_event() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -643,27 +639,24 @@ fn emit_event() {
         vec![
             OrderedEvent {
                 order: 0,
-                keys: vec![Felt252::from_str_radix(
-                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                    10
+                keys: vec![Felt252::from_dec_str(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                 )
                 .unwrap()],
                 data: vec![1.into()]
             },
             OrderedEvent {
                 order: 1,
-                keys: vec![Felt252::from_str_radix(
-                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                    10
+                keys: vec![Felt252::from_dec_str(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                 )
                 .unwrap()],
                 data: vec![2.into()]
             },
             OrderedEvent {
                 order: 2,
-                keys: vec![Felt252::from_str_radix(
-                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                    10
+                keys: vec![Felt252::from_dec_str(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                 )
                 .unwrap()],
                 data: vec![3.into()]
@@ -730,7 +723,7 @@ fn deploy_cairo1_from_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -764,9 +757,12 @@ fn deploy_cairo1_from_cairo1() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "619464431559909356793718633071398796109800070568878623926447195121629120356"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "619464431559909356793718633071398796109800070568878623926447195121629120356",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -834,7 +830,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -868,9 +864,12 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "3326516449409112130211257005742850249535379011750934837578774621442000311202"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "3326516449409112130211257005742850249535379011750934837578774621442000311202",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -937,7 +936,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -971,9 +970,12 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "2981367321579044137695643605491580626686793431687828656373743652416610344312"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "2981367321579044137695643605491580626686793431687828656373743652416610344312",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -1042,7 +1044,7 @@ fn deploy_cairo0_and_invoke() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1076,9 +1078,12 @@ fn deploy_cairo0_and_invoke() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "3326516449409112130211257005742850249535379011750934837578774621442000311202"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "3326516449409112130211257005742850249535379011750934837578774621442000311202",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -1092,8 +1097,10 @@ fn deploy_cairo0_and_invoke() {
     // invoke factorial
 
     let calldata = [3.into()].to_vec();
-    let selector =
-        felt_str!("1554360238305724106620514039016755337737024783182305317707426109255385571750");
+    let selector = Felt252::from_dec_str(
+        "1554360238305724106620514039016755337737024783182305317707426109255385571750",
+    )
+    .unwrap();
 
     let exec_entry_point = ExecutionEntryPoint::new(
         ret_address,
@@ -1221,7 +1228,7 @@ fn test_send_message_to_l1_syscall() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(external_entrypoint_selector.into()),
+        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
         execution_resources: Some(expected_execution_resources),
@@ -1328,7 +1335,7 @@ fn test_get_execution_info() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(external_entrypoint_selector.into()),
+        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: Some(expected_execution_resources),
@@ -1396,7 +1403,7 @@ fn replace_class_internal() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        Felt252::new(upgrade_selector.clone()),
+        biguint_to_felt(&upgrade_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1542,7 +1549,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        Felt252::new(get_number_entrypoint_selector.clone()),
+        biguint_to_felt(&get_number_entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1571,7 +1578,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        Felt252::new(upgrade_entrypoint_selector.clone()),
+        biguint_to_felt(&upgrade_entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1599,7 +1606,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_number_entrypoint_selector.clone()),
+        biguint_to_felt(&get_number_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1724,7 +1731,7 @@ fn replace_class_contract_call_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        biguint_to_felt(&get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1849,7 +1856,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        biguint_to_felt(&get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1972,7 +1979,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        biguint_to_felt(&get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2091,7 +2098,7 @@ fn call_contract_replace_class_cairo_0() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        biguint_to_felt(&get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2157,7 +2164,7 @@ fn test_out_of_gas_failure() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2192,7 +2199,7 @@ fn test_out_of_gas_failure() {
     let call_info = call_info.call_info.unwrap();
     assert_eq!(
         call_info.retdata,
-        vec![Felt252::from_bytes_be("Out of gas".as_bytes())]
+        vec![Felt252::from_bytes_be_slice("Out of gas".as_bytes())]
     );
     assert!(call_info.failure_flag)
 }
@@ -2236,7 +2243,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2269,7 +2276,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         )
         .unwrap();
     assert_eq!(
-        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "CLASS_HASH_NOT_FOUND"
@@ -2327,7 +2334,7 @@ fn deploy_syscall_failure_in_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2362,7 +2369,7 @@ fn deploy_syscall_failure_in_constructor() {
     // Check that we get the error from the constructor
     // assert( 1 == 0 , 'Oops');
     assert_eq!(
-        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "Oops"
@@ -2514,7 +2521,7 @@ fn storage_read_unavailable_address_domain() {
 
     assert_eq!(
         call_info.call_info.unwrap().retdata[0],
-        Felt252::from_bytes_be(b"Unsupported address domain")
+        Felt252::from_bytes_be_slice(b"Unsupported address domain")
     );
 }
 
@@ -2591,7 +2598,7 @@ fn storage_write_unavailable_address_domain() {
 
     assert_eq!(
         call_info.call_info.unwrap().retdata[0],
-        Felt252::from_bytes_be(b"Unsupported address domain")
+        Felt252::from_bytes_be_slice(b"Unsupported address domain")
     );
 }
 
@@ -2657,7 +2664,7 @@ fn library_call_failure() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2699,7 +2706,7 @@ fn library_call_failure() {
     let call_info = call_info.call_info.unwrap();
 
     assert_eq!(
-        std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "Unimplemented"
@@ -2772,7 +2779,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        entrypoint_selector.clone().into(),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2895,7 +2902,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        entrypoint_selector.clone().into(),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3209,8 +3216,8 @@ fn library_call_recursive_50_calls() {
 
     // Create an execution entry point
     let calldata = [
-        felt_str!("1125899906842624"),
-        Felt252::from_bytes_be(lib_class_hash.to_bytes_be()),
+        Felt252::from_dec_str("1125899906842624").unwrap(),
+        Felt252::from_bytes_be(&lib_class_hash.0),
         Felt252::from(50),
     ]
     .to_vec();
@@ -3220,7 +3227,7 @@ fn library_call_recursive_50_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(&entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3272,15 +3279,14 @@ fn library_call_recursive_50_calls() {
             call_type: Some(CallType::Delegate),
             contract_address: Address(1111.into()),
             entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "544923964202674311881044083303061611121949089655923191939299897061511784662",
-                    10,
+                Felt252::from_dec_str(
+                    "544923964202674311881044083303061611121949089655923191939299897061511784662"
                 )
                 .unwrap(),
             ),
             entry_point_type: Some(EntryPointType::External),
-            calldata: vec![felt_str!("1125899906842624")],
-            retdata: [felt_str!("33554432")].to_vec(),
+            calldata: vec![Felt252::from_dec_str("1125899906842624").unwrap()],
+            retdata: [Felt252::from_dec_str("33554432").unwrap()].to_vec(),
             execution_resources: Some(expected_execution_resources_internal_call),
             class_hash: Some(lib_class_hash),
             gas_consumed: 0,
@@ -3381,7 +3387,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            Felt252::new(selector.clone()),
+            biguint_to_felt(&selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -3588,7 +3594,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            Felt252::new(selector.clone()),
+            biguint_to_felt(&selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),

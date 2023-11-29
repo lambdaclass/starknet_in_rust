@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
-use num_traits::Zero;
+use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;

@@ -1,11 +1,11 @@
 use crate::complex_contracts::utils::*;
 use assert_matches::assert_matches;
 use cairo_vm::{
-    felt::Felt252,
     vm::runners::{
         builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
         cairo_runner::ExecutionResources,
     },
+    Felt252,
 };
 use num_traits::Zero;
 use starknet_crypto::FieldElement;
@@ -37,7 +37,7 @@ fn erc721_constructor_test() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be(b"some-nft");
+    let collection_name = Felt252::from_bytes_be_slice(b"some-nft");
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = vec![collection_name, collection_symbol, to];
@@ -83,7 +83,7 @@ fn erc721_balance_of_test() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -173,7 +173,7 @@ fn erc721_test_owner_of() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -255,7 +255,7 @@ fn erc721_test_get_approved() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -354,7 +354,7 @@ fn erc721_test_is_approved_for_all() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -456,7 +456,7 @@ fn erc721_test_approve() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -560,7 +560,7 @@ fn erc721_set_approval_for_all() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -658,7 +658,7 @@ fn erc721_transfer_from_test() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -804,7 +804,7 @@ fn erc721_transfer_from_and_get_owner_test() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -895,7 +895,7 @@ fn erc721_safe_transfer_from_should_fail_test() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -962,7 +962,7 @@ fn erc721_calling_constructor_twice_should_fail_test() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -1011,7 +1011,7 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(0);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -1038,7 +1038,7 @@ fn erc721_transfer_fail_to_zero_address() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -1092,7 +1092,7 @@ fn erc721_transfer_fail_not_owner() {
         Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();

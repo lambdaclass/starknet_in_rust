@@ -162,7 +162,7 @@ fn call_contract_with_extra_arguments() {
 #[test]
 fn call_contract_not_deployed() {
     let contract_address = Address(2222.into());
-    let wrong_address = contract_address.0.clone() - Felt252::new(2); // another address
+    let wrong_address = contract_address.0.clone() - Felt252::from(2); // another address
     let error_msg = format!(
         "Contract address {:?} is not deployed",
         felt_to_hash(&wrong_address)
@@ -214,10 +214,7 @@ fn deploy_not_declared_class_hash() {
         BlockContext::default(),
         None,
         [].into_iter(),
-        [
-            Felt252::from_bytes_be(not_declared_class_hash.to_bytes_be()),
-            0.into(),
-        ],
+        [Felt252::from_bytes_be(&not_declared_class_hash.0), 0.into()],
         &StateError::NoneCompiledHash(not_declared_class_hash).to_string(),
     );
 }

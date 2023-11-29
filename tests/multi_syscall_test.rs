@@ -164,7 +164,7 @@ fn test_multiple_syscall() {
         );
         assert_eq!(
             call_info.retdata,
-            vec![Felt252::from_str_radix("310939249775", 10).unwrap()]
+            vec![Felt252::from_dec_str("310939249775").unwrap()]
         )
     }
 
@@ -184,27 +184,24 @@ fn test_multiple_syscall() {
             vec![
                 OrderedEvent {
                     order: 0,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![1.into()]
                 },
                 OrderedEvent {
                     order: 1,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![2.into()]
                 },
                 OrderedEvent {
                     order: 2,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![3.into()]
@@ -228,7 +225,7 @@ fn test_syscall(
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
