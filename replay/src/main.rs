@@ -1,25 +1,32 @@
-use std::{collections::HashMap, sync::Arc};
-
 use clap::{Parser, Subcommand};
 use rpc_state_reader::{
-    execute_tx_configurable, execute_tx_configurable_with_state, get_transaction_hashes,
-    rpc_state::{RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt},
+    execute_tx_configurable, get_transaction_hashes,
+    rpc_state::{RpcChain, RpcTransactionReceipt},
+};
+#[cfg(feature = "benchmark")]
+use rpc_state_reader::{
+    execute_tx_configurable_with_state,
+    rpc_state::{RpcBlockInfo, RpcState},
     RpcStateReader,
 };
-use starknet_api::hash::StarkFelt;
+use starknet_api::block::BlockNumber;
+#[cfg(feature = "benchmark")]
 use starknet_api::{
-    block::BlockNumber,
+    hash::StarkFelt,
     stark_felt,
     transaction::{Transaction, TransactionHash},
 };
+use starknet_in_rust::execution::TransactionExecutionInfo;
+#[cfg(feature = "benchmark")]
 use starknet_in_rust::{
-    execution::TransactionExecutionInfo,
     felt::Felt252,
     state::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
     },
     utils::Address,
 };
+#[cfg(feature = "benchmark")]
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Parser)]
 #[command(about = "Replay is a tool for executing Starknet transactions.", long_about = None)]
@@ -50,6 +57,7 @@ enum ReplayExecute {
         chain: String,
         silent: Option<bool>,
     },
+    #[cfg(feature = "benchmark")]
     #[clap(
         about = "Execute all the invoke transactions in a given range of blocks.
 Runs the all transactions twice, once to fill up the caches and a second one to benchmark."
@@ -106,6 +114,7 @@ fn main() {
                 }
             }
         }
+        #[cfg(feature = "benchmark")]
         ReplayExecute::BenchBlockRange {
             block_start,
             block_end,
