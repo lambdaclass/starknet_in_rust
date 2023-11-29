@@ -16,10 +16,6 @@ pub use sir_state_reader::{
 mod tests {
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
-        class_hash,
-        core::{ClassHash, ContractAddress, PatriciaKey},
-        hash::{StarkFelt, StarkHash},
-        patricia_key, stark_felt,
         state::StorageKey,
         transaction::{Transaction as SNTransaction, TransactionHash},
     };
@@ -27,14 +23,14 @@ mod tests {
         definitions::block_context::StarknetChainId, transaction::InvokeFunction,
     };
 
-    use crate::rpc_state::*;
+    use crate::{patricia_key, rpc_state::*, stark_felt, class_hash};
 
     /// A utility macro to create a [`ContractAddress`] from a hex string / unsigned integer
     /// representation.
     /// Imported from starknet_api
     macro_rules! contract_address {
         ($s:expr) => {
-            ContractAddress(patricia_key!($s))
+            starknet_api::core::ContractAddress(patricia_key!($s))
         };
     }
 

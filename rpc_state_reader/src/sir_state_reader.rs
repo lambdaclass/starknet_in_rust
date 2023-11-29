@@ -4,7 +4,7 @@ use cairo_vm::felt::{felt_str, Felt252};
 use starknet_api::{
     block::BlockNumber,
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
-    hash::{StarkFelt, StarkHash},
+    hash::StarkHash,
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash, TransactionVersion},
 };
@@ -35,6 +35,7 @@ use crate::{
         BlockValue, RpcBlockInfo, RpcChain, RpcState, RpcTransactionReceipt, TransactionTrace,
     },
     rpc_state_errors::RpcStateError,
+    stark_felt,
 };
 
 #[derive(Debug)]

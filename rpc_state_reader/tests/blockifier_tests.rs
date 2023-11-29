@@ -2,7 +2,7 @@ use blockifier::{
     block_context::BlockContext,
     execution::{contract_class::ContractClass, entry_point::CallInfo},
     state::{
-        cached_state::{CachedState, GlobalContractCache},
+        cached_state::{CachedState},
         errors::StateError,
         state_api::{StateReader, StateResult},
     },
@@ -144,7 +144,7 @@ pub fn execute_tx(
 
     // Create state from RPC reader
     let global_cache = GlobalContractCache::default();
-    let mut state = CachedState::new(rpc_reader, global_cache);
+    let mut state = CachedState::new(rpc_reader);
 
     let fee_token_address =
         contract_address!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7");

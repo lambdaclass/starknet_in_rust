@@ -8,7 +8,7 @@ use cairo_lang_utils::bigint::BigUintAsHex;
 use serde::Deserialize;
 use starknet::core::types::{LegacyContractEntryPoint, LegacyEntryPointsByType};
 use starknet_api::{
-    core::EntryPointSelector,
+    core::{ClassHash, EntryPointSelector},
     deprecated_contract_class::{EntryPoint, EntryPointOffset, EntryPointType},
     hash::{StarkFelt, StarkHash},
     transaction::{DeclareTransaction, InvokeTransaction, Transaction},
@@ -106,3 +106,22 @@ pub fn deserialize_transaction_json(
     }
 }
 
+#[macro_export]
+macro_rules! stark_felt {
+    ($s:expr) => {
+        starknet_api::hash::StarkFelt::try_from($s).unwrap()
+    };
+}
+#[macro_export]
+macro_rules! patricia_key {
+    ($s:expr) => {
+        // PatriciaKey::try_from(StarkFelt::try_from($s).unwrap()).unwrap()
+        starknet_api::core::PatriciaKey::try_from(stark_felt!($s)).unwrap()
+    };
+}
+#[macro_export]
+macro_rules! class_hash {
+    ($s:expr) => {
+        ClassHash::try_from(stark_felt!($s)).unwrap()
+    };
+}
