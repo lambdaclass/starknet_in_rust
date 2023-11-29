@@ -1,6 +1,6 @@
 #![deny(warnings)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
-#![cfg_attr(not(feature = "cairo-native"), unsafe_code)]
+#![cfg_attr(not(feature = "cairo-native"), forbid(unsafe_code))]
 
 use crate::{
     definitions::block_context::BlockContext,
