@@ -5,7 +5,6 @@ use starknet_api::{
     block::BlockNumber,
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
     hash::{StarkFelt, StarkHash},
-    stark_felt,
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash, TransactionVersion},
 };

@@ -24,7 +24,7 @@ flate2 = "1.0.25"
 serde_with = "3.0.0"
 dotenv = "0.15.0"
 cairo-vm = { workspace = true }
-blockifier = "=0.2.0-rc0"
+blockifier = { git = "https://github.com/starkware-libs/blockifier", rev = "v0.3.0-rc1" }
 starknet_in_rust = { path = "../", version = "0.4.0" }
 
 [dev-dependencies]
