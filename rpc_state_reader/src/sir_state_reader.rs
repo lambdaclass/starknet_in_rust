@@ -120,7 +120,7 @@ pub fn execute_tx_configurable(
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     // Instantiate the RPC StateReader and the CachedState
-    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
+    let rpc_reader = RpcStateReader(RpcState::new_rpc(network, block_number.into()).unwrap());
     let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
@@ -164,9 +164,8 @@ pub fn execute_tx_configurable(
         }
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
-            let next_block_state_reader = RpcStateReader(
-                RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
-            );
+            let next_block_state_reader =
+                RpcStateReader(RpcState::new_rpc(network, (block_number.next()).into()).unwrap());
             let class_hash = tx.class_hash().0.bytes().try_into().unwrap();
             let contract_class = next_block_state_reader
                 .get_contract_class(&ClassHash(class_hash))
@@ -293,6 +292,6 @@ pub fn get_transaction_hashes(
     block_number: BlockNumber,
     network: RpcChain,
 ) -> Result<Vec<String>, RpcStateError> {
-    let rpc_state = RpcState::new_infura(network, BlockValue::Number(block_number))?;
+    let rpc_state = RpcState::new_rpc(network, BlockValue::Number(block_number))?;
     rpc_state.get_transaction_hashes()
 }
