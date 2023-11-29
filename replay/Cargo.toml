@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-benchmark = []
+benchmark = ["starknet_in_rust/replay_benchmark"]
 
 [dependencies]
 # starknet specific crates

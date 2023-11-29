@@ -404,9 +404,12 @@ impl InvokeFunction {
                 .as_str(),
             );
         } else {
+            #[cfg(not(feature = "replay_benchmark"))]
             state
                 .apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
         }
+        #[cfg(feature = "replay_benchmark")]
+        state.apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
