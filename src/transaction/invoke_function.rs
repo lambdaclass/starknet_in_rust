@@ -377,13 +377,33 @@ impl InvokeFunction {
         self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional()?;
-        let mut tx_exec_info = self.apply(
+
+        let tx_exec_info = self.apply(
             &mut transactional_state,
             block_context,
             remaining_gas,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
-        )?;
+        );
+        #[cfg(feature = "replay_benchmark")]
+        // Add initial values to cache despite tx outcome
+        {
+            state.cache_mut().storage_initial_values_mut().extend(
+                transactional_state
+                    .cache()
+                    .storage_initial_values
+                    .clone()
+                    .into_iter(),
+            );
+            state.cache_mut().class_hash_initial_values_mut().extend(
+                transactional_state
+                    .cache()
+                    .class_hash_initial_values
+                    .clone()
+                    .into_iter(),
+            );
+        }
+        let mut tx_exec_info = tx_exec_info?;
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
@@ -406,23 +426,6 @@ impl InvokeFunction {
         } else {
             state
                 .apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
-        }
-        #[cfg(feature = "replay_benchmark")]
-        {
-            state.cache_mut().storage_initial_values_mut().extend(
-                transactional_state
-                    .cache()
-                    .storage_initial_values
-                    .clone()
-                    .into_iter(),
-            );
-            state.cache_mut().class_hash_initial_values_mut().extend(
-                transactional_state
-                    .cache()
-                    .class_hash_initial_values
-                    .clone()
-                    .into_iter(),
-            );
         }
 
         let mut tx_execution_context =
