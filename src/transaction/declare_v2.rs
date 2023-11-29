@@ -465,7 +465,23 @@ impl DeclareV2 {
         let compiled_contract_class = ClassHash::from(self.compiled_class_hash.clone());
         state.set_contract_class(
             &compiled_contract_class,
-            &CompiledClass::Casm(Arc::new(casm_class)),
+            &CompiledClass::Casm {
+                casm: Arc::new(casm_class),
+                sierra: self
+                    .sierra_contract_class
+                    .as_ref()
+                    .map(|contract_class| {
+                        Result::<_, TransactionError>::Ok(Arc::new((
+                            contract_class.extract_sierra_program().map_err(|e| {
+                                TransactionError::CustomError(format!(
+                                    "Sierra program extraction failed: {e}"
+                                ))
+                            })?,
+                            contract_class.entry_points_by_type.clone(),
+                        )))
+                    })
+                    .transpose()?,
+            },
         )?;
 
         Ok(())
@@ -518,7 +534,13 @@ impl DeclareV2 {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
-        if let CompiledClass::Sierra(_) = contract_class {
+        if matches!(
+            contract_class,
+            CompiledClass::Casm {
+                sierra: Some(_),
+                ..
+            }
+        ) {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
             if !execution_result
@@ -652,7 +674,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -722,7 +744,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -794,7 +816,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -864,7 +886,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 

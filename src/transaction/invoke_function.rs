@@ -180,8 +180,9 @@ impl InvokeFunction {
     pub(crate) fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
+        remaining_gas: u128,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
@@ -201,7 +202,7 @@ impl InvokeFunction {
             EntryPointType::External,
             None,
             None,
-            0,
+            remaining_gas,
         );
 
         let ExecutionResult { call_info, .. } = call.execute(
@@ -220,12 +221,18 @@ impl InvokeFunction {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
-        if let CompiledClass::Sierra(_) = contract_class {
+        if matches!(
+            contract_class,
+            CompiledClass::Casm {
+                sierra: Some(_),
+                ..
+            }
+        ) {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
             if !call_info
                 .as_ref()
-                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .map(|ci| ci.retdata == [VALIDATE_RETDATA.clone()])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
@@ -293,8 +300,9 @@ impl InvokeFunction {
         } else {
             self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
+                remaining_gas,
                 #[cfg(feature = "cairo-native")]
                 program_cache.clone(),
             )?
@@ -323,7 +331,7 @@ impl InvokeFunction {
         )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &vec![call_info.clone(), validate_info.clone()],
+            &[call_info.clone(), validate_info.clone()],
             self.tx_type,
             changes,
             None,
@@ -1530,8 +1538,13 @@ mod tests {
 
         let casm_contract_class_cache = PermanentContractClassCache::default();
 
-        casm_contract_class_cache
-            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        casm_contract_class_cache.set_contract_class(
+            class_hash,
+            CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        );
 
         let mut state =
             CachedState::new(Arc::new(state_reader), Arc::new(casm_contract_class_cache));

@@ -896,7 +896,10 @@ fn deploy_fib_syscall() -> Deploy {
     let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let casm_class = CasmContractClass::from_contract_class(sierra_contract_class, true).unwrap();
-    let contract_class = CompiledClass::Casm(Arc::new(casm_class));
+    let contract_class = CompiledClass::Casm {
+        casm: Arc::new(casm_class),
+        sierra: None,
+    };
 
     let contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -2468,7 +2471,13 @@ fn test_library_call_with_declare_v2() {
         .insert(address.clone(), nonce);
 
     state
-        .set_contract_class(&class_hash, &CompiledClass::Casm(Arc::new(contract_class)))
+        .set_contract_class(
+            &class_hash,
+            &CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        )
         .unwrap();
 
     let create_execute_extrypoint = |selector: &BigUint,

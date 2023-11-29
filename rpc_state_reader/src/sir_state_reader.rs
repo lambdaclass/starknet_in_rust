@@ -196,7 +196,7 @@ pub fn execute_tx_configurable(
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             } else {
                 let contract_class = match contract_class {
-                    CompiledClass::Casm(cc) => cc.as_ref().clone(),
+                    CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
                     _ => unreachable!(),
                 };
 

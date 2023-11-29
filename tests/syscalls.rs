@@ -1155,7 +1155,10 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     // simulate contract declare
     contract_class_cache.set_contract_class(
         test_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(test_contract_class.clone()),
+            sierra: None,
+        },
     );
     contract_class_cache.set_contract_class(
         class_hash,
@@ -1224,9 +1227,8 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => class.as_ref().clone(),
+        CompiledClass::Casm { casm: class, .. } => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1260,7 +1262,10 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     // simulate contract declare
     contract_class_cache.set_contract_class(
         test_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(test_contract_class.clone()),
+            sierra: None,
+        },
     );
     contract_class_cache.set_contract_class(
         class_hash,
@@ -1331,9 +1336,8 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => class.as_ref().clone(),
+        CompiledClass::Casm { casm: class, .. } => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1367,7 +1371,10 @@ fn deploy_cairo1_and_invoke() {
     // simulate contract declare
     contract_class_cache.set_contract_class(
         test_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(test_contract_class.clone()),
+            sierra: None,
+        },
     );
     contract_class_cache.set_contract_class(
         class_hash,
@@ -1436,9 +1443,8 @@ fn deploy_cairo1_and_invoke() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => class.as_ref().clone(),
+        CompiledClass::Casm { casm: class, .. } => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);

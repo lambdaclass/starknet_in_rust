@@ -139,16 +139,18 @@ impl Deploy {
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
-        match contract_class {
-            CompiledClass::Deprecated(class) => Ok(class
+        Ok(match contract_class {
+            CompiledClass::Deprecated(class) => class
                 .entry_points_by_type
                 .get(&EntryPointType::Constructor)
                 .ok_or(ContractClassError::NoneEntryPointType)?
-                .is_empty()),
-            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => todo!(),
-        }
+                .is_empty(),
+            CompiledClass::Casm { casm: class, .. } => {
+                class.entry_points_by_type.constructor.is_empty()
+            }
+        })
     }
+
     /// Deploys the contract in the starknet network and calls its constructor if it has one.
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
@@ -161,13 +163,7 @@ impl Deploy {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        match self.contract_class {
-            CompiledClass::Sierra(_) => todo!(),
-            _ => {
-                state.set_contract_class(&self.contract_hash, &self.contract_class)?;
-            }
-        }
-
+        state.set_contract_class(&self.contract_hash, &self.contract_class)?;
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
 
         if self.constructor_entry_points_empty(self.contract_class.clone())? {

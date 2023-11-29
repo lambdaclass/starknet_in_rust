@@ -972,25 +972,22 @@ mod utils {
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), {
             let cache = PermanentContractClassCache::default();
-            cache.extend([
-                (
-                    ClassHash(casm_class_hash),
-                    CompiledClass::Casm(Arc::new(casm_contract_class)),
-                ),
-                (
-                    ClassHash(sierra_class_hash),
-                    CompiledClass::Sierra(Arc::new((
+            cache.extend([(
+                ClassHash(casm_class_hash),
+                CompiledClass::Casm {
+                    casm: Arc::new(casm_contract_class),
+                    sierra: Some(Arc::new((
                         sierra_contract_class.extract_sierra_program()?,
                         sierra_contract_class.entry_points_by_type,
                     ))),
-                ),
-            ]);
+                },
+            )]);
 
             Arc::new(cache)
         });
         cached_state.set_compiled_class_hash(
-            &Felt252::from_bytes_be(&sierra_class_hash),
             &Felt252::from_bytes_be(&casm_class_hash),
+            &Felt252::from_bytes_be(&sierra_class_hash),
         )?;
 
         Ok(cached_state)

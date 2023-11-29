@@ -38,10 +38,19 @@ fn test_erc20_cairo2() {
     let nonce = Felt252::zero();
 
     contract_class_cache.extend([
-        (class_hash, CompiledClass::Casm(Arc::new(contract_class))),
+        (
+            class_hash,
+            CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        ),
         (
             erc20_class_hash,
-            CompiledClass::Casm(Arc::new(test_contract_class)),
+            CompiledClass::Casm {
+                casm: Arc::new(test_contract_class),
+                sierra: None,
+            },
         ),
     ]);
 
@@ -125,7 +134,10 @@ fn test_erc20_cairo2() {
     state
         .set_contract_class(
             &ClassHash::from(felt_str!("1")),
-            &CompiledClass::Casm(Arc::new(contract_class_account)),
+            &CompiledClass::Casm {
+                casm: Arc::new(contract_class_account),
+                sierra: None,
+            },
         )
         .unwrap();
     state
@@ -175,7 +187,10 @@ fn test_erc20_cairo2() {
     state
         .set_contract_class(
             &ClassHash::from(felt_str!("1")),
-            &CompiledClass::Casm(Arc::new(contract_class_account)),
+            &CompiledClass::Casm {
+                casm: Arc::new(contract_class_account),
+                sierra: None,
+            },
         )
         .unwrap();
     state

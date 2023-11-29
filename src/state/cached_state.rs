@@ -516,34 +516,19 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             }
         }
 
-        // if let Some(sierra_compiled_class) = self
-        //     .sierra_programs
-        //     .as_ref()
-        //     .and_then(|x| x.get(class_hash))
-        // {
-        //     return Ok(CompiledClass::Sierra(Arc::new(
-        //         sierra_compiled_class.clone(),
-        //     )));
-        // }
         // II: FETCHING FROM STATE_READER
         let contract = self.state_reader.get_contract_class(class_hash)?;
-        match contract {
-            CompiledClass::Casm(ref casm_class) => {
+        match &contract {
+            contract @ CompiledClass::Deprecated(_) => {
+                self.set_contract_class(class_hash, contract)?;
+            }
+            contract @ CompiledClass::Casm { .. } => {
                 // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
                 let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
-                self.set_contract_class(
-                    &compiled_class_hash,
-                    &CompiledClass::Casm(casm_class.clone()),
-                )?;
+                self.set_contract_class(&compiled_class_hash, contract)?;
             }
-            CompiledClass::Deprecated(ref contract) => {
-                self.set_contract_class(class_hash, &CompiledClass::Deprecated(contract.clone()))?
-            }
-            CompiledClass::Sierra(ref sierra_compiled_class) => self.set_contract_class(
-                class_hash,
-                &CompiledClass::Sierra(sierra_compiled_class.clone()),
-            )?,
         }
+
         Ok(contract)
     }
 }

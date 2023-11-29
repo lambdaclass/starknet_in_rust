@@ -1,6 +1,6 @@
 #![deny(warnings)]
-#![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+#![cfg_attr(not(feature = "cairo-native"), unsafe_code)]
 
 use crate::{
     definitions::block_context::BlockContext,
@@ -366,8 +366,13 @@ mod test {
         let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::zero();
 
-        contract_class_cache
-            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        contract_class_cache.set_contract_class(
+            class_hash,
+            CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        );
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
@@ -471,8 +476,13 @@ mod test {
         let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::zero();
 
-        contract_class_cache
-            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        contract_class_cache.set_contract_class(
+            class_hash,
+            CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        );
 
         let mut state_reader = InMemoryStateReader::default();
         state_reader
@@ -507,8 +517,9 @@ mod test {
         let call_info = simul_invoke
             .run_validate_entrypoint(
                 &mut state,
-                &mut ExecutionResourcesManager::default(),
                 &block_context,
+                &mut ExecutionResourcesManager::default(),
+                1000000,
                 #[cfg(feature = "cairo-native")]
                 None,
             )
@@ -566,7 +577,10 @@ mod test {
             .insert(fib_address, class_hash);
         state_reader.class_hash_to_compiled_class.insert(
             fib_address,
-            CompiledClass::Casm(Arc::new(casm_contract_class)),
+            CompiledClass::Casm {
+                casm: Arc::new(casm_contract_class),
+                sierra: None,
+            },
         );
 
         let calldata = [
@@ -698,7 +712,10 @@ mod test {
             .insert(fib_address, class_hash);
         state_reader.class_hash_to_compiled_class.insert(
             fib_address,
-            CompiledClass::Casm(Arc::new(casm_contract_class)),
+            CompiledClass::Casm {
+                casm: Arc::new(casm_contract_class),
+                sierra: None,
+            },
         );
 
         let calldata = [
