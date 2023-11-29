@@ -562,7 +562,7 @@ impl DeployAccount {
         Transaction::DeployAccount(tx)
     }
 
-    pub fn from_sn_api_transaction(
+    pub fn from_starknet_api_transaction(
         value: starknet_api::transaction::DeployAccountTransaction,
         chain_id: Felt252,
     ) -> Result<Self, SyscallHandlerError> {

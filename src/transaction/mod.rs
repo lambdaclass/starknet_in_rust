@@ -1,6 +1,6 @@
 use crate::{
     definitions::block_context::BlockContext,
-    definitions::constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    definitions::{constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2}, block_context::StarknetChainId},
     execution::TransactionExecutionInfo,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
@@ -26,6 +26,7 @@ pub mod l1_handler;
 
 use cairo_vm::felt::Felt252;
 use num_traits::{One, Zero};
+use starknet_api::hash::StarkFelt;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -59,6 +60,46 @@ pub enum Transaction {
 }
 
 impl Transaction {
+    /// Create a new `Transaction` from a `starknet-api Transaction`.
+    pub fn from_starknet_api(tx: starknet_api::transaction::Transaction, chain_id: StarknetChainId) -> Self {
+        match tx {
+            starknet_api::transaction::Transaction::Declare(declare_tx) => {
+                match <StarkFelt as TryInto<u64>>::try_into(declare_tx.version().0) {
+                    Ok(_version) => {
+                        // handle declare v2 and v1,v0
+                        todo!()
+                    }
+                    Err(_err) => {
+                        // TODO: handle error
+                        unimplemented!()
+                    }
+                }
+            }
+            starknet_api::transaction::Transaction::Deploy(deploy_tx) => {
+                match <StarkFelt as TryInto<u64>>::try_into(deploy_tx.version.0) {
+                    Ok(_version) => {
+                        todo!()
+                    }
+                    Err(_err) => {
+                        unimplemented!()
+                    }
+                }
+            }
+            starknet_api::transaction::Transaction::DeployAccount(tx) => {
+                let sir_tx = DeployAccount::from_starknet_api_transaction(tx, chain_id.to_felt()).unwrap();
+                Self::DeployAccount(sir_tx)
+            },
+            starknet_api::transaction::Transaction::Invoke(tx) => {
+                let sir_tx = InvokeFunction::from_starknet_api_transaction(tx, chain_id).unwrap();
+                Self::InvokeFunction(sir_tx)
+            },
+            starknet_api::transaction::Transaction::L1Handler(tx) => {
+               let sir_tx = L1Handler::from_starknet_api_transaction(tx, chain_id.to_felt(), None, None).unwrap();
+               Self::L1Handler(sir_tx)
+            }
+        }
+    }
+
     /// returns the contract address of the transaction.
     pub fn contract_address(&self) -> Address {
         match self {

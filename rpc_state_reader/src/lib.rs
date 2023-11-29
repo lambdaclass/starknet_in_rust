@@ -114,7 +114,7 @@ mod tests {
         let tx = rpc_state.get_transaction(&tx_hash).unwrap();
         match tx {
             SNTransaction::Invoke(tx) => {
-                InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet)
+                InvokeFunction::from_starknet_api_transaction(tx, StarknetChainId::MainNet)
             }
             _ => unreachable!(),
         }

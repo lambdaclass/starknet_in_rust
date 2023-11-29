@@ -154,11 +154,12 @@ pub fn execute_tx_configurable(
     // Get transaction before giving ownership of the reader
     let tx_hash = TransactionHash(stark_felt!(tx_hash));
     let tx = match rpc_reader.0.get_transaction(&tx_hash).unwrap() {
-        SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
+        // TODO: pass the tx_hash as parameter to avoid computation
+        SNTransaction::Invoke(tx) => InvokeFunction::from_starknet_api_transaction(tx, chain_id)
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
         SNTransaction::DeployAccount(tx) => {
-            DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
+            DeployAccount::from_starknet_api_transaction(tx, chain_id.to_felt())
                 .unwrap()
                 .create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
         }
@@ -223,9 +224,10 @@ pub fn execute_tx_configurable(
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             }
         }
-        SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(
+        SNTransaction::L1Handler(tx) => L1Handler::from_starknet_api_transaction(
             tx,
-            Felt252::from_bytes_be(tx_hash.0.bytes()),
+            chain_id.to_felt(),
+            Some(Felt252::from_bytes_be(tx_hash.0.bytes())),
             Some(Felt252::from(u128::MAX)),
         )
         .unwrap()

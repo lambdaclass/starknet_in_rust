@@ -224,24 +224,42 @@ impl L1Handler {
     }
 
     /// Creates a `L1Handler` from a starknet api `L1HandlerTransaction`.
-    pub fn from_sn_api_tx(
+    pub fn from_starknet_api_transaction(
         tx: starknet_api::transaction::L1HandlerTransaction,
-        tx_hash: Felt252,
+        chain_id: Felt252,
+        tx_hash: Option<Felt252>,
         paid_fee_on_l1: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
-        L1Handler::new_with_tx_hash(
-            Address(Felt252::from_bytes_be(tx.contract_address.0.key().bytes())),
-            Felt252::from_bytes_be(tx.entry_point_selector.0.bytes()),
-            tx.calldata
-                .0
-                .as_ref()
-                .iter()
-                .map(|f| Felt252::from_bytes_be(f.bytes()))
-                .collect(),
-            Felt252::from_bytes_be(tx.nonce.0.bytes()),
-            paid_fee_on_l1,
-            tx_hash,
-        )
+        if let Some(tx_hash) = tx_hash {
+            L1Handler::new_with_tx_hash(
+                Address(Felt252::from_bytes_be(tx.contract_address.0.key().bytes())),
+                Felt252::from_bytes_be(tx.entry_point_selector.0.bytes()),
+                tx.calldata
+                    .0
+                    .as_ref()
+                    .iter()
+                    .map(|f| Felt252::from_bytes_be(f.bytes()))
+                    .collect(),
+                Felt252::from_bytes_be(tx.nonce.0.bytes()),
+                paid_fee_on_l1,
+                tx_hash,
+            )
+        } else {
+            L1Handler::new(
+                Address(Felt252::from_bytes_be(tx.contract_address.0.key().bytes())),
+                Felt252::from_bytes_be(tx.entry_point_selector.0.bytes()),
+                tx.calldata
+                    .0
+                    .as_ref()
+                    .iter()
+                    .map(|f| Felt252::from_bytes_be(f.bytes()))
+                    .collect(),
+                Felt252::from_bytes_be(tx.nonce.0.bytes()),
+                chain_id,
+                paid_fee_on_l1,
+            )
+        }
+
     }
 }
 

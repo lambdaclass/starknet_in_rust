@@ -143,7 +143,7 @@ impl InvokeFunction {
     }
 
     /// Creates a `InvokeFunction` from a starknet api `InvokeTransaction`.
-    pub fn from_invoke_transaction(
+    pub fn from_starknet_api_transaction(
         tx: starknet_api::transaction::InvokeTransaction,
         chain_id: StarknetChainId,
     ) -> Result<Self, TransactionError> {
@@ -735,7 +735,7 @@ mod tests {
             ])),
         });
 
-        let tx_sir = InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet).unwrap();
+        let tx_sir = InvokeFunction::from_starknet_api_transaction(tx, StarknetChainId::MainNet).unwrap();
         assert_eq!(
             tx_sir.hash_value.to_str_radix(16),
             "5b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4"
