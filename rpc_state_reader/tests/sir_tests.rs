@@ -30,7 +30,7 @@ fn test_get_transaction_try_from() {
             let tx =
                 InvokeFunction::from_invoke_transaction(sn_tx.clone(), StarknetChainId::MainNet)
                     .unwrap();
-            assert_eq!(tx.hash_value().to_be_bytes().as_slice(), str_hash.bytes())
+            assert_eq!(tx.hash_value().to_bytes_be().as_slice(), str_hash.bytes())
         }
         _ => unimplemented!(),
     };
@@ -412,7 +412,7 @@ fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: 
         .retdata
         .unwrap()
         .into_iter()
-        .map(|sf| Felt252::from_bytes_be(sf.bytes()))
+        .map(|sf| Felt252::from_bytes_be_slice(sf.bytes()))
         .collect();
 
     assert_eq!(retdata, rpc_retdata);

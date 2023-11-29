@@ -35,16 +35,17 @@ use cairo_lang_starknet::contract_class::ContractEntryPoints;
 #[cfg(feature = "cairo-native")]
 use cairo_native::cache::ProgramCache;
 use cairo_vm::{
-    felt::Felt252,
     types::{
         program::Program,
         relocatable::{MaybeRelocatable, Relocatable},
     },
+    utils::felt_to_biguint,
     vm::{
         errors::runner_errors::RunnerError,
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources, RunResources},
         vm_core::VirtualMachine,
     },
+    Felt252,
 };
 use std::sync::Arc;
 
@@ -275,11 +276,11 @@ impl ExecutionEntryPoint {
         let entry_point = entry_points
             .iter()
             .filter(|x| {
-                if x.selector == DEFAULT_ENTRY_POINT_SELECTOR.to_biguint() {
+                if x.selector == felt_to_biguint(*DEFAULT_ENTRY_POINT_SELECTOR) {
                     default_entry_point = Some(*x);
                 }
 
-                x.selector == self.entry_point_selector.to_biguint()
+                x.selector == felt_to_biguint(self.entry_point_selector)
             })
             .try_fold(None, |acc, x| match acc {
                 None => Ok(Some(x)),

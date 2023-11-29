@@ -1,5 +1,5 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer};
-use cairo_vm::Felt252;
+use cairo_vm::{utils::felt_to_biguint, Felt252};
 use clap::{Args, Parser, Subcommand};
 use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
@@ -140,7 +140,7 @@ fn deploy_parser(
     };
     let address = calculate_contract_address(
         &args.salt.into(),
-        &Felt252::from_str_radix(&args.class_hash[2..], 16)
+        &Felt252::from_hex(&args.class_hash)
             .map_err(|_| ParserError::ParseFelt(args.class_hash.clone()))?,
         &constructor_calldata,
         Address(0.into()),
@@ -161,7 +161,7 @@ fn invoke_parser(
     args: &InvokeArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_address = Address(
-        Felt252::from_str_radix(&args.address[2..], 16)
+        Felt252::from_hex(&args.address)
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
@@ -171,7 +171,7 @@ fn invoke_parser(
         .map_err(StateError::from)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
     let transaction_hash = args.hash.clone().map(|f| {
-        Felt252::from_str_radix(&f, 16)
+        Felt252::from_hex(&f)
             .map_err(|_| ParserError::ParseFelt(f.clone()))
             .unwrap()
     });
@@ -231,7 +231,7 @@ fn call_parser(
     args: &CallArgs,
 ) -> Result<Vec<Felt252>, ParserError> {
     let contract_address = Address(
-        Felt252::from_str_radix(&args.address[2..], 16)
+        Felt252::from_hex(&args.address)
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
@@ -359,7 +359,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },
@@ -375,7 +375,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },
@@ -391,7 +391,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Invoke transaction was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Invoke transaction was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },

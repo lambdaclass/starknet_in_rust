@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use starknet_api::{
     block::BlockNumber,
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
@@ -60,7 +60,7 @@ impl StateReader for RpcStateReader {
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
         let address = ContractAddress(
             PatriciaKey::try_from(
-                StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
+                StarkHash::new(contract_address.clone().0.to_bytes_be()).unwrap(),
             )
             .unwrap(),
         );
@@ -72,25 +72,25 @@ impl StateReader for RpcStateReader {
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
         let address = ContractAddress(
             PatriciaKey::try_from(
-                StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
+                StarkHash::new(contract_address.clone().0.to_bytes_be()).unwrap(),
             )
             .unwrap(),
         );
         let nonce = self.0.get_nonce_at(&address);
-        Ok(Felt252::from_bytes_be(nonce.bytes()))
+        Ok(Felt252::from_bytes_be_slice(nonce.bytes()))
     }
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         let (contract_address, key) = storage_entry;
         let address = ContractAddress(
             PatriciaKey::try_from(
-                StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
+                StarkHash::new(contract_address.clone().0.to_bytes_be()).unwrap(),
             )
             .unwrap(),
         );
         let key = StorageKey(PatriciaKey::try_from(StarkHash::new(*key).unwrap()).unwrap());
         let value = self.0.get_storage_at(&address, &key);
-        Ok(Felt252::from_bytes_be(value.bytes()))
+        Ok(Felt252::from_bytes_be_slice(value.bytes()))
     }
 
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
@@ -112,10 +112,10 @@ pub fn execute_tx_configurable(
     ),
     TransactionError,
 > {
-    let fee_token_address = Address(felt_str!(
-        "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-        16
-    ));
+    let fee_token_address = Address(
+        Felt252::from_hex("0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
+            .unwrap(),
+    );
 
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
@@ -141,7 +141,9 @@ pub fn execute_tx_configurable(
 
         let block_number = block_number.0;
         let block_timestamp = block_timestamp.0;
-        let sequencer_address = Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
+        let sequencer_address = Address(Felt252::from_bytes_be_slice(
+            sequencer_address.0.key().bytes(),
+        ));
 
         BlockInfo {
             block_number,
@@ -181,16 +183,18 @@ pub fn execute_tx_configurable(
                 let class_hash = tx.class_hash().0.bytes().try_into().unwrap();
                 let declare = Declare::new_with_tx_and_class_hash(
                     contract_class,
-                    Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
+                    Address(Felt252::from_bytes_be_slice(
+                        tx.sender_address().0.key().bytes(),
+                    )),
                     tx.max_fee().0,
-                    Felt252::from_bytes_be(tx.version().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.version().0.bytes()),
                     tx.signature()
                         .0
                         .iter()
-                        .map(|f| Felt252::from_bytes_be(f.bytes()))
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
                         .collect(),
-                    Felt252::from_bytes_be(tx.nonce().0.bytes()),
-                    Felt252::from_bytes_be(tx_hash.0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.nonce().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
                     ClassHash(class_hash),
                 )
                 .unwrap();
@@ -205,19 +209,21 @@ pub fn execute_tx_configurable(
 
                 let declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
                     None,
-                    Felt252::from_bytes_be(tx.class_hash().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.class_hash().0.bytes()),
                     Some(contract_class),
                     compiled_class_hash,
-                    Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
+                    Address(Felt252::from_bytes_be_slice(
+                        tx.sender_address().0.key().bytes(),
+                    )),
                     tx.max_fee().0,
-                    Felt252::from_bytes_be(tx.version().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.version().0.bytes()),
                     tx.signature()
                         .0
                         .iter()
-                        .map(|f| Felt252::from_bytes_be(f.bytes()))
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
                         .collect(),
-                    Felt252::from_bytes_be(tx.nonce().0.bytes()),
-                    Felt252::from_bytes_be(tx_hash.0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.nonce().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
                 )
                 .unwrap();
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
@@ -225,7 +231,7 @@ pub fn execute_tx_configurable(
         }
         SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(
             tx,
-            Felt252::from_bytes_be(tx_hash.0.bytes()),
+            Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
             Some(Felt252::from(u128::MAX)),
         )
         .unwrap()

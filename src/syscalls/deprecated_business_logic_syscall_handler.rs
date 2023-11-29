@@ -735,7 +735,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         let retdata_maybe_reloc = retdata
             .clone()
             .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
+            .map(|item| MaybeRelocatable::from(Felt252::from(item)))
             .collect::<Vec<MaybeRelocatable>>();
 
         let response = DeprecatedCallContractResponse::new(
@@ -1073,8 +1073,8 @@ mod tests {
         syscalls::syscall_handler_errors::SyscallHandlerError,
         utils::{test_utils::*, Address},
     };
-    use cairo_vm::Felt252;
     use cairo_vm::hint_processor::hint_processor_definition::HintProcessorLogic;
+    use cairo_vm::Felt252;
     use cairo_vm::{
         hint_processor::builtin_hint_processor::builtin_hint_processor_definition::{
             BuiltinHintProcessor, HintProcessorData,
@@ -1215,7 +1215,7 @@ mod tests {
         // Initialize state reader with value
         let mut state_reader = InMemoryStateReader::default();
         state_reader.address_to_storage.insert(
-            (Address(Felt252::ONE), Felt252::ONE.to_be_bytes()),
+            (Address(Felt252::ONE), Felt252::ONE.to_bytes_be()),
             Felt252::ZERO,
         );
         // Create empty-cached state
@@ -1232,7 +1232,7 @@ mod tests {
         assert_eq!(
             state.cache().storage_initial_values,
             HashMap::from([(
-                (Address(Felt252::ONE), Felt252::ONE.to_be_bytes()),
+                (Address(Felt252::ONE), Felt252::ONE.to_bytes_be()),
                 Felt252::ZERO
             )])
         )

@@ -583,32 +583,32 @@ fn convert_invoke_v0(
     value: starknet_api::transaction::InvokeTransactionV0,
     chain_id: StarknetChainId,
 ) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be(
+    let contract_address = Address(Felt252::from_bytes_be_slice(
         value.contract_address.0.key().bytes(),
     ));
     let max_fee = value.max_fee.0;
-    let entry_point_selector = Felt252::from_bytes_be(value.entry_point_selector.0.bytes());
+    let entry_point_selector = Felt252::from_bytes_be_slice(value.entry_point_selector.0.bytes());
     let nonce = None;
 
     let signature = value
         .signature
         .0
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
     let calldata = value
         .calldata
         .0
         .as_ref()
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
 
     InvokeFunction::new(
         contract_address,
         entry_point_selector,
         max_fee,
-        Felt252::new(0),
+        Felt252::from(0),
         calldata,
         signature,
         chain_id.to_felt(),
@@ -620,30 +620,32 @@ fn convert_invoke_v1(
     value: starknet_api::transaction::InvokeTransactionV1,
     chain_id: StarknetChainId,
 ) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
+    let contract_address = Address(Felt252::from_bytes_be_slice(
+        value.sender_address.0.key().bytes(),
+    ));
     let max_fee = value.max_fee.0;
-    let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+    let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
     let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
 
     let signature = value
         .signature
         .0
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
     let calldata = value
         .calldata
         .0
         .as_ref()
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
 
     InvokeFunction::new(
         contract_address,
         entry_point_selector,
         max_fee,
-        Felt252::new(1),
+        Felt252::ONE,
         calldata,
         signature,
         chain_id.to_felt(),
@@ -737,8 +739,9 @@ mod tests {
 
         let tx_sir = InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet).unwrap();
         assert_eq!(
-            tx_sir.hash_value.to_str_radix(16),
-            "5b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4"
+            tx_sir.hash_value,
+            Felt252::from_hex("0x5b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4")
+                .unwrap()
         );
     }
 
@@ -746,9 +749,8 @@ mod tests {
     fn test_invoke_apply_without_fees() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
+            entry_point_selector: Felt252::from_hex(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -822,16 +824,15 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
     fn test_invoke_execute() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -900,7 +901,7 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
@@ -971,9 +972,8 @@ mod tests {
     fn test_apply_v0_with_no_nonce() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1047,7 +1047,7 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
@@ -1135,9 +1135,8 @@ mod tests {
 
         let internal_invoke_function = InvokeFunction {
             contract_address,
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1188,9 +1187,8 @@ mod tests {
         let max_fee = 5;
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1264,9 +1262,8 @@ mod tests {
     fn test_execute_invoke_twice_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1341,9 +1338,8 @@ mod tests {
     fn test_execute_inovoke_nonce_missing_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1404,11 +1400,8 @@ mod tests {
     #[test]
     fn invoke_version_zero_with_non_zero_nonce_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             Some(1.into()),
             0.into(),
         )
@@ -1439,11 +1432,9 @@ mod tests {
 
     #[test]
     fn preprocess_invoke_function_fields_nonce_is_none() {
-        let entry_point_selector = Felt252::from_str_radix(
-            "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-            16,
-        )
-        .unwrap();
+        let entry_point_selector =
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap();
         let result =
             preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0.into());
 
@@ -1461,11 +1452,8 @@ mod tests {
     #[test]
     fn invoke_version_one_with_no_nonce_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             None,
             1.into(),
         );
@@ -1479,11 +1467,8 @@ mod tests {
     #[test]
     fn invoke_version_one_with_no_nonce_with_query_base_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             None,
             QUERY_VERSION_1.clone(),
         );

@@ -181,7 +181,7 @@ impl Declare {
 
     /// Returns the calldata.
     pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(self.class_hash.to_bytes_be());
+        let bytes = Felt252::from_bytes_be(&self.class_hash.0);
         Vec::from([bytes])
     }
 
@@ -472,10 +472,7 @@ mod tests {
         state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::{felt_to_hash, Address},
     };
-    use cairo_vm::{
-        felt::{felt_str, Felt252},
-        vm::runners::cairo_runner::ExecutionResources,
-    };
+    use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
     use num_traits::{One, Zero};
     use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
@@ -510,7 +507,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
+            .insert(sender_address, Felt252::ONE);
 
         let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
@@ -546,9 +543,10 @@ mod tests {
         let expected_class_hash = felt_to_hash(&class_hash_felt);
 
         // Calldata is the class hash represented as a Felt252
-        let calldata = [felt_str!(
-            "151449101692423517761547521693863750221386499114738230243355039033913267347"
-        )]
+        let calldata = [Felt252::from_dec_str(
+            "151449101692423517761547521693863750221386499114738230243355039033913267347",
+        )
+        .unwrap()]
         .to_vec();
 
         let validate_info = Some(CallInfo {
@@ -909,22 +907,24 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address.clone(), Felt252::new(1));
+            .insert(sender_address.clone(), Felt252::ONE);
 
         let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
         // Insert pubkey storage var to pass validation
         let storage_entry = &(
             sender_address,
-            felt_str!(
-                "1672321442399497129215646424919402195095307045612040218489019266998007191460"
+            Felt252::from_dec_str(
+                "1672321442399497129215646424919402195095307045612040218489019266998007191460",
             )
-            .to_be_bytes(),
+            .unwrap()
+            .to_bytes_be(),
         );
         state.set_storage_at(
             storage_entry,
-            felt_str!(
-                "1735102664668487605176656616876767369909409133946409161569774794110049207117"
-            ),
+            Felt252::from_dec_str(
+                "1735102664668487605176656616876767369909409133946409161569774794110049207117",
+            )
+            .unwrap(),
         );
 
         //* ---------------------------------------
@@ -938,25 +938,26 @@ mod tests {
 
         // declare tx
         // Signature & tx hash values are hand-picked for account validations to pass
-        let mut declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::ONE),
-            60000,
-            1.into(),
-            vec![
-                felt_str!(
+        let mut declare =
+            Declare::new(
+                fib_contract_class,
+                chain_id,
+                Address(Felt252::ONE),
+                60000,
+                1.into(),
+                vec![
+                Felt252::from_dec_str(
                     "3086480810278599376317923499561306189851900463386393948998357832163236918254"
-                ),
-                felt_str!(
+                ).unwrap(),
+                Felt252::from_dec_str(
                     "598673427589502599949712887611119751108407514580626464031881322743364689811"
-                ),
+                ).unwrap(),
             ],
-            Felt252::ONE,
-        )
-        .unwrap();
+                Felt252::ONE,
+            )
+            .unwrap();
         declare.skip_fee_transfer = true;
-        declare.hash_value = felt_str!("2718");
+        declare.hash_value = Felt252::from_dec_str("2718").unwrap();
 
         let simulate_declare = declare
             .clone()

@@ -1,5 +1,5 @@
-use cairo_vm::Felt252;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_vm::Felt252;
 
 /// Abstracts every response variant body for each syscall.
 pub(crate) enum ResponseBody {

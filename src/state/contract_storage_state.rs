@@ -34,7 +34,7 @@ impl<'a, S: StateReader, C: ContractClassCache> ContractStorageState<'a, S, C> {
             .insert(ClassHash::from(address.0.clone()));
         let value = self
             .state
-            .get_storage_at(&(self.contract_address.clone(), (address).0.to_be_bytes()))?;
+            .get_storage_at(&(self.contract_address.clone(), (address).0.to_bytes_be()))?;
 
         self.read_values.push(value.clone());
         Ok(value)
@@ -44,7 +44,7 @@ impl<'a, S: StateReader, C: ContractClassCache> ContractStorageState<'a, S, C> {
         self.accessed_keys
             .insert(ClassHash::from(address.0.clone()));
         self.state.set_storage_at(
-            &(self.contract_address.clone(), (address).0.to_be_bytes()),
+            &(self.contract_address.clone(), (address).0.to_bytes_be()),
             value,
         );
     }

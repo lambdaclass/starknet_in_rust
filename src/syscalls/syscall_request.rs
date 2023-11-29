@@ -328,7 +328,7 @@ impl FromPtr for StorageReadRequest {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let reserved = get_big_int(vm, syscall_ptr)?;
-        let key = get_big_int(vm, &syscall_ptr + 1)?.to_be_bytes();
+        let key = get_big_int(vm, &syscall_ptr + 1)?.to_bytes_be();
         Ok(StorageReadRequest { key, reserved }.into())
     }
 }

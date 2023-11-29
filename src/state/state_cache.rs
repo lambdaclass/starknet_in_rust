@@ -237,7 +237,7 @@ mod tests {
                 .unwrap();
         let compiled_class_bytes = compute_deprecated_class_hash(&contract_class)
             .unwrap()
-            .to_be_bytes();
+            .to_bytes_be();
         let class_hash_to_compiled_class_hash =
             HashMap::from([(ClassHash([8; 32]), ClassHash(compiled_class_bytes))]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);

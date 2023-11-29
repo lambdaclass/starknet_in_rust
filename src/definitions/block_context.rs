@@ -47,19 +47,19 @@ impl StarknetChainId {
     ///
     /// assert_eq!(
     ///     StarknetChainId::MainNet.to_felt(),
-    ///     felt_str!("23448594291968334"),
+    ///     Felt252::from_dec_str("23448594291968334").unwrap(),
     /// );
     /// assert_eq!(
     ///    StarknetChainId::TestNet.to_felt(),
-    ///    felt_str!("1536727068981429685321"),
+    ///    Felt252::from_dec_str("1536727068981429685321").unwrap(),
     /// );
     /// assert_eq!(
     ///     StarknetChainId::TestNet2.to_felt(),
-    ///     felt_str!("393402129659245999442226"),
+    ///     Felt252::from_dec_str("393402129659245999442226").unwrap(),
     /// );
     /// ```
     pub fn to_felt(self) -> Felt252 {
-        Felt252::from_bytes_be(self.to_string().as_bytes())
+        Felt252::from_bytes_be_slice(&self.to_string().as_bytes())
     }
 }
 
@@ -184,22 +184,22 @@ impl Default for BlockContext {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::felt::felt_str;
+    use cairo_vm::Felt252;
     use coverage_helper::test;
 
     #[test]
     fn starknet_chain_to_felt() {
         assert_eq!(
             StarknetChainId::MainNet.to_felt(),
-            felt_str!("23448594291968334"),
+            Felt252::from_dec_str("23448594291968334").unwrap(),
         );
         assert_eq!(
             StarknetChainId::TestNet.to_felt(),
-            felt_str!("1536727068981429685321"),
+            Felt252::from_dec_str("1536727068981429685321").unwrap(),
         );
         assert_eq!(
             StarknetChainId::TestNet2.to_felt(),
-            felt_str!("393402129659245999442226"),
+            Felt252::from_dec_str("393402129659245999442226").unwrap(),
         );
     }
 }

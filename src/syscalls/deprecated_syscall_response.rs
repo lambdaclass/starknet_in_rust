@@ -6,8 +6,7 @@ use super::deprecated_syscall_request::{
     DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
 use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine, Felt252};
 
 /// Trait to write the response of a deprecated system call
 /// Takes in a mutable reference to a VirtualMachine and a Relocatable pointer to the system

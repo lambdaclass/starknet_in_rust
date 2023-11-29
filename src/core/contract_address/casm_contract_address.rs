@@ -1,7 +1,7 @@
 use crate::core::errors::contract_address_errors::ContractAddressError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_vm::felt::Felt252;
+use cairo_vm::{utils::biguint_to_felt, Felt252};
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"COMPILED_CLASS_V1";
@@ -19,10 +19,12 @@ fn get_contract_entry_points_hashed(
     for entry_point in contract_entry_points {
         entry_points_flatted.push(
             // fix this conversion later
-            FieldElement::from_bytes_be(&Felt252::from(entry_point.selector).to_be_bytes())
-                .map_err(|_err| {
-                    ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
-                })?,
+            FieldElement::from_bytes_be(
+                &Felt252::from_bytes_be_slice(&entry_point.selector.to_bytes_be()).to_bytes_be(),
+            )
+            .map_err(|_err| {
+                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
+            })?,
         );
         entry_points_flatted.push(FieldElement::from(entry_point.offset));
         let builtins_flatted = entry_point
@@ -43,11 +45,13 @@ fn get_contract_entry_points_hashed(
 pub fn compute_casm_class_hash(
     contract_class: &CasmContractClass,
 ) -> Result<Felt252, ContractAddressError> {
-    let api_version =
-        FieldElement::from_bytes_be(&Felt252::from_bytes_be(CONTRACT_CLASS_VERSION).to_be_bytes())
-            .map_err(|_err| {
-                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
-            })?;
+    // fix this conversion later
+    let api_version = FieldElement::from_bytes_be(
+        &Felt252::from_bytes_be_slice(CONTRACT_CLASS_VERSION).to_bytes_be(),
+    )
+    .map_err(|_err| {
+        ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
+    })?;
 
     // Entrypoints by type, hashed.
     let external_functions =
@@ -59,10 +63,13 @@ pub fn compute_casm_class_hash(
     let mut casm_program_vector = Vec::with_capacity(contract_class.bytecode.len());
     for number in &contract_class.bytecode {
         casm_program_vector.push(
-            FieldElement::from_bytes_be(&Felt252::from(number.value.clone()).to_be_bytes())
-                .map_err(|_err| {
-                    ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
-                })?,
+            // fix this conversion later
+            FieldElement::from_bytes_be(
+                &Felt252::from_bytes_be_slice(&number.value.to_bytes_be()).to_bytes_be(),
+            )
+            .map_err(|_err| {
+                ContractAddressError::Cast("Felt252".to_string(), "FieldElement".to_string())
+            })?,
         );
     }
 
@@ -102,7 +109,7 @@ mod tests {
     use std::{fs::File, io::BufReader};
 
     use super::*;
-    use cairo_vm::felt::felt_str;
+    use cairo_vm::Felt252;
     use coverage_helper::test;
 
     #[test]
@@ -113,18 +120,18 @@ mod tests {
         #[cfg(not(feature = "cairo_1_tests"))]
         {
             file = File::open("starknet_programs/raw_contract_classes/321aadcf42b0a4ad905616598d16c42fa9b87c812dc398e49b57bf77930629f.casm").unwrap();
-            expected_result = felt_str!(
-                "321aadcf42b0a4ad905616598d16c42fa9b87c812dc398e49b57bf77930629f",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x321aadcf42b0a4ad905616598d16c42fa9b87c812dc398e49b57bf77930629f",
+            )
+            .unwrap();
         }
         #[cfg(feature = "cairo_1_tests")]
         {
             file = File::open("starknet_programs/cairo1/contract_a.casm").unwrap();
-            expected_result = felt_str!(
-                "3a4f00bf75ba3b9230a94f104c7a4605a1901c4bd475beb59eeeeb7aceb9795",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x3a4f00bf75ba3b9230a94f104c7a4605a1901c4bd475beb59eeeeb7aceb9795",
+            )
+            .unwrap();
         }
         let reader = BufReader::new(file);
 
@@ -145,19 +152,19 @@ mod tests {
         #[cfg(not(feature = "cairo_1_tests"))]
         {
             file = File::open("starknet_programs/raw_contract_classes/53ad3bfb13f39cf1a9940108be4f9c6a8d9cc48a59d5f9b3c73432f877f8cf0.casm").unwrap();
-            expected_result = felt_str!(
-                "53ad3bfb13f39cf1a9940108be4f9c6a8d9cc48a59d5f9b3c73432f877f8cf0",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x53ad3bfb13f39cf1a9940108be4f9c6a8d9cc48a59d5f9b3c73432f877f8cf0",
+            )
+            .unwrap();
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
             file = File::open("starknet_programs/cairo1/deploy.casm").unwrap();
-            expected_result = felt_str!(
-                "3bd56f1c3c1c595ac2ee6d07bdedc027d09df56235e20374649f0b3535c1f15",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x3bd56f1c3c1c595ac2ee6d07bdedc027d09df56235e20374649f0b3535c1f15",
+            )
+            .unwrap();
         }
         let reader = BufReader::new(file);
 
@@ -178,19 +185,19 @@ mod tests {
         #[cfg(not(feature = "cairo_1_tests"))]
         {
             file = File::open("starknet_programs/raw_contract_classes/6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89.casm").unwrap();
-            expected_result = felt_str!(
-                "6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89",
+            )
+            .unwrap();
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
             file = File::open("starknet_programs/cairo1/fibonacci.casm").unwrap();
-            expected_result = felt_str!(
-                "44f12e6e59232e9909d7428b913b3cc8d9059458e5027740a3ccdbdc4b1ffd2",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x44f12e6e59232e9909d7428b913b3cc8d9059458e5027740a3ccdbdc4b1ffd2",
+            )
+            .unwrap();
         }
         let reader = BufReader::new(file);
 
@@ -211,19 +218,19 @@ mod tests {
         #[cfg(not(feature = "cairo_1_tests"))]
         {
             file = File::open("starknet_programs/raw_contract_classes/7c48d040ceb3183837a0aff2adf33d879f790e202eb2c4b8622005c12252641.casm").unwrap();
-            expected_result = felt_str!(
-                "7c48d040ceb3183837a0aff2adf33d879f790e202eb2c4b8622005c12252641",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x7c48d040ceb3183837a0aff2adf33d879f790e202eb2c4b8622005c12252641",
+            )
+            .unwrap();
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
             file = File::open("starknet_programs/cairo1/factorial.casm").unwrap();
-            expected_result = felt_str!(
-                "189a9b8b852aedbb225aa28dce9cfc3133145dd623e2d2ca5e962b7d4e61e15",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x189a9b8b852aedbb225aa28dce9cfc3133145dd623e2d2ca5e962b7d4e61e15",
+            )
+            .unwrap();
         }
         let reader = BufReader::new(file);
 
@@ -244,19 +251,19 @@ mod tests {
         #[cfg(not(feature = "cairo_1_tests"))]
         {
             file = File::open("starknet_programs/raw_contract_classes/3010533bd60cb0e70ac1bf776e171713f0e5229a084989d3894c171c160ace2.casm").unwrap();
-            expected_result = felt_str!(
-                "3010533bd60cb0e70ac1bf776e171713f0e5229a084989d3894c171c160ace2",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x3010533bd60cb0e70ac1bf776e171713f0e5229a084989d3894c171c160ace2",
+            )
+            .unwrap();
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
             file = File::open("starknet_programs/cairo1/emit_event.casm").unwrap();
-            expected_result = felt_str!(
-                "3335fe731ceda1116eda8bbc2e282953ce54618309ad474189e627c59328fff",
-                16
-            );
+            expected_result = Felt252::from_hex(
+                "0x3335fe731ceda1116eda8bbc2e282953ce54618309ad474189e627c59328fff",
+            )
+            .unwrap();
         }
         let reader = BufReader::new(file);
 
@@ -277,9 +284,10 @@ mod tests {
         let contract_class: CasmContractClass = serde_json::from_reader(reader).unwrap();
 
         // this is the compiled_class_hash from: https://alpha4.starknet.io/feeder_gateway/get_transaction?transactionHash=0x01b852f1fe2b13db21a44f8884bc4b7760dc277bb3820b970dba929860275617
-        let expected_result = felt_str!(
-            "2011836827876139258613930428521012424481847645471980617287552173098289225455"
-        );
+        let expected_result = Felt252::from_dec_str(
+            "2011836827876139258613930428521012424481847645471980617287552173098289225455",
+        )
+        .unwrap();
 
         assert_eq!(
             compute_casm_class_hash(&contract_class).unwrap(),

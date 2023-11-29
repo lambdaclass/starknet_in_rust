@@ -138,12 +138,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn deploy(
         &mut self,
-        class_hash: cairo_vm::felt::Felt252,
-        contract_address_salt: cairo_vm::felt::Felt252,
+        class_hash: cairo_vm::Felt252,
+        contract_address_salt: cairo_vm::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
         deploy_from_zero: bool,
         gas: &mut u128,
-    ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
+    ) -> SyscallResult<(cairo_vm::Felt252, Vec<cairo_vm::felt::Felt252>)> {
         tracing::debug!("Called `deploy({class_hash}, {calldata:?})` from Cairo Native");
         self.handle_syscall_request(gas, "deploy")?;
 
@@ -214,8 +214,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn library_call(
         &mut self,
-        class_hash: cairo_vm::felt::Felt252,
-        function_selector: cairo_vm::felt::Felt252,
+        class_hash: cairo_vm::Felt252,
+        function_selector: cairo_vm::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
         gas: &mut u128,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
@@ -278,8 +278,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn call_contract(
         &mut self,
-        address: cairo_vm::felt::Felt252,
-        entrypoint_selector: cairo_vm::felt::Felt252,
+        address: cairo_vm::Felt252,
+        entrypoint_selector: cairo_vm::Felt252,
         calldata: &[cairo_vm::felt::Felt252],
         gas: &mut u128,
     ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
@@ -336,7 +336,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     fn storage_read(
         &mut self,
         address_domain: u32,
-        address: cairo_vm::felt::Felt252,
+        address: cairo_vm::Felt252,
         gas: &mut u128,
     ) -> SyscallResult<cairo_vm::felt::Felt252> {
         tracing::debug!("Called `storage_read({address_domain}, {address})` from Cairo Native");
@@ -355,8 +355,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     fn storage_write(
         &mut self,
         address_domain: u32,
-        address: cairo_vm::felt::Felt252,
-        value: cairo_vm::felt::Felt252,
+        address: cairo_vm::Felt252,
+        value: cairo_vm::Felt252,
         gas: &mut u128,
     ) -> SyscallResult<()> {
         tracing::debug!(
@@ -387,7 +387,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn send_message_to_l1(
         &mut self,
-        to_address: cairo_vm::felt::Felt252,
+        to_address: cairo_vm::Felt252,
         payload: &[cairo_vm::felt::Felt252],
         gas: &mut u128,
     ) -> SyscallResult<()> {
@@ -421,7 +421,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
         if length % 17 != 0 {
             let error_msg = b"Invalid keccak input size";
-            let felt_error = Felt252::from_bytes_be(error_msg);
+            let felt_error = Felt252::from_bytes_be_slice(error_msg);
             return Err(vec![felt_error]);
         }
 

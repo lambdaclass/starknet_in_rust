@@ -1,4 +1,4 @@
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use num_traits::Zero;
 use starknet_in_rust::utils::ClassHash;
@@ -39,9 +39,9 @@ lazy_static! {
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
-    static ref FIB_SELECTOR: Felt252 = felt_str!("485685360977693822178494178685050472186234432883326654755380582597179924681");
+    static ref FIB_SELECTOR: Felt252 = Felt252::from_dec_str("485685360977693822178494178685050472186234432883326654755380582597179924681").unwrap();
 
-    static ref EXPECTED_RES: Felt252 = felt_str!("222450955505511890955301767713383614666194461405743219770606958667979327682");
+    static ref EXPECTED_RES: Felt252 = Felt252::from_dec_str("222450955505511890955301767713383614666194461405743219770606958667979327682").unwrap();
 }
 
 fn main() {

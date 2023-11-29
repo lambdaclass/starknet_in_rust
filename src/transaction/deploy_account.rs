@@ -96,7 +96,7 @@ impl DeployAccount {
         let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
-            &Felt252::from_bytes_be(class_hash.to_bytes_be()),
+            &Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
             Address(Felt252::ZERO),
         )?);
@@ -104,7 +104,7 @@ impl DeployAccount {
         let hash_value = calculate_deploy_account_transaction_hash(
             version.clone(),
             &contract_address,
-            Felt252::from_bytes_be(class_hash.to_bytes_be()),
+            Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
             max_fee,
             nonce.clone(),
@@ -143,7 +143,7 @@ impl DeployAccount {
         let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
-            &Felt252::from_bytes_be(class_hash.to_bytes_be()),
+            &Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
             Address(Felt252::ZERO),
         )?);
@@ -486,7 +486,7 @@ impl DeployAccount {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             [
-                Felt252::from_bytes_be(self.class_hash.to_bytes_be()),
+                Felt252::from_bytes_be(&self.class_hash.0),
                 self.contract_address_salt.clone(),
             ]
             .into_iter()
@@ -570,7 +570,8 @@ impl DeployAccount {
         let version = Felt252::from_bytes_be_slice(value.version.0.bytes());
         let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
         let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
-        let contract_address_salt = Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
+        let contract_address_salt =
+            Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
 
         let signature = value
             .signature
@@ -613,7 +614,8 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
         let version = Felt252::from_bytes_be_slice(value.version.0.bytes());
         let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
         let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
-        let contract_address_salt = Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
+        let contract_address_salt =
+            Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
 
         let signature = value
             .signature

@@ -230,15 +230,17 @@ impl L1Handler {
         paid_fee_on_l1: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         L1Handler::new_with_tx_hash(
-            Address(Felt252::from_bytes_be(tx.contract_address.0.key().bytes())),
-            Felt252::from_bytes_be(tx.entry_point_selector.0.bytes()),
+            Address(Felt252::from_bytes_be_slice(
+                tx.contract_address.0.key().bytes(),
+            )),
+            Felt252::from_bytes_be_slice(tx.entry_point_selector.0.bytes()),
             tx.calldata
                 .0
                 .as_ref()
                 .iter()
-                .map(|f| Felt252::from_bytes_be(f.bytes()))
+                .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
                 .collect(),
-            Felt252::from_bytes_be(tx.nonce.0.bytes()),
+            Felt252::from_bytes_be_slice(tx.nonce.0.bytes()),
             paid_fee_on_l1,
             tx_hash,
         )
@@ -266,10 +268,7 @@ mod test {
         sync::Arc,
     };
 
-    use cairo_vm::{
-        felt::{felt_str, Felt252},
-        vm::runners::cairo_runner::ExecutionResources,
-    };
+    use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
     use num_traits::{Num, Zero};
 
     /// Test the correct execution of the L1Handler.
@@ -277,13 +276,10 @@ mod test {
     fn test_execute_l1_handler() {
         let l1_handler = L1Handler::new(
             Address(0.into()),
-            Felt252::from_str_radix(
-                "c73f681176fc7b3f9693986fd7b14581e8d540519e27400e88b8713932be01",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0xc73f681176fc7b3f9693986fd7b14581e8d540519e27400e88b8713932be01")
+                .unwrap(),
             vec![
-                Felt252::from_str_radix("8359E4B0152ed5A731162D3c7B0D8D56edB165A0", 16).unwrap(),
+                Felt252::from_hex("0x8359E4B0152ed5A731162D3c7B0D8D56edB165A0").unwrap(),
                 1.into(),
                 10.into(),
             ],
@@ -352,12 +348,12 @@ mod test {
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1,
                 ])),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(Felt252::from_dec_str(
                     "352040181584456735608515580760888541466059565068553383579463728554843487745"
-                )),
+                ).unwrap()),
                 entry_point_type: Some(EntryPointType::L1Handler),
                 calldata: vec![
-                    felt_str!("749882478819638189522059655282096373471980381600"),
+                    Felt252::from_dec_str("749882478819638189522059655282096373471980381600").unwrap(),
                     1.into(),
                     10.into(),
                 ],

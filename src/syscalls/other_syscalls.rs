@@ -21,8 +21,8 @@ pub fn addr_bound_prime(
             "starkware.starknet.common.storage.ADDR_BOUND".into(),
         ))?;
 
-    let lower_bound = Felt252::from(1).shl(250u32);
-    let upper_bound = Felt252::from(1).shl(251u32);
+    let lower_bound = Felt252::TWO.pow(250u32);
+    let upper_bound = Felt252::TWO.pow(251u32);
     if !(&lower_bound < addr_bound && addr_bound <= &upper_bound) {
         return Err(HintError::AssertionFailed(
             "normalize_address() cannot be used with the current constants."
