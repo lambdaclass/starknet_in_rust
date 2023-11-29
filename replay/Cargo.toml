@@ -10,7 +10,7 @@ benchmark = ["starknet_in_rust/replay_benchmark"]
 
 [dependencies]
 # starknet specific crates
-starknet_in_rust = { path = "../", version = "0.4.0" }
+starknet_in_rust = { path = "../", version = "0.4.0", features = ["replay_benchmark"] }
 rpc_state_reader = { path = "../rpc_state_reader", features = ["starknet_in_rust"] }
 starknet_api = { workspace = true }
 # CLI specific crates
