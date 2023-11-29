@@ -17,7 +17,7 @@ use crate::{
     transaction::{error::TransactionError, fee::calculate_tx_fee, L1Handler, Transaction},
     utils::Address,
 };
-use cairo_vm::Felt252;
+pub use cairo_vm::Felt252;
 use std::sync::Arc;
 
 #[cfg(test)]
