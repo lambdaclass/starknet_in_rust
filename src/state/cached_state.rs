@@ -23,7 +23,7 @@ use std::{
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &ClassHash([0u8; 32]);
 
 /// Represents a cached state of contract classes with optional caches.
-#[derive(Default, Debug, Getters, MutGetters)]
+#[derive(Clone, Default, Debug, Getters, MutGetters)]
 pub struct CachedState<T: StateReader, C: ContractClassCache> {
     pub state_reader: Arc<T>,
     #[getset(get = "pub", get_mut = "pub")]

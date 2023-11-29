@@ -84,6 +84,11 @@ name = "cairo_native"
 required-features = ["cairo-native"]
 harness = false
 
+[[bench]]
+path = "bench/yas.rs"
+name = "yas"
+harness = false
+
 [profile.release]
 codegen-units = 1
 lto = "fat"
