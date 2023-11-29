@@ -379,22 +379,20 @@ impl DeclareV2 {
         }
 
         self.handle_nonce(state)?;
-        let initial_gas = INITIAL_GAS_COST;
 
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let (execution_result, _remaining_gas) = if self.skip_validate {
-            (ExecutionResult::default(), 0)
+        let execution_result = if self.skip_validate {
+            ExecutionResult::default()
         } else {
-            let (info, gas) = self.run_validate_entrypoint(
-                initial_gas,
+            self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
+                INITIAL_GAS_COST,
                 #[cfg(feature = "cairo-native")]
                 program_cache.clone(),
-            )?;
-            (info, gas)
+            )?
         };
         self.compile_and_store_casm_class(state)?;
 
@@ -489,27 +487,26 @@ impl DeclareV2 {
 
     fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        mut remaining_gas: u128,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
+        remaining_gas: u128,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
-    ) -> Result<(ExecutionResult, u128), TransactionError> {
-        let calldata = [self.compiled_class_hash.clone()].to_vec();
+    ) -> Result<ExecutionResult, TransactionError> {
+        let calldata = self.get_calldata();
 
-        let entry_point = ExecutionEntryPoint {
-            contract_address: self.sender_address.clone(),
-            entry_point_selector: self.validate_entry_point_selector.clone(),
-            initial_gas: remaining_gas,
-            entry_point_type: EntryPointType::External,
+        let entry_point = ExecutionEntryPoint::new(
+            self.sender_address.clone(),
             calldata,
-            caller_address: Address(Felt252::zero()),
-            code_address: None,
-            class_hash: None,
-            call_type: CallType::Call,
-        };
+            self.validate_entry_point_selector.clone(),
+            Address::default(),
+            EntryPointType::External,
+            Some(CallType::Call),
+            None,
+            remaining_gas,
+        );
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.validate_max_n_steps);
@@ -555,10 +552,9 @@ impl DeclareV2 {
 
         if execution_result.call_info.is_some() {
             verify_no_calls_to_other_contracts(&execution_result.call_info)?;
-            remaining_gas -= execution_result.call_info.clone().unwrap().gas_consumed;
         }
 
-        Ok((execution_result, remaining_gas))
+        Ok(execution_result)
     }
 
     // ---------------

@@ -289,7 +289,7 @@ impl InvokeFunction {
         &self,
         state: &mut CachedState<S, C>,
         block_context: &BlockContext,
-        remaining_gas: u128,
+        mut remaining_gas: u128,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
@@ -307,6 +307,10 @@ impl InvokeFunction {
                 program_cache.clone(),
             )?
         };
+
+        if let Some(call_info) = &validate_info {
+            remaining_gas -= dbg!(call_info.gas_consumed);
+        }
 
         // Execute transaction
         let ExecutionResult {

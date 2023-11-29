@@ -297,8 +297,8 @@ impl DeployAccount {
         } else {
             self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
             )?
@@ -478,8 +478,8 @@ impl DeployAccount {
     pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
