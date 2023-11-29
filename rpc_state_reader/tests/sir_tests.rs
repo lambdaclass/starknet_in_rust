@@ -246,6 +246,18 @@ fn test_sorted_events(
     RpcChain::MainNet
     => ignore["broken on both due to a cairo-vm error"]
 )]
+// Insufficient fee token balance
+#[test_case(
+    "0x006978ae71587d4ab1048d7836c2d656222a16976c82c0dc24d3b44316d63cfe",
+    440823, // real block     440824
+    RpcChain::MainNet
+)]
+// Insufficient fee token balance
+#[test_case(
+    "0x03e458ef06c17dd2601013746ae5622d8434348b246a335b20b6543f37aff0f8",
+    440849, // real block     440850
+    RpcChain::MainNet
+)]
 fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
 
