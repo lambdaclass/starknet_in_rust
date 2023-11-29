@@ -408,9 +408,22 @@ impl InvokeFunction {
                 .apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
         }
         #[cfg(feature = "replay_benchmark")]
-        state.cache_mut().storage_initial_values_mut().extend(transactional_state.cache().storage_initial_values.clone().into_iter());
-        #[cfg(feature = "replay_benchmark")]
-        state.cache_mut().class_hash_initial_values_mut().extend(transactional_state.cache().class_hash_initial_values.clone().into_iter());
+        {
+            state.cache_mut().storage_initial_values_mut().extend(
+                transactional_state
+                    .cache()
+                    .storage_initial_values
+                    .clone()
+                    .into_iter(),
+            );
+            state.cache_mut().class_hash_initial_values_mut().extend(
+                transactional_state
+                    .cache()
+                    .class_hash_initial_values
+                    .clone()
+                    .into_iter(),
+            );
+        }
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
