@@ -140,10 +140,9 @@ fn main() {
                     ..
                 } = state.state_reader.0.get_block_info().unwrap();
                 block_timestamps.insert(block_number, block_timestamp.0);
-                sequencer_addresses.insert(
-                    block_number,
-                    Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes())),
-                );
+                let sequencer_address =
+                    Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
+                sequencer_addresses.insert(block_number, sequencer_address.clone());
                 // Fetch gas price
                 let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();
                 gas_prices.insert(block_number, gas_price);
@@ -156,7 +155,23 @@ fn main() {
                     // Fetch tx and add it to txs_in_block cache
                     let tx_hash = TransactionHash(stark_felt!(tx_hash.strip_prefix("0x").unwrap()));
                     let tx = state.state_reader.0.get_transaction(&tx_hash).unwrap();
-                    txs_in_block.push((tx_hash, tx));
+                    txs_in_block.push((tx_hash, tx.clone()));
+                    // First execution to fill up cache values
+                    let _ = execute_tx_configurable_with_state(
+                        &tx_hash,
+                        tx.clone(),
+                        network,
+                        block_number,
+                        BlockInfo {
+                            block_number: block_number.0,
+                            block_timestamp: block_timestamp.0,
+                            gas_price,
+                            sequencer_address: sequencer_address.clone(),
+                        },
+                        false,
+                        true,
+                        &mut state,
+                    );
                 }
                 // Add the txs from the current block to the transactions cache
                 transactions.insert(block_number, txs_in_block);
