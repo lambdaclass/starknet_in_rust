@@ -61,7 +61,7 @@ enum ReplayExecute {
     },
     #[cfg(feature = "benchmark")]
     #[clap(
-        about = "Execute all the invoke transactions in a given range of blocks.
+        about = "Execute all the transactions in a given range of blocks.
 Runs the all transactions twice, once to fill up the caches and a second one to benchmark."
     )]
     BenchBlockRange {
