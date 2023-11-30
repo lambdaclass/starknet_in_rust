@@ -24,7 +24,7 @@ thiserror = { workspace = true }
 flate2 = "1.0.25"
 serde_with = "3.0.0"
 dotenv = "0.15.0"
-blockifier = { git = "https://github.com/starkware-libs/blockifier", rev = "v0.4.0-rc7" }
+blockifier = { git = "https://github.com/starkware-libs/blockifier", rev = "256e2a6bb600963c26c43bf64c53f5b91985a290" }
 starknet_in_rust = { path = "../", version = "0.4.0" }
 
 [dev-dependencies]
