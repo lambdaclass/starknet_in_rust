@@ -173,7 +173,6 @@ fn main() {
                         &tx_hash,
                         tx.clone(),
                         network,
-                        block_number,
                         BlockInfo {
                             block_number: block_number.0,
                             block_timestamp: block_timestamp.0,
@@ -220,7 +219,6 @@ fn main() {
                             tx_hash,
                             tx.clone(),
                             network,
-                            block_number,
                             BlockInfo {
                                 block_number: block_number.0,
                                 block_timestamp,
@@ -235,7 +233,14 @@ fn main() {
                 }
             }
             let elapsed_time = now.elapsed();
-            println!("Ran blocks {} - {} {} times in {} seconds", block_start, block_end, n_runs, elapsed_time.as_secs());
+            println!(
+                "Ran blocks {} - {} {} times in {} seconds. Approximately {} seconds per run",
+                block_start,
+                block_end,
+                n_runs,
+                elapsed_time.as_secs(),
+                elapsed_time.as_secs().div_euclid(n_runs as u64)
+            );
         }
     }
 }

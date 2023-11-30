@@ -137,7 +137,6 @@ pub fn execute_tx_configurable(
         &tx_hash,
         tx,
         network,
-        block_number,
         block_info,
         skip_validate,
         skip_nonce_check,
@@ -160,7 +159,6 @@ pub fn execute_tx_configurable_with_state(
     tx_hash: &TransactionHash,
     tx: SNTransaction,
     network: RpcChain,
-    block_number: BlockNumber,
     block_info: BlockInfo,
     skip_validate: bool,
     skip_nonce_check: bool,
@@ -198,7 +196,11 @@ pub fn execute_tx_configurable_with_state(
             } else {
                 // Fetch the contract_class from the next block (as we don't have it in the previous one)
                 let next_block_state_reader = RpcStateReader(
-                    RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
+                    RpcState::new_infura(
+                        network,
+                        BlockNumber(block_info.block_number).next().into(),
+                    )
+                    .unwrap(),
                 );
 
                 let contract_class = next_block_state_reader
