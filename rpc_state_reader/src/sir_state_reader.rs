@@ -184,7 +184,7 @@ pub fn execute_tx_configurable_with_state(
             .unwrap()
             .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
         SNTransaction::DeployAccount(tx) => {
-            DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
+            DeployAccount::from_sn_api_transaction(tx, Felt252::from_bytes_be(tx_hash.0.bytes()))
                 .unwrap()
                 .create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
         }

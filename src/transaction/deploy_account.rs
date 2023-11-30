@@ -583,7 +583,7 @@ impl DeployAccount {
 
     pub fn from_sn_api_transaction(
         value: starknet_api::transaction::DeployAccountTransaction,
-        chain_id: Felt252,
+        tx_hash: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
@@ -605,7 +605,7 @@ impl DeployAccount {
             .map(|f| Felt252::from_bytes_be(f.bytes()))
             .collect();
 
-        DeployAccount::new(
+        DeployAccount::new_with_tx_hash(
             class_hash,
             max_fee,
             version,
@@ -613,7 +613,7 @@ impl DeployAccount {
             constructor_calldata,
             signature,
             contract_address_salt,
-            chain_id,
+            tx_hash,
         )
     }
 }
