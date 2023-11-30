@@ -1,15 +1,15 @@
 use std::{
+    borrow::BorrowMut,
     collections::HashMap,
-    io::{self, Read}, borrow::BorrowMut,
+    io::{self, Read},
 };
 
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_lang_utils::bigint::BigUintAsHex;
 use serde::Deserialize;
-use serde_json::Value;
 use starknet::core::types::{LegacyContractEntryPoint, LegacyEntryPointsByType};
 use starknet_api::{
-    core::EntryPointSelector,
+    core::{calculate_contract_address, ContractAddress, EntryPointSelector},
     deprecated_contract_class::{EntryPoint, EntryPointOffset, EntryPointType},
     hash::{StarkFelt, StarkHash},
     transaction::{DeclareTransaction, InvokeTransaction, Transaction},
@@ -66,11 +66,11 @@ pub fn decode_reader(bytes: Vec<u8>) -> io::Result<String> {
 
 /// Freestanding deserialize method to avoid a new type.
 pub fn deserialize_transaction_json(
-    transaction: serde_json::Value,
+    mut transaction: serde_json::Value,
 ) -> serde_json::Result<Transaction> {
     let tx_type: String = serde_json::from_value(transaction["type"].clone())?;
     let tx_version: String = serde_json::from_value(transaction["version"].clone())?;
-
+    dbg!(transaction.clone());
     match dbg!(tx_type.as_str()) {
         "INVOKE" => match tx_version.as_str() {
             "0x0" => Ok(Transaction::Invoke(InvokeTransaction::V0(
@@ -83,9 +83,24 @@ pub fn deserialize_transaction_json(
                 "unimplemented invoke version: {x}"
             ))),
         },
-        "DEPLOY_ACCOUNT" => Ok(Transaction::DeployAccount(serde_json::from_value(
-            transaction,
-        )?)),
+        "DEPLOY_ACCOUNT" => {
+            let salt = serde_json::from_value(transaction["contract_address_salt"].clone())?;
+            let class_hash = serde_json::from_value(transaction["class_hash"].clone())?;
+            let constructor_calldata =
+                &serde_json::from_value(transaction["constructor_calldata"].clone())?;
+            let contract_address = calculate_contract_address(
+                salt,
+                class_hash,
+                constructor_calldata,
+                ContractAddress::default(),
+            )
+            .unwrap();
+            let contract_address = serde_json::to_value(contract_address)?;
+            transaction.borrow_mut()["contract_address"] = contract_address;
+            Ok(Transaction::DeployAccount(serde_json::from_value(
+                transaction,
+            )?))
+        }
         "DECLARE" => match tx_version.as_str() {
             "0x0" => Ok(Transaction::Declare(DeclareTransaction::V0(
                 serde_json::from_value(transaction)?,

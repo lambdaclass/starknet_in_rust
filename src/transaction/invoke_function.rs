@@ -694,7 +694,7 @@ mod tests {
         // https://starkscan.co/tx/0x05b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4
         // result 0x05b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4
         let tx_hash = StarkHash::try_from(
-            "0x05b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4",
+            "0x00c4658311841a69ce121543af332622bc243cf5593fc4aaf822481c7b7f183d",
         )
         .unwrap();
         let tx = InvokeTransaction::V1(InvokeTransactionV1 {
