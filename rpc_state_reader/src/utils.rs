@@ -70,8 +70,7 @@ pub fn deserialize_transaction_json(
 ) -> serde_json::Result<Transaction> {
     let tx_type: String = serde_json::from_value(transaction["type"].clone())?;
     let tx_version: String = serde_json::from_value(transaction["version"].clone())?;
-    dbg!(transaction.clone());
-    match dbg!(tx_type.as_str()) {
+    match tx_type.as_str() {
         "INVOKE" => match tx_version.as_str() {
             "0x0" => Ok(Transaction::Invoke(InvokeTransaction::V0(
                 serde_json::from_value(transaction)?,
