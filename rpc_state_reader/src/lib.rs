@@ -14,6 +14,7 @@ pub use sir_state_reader::{
 
 #[cfg(test)]
 mod tests {
+    use cairo_vm::felt::Felt252;
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         class_hash,
@@ -23,9 +24,7 @@ mod tests {
         state::StorageKey,
         transaction::{Transaction as SNTransaction, TransactionHash},
     };
-    use starknet_in_rust::{
-        definitions::block_context::StarknetChainId, transaction::InvokeFunction,
-    };
+    use starknet_in_rust::transaction::InvokeFunction;
 
     use crate::rpc_state::*;
 
@@ -111,9 +110,10 @@ mod tests {
 
         let tx = rpc_state.get_transaction(&tx_hash).unwrap();
         match tx {
-            SNTransaction::Invoke(tx) => {
-                InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet)
-            }
+            SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(
+                tx,
+                Felt252::from_bytes_be(tx_hash.0.bytes()),
+            ),
             _ => unreachable!(),
         }
         .unwrap();

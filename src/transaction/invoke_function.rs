@@ -5,7 +5,7 @@ use super::{
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        block_context::{BlockContext, StarknetChainId},
+        block_context::BlockContext,
         constants::{
             EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
@@ -145,11 +145,11 @@ impl InvokeFunction {
     /// Creates a `InvokeFunction` from a starknet api `InvokeTransaction`.
     pub fn from_invoke_transaction(
         tx: starknet_api::transaction::InvokeTransaction,
-        chain_id: StarknetChainId,
+        tx_hash: Felt252,
     ) -> Result<Self, TransactionError> {
         match tx {
-            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, chain_id),
-            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, chain_id),
+            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, tx_hash),
+            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, tx_hash),
         }
     }
 
@@ -614,7 +614,7 @@ pub(crate) fn preprocess_invoke_function_fields(
 
 fn convert_invoke_v0(
     value: starknet_api::transaction::InvokeTransactionV0,
-    chain_id: StarknetChainId,
+    tx_hash: Felt252,
 ) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(
         value.contract_address.0.key().bytes(),
@@ -637,21 +637,21 @@ fn convert_invoke_v0(
         .map(|f| Felt252::from_bytes_be(f.bytes()))
         .collect();
 
-    InvokeFunction::new(
+    InvokeFunction::new_with_tx_hash(
         contract_address,
         entry_point_selector,
         max_fee,
         Felt252::new(0),
         calldata,
         signature,
-        chain_id.to_felt(),
         nonce,
+        tx_hash,
     )
 }
 
 fn convert_invoke_v1(
     value: starknet_api::transaction::InvokeTransactionV1,
-    chain_id: StarknetChainId,
+    tx_hash: Felt252,
 ) -> Result<InvokeFunction, TransactionError> {
     let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
     let max_fee = value.max_fee.0;
@@ -672,15 +672,15 @@ fn convert_invoke_v1(
         .map(|f| Felt252::from_bytes_be(f.bytes()))
         .collect();
 
-    InvokeFunction::new(
+    InvokeFunction::new_with_tx_hash(
         contract_address,
         entry_point_selector,
         max_fee,
         Felt252::new(1),
         calldata,
         signature,
-        chain_id.to_felt(),
         Some(nonce),
+        tx_hash,
     )
 }
 
@@ -768,11 +768,7 @@ mod tests {
             ])),
         });
 
-        let tx_sir = InvokeFunction::from_invoke_transaction(tx, StarknetChainId::MainNet).unwrap();
-        assert_eq!(
-            tx_sir.hash_value.to_str_radix(16),
-            "5b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4"
-        );
+        assert!(InvokeFunction::from_invoke_transaction(tx, Felt252::one()).is_ok())
     }
 
     #[test]
@@ -1612,8 +1608,6 @@ mod tests {
 
     #[test]
     fn invoke_wrong_version() {
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
         // declare tx
         let internal_declare = InvokeFunction::new(
             Address(Felt252::one()),
@@ -1622,7 +1616,7 @@ mod tests {
             2.into(),
             vec![],
             vec![],
-            chain_id,
+            Felt252::one(),
             Some(Felt252::zero()),
         )
         .unwrap();
