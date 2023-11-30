@@ -25,6 +25,7 @@ use starknet_in_rust::{
     },
     utils::Address,
 };
+use std::time::Instant;
 #[cfg(feature = "benchmark")]
 use std::{collections::HashMap, sync::Arc};
 
@@ -66,6 +67,7 @@ Runs the all transactions twice, once to fill up the caches and a second one to 
         block_start: u64,
         block_end: u64,
         chain: String,
+        n_runs: usize,
     },
 }
 
@@ -119,6 +121,7 @@ fn main() {
             block_start,
             block_end,
             chain,
+            n_runs,
         } => {
             println!("Filling up Cache");
             let network = parse_network(&chain);
@@ -193,38 +196,46 @@ fn main() {
             }
             // Benchmark run should make no api requests as all data is cached
 
-            println!("Executing block range: {} - {}", block_start, block_end);
-            for block_number in block_start..=block_end {
-                let block_number = BlockNumber(block_number);
-                // Fetch state
-                let state = cached_states.get_mut(&block_number).unwrap();
-                // Fetch txs
-                let block_txs = transactions.get(&block_number).unwrap();
-                // Fetch timestamp
-                let block_timestamp = *block_timestamps.get(&block_number).unwrap();
-                // Fetch sequencer address
-                let sequencer_address = sequencer_addresses.get(&block_number).unwrap();
-                // Fetch gas price
-                let gas_price = *gas_prices.get(&block_number).unwrap();
-                // Run txs
-                for (tx_hash, tx) in block_txs {
-                    let _ = execute_tx_configurable_with_state(
-                        tx_hash,
-                        tx.clone(),
-                        network,
-                        block_number,
-                        BlockInfo {
-                            block_number: block_number.0,
-                            block_timestamp,
-                            gas_price,
-                            sequencer_address: sequencer_address.clone(),
-                        },
-                        false,
-                        true,
-                        state,
-                    );
+            println!(
+                "Executing block range: {} - {} {} times",
+                block_start, block_end, n_runs
+            );
+            let now = Instant::now();
+            for _ in 0..n_runs {
+                for block_number in block_start..=block_end {
+                    let block_number = BlockNumber(block_number);
+                    // Fetch state
+                    let state = cached_states.get_mut(&block_number).unwrap();
+                    // Fetch txs
+                    let block_txs = transactions.get(&block_number).unwrap();
+                    // Fetch timestamp
+                    let block_timestamp = *block_timestamps.get(&block_number).unwrap();
+                    // Fetch sequencer address
+                    let sequencer_address = sequencer_addresses.get(&block_number).unwrap();
+                    // Fetch gas price
+                    let gas_price = *gas_prices.get(&block_number).unwrap();
+                    // Run txs
+                    for (tx_hash, tx) in block_txs {
+                        let _ = execute_tx_configurable_with_state(
+                            tx_hash,
+                            tx.clone(),
+                            network,
+                            block_number,
+                            BlockInfo {
+                                block_number: block_number.0,
+                                block_timestamp,
+                                gas_price,
+                                sequencer_address: sequencer_address.clone(),
+                            },
+                            false,
+                            true,
+                            state,
+                        );
+                    }
                 }
             }
+            let elapsed_time = now.elapsed();
+            println!("Ran blocks {} - {} {} times in {} seconds", block_start, block_end, n_runs, elapsed_time.as_secs());
         }
     }
 }
