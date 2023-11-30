@@ -25,6 +25,31 @@ use cairo_vm::{
 };
 use std::{any::Any, collections::HashMap};
 
+#[derive(Clone, Debug)]
+pub enum Hint {
+    Deploy,
+    EmitEvent,
+    GetBlockNumber,
+    GetBlockTimestamp,
+    GetCallerAddress,
+    GetSequencerAddress,
+    LibraryCall,
+    LibraryCallL1Handler,
+    CallContract,
+    StorageRead,
+    StorageWrite,
+    SendMessageToL1,
+    GetTxSignature,
+    GetTxInfo,
+    GetContractAddress,
+    DelegateCall,
+    DelegateCallL1Handler,
+    ReplaceClass,
+    //Normal hint
+    AddrBoundPrime,
+    AddrIs250,
+}
+
 /// Definition of the deprecated syscall hint processor with associated structs
 pub(crate) struct DeprecatedSyscallHintProcessor<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
@@ -73,6 +98,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
         constants: &HashMap<String, Felt252>,
     ) -> Result<(), SyscallHandlerError> {
         // Match against specific syscall hint codes and call the appropriate handler
+
         let hint_data = hint_data
             .downcast_ref::<HintProcessorData>()
             .ok_or(SyscallHandlerError::WrongHintData)?;
@@ -211,7 +237,6 @@ impl<'a, S: StateReader, C: ContractClassCache> HintProcessorLogic
                     SyscallHandlerError::NotImplemented(hint_code) => {
                         HintError::UnknownHint(hint_code.into_boxed_str())
                     }
-
                     e => HintError::CustomHint(e.to_string().into_boxed_str()),
                 })?;
         }
@@ -383,7 +408,11 @@ mod tests {
 
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(GET_BLOCK_TIMESTAMP.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_block_timestamp(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -417,7 +446,11 @@ mod tests {
 
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(GET_SEQUENCER_ADDRESS.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_sequencer_address(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -471,7 +504,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(EMIT_EVENT_CODE.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.emit_event(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -530,7 +567,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_tx_info(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -638,7 +679,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(GET_TX_INFO.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_tx_info(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -679,7 +724,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(GET_CALLER_ADDRESS.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_caller_address(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -727,7 +776,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(SEND_MESSAGE_TO_L1.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.send_message_to_l1(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::<InMemoryStateReader, PermanentContractClassCache>::default();
@@ -788,8 +841,11 @@ mod tests {
             RunResources::default(),
         );
 
-        let hint_data =
-            HintProcessorData::new_default(GET_BLOCK_NUMBER.to_string(), ids_data!["syscall_ptr"]);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_block_number(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data!["syscall_ptr"],
+        );
         assert_matches!(
             hint_processor.execute_hint(
                 &mut vm,
@@ -815,7 +871,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(GET_CONTRACT_ADDRESS.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_contract_address(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::new(
@@ -860,7 +920,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(GET_TX_SIGNATURE.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.get_tx_signature(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         // invoke syscall
         let mut state = CachedState::new(
@@ -932,7 +996,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(STORAGE_READ.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.storage_read(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
@@ -1000,7 +1068,11 @@ mod tests {
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
 
-        let hint_data = HintProcessorData::new_default(STORAGE_WRITE.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.storage_write(segments=segments, syscall_ptr=ids.syscall_ptr)"
+                .to_string(),
+            ids_data,
+        );
 
         let mut state = CachedState::new(
             Arc::new(InMemoryStateReader::default()),
@@ -1076,7 +1148,10 @@ mod tests {
 
         // Hinta data
         let ids_data = ids_data!["syscall_ptr"];
-        let hint_data = HintProcessorData::new_default(DEPLOY.to_string(), ids_data);
+        let hint_data = HintProcessorData::new_default(
+            "syscall_handler.deploy(segments=segments, syscall_ptr=ids.syscall_ptr)".to_string(),
+            ids_data,
+        );
 
         // Create SyscallHintProcessor
         let mut state = CachedState::new(
