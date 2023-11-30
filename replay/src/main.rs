@@ -25,6 +25,7 @@ use starknet_in_rust::{
     },
     utils::Address,
 };
+use std::ops::Div;
 #[cfg(feature = "benchmark")]
 use std::time::Instant;
 #[cfg(feature = "benchmark")]
@@ -239,7 +240,7 @@ fn main() {
                 block_end,
                 n_runs,
                 elapsed_time.as_secs_f64(),
-                elapsed_time.as_secs_f64().div_euclid(n_runs as f64)
+                elapsed_time.as_secs_f64().div(n_runs as f64)
             );
         }
     }
