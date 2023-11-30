@@ -234,7 +234,7 @@ fn main() {
             }
             let elapsed_time = now.elapsed();
             println!(
-                "Ran blocks {} - {} {} times in {} seconds. Approximately {} seconds per run",
+                "Ran blocks {} - {} {} times in {} seconds. Approximately {} second(s) per run",
                 block_start,
                 block_end,
                 n_runs,
