@@ -46,13 +46,13 @@ enum ReplayExecute {
         block_number: u64,
         silent: Option<bool>,
     },
-    #[clap(about = "Execute all the invoke transactions in a given block.")]
+    #[clap(about = "Execute all the transactions in a given block.")]
     Block {
         chain: String,
         block_number: u64,
         silent: Option<bool>,
     },
-    #[clap(about = "Execute all the invoke transactions in a given range of blocks.")]
+    #[clap(about = "Execute all the transactions in a given range of blocks.")]
     BlockRange {
         block_start: u64,
         block_end: u64,
