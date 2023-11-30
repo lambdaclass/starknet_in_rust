@@ -746,7 +746,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "starknet-crypto 0.5.2",
- "starknet_api 0.1.0",
+ "starknet_api",
  "strum",
  "strum_macros",
  "thiserror",
@@ -2086,7 +2086,7 @@ dependencies = [
  "honggfuzz",
  "num-traits 0.2.17",
  "serde_json",
- "starknet_api 0.4.1",
+ "starknet_api",
  "starknet_in_rust",
  "tempfile",
 ]
@@ -3515,7 +3515,7 @@ dependencies = [
  "clap",
  "indicatif",
  "rpc_state_reader",
- "starknet_api 0.4.1",
+ "starknet_api",
  "starknet_in_rust",
  "tracing",
  "tracing-subscriber",
@@ -3610,8 +3610,7 @@ dependencies = [
  "serde_json",
  "serde_with 3.4.0",
  "starknet",
- "starknet_api 0.1.0",
- "starknet_api 0.4.1",
+ "starknet_api",
  "starknet_in_rust",
  "test-case",
  "thiserror",
@@ -4333,24 +4332,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet_api"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f6e445fbd6bf3826dda26fd64aa5311353b4799c9bd1119d6ec1906be4c73bf"
-dependencies = [
- "cairo-lang-starknet",
- "derive_more",
- "hex",
- "indexmap 1.9.3",
- "once_cell",
- "primitive-types",
- "serde",
- "serde_json",
- "starknet-crypto 0.5.2",
- "thiserror",
-]
-
-[[package]]
 name = "starknet_in_rust"
 version = "0.4.0"
 dependencies = [
@@ -4383,7 +4364,7 @@ dependencies = [
  "sha3",
  "starknet",
  "starknet-crypto 0.6.1",
- "starknet_api 0.4.1",
+ "starknet_api",
  "thiserror",
  "tracing",
  "tracing-subscriber",
