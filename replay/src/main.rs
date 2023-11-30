@@ -238,8 +238,8 @@ fn main() {
                 block_start,
                 block_end,
                 n_runs,
-                elapsed_time.as_secs(),
-                elapsed_time.as_secs().div_euclid(n_runs as u64)
+                elapsed_time.as_secs_f64(),
+                elapsed_time.as_secs_f64().div_euclid(n_runs as f64)
             );
         }
     }
