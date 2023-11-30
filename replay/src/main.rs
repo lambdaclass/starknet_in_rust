@@ -25,6 +25,7 @@ use starknet_in_rust::{
     },
     utils::Address,
 };
+#[cfg(feature = "benchmark")]
 use std::time::Instant;
 #[cfg(feature = "benchmark")]
 use std::{collections::HashMap, sync::Arc};
@@ -141,9 +142,8 @@ fn main() {
                 // For each block:
                 let block_number = BlockNumber(block_number);
                 // Create a cached state
-                let rpc_reader = RpcStateReader::new(
-                    RpcState::new_infura(network, block_number.into()).unwrap(),
-                );
+                let rpc_reader =
+                    RpcStateReader::new(RpcState::new_rpc(network, block_number.into()).unwrap());
                 let mut state = CachedState::new(Arc::new(rpc_reader), class_cache.clone());
                 // Fetch block timestamps & sequencer address
                 let RpcBlockInfo {

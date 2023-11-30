@@ -115,7 +115,7 @@ pub fn execute_tx_configurable(
     ),
     TransactionError,
 > {
-    let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
+    let rpc_reader = RpcStateReader(RpcState::new_rpc(network, block_number.into()).unwrap());
     let class_cache = PermanentContractClassCache::default();
     let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
     let tx_hash = TransactionHash(stark_felt!(tx_hash.strip_prefix("0x").unwrap()));
@@ -196,11 +196,8 @@ pub fn execute_tx_configurable_with_state(
             } else {
                 // Fetch the contract_class from the next block (as we don't have it in the previous one)
                 let next_block_state_reader = RpcStateReader(
-                    RpcState::new_infura(
-                        network,
-                        BlockNumber(block_info.block_number).next().into(),
-                    )
-                    .unwrap(),
+                    RpcState::new_rpc(network, BlockNumber(block_info.block_number).next().into())
+                        .unwrap(),
                 );
 
                 let contract_class = next_block_state_reader
@@ -328,6 +325,6 @@ pub fn get_transaction_hashes(
     block_number: BlockNumber,
     network: RpcChain,
 ) -> Result<Vec<String>, RpcStateError> {
-    let rpc_state = RpcState::new_infura(network, BlockValue::Number(block_number))?;
+    let rpc_state = RpcState::new_rpc(network, BlockValue::Number(block_number))?;
     rpc_state.get_transaction_hashes()
 }

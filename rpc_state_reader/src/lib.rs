@@ -14,7 +14,6 @@ pub use sir_state_reader::{
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         class_hash,
@@ -27,7 +26,6 @@ mod tests {
     use starknet_in_rust::{
         definitions::block_context::StarknetChainId, transaction::InvokeFunction,
     };
-    use std::collections::HashMap;
 
     use crate::rpc_state::*;
 
@@ -42,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_class_cairo1() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         let class_hash =
             class_hash!("0298e56befa6d1446b86ed5b900a9ba51fd2faa683cd6f50e8f833c0fb847216");
@@ -55,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_class_cairo0() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         let class_hash =
             class_hash!("025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
@@ -64,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_get_class_hash_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let address =
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
 
@@ -76,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_get_nonce_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::TestNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::TestNet, BlockTag::Latest.into()).unwrap();
         // Contract deployed by xqft which will not be used again, so nonce changes will not break
         // this test.
         let address =
@@ -86,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_get_storage_at() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let address =
             contract_address!("00b081f7ba1efc6fe98770b09a827ae373ef2baa6116b3d2a0bf5154136573a9");
         let key = StorageKey(patricia_key!(0u128));
@@ -96,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_get_transaction() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
@@ -106,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_try_from_invoke() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));
@@ -123,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_get_block_info() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         assert!(rpc_state.get_block_info().is_ok());
     }
@@ -132,21 +130,13 @@ mod tests {
     // https://alpha-mainnet.starknet.io/feeder_gateway/get_transaction_trace?transactionHash=0x035673e42bd485ae699c538d8502f730d1137545b22a64c094ecdaf86c59e592
     #[test]
     fn test_get_transaction_trace() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
 
         let tx_hash = TransactionHash(stark_felt!(
             "0x035673e42bd485ae699c538d8502f730d1137545b22a64c094ecdaf86c59e592"
         ));
 
         let tx_trace = rpc_state.get_transaction_trace(&tx_hash).unwrap();
-
-        assert_eq!(
-            tx_trace.signature,
-            vec![
-                stark_felt!("0x1bb2bc03d7f5faccc0e159ea2bbf54cdd1e983fc6362545391bf8fda5d8e669"),
-                stark_felt!("0x4517da2856095584a30640bf14ad59cca3ff91dded42be7e3e40e5ea2f51045"),
-            ]
-        );
 
         assert_eq!(
             tx_trace.validate_invocation.as_ref().unwrap().calldata,
@@ -173,22 +163,6 @@ mod tests {
             tx_trace.validate_invocation.as_ref().unwrap().retdata,
             Some(vec![])
         );
-        assert_eq_sorted!(
-            tx_trace
-                .validate_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources,
-            ExecutionResources {
-                n_steps: 672,
-                n_memory_holes: 74,
-                builtin_instance_counter: HashMap::from([
-                    ("range_check_builtin".to_string(), 11),
-                    ("ecdsa_builtin".to_string(), 1),
-                    ("pedersen_builtin".to_string(), 1),
-                ]),
-            }
-        );
         assert_eq!(
             tx_trace
                 .validate_invocation
@@ -200,7 +174,7 @@ mod tests {
         );
 
         assert_eq!(
-            tx_trace.function_invocation.as_ref().unwrap().calldata,
+            tx_trace.execute_invocation.as_ref().unwrap().calldata,
             Some(vec![
                 stark_felt!("0x1"),
                 stark_felt!("0x45dc42889b6292c540de9def0341364bd60c2d8ccced459fac8b1bfc24fa1f5"),
@@ -221,29 +195,12 @@ mod tests {
             ])
         );
         assert_eq!(
-            tx_trace.function_invocation.as_ref().unwrap().retdata,
+            tx_trace.execute_invocation.as_ref().unwrap().retdata,
             Some(vec![0u128.into()])
         );
-        assert_eq_sorted!(
-            tx_trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources,
-            ExecutionResources {
-                n_steps: 3525,
-                n_memory_holes: 421,
-                builtin_instance_counter: HashMap::from([
-                    ("range_check_builtin".to_string(), 83),
-                    ("pedersen_builtin".to_string(), 16),
-                    ("poseidon_builtin".to_string(), 4),
-                    ("ec_op_builtin".to_string(), 3),
-                ]),
-            }
-        );
         assert_eq!(
             tx_trace
-                .function_invocation
+                .execute_invocation
                 .as_ref()
                 .unwrap()
                 .internal_calls
@@ -251,22 +208,13 @@ mod tests {
             1
         );
         assert_eq!(
-            tx_trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .internal_calls[0]
+            tx_trace.execute_invocation.as_ref().unwrap().internal_calls[0]
                 .internal_calls
                 .len(),
             1
         );
         assert_eq!(
-            tx_trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .internal_calls[0]
-                .internal_calls[0]
+            tx_trace.execute_invocation.as_ref().unwrap().internal_calls[0].internal_calls[0]
                 .internal_calls
                 .len(),
             0
@@ -284,21 +232,6 @@ mod tests {
             tx_trace.fee_transfer_invocation.as_ref().unwrap().retdata,
             Some(vec![1u128.into()])
         );
-        assert_eq_sorted!(
-            tx_trace
-                .fee_transfer_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources,
-            ExecutionResources {
-                n_steps: 590,
-                n_memory_holes: 40,
-                builtin_instance_counter: HashMap::from([
-                    ("range_check_builtin".to_string(), 21),
-                    ("pedersen_builtin".to_string(), 4),
-                ]),
-            }
-        );
         assert_eq!(
             tx_trace
                 .fee_transfer_invocation
@@ -312,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_get_transaction_receipt() {
-        let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+        let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
         let tx_hash = TransactionHash(stark_felt!(
             "06da92cfbdceac5e5e94a1f40772d6c79d34f011815606742658559ec77b6955"
         ));

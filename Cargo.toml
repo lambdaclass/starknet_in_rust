@@ -65,7 +65,7 @@ serde_json = { version = "1.0", features = [
 serde_json_pythonic = "0.1.2"
 starknet = { workspace = true }
 starknet_api = { workspace = true }
-starknet-crypto = "0.5.1"
+starknet-crypto = "0.6.1"
 thiserror = { workspace = true }
 tracing = "0.1.37"
 
