@@ -596,9 +596,7 @@ fn convert_invoke_v0(
     value: starknet_api::transaction::InvokeTransactionV0,
     chain_id: StarknetChainId,
 ) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be(
-        value.contract_address.0.key().bytes(),
-    ));
+    let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
     let max_fee = value.max_fee.0;
     let entry_point_selector = Felt252::from_bytes_be(value.entry_point_selector.0.bytes());
     let nonce = None;
@@ -685,7 +683,9 @@ mod tests {
     use starknet_api::{
         core::{ContractAddress, Nonce, PatriciaKey},
         hash::{StarkFelt, StarkHash},
-        transaction::{Fee, InvokeTransaction, InvokeTransactionV1, TransactionSignature},
+        transaction::{
+            Fee, InvokeTransaction, InvokeTransactionV1, TransactionHash, TransactionSignature,
+        },
     };
     use std::sync::Arc;
 
@@ -693,16 +693,13 @@ mod tests {
     fn test_from_invoke_transaction() {
         // https://starkscan.co/tx/0x05b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4
         // result 0x05b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4
+        let tx_hash = StarkHash::try_from(
+            "0x05b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4",
+        )
+        .unwrap();
         let tx = InvokeTransaction::V1(InvokeTransactionV1 {
-            sender_address: ContractAddress(
-                PatriciaKey::try_from(
-                    StarkHash::try_from(
-                        "0x00c4658311841a69ce121543af332622bc243cf5593fc4aaf822481c7b7f183d",
-                    )
-                    .unwrap(),
-                )
-                .unwrap(),
-            ),
+            sender_address: ContractAddress(PatriciaKey::try_from(tx_hash).unwrap()),
+            transaction_hash: TransactionHash(tx_hash),
             max_fee: Fee(49000000000000),
             signature: TransactionSignature(vec![
                 StarkFelt::try_from(

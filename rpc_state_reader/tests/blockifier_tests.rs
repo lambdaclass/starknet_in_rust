@@ -1,25 +1,19 @@
+use blockifier::execution::contract_class::{
+    ContractClass as BlockifierContractClass, ContractClassV0, ContractClassV0Inner,
+};
 use blockifier::{
     block_context::BlockContext,
     execution::{contract_class::ContractClass, entry_point::CallInfo},
     state::{
-        cached_state::{CachedState, GlobalContractCache},
+        cached_state::CachedState,
         errors::StateError,
         state_api::{StateReader, StateResult},
     },
     transaction::{
         account_transaction::AccountTransaction,
         objects::TransactionExecutionInfo,
-        transactions::{
-            DeclareTransaction, DeployAccountTransaction, ExecutableTransaction,
-            L1HandlerTransaction,
-        },
+        transactions::{DeclareTransaction, ExecutableTransaction, L1HandlerTransaction},
     },
-};
-use blockifier::{
-    execution::contract_class::{
-        ContractClass as BlockifierContractClass, ContractClassV0, ContractClassV0Inner,
-    },
-    transaction::transactions::InvokeTransaction,
 };
 use cairo_lang_starknet::{
     casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
@@ -29,15 +23,13 @@ use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use rpc_state_reader::rpc_state::*;
 use rpc_state_reader::utils;
 use starknet::core::types::ContractClass as SNContractClass;
+use starknet_api::core::PatriciaKey;
+use starknet_api::hash::StarkHash;
 use starknet_api::{
     block::BlockNumber,
-    contract_address,
-    core::{
-        calculate_contract_address, ClassHash, CompiledClassHash, ContractAddress, Nonce,
-        PatriciaKey,
-    },
-    hash::{StarkFelt, StarkHash},
-    patricia_key, stark_felt,
+    core::{ClassHash, CompiledClassHash, ContractAddress, Nonce},
+    hash::StarkFelt,
+    stark_felt,
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
@@ -143,11 +135,12 @@ pub fn execute_tx(
     let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash).unwrap();
 
     // Create state from RPC reader
-    let global_cache = GlobalContractCache::default();
-    let mut state = CachedState::new(rpc_reader, global_cache);
+    let mut state = CachedState::new(rpc_reader);
 
-    let fee_token_address =
-        contract_address!("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7");
+    let stark_hash =
+        StarkHash::try_from("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
+            .unwrap();
+    let fee_token_address = ContractAddress(PatriciaKey::try_from(stark_hash).unwrap());
 
     const N_STEPS_FEE_WEIGHT: f64 = 0.01;
     let vm_resource_fee_cost = Arc::new(HashMap::from([
@@ -181,24 +174,8 @@ pub fn execute_tx(
 
     // Map starknet_api transaction to blockifier's
     let blockifier_tx = match sn_api_tx.unwrap() {
-        SNTransaction::Invoke(tx) => {
-            let invoke = InvokeTransaction { tx, tx_hash };
-            AccountTransaction::Invoke(invoke)
-        }
-        SNTransaction::DeployAccount(tx) => {
-            let contract_address = calculate_contract_address(
-                tx.contract_address_salt,
-                tx.class_hash,
-                &tx.constructor_calldata,
-                ContractAddress::default(),
-            )
-            .unwrap();
-            AccountTransaction::DeployAccount(DeployAccountTransaction {
-                tx,
-                tx_hash,
-                contract_address,
-            })
-        }
+        SNTransaction::Invoke(tx) => AccountTransaction::Invoke(tx),
+        SNTransaction::DeployAccount(tx) => AccountTransaction::DeployAccount(tx),
         SNTransaction::Declare(tx) => {
             // Fetch the contract_class from the next block (as we don't have it in the previous one)
             let mut next_block_state_reader =
@@ -207,19 +184,18 @@ pub fn execute_tx(
                 .get_compiled_contract_class(&tx.class_hash())
                 .unwrap();
 
-            let declare = DeclareTransaction::new(tx, tx_hash, contract_class).unwrap();
+            let declare = DeclareTransaction::new(tx, contract_class).unwrap();
             AccountTransaction::Declare(declare)
         }
         SNTransaction::L1Handler(tx) => {
             // As L1Hanlder is not an account transaction we execute it here and return the result
             let blockifier_tx = L1HandlerTransaction {
                 tx,
-                tx_hash,
                 paid_fee_on_l1: starknet_api::transaction::Fee(u128::MAX),
             };
             return (
                 blockifier_tx
-                    .execute(&mut state, &block_context, true, true)
+                    .execute(&mut state, &block_context, true)
                     .unwrap(),
                 trace,
                 receipt,
@@ -230,7 +206,7 @@ pub fn execute_tx(
 
     (
         blockifier_tx
-            .execute(&mut state, &block_context, true, true)
+            .execute(&mut state, &block_context, true)
             .unwrap(),
         trace,
         receipt,

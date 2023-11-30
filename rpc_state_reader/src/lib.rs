@@ -16,7 +16,6 @@ pub use sir_state_reader::{
 mod tests {
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
-        class_hash,
         core::{ClassHash, ContractAddress, PatriciaKey},
         hash::{StarkFelt, StarkHash},
         patricia_key, stark_felt,
@@ -35,6 +34,12 @@ mod tests {
     macro_rules! contract_address {
         ($s:expr) => {
             ContractAddress(patricia_key!($s))
+        };
+    }
+
+    macro_rules! class_hash {
+        ($s:expr) => {
+            ClassHash(stark_felt!($s))
         };
     }
 

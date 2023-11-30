@@ -1,11 +1,12 @@
 use std::{
     collections::HashMap,
-    io::{self, Read},
+    io::{self, Read}, borrow::BorrowMut,
 };
 
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_lang_utils::bigint::BigUintAsHex;
 use serde::Deserialize;
+use serde_json::Value;
 use starknet::core::types::{LegacyContractEntryPoint, LegacyEntryPointsByType};
 use starknet_api::{
     core::EntryPointSelector,
@@ -70,7 +71,7 @@ pub fn deserialize_transaction_json(
     let tx_type: String = serde_json::from_value(transaction["type"].clone())?;
     let tx_version: String = serde_json::from_value(transaction["version"].clone())?;
 
-    match tx_type.as_str() {
+    match dbg!(tx_type.as_str()) {
         "INVOKE" => match tx_version.as_str() {
             "0x0" => Ok(Transaction::Invoke(InvokeTransaction::V0(
                 serde_json::from_value(transaction)?,
