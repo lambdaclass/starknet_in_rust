@@ -18,10 +18,24 @@ use starknet_api::{
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
+
 use starknet_in_rust::definitions::block_context::StarknetChainId;
 use std::{collections::HashMap, env, fmt::Display};
 
 use crate::{rpc_state_errors::RpcStateError, utils};
+
+use starknet_api_blockifier::{
+    block::{BlockNumber as BlockifierBlockNumber, BlockTimestamp as BlockifierBlockTimestamp},
+    core::{
+        ChainId as BlockifierChainId, ClassHash as BlockifierClassHash,
+        ContractAddress as BlockifierContractAddress,
+    },
+    hash::{StarkFelt as BlockifierStarkFelt, StarkHash as BlockifierStarkHash},
+    state::StorageKey as BlockifierStorageKey,
+    transaction::{
+        Transaction as BlockifierTransaction, TransactionHash as BlickifierTrasactionhHash,
+    },
+};
 
 /// Starknet chains supported in Infura.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]

@@ -3,12 +3,10 @@
 use cairo_vm::felt::Felt252;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use rpc_state_reader::{
-    execute_tx, execute_tx_configurable, execute_tx_without_validate, rpc_state::*,
+    execute_tx, execute_tx_configurable, execute_tx_without_validate, rpc_state::*, stark_felt,
 };
 use starknet_api::{
     block::BlockNumber,
-    hash::StarkFelt,
-    stark_felt,
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
 use starknet_in_rust::{

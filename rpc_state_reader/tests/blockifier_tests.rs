@@ -1,8 +1,8 @@
 use blockifier::{
     block_context::BlockContext,
-    execution::{contract_class::ContractClass, entry_point::CallInfo},
+    execution::{contract_address, contract_class::ContractClass, entry_point::CallInfo},
     state::{
-        cached_state::{CachedState},
+        cached_state::CachedState,
         errors::StateError,
         state_api::{StateReader, StateResult},
     },
@@ -26,20 +26,19 @@ use cairo_lang_starknet::{
 };
 use cairo_vm::types::program::Program;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use rpc_state_reader::rpc_state::*;
 use rpc_state_reader::utils;
+use rpc_state_reader::{contract_address, rpc_state::*};
 use starknet::core::types::ContractClass as SNContractClass;
-use starknet_api::{
+use starknet_api::{core::ContractAddress, state::StorageKey};
+use starknet_api_blockifier::{
     block::BlockNumber,
-    contract_address,
     core::{
-        calculate_contract_address, ClassHash, CompiledClassHash, ContractAddress, Nonce,
-        PatriciaKey,
+        calculate_contract_address, ClassHash, CompiledClassHash,
+        ContractAddress as BlockifierContractAddress, Nonce,
     },
-    hash::{StarkFelt, StarkHash},
-    patricia_key, stark_felt,
-    state::StorageKey,
-    transaction::{Transaction as SNTransaction, TransactionHash},
+    hash::StarkFelt as BlockifierStarkFelt,
+    state::StorageKey as BlockifierStorageKey,
+    transaction::{Transaction as BlockifierTransaction, TransactionHash},
 };
 use test_case::test_case;
 
@@ -50,10 +49,12 @@ pub struct RpcStateReader(RpcState);
 impl StateReader for RpcStateReader {
     fn get_storage_at(
         &mut self,
-        contract_address: ContractAddress,
-        key: StorageKey,
-    ) -> StateResult<StarkFelt> {
-        Ok(self.0.get_storage_at(&contract_address, &key))
+        contract_address: BlockifierContractAddress,
+        key: BlockifierStorageKey,
+    ) -> StateResult<BlockifierStarkFelt> {
+        let contract_address: ContractAddress = contract_address.into();
+        let key: StorageKey = key.into();
+        Ok(self.0.get_storage_at(&contract_address, &key).into())
     }
 
     fn get_nonce_at(&mut self, contract_address: ContractAddress) -> StateResult<Nonce> {
@@ -123,11 +124,16 @@ pub fn execute_tx(
     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
     // Instantiate the RPC StateReader and the CachedState
-    let rpc_reader = RpcStateReader(RpcState::new_rpc(network, block_number.into()).unwrap());
+    let rpc_reader =
+        RpcStateReader(RpcState::new_rpc_blockifier(network, block_number.into()).unwrap());
     let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
     // Get values for block context before giving ownership of the reader
     let chain_id = rpc_reader.0.get_chain_name();
+
+    #[cfg(feature = "blockifier")]
+    let chain_id = rpc_reader.0.get_chain_name();
+
     let RpcBlockInfo {
         block_number,
         block_timestamp,
@@ -143,7 +149,6 @@ pub fn execute_tx(
     let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash).unwrap();
 
     // Create state from RPC reader
-    let global_cache = GlobalContractCache::default();
     let mut state = CachedState::new(rpc_reader);
 
     let fee_token_address =

@@ -23,7 +23,7 @@ mod tests {
         definitions::block_context::StarknetChainId, transaction::InvokeFunction,
     };
 
-    use crate::{patricia_key, rpc_state::*, stark_felt, class_hash};
+    use crate::{class_hash, patricia_key, rpc_state::*, stark_felt};
 
     /// A utility macro to create a [`ContractAddress`] from a hex string / unsigned integer
     /// representation.
