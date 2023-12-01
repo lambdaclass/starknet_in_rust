@@ -472,6 +472,42 @@ fn call_events_contract_test() {
     assert_eq_sorted!(result_vm, result_native);
 }
 
+#[test]
+fn replace_class_test() {
+    let class_hash_a = ClassHash([1; 32]);
+    let address = Address(1.into());
+    let class_hash_b = ClassHash([2; 32]);
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            class_hash_a,
+            address.clone(),
+            "starknet_programs/cairo2/get_number_a.cairo",
+        )
+        .unwrap();
+
+    state
+        .load_contract(class_hash_b, "starknet_programs/cairo2/get_number_b.cairo")
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    let (result_vm, result_native) = state
+        .execute(
+            &address,
+            &address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("upgrade".as_bytes())),
+            ),
+            &[Felt252::from_bytes_be(&class_hash_b.0)],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
 #[derive(Debug, Default)]
 struct TestStateSetup {
     state_reader: InMemoryStateReader,
