@@ -773,15 +773,12 @@ impl TestState {
             None,
         )?;
         // Overwrite the execution result's execution_resources as native doesn't output it
-        execution_result_vm
-            .call_info
-            .as_mut()
-            .map(|callinfo| callinfo.execution_resources = None);
-        execution_result_vm.call_info.as_mut().map(|callinfo| {
+        if let Some(callinfo) = execution_result_vm.call_info.as_mut() {
+            callinfo.execution_resources = None;
             for callinfo in callinfo.internal_calls.iter_mut() {
-                callinfo.execution_resources = None
+                callinfo.execution_resources = None;
             }
-        });
+        }
 
         let execution_result_native = ExecutionEntryPoint::new(
             callee_address.clone(),
