@@ -36,7 +36,6 @@ use crate::{
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
-    syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
@@ -92,7 +91,7 @@ impl DeployAccount {
         signature: Vec<Felt252>,
         contract_address_salt: Felt252,
         chain_id: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -139,7 +138,7 @@ impl DeployAccount {
         signature: Vec<Felt252>,
         contract_address_salt: Felt252,
         hash_value: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
@@ -565,7 +564,7 @@ impl DeployAccount {
     pub fn from_starknet_api_transaction(
         value: starknet_api::transaction::DeployAccountTransaction,
         chain_id: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
         let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
@@ -604,11 +603,11 @@ impl DeployAccount {
 // ----------------------------------
 
 impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
-    type Error = SyscallHandlerError;
+    type Error = TransactionError;
 
     fn try_from(
         value: starknet_api::transaction::DeployAccountTransaction,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
         let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());

@@ -1,5 +1,5 @@
 use crate::core::errors::hash_errors::HashError;
-use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use crate::utils::Address;
 use cairo_vm::felt::Felt252;
 use num_integer::Integer;
 use num_traits::Pow;
@@ -59,7 +59,7 @@ pub fn calculate_contract_address(
     class_hash: &Felt252,
     constructor_calldata: &[Felt252],
     deployer_address: Address,
-) -> Result<Felt252, SyscallHandlerError> {
+) -> Result<Felt252, HashError> {
     // Define constants
     let l2_address_upper_bound = Felt252::new(2).pow(251) - Felt252::new(256);
     let contract_address_prefix = Felt252::from_bytes_be("STARKNET_CONTRACT_ADDRESS".as_bytes());
