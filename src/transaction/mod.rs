@@ -1,6 +1,9 @@
 use crate::{
     definitions::block_context::BlockContext,
-    definitions::{constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2}, block_context::StarknetChainId},
+    definitions::{
+        block_context::StarknetChainId,
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    },
     execution::TransactionExecutionInfo,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
@@ -61,7 +64,10 @@ pub enum Transaction {
 
 impl Transaction {
     /// Create a new `Transaction` from a `starknet-api Transaction`.
-    pub fn from_starknet_api(tx: starknet_api::transaction::Transaction, chain_id: StarknetChainId) -> Self {
+    pub fn from_starknet_api(
+        tx: starknet_api::transaction::Transaction,
+        chain_id: StarknetChainId,
+    ) -> Self {
         match tx {
             starknet_api::transaction::Transaction::Declare(declare_tx) => {
                 match <StarkFelt as TryInto<u64>>::try_into(declare_tx.version().0) {
@@ -86,16 +92,19 @@ impl Transaction {
                 }
             }
             starknet_api::transaction::Transaction::DeployAccount(tx) => {
-                let sir_tx = DeployAccount::from_starknet_api_transaction(tx, chain_id.to_felt()).unwrap();
+                let sir_tx =
+                    DeployAccount::from_starknet_api_transaction(tx, chain_id.to_felt()).unwrap();
                 Self::DeployAccount(sir_tx)
-            },
+            }
             starknet_api::transaction::Transaction::Invoke(tx) => {
                 let sir_tx = InvokeFunction::from_starknet_api_transaction(tx, chain_id).unwrap();
                 Self::InvokeFunction(sir_tx)
-            },
+            }
             starknet_api::transaction::Transaction::L1Handler(tx) => {
-               let sir_tx = L1Handler::from_starknet_api_transaction(tx, chain_id.to_felt(), None, None).unwrap();
-               Self::L1Handler(sir_tx)
+                let sir_tx =
+                    L1Handler::from_starknet_api_transaction(tx, chain_id.to_felt(), None, None)
+                        .unwrap();
+                Self::L1Handler(sir_tx)
             }
         }
     }

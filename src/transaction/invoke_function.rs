@@ -735,7 +735,8 @@ mod tests {
             ])),
         });
 
-        let tx_sir = InvokeFunction::from_starknet_api_transaction(tx, StarknetChainId::MainNet).unwrap();
+        let tx_sir =
+            InvokeFunction::from_starknet_api_transaction(tx, StarknetChainId::MainNet).unwrap();
         assert_eq!(
             tx_sir.hash_value.to_str_radix(16),
             "5b6cf416d56e7c7c519b44e6d06a41657ff6c6a3f2629044fac395e6d200ac4"

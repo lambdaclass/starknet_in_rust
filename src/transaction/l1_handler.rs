@@ -259,7 +259,6 @@ impl L1Handler {
                 paid_fee_on_l1,
             )
         }
-
     }
 }
 

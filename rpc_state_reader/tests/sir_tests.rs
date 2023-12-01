@@ -27,9 +27,11 @@ fn test_get_transaction_try_from() {
     let sn_tx = rpc_state.get_transaction(&tx_hash).unwrap();
     match &sn_tx {
         SNTransaction::Invoke(sn_tx) => {
-            let tx =
-                InvokeFunction::from_starknet_api_transaction(sn_tx.clone(), StarknetChainId::MainNet)
-                    .unwrap();
+            let tx = InvokeFunction::from_starknet_api_transaction(
+                sn_tx.clone(),
+                StarknetChainId::MainNet,
+            )
+            .unwrap();
             assert_eq!(tx.hash_value().to_be_bytes().as_slice(), str_hash.bytes())
         }
         _ => unimplemented!(),
