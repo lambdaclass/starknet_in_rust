@@ -588,6 +588,37 @@ fn replace_class_contract_call_test() {
     assert_eq_sorted!(result_vm, result_native);
 }
 
+#[test]
+fn keccak_syscall_test() {
+    let class_hash = ClassHash([1; 32]);
+    let address = Address(1.into());
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            class_hash,
+            address.clone(),
+            "starknet_programs/cairo2/test_cairo_keccak.cairo",
+        )
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    let (result_vm, result_native) = state
+        .execute(
+            &address,
+            &address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("cairo_keccak_test".as_bytes())),
+            ),
+            &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
 #[derive(Debug, Default)]
 struct TestStateSetup {
     state_reader: InMemoryStateReader,
