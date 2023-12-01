@@ -309,7 +309,7 @@ impl InvokeFunction {
         };
 
         if let Some(call_info) = &validate_info {
-            remaining_gas -= dbg!(call_info.gas_consumed);
+            remaining_gas -= call_info.gas_consumed;
         }
 
         // Execute transaction

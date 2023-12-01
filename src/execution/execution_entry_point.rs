@@ -64,7 +64,7 @@ use {
     tracing::debug,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct ExecutionResult {
     pub call_info: Option<CallInfo>,
     pub revert_error: Option<String>,

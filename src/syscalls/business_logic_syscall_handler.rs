@@ -528,7 +528,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let block_number = request.block_number;
         let current_block_number = self.block_context.block_info.block_number;
 
-        if block_number > current_block_number - 10 {
+        if block_number > current_block_number {
             let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
             let retdata_start =
                 self.allocate_segment(vm, vec![MaybeRelocatable::from(out_of_range_felt)])?;
