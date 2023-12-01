@@ -4,6 +4,7 @@ use assert_matches::assert_matches;
 use cairo_vm::felt::{felt_str, Felt252};
 use num_traits::One;
 use pretty_assertions_sorted::*;
+use starknet_in_rust::hash_utils::calculate_contract_address;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -613,6 +614,59 @@ fn keccak_syscall_test() {
                 &Felt252::from_bytes_be(&calculate_sn_keccak("cairo_keccak_test".as_bytes())),
             ),
             &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
+#[test]
+fn deploy_syscall_address_unavailable_test() {
+    let deployer_class_hash = ClassHash([1; 32]);
+    let deployer_address = Address(1.into());
+
+    let deployee_class_hash = ClassHash([2; 32]);
+    let salt = Felt252::one();
+    let deployee_constructor_calldata = vec![100.into()];
+    let deployee_address = Address(
+        calculate_contract_address(
+            &salt,
+            &Felt252::from_bytes_be(&deployee_class_hash.0),
+            &deployee_constructor_calldata,
+            deployer_address.clone(),
+        )
+        .unwrap(),
+    );
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            deployer_class_hash,
+            deployer_address.clone(),
+            "starknet_programs/cairo2/deploy.cairo",
+        )
+        .unwrap();
+
+    // Insert contract to be deployed so that its address is taken
+    state
+        .load_contract_at_address(
+            deployee_class_hash,
+            deployee_address.clone(),
+            "starknet_programs/cairo2/echo.cairo",
+        )
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    let (result_vm, result_native) = state
+        .execute(
+            &deployer_address,
+            &deployer_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("deploy_test".as_bytes())),
+            ),
+            &[Felt252::from_bytes_be(&deployee_class_hash.0), salt],
         )
         .unwrap();
 
