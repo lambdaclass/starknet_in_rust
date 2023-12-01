@@ -619,6 +619,37 @@ fn keccak_syscall_test() {
     assert_eq_sorted!(result_vm, result_native);
 }
 
+#[test]
+fn get_execution_info_test() {
+    let class_hash = ClassHash([1; 32]);
+    let address = Address(1.into());
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            class_hash,
+            address.clone(),
+            "starknet_programs/cairo2/get_execution_info.cairo",
+        )
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    let (result_vm, result_native) = state
+        .execute(
+            &address,
+            &address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("get_info".as_bytes())),
+            ),
+            &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
 #[derive(Debug, Default)]
 struct TestStateSetup {
     state_reader: InMemoryStateReader,
