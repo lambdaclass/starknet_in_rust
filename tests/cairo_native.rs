@@ -17,7 +17,7 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader,
         ExecutionResourcesManager,
     },
-    utils::{felt_to_hash, Address, ClassHash},
+    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
     CasmContractClass, ContractClass as SierraContractClass, EntryPointType,
 };
 use std::{fs, path::Path, sync::Arc};
@@ -57,6 +57,285 @@ fn get_block_hash_test() {
             &[
                 10.into(), // Block number.
             ],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
+#[test]
+fn integration_test_erc20() {
+    let class_hash = ClassHash([1; 32]);
+    let caller_address = Address(1.into());
+    let callee_address = Address(1.into());
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            class_hash,
+            caller_address.clone(),
+            "starknet_programs/cairo2/erc20.cairo",
+        )
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::Constructor,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("constructor".as_bytes())),
+            ),
+            &[
+                caller_address.0.clone(), // recipient
+                2.into(),                 // name
+                3.into(),                 // decimals
+                4.into(),                 // initial_supply
+                5.into(),                 // symbol
+            ],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET TOTAL SUPPLY -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("get_total_supply".as_bytes())),
+            ),
+            &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET DECIMALS -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("get_decimals".as_bytes())),
+            ),
+            &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET NAME -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("get_name".as_bytes())),
+            ),
+            &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET SYMBOL -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("get_symbol".as_bytes())),
+            ),
+            &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET BALANCE OF CALLER -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("balance_of".as_bytes())),
+            ),
+            &[caller_address.0.clone()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- ALLOWANCE OF ADDRESS 1 -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("allowance".as_bytes())),
+            ),
+            &[caller_address.0.clone(), 1.into()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- INCREASE ALLOWANCE OF ADDRESS 1 by 10_000 -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("increase_allowance".as_bytes())),
+            ),
+            &[1.into(), 10_000.into()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- ALLOWANCE OF ADDRESS 1 -----------------
+
+    // Checking again because allowance changed with previous call.
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("allowance".as_bytes())),
+            ),
+            &[caller_address.0.clone(), 1.into()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // ---------------- APPROVE ADDRESS 1 TO MAKE TRANSFERS ON BEHALF OF THE CALLER ----------------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("approve".as_bytes())),
+            ),
+            &[1.into(), 5000.into()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // ---------------- TRANSFER 3 TOKENS FROM CALLER TO ADDRESS 2 ---------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("transfer".as_bytes())),
+            ),
+            &[2.into(), 3.into()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET BALANCE OF CALLER -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("balance_of".as_bytes())),
+            ),
+            &[caller_address.0.clone()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET BALANCE OF ADDRESS 2 -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("balance_of".as_bytes())),
+            ),
+            &[2.into()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // ---------------- TRANSFER 1 TOKEN FROM CALLER TO ADDRESS 2, CALLED FROM ADDRESS 1 ----------------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("transfer_from".as_bytes())),
+            ),
+            &[1.into(), 2.into(), 1.into()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET BALANCE OF ADDRESS 2 -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("balance_of".as_bytes())),
+            ),
+            &[2.into()],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // --------------- GET BALANCE OF CALLER -----------------
+
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("balance_of".as_bytes())),
+            ),
+            &[caller_address.0.clone()],
         )
         .unwrap();
 
@@ -217,7 +496,10 @@ impl TestState {
             None,
         )?;
         // Overwrite the execution result's execution_resources as native doesn't output it
-        execution_result_vm.call_info.as_mut().map(|callinfo|callinfo.execution_resources = None);
+        execution_result_vm
+            .call_info
+            .as_mut()
+            .map(|callinfo| callinfo.execution_resources = None);
 
         let execution_result_native = ExecutionEntryPoint::new(
             callee_address.clone(),
