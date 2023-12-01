@@ -429,6 +429,49 @@ fn call_echo_contract_test() {
     assert_eq_sorted!(result_vm, result_native);
 }
 
+#[test]
+fn call_events_contract_test() {
+    let class_hash = ClassHash([1; 32]);
+    let caller_address = Address(1.into());
+    let callee_class_hash = ClassHash([2; 32]);
+    let callee_address = Address(2.into());
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            class_hash,
+            caller_address.clone(),
+            "starknet_programs/cairo2/caller.cairo",
+        )
+        .unwrap();
+
+    state
+        .load_contract_at_address(
+            callee_class_hash,
+            callee_address.clone(),
+            "starknet_programs/cairo2/event_emitter.cairo",
+        )
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    let (result_vm, result_native) = state
+        .execute(
+            &caller_address,
+            &callee_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("call_callee_contract".as_bytes())),
+            ),
+            &[Felt252::from_bytes_be(&calculate_sn_keccak(
+                "trigger_event".as_bytes(),
+            ))],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
 #[derive(Debug, Default)]
 struct TestStateSetup {
     state_reader: InMemoryStateReader,
