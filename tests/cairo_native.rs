@@ -508,6 +508,86 @@ fn replace_class_test() {
     assert_eq_sorted!(result_vm, result_native);
 }
 
+#[test]
+fn replace_class_contract_call_test() {
+    let class_hash_a = ClassHash([1; 32]);
+    let get_number_address = Address(1.into());
+    let class_hash_b = ClassHash([2; 32]);
+    let wrapper_address = Address(3.into());
+    let class_hash_wrapper = ClassHash([3; 32]);
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            class_hash_a,
+            get_number_address.clone(),
+            "starknet_programs/cairo2/get_number_a.cairo",
+        )
+        .unwrap();
+
+    state
+        .load_contract(class_hash_b, "starknet_programs/cairo2/get_number_b.cairo")
+        .unwrap();
+
+    state
+        .load_contract_at_address(
+            class_hash_wrapper,
+            wrapper_address.clone(),
+            "starknet_programs/cairo2/get_number_wrapper.cairo",
+        )
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    // CALL GET_NUMBER BEFORE REPLACE_CLASS
+
+    let (result_vm, result_native) = state
+        .execute(
+            &wrapper_address,
+            &wrapper_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes())),
+            ),
+            &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // REPLACE_CLASS
+
+    let (result_vm, result_native) = state
+        .execute(
+            &wrapper_address,
+            &wrapper_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("upgrade".as_bytes())),
+            ),
+            &[Felt252::from_bytes_be(&class_hash_b.0)],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+
+    // CALL GET_NUMBER AFTER REPLACE_CLASS
+
+    let (result_vm, result_native) = state
+        .execute(
+            &wrapper_address,
+            &wrapper_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes())),
+            ),
+            &[],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
 #[derive(Debug, Default)]
 struct TestStateSetup {
     state_reader: InMemoryStateReader,
