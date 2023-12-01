@@ -188,7 +188,7 @@ impl TestState {
 
         let block_context = BlockContext::default();
 
-        let execution_result_vm = ExecutionEntryPoint::new(
+        let mut execution_result_vm = ExecutionEntryPoint::new(
             callee_address.clone(),
             call_data.to_vec(),
             entry_point.1.clone(),
@@ -216,6 +216,9 @@ impl TestState {
             #[cfg(feature = "cairo-native")]
             None,
         )?;
+        // Overwrite the execution result's execution_resources as native doesn't output it
+        execution_result_vm.call_info.as_mut().map(|callinfo|callinfo.execution_resources = None);
+
         let execution_result_native = ExecutionEntryPoint::new(
             callee_address.clone(),
             call_data.to_vec(),
