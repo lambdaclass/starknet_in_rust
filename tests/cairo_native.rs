@@ -911,7 +911,8 @@ impl TestState {
             "The Native contract class doesn't contain the Sierra."
         );
 
-        let block_context = BlockContext::default();
+        let mut block_context = BlockContext::default();
+        block_context.block_info_mut().block_number = 30;
 
         let mut execution_result_vm = ExecutionEntryPoint::new(
             callee_address.clone(),
