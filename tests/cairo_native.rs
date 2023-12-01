@@ -681,10 +681,7 @@ fn deploy_syscall_test() {
         .unwrap();
 
     state
-        .load_contract(
-            deployee_class_hash,
-            "starknet_programs/cairo2/echo.cairo",
-        )
+        .load_contract(deployee_class_hash, "starknet_programs/cairo2/echo.cairo")
         .unwrap();
 
     let mut state = state.finalize();
