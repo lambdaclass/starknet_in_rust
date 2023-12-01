@@ -621,6 +621,49 @@ fn keccak_syscall_test() {
 }
 
 #[test]
+fn library_call() {
+    let sr_class_hash = ClassHash([1; 32]);
+    let sr_address = Address(1.into());
+    let lib_class_hash = ClassHash([2; 32]);
+    let lib_address = Address(2.into());
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            sr_class_hash,
+            sr_address.clone(),
+            "starknet_programs/cairo2/square_root.cairo",
+        )
+        .unwrap();
+    state
+        .load_contract_at_address(
+            lib_class_hash,
+            lib_address.clone(),
+            "starknet_programs/cairo2/math_lib.cairo",
+        )
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    let (result_vm, result_native) = state
+        .execute(
+            &sr_address,
+            &sr_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("square_root".as_bytes())),
+            ),
+            &[
+                25.into(),
+                Felt252::from_bytes_be(lib_class_hash.to_bytes_be()),
+            ],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
+#[test]
 fn deploy_syscall_test() {
     let deployer_class_hash = ClassHash([1; 32]);
     let deployer_address = Address(1.into());
