@@ -621,6 +621,47 @@ fn keccak_syscall_test() {
 }
 
 #[test]
+fn deploy_syscall_test() {
+    let deployer_class_hash = ClassHash([1; 32]);
+    let deployer_address = Address(1.into());
+
+    let deployee_class_hash = ClassHash([2; 32]);
+    let salt = Felt252::one();
+
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            deployer_class_hash,
+            deployer_address.clone(),
+            "starknet_programs/cairo2/deploy.cairo",
+        )
+        .unwrap();
+
+    state
+        .load_contract(
+            deployee_class_hash,
+            "starknet_programs/cairo2/echo.cairo",
+        )
+        .unwrap();
+
+    let mut state = state.finalize();
+
+    let (result_vm, result_native) = state
+        .execute(
+            &deployer_address,
+            &deployer_address,
+            (
+                EntryPointType::External,
+                &Felt252::from_bytes_be(&calculate_sn_keccak("deploy_test".as_bytes())),
+            ),
+            &[Felt252::from_bytes_be(&deployee_class_hash.0), salt],
+        )
+        .unwrap();
+
+    assert_eq_sorted!(result_vm, result_native);
+}
+
+#[test]
 fn deploy_syscall_address_unavailable_test() {
     let deployer_class_hash = ClassHash([1; 32]);
     let deployer_address = Address(1.into());
