@@ -543,6 +543,11 @@ impl TestState {
             .call_info
             .as_mut()
             .map(|callinfo| callinfo.execution_resources = None);
+        execution_result_vm.call_info.as_mut().map(|callinfo| {
+            for callinfo in callinfo.internal_calls.iter_mut() {
+                callinfo.execution_resources = None
+            }
+        });
 
         let execution_result_native = ExecutionEntryPoint::new(
             callee_address.clone(),
