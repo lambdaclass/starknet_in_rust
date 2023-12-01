@@ -488,10 +488,10 @@ impl TestState {
         call_data: &[Felt252],
     ) -> Result<(ExecutionResult, ExecutionResult), Box<dyn std::error::Error>> {
         let (class_hash_vm, contract_class_vm) =
-            Self::get_contract_class_for_address(&self.state_vm, callee_address)
+            Self::get_contract_class_for_address(&self.state_vm, caller_address)
                 .ok_or("The contract address doesn't exist.")?;
         let (class_hash_native, contract_class_native) =
-            Self::get_contract_class_for_address(&self.state_native, callee_address)
+            Self::get_contract_class_for_address(&self.state_native, caller_address)
                 .ok_or("The contract address doesn't exist.")?;
 
         assert_matches!(
