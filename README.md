@@ -116,6 +116,7 @@ Starknet in Rust can be integrated with [Cairo Native](https://github.com/lambda
   ```
   brew install llvm@17
   export MLIR_SYS_170_PREFIX=/opt/homebrew/opt/llvm@17
+  export LLVM_SYS_170_PREFIX=/opt/homebrew/opt/llvm@17
   export TABLEGEN_170_PREFIX=/opt/homebrew/opt/llvm@17
   ```
   and you're set.
