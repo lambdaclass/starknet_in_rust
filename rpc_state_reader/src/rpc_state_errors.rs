@@ -18,4 +18,8 @@ pub enum RpcStateError {
     RpcObjectHasNoField(String, String),
     #[error("Failed to convert StarkFelt to PatriciaKey")]
     StarkFeltToParticiaKeyConversion,
+    #[error("The service is down")]
+    RpcConnectionNotAvailable,
+    #[error("The response does not have a field named '{0}'")]
+    RpcResponseMissingField(String)
 }
