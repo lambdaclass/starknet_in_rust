@@ -21,5 +21,5 @@ pub enum RpcStateError {
     #[error("The service is down")]
     RpcConnectionNotAvailable,
     #[error("The response does not have a field named '{0}'")]
-    RpcResponseMissingField(String)
+    MissingRpcResponseField(String)
 }

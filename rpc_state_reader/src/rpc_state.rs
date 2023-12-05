@@ -394,8 +394,8 @@ impl RpcState {
         let result = self
             .rpc_call::<serde_json::Value>("starknet_traceTransaction", &json!([hash.to_string()]))?
             .get("result")
-            .ok_or(RpcStateError::RpcCall(
-                "Response has no field result".into(),
+            .ok_or(RpcStateError::MissingRpcResponseField(
+                "result".into(),
             ))?
             .clone();
         serde_json::from_value(result).map_err(|e| RpcStateError::Request(e.to_string()))
@@ -409,8 +409,8 @@ impl RpcState {
                 &json!([hash.to_string()]),
             )?
             .get("result")
-            .ok_or(RpcStateError::RpcCall(
-                "Response has no field result".into(),
+            .ok_or(RpcStateError::MissingRpcResponseField(
+                "result".into(),
             ))?
             .clone();
         utils::deserialize_transaction_json(result).map_err(RpcStateError::SerdeJson)
@@ -424,16 +424,16 @@ impl RpcState {
                 &json!({"block_id" : { "block_number": block_number }}),
             )?
             .get("result")
-            .ok_or(RpcStateError::RpcCall(
-                "Response has no field result".into(),
+            .ok_or(RpcStateError::MissingRpcResponseField(
+                "result".into(),
             ))?
             .clone();
         let gas_price_hex = res
             .get("l1_gas_price")
             .and_then(|gp| gp.get("price_in_wei"))
             .and_then(|gp| gp.as_str())
-            .ok_or(RpcStateError::Request(
-                "Response has no field gas_price".to_string(),
+            .ok_or(RpcStateError::MissingRpcResponseField(
+                "gas_price".to_string(),
             ))?;
         let gas_price =
             u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).map_err(|_| {
