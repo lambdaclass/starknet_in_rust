@@ -59,7 +59,7 @@ pub struct StateSelector {
     pub class_hashes: Vec<ClassHash>,
 }
 
-/// Struct representing the deploy account, containing various fields related to the deployment.
+/// Struct representing a type of transaction: deploy account.
 #[derive(Clone, Debug, Getters)]
 pub struct DeployAccount {
     #[getset(get = "pub")]
@@ -361,7 +361,7 @@ impl DeployAccount {
         }
     }
 
-    /// Handles the nonce of a transaction, verifies if it is valid.
+    /// Handles the nonce of a transaction, verifies if it is valid and increments it.
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version.is_zero() {
             return Ok(());
