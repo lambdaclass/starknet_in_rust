@@ -8,6 +8,7 @@ use cairo_vm::vm::runners::{
 };
 use core::fmt;
 use dotenv::dotenv;
+use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use starknet::core::types::ContractClass as SNContractClass;
@@ -210,7 +211,7 @@ where
     let n_steps_str: String = serde_json::from_value(
         value
             .get("steps")
-            .ok_or(serde::de::Error::custom("Missing field steps"))?
+            .ok_or(serde::de::Error::custom(RpcStateError::MissingRpcResponseField("steps".to_string())))?
             .clone(),
     )
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
@@ -221,7 +222,7 @@ where
     let n_memory_holes_str: String = serde_json::from_value(
         value
             .get("memory_holes")
-            .ok_or(serde::de::Error::custom("Missing field memory_holes"))?
+            .ok_or(serde::de::Error::custom(RpcStateError::MissingRpcResponseField("memory_holes".to_string())))?
             .clone(),
     )
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
@@ -276,7 +277,7 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         // Parse retdata
         let retdata_value = value
             .get("result")
-            .ok_or(serde::de::Error::custom("Missing field result"))?
+            .ok_or(serde::de::Error::custom(RpcStateError::MissingRpcResponseField("result".to_string())))?
             .clone();
         let retdata = serde_json::from_value(retdata_value)
             .map_err(|e| serde::de::Error::custom(e.to_string()))?;
@@ -284,7 +285,7 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         // Parse calldata
         let calldata_value = value
             .get("calldata")
-            .ok_or(serde::de::Error::custom("Missing field calldata"))?
+            .ok_or(serde::de::Error::custom(RpcStateError::MissingRpcResponseField("calldata".to_string())))?
             .clone();
         let calldata = serde_json::from_value(calldata_value)
             .map_err(|e| serde::de::Error::custom(e.to_string()))?;
@@ -292,14 +293,14 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         // Parse internal calls
         let internal_calls_value = value
             .get("calls")
-            .ok_or(serde::de::Error::custom("Missing field calls"))?
+            .ok_or(serde::de::Error::custom(RpcStateError::MissingRpcResponseField("calls".to_string())))?
             .clone();
         let mut internal_calls = vec![];
 
         for call in internal_calls_value
             .as_array()
             .ok_or(serde::de::Error::custom(
-                "Wrong type for field internal_calls",
+                RpcStateError::RpcResponseWrongType("internal_calls".to_string())
             ))?
         {
             internal_calls
@@ -437,7 +438,7 @@ impl RpcState {
             ))?;
         let gas_price =
             u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).map_err(|_| {
-                RpcStateError::Request("Response field gas_price has wrong type".to_string())
+                RpcStateError::RpcResponseWrongType("gas_price".to_string())
             })?;
         Ok(gas_price)
     }
