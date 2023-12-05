@@ -204,12 +204,19 @@ impl DeployAccount {
         self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional()?;
-        let mut tx_exec_info = self.apply(
+        let original_state = state.create_transactional()?;
+        let mut tx_exec_info = match self.apply(
             &mut transactional_state,
             block_context,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
-        )?;
+        ) {
+            Ok(info) => info,
+            Err(e) => {
+                drop(original_state);
+                return Err(e);
+            }
+        };
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
@@ -219,9 +226,11 @@ impl DeployAccount {
 
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
+            drop(original_state);
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
         } else if actual_fee > self.max_fee {
             // max_fee exceeded
+            drop(original_state);
             tx_exec_info = tx_exec_info.to_revert_error(
                 format!(
                     "Calculated fee ({}) exceeds max fee ({})",
@@ -824,5 +833,51 @@ mod tests {
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
         if tx == "DeployAccount" && ver == 2.into() && supp == vec![1]);
+    }
+
+    #[test]
+    fn test_deploy_account_reversion_on_error() {
+        let state_reader = Arc::new(InMemoryStateReader::default());
+        let mut state = CachedState::new(
+            state_reader,
+            Arc::new(PermanentContractClassCache::default()),
+        );
+
+        let initial_account_balance = Felt252::from(100);
+        let account_address = Address(Felt252::from(1));
+        let cloned_account_address = account_address.clone();
+
+        let cloned_initial_account_balance = initial_account_balance.clone();
+        state.set_storage_at(
+            &(cloned_account_address, Felt252::from(0).to_be_bytes()),
+            cloned_initial_account_balance,
+        );
+
+        // Create a DeployAccount transaction that is expected to fail, max fee greater than account balance
+        let deploy_account = DeployAccount::new(
+            ClassHash([0; 32]),
+            200,
+            Felt252::from(1),
+            Felt252::from(1),
+            vec![],
+            vec![],
+            Felt252::from(1),
+            Felt252::from(1),
+        )
+        .unwrap();
+
+        let block_context = BlockContext::default();
+        #[cfg(feature = "cairo-native")]
+        let execute_result = deploy_account.execute(&mut state, &block_context, None);
+
+        #[cfg(not(feature = "cairo-native"))]
+        let execute_result = deploy_account.execute(&mut state, &block_context);
+
+        assert!(execute_result.is_err());
+
+        let final_account_balance = state
+            .get_storage_at(&(account_address, Felt252::from(0).to_be_bytes()))
+            .unwrap();
+        assert_eq!(final_account_balance, initial_account_balance);
     }
 }
