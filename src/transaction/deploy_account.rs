@@ -52,12 +52,14 @@ use {
     std::{cell::RefCell, rc::Rc},
 };
 
+/// Struct representing the state selector, containing contract addresses and class hashes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
     pub contract_addresses: Vec<Address>,
     pub class_hashes: Vec<ClassHash>,
 }
 
+/// Struct representing a type of transaction: deploy account.
 #[derive(Clone, Debug, Getters)]
 pub struct DeployAccount {
     #[getset(get = "pub")]
@@ -83,6 +85,7 @@ pub struct DeployAccount {
 
 impl DeployAccount {
     #[allow(clippy::too_many_arguments)]
+    /// Constructor create a new DeployAccount.
     pub fn new(
         class_hash: ClassHash,
         max_fee: u128,
@@ -130,6 +133,7 @@ impl DeployAccount {
     }
 
     #[allow(clippy::too_many_arguments)]
+    /// Creates a new L1Handler instance with a specified transaction hash.
     pub fn new_with_tx_hash(
         class_hash: ClassHash,
         max_fee: u128,
@@ -325,6 +329,7 @@ impl DeployAccount {
         ))
     }
 
+    /// Handles the constructor of a contract, executes it if necessary.
     pub fn handle_constructor<S: StateReader, C: ContractClassCache>(
         &self,
         contract_class: CompiledClass,
@@ -356,6 +361,7 @@ impl DeployAccount {
         }
     }
 
+    /// Handles the nonce of a transaction, verifies if it is valid and increments it.
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version.is_zero() {
             return Ok(());
