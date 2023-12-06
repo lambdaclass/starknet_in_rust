@@ -48,6 +48,7 @@ pub(crate) enum SyscallRequest {
     ReplaceClass(ReplaceClassRequest),
     /// Computes the Keccak256 hash of the given data.
     Keccak(KeccakRequest),
+    Secp256Add(SecpAddRequest),
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -180,6 +181,13 @@ pub(crate) struct GetBlockHashRequest {
 pub(crate) struct ReplaceClassRequest {
     /// The hash of the class that will replace the calling contract one.
     pub(crate) class_hash: Felt252,
+}
+
+#[allow(unused)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct SecpAddRequest {
+    pub lhs_id: Felt252,
+    pub rhs_id: Felt252,
 }
 
 /// Computes the Keccak256 hash of the given data.

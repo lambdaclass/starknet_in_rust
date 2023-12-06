@@ -6,7 +6,7 @@ use std::ops::Add;
 use super::syscall_handler_errors::SyscallHandlerError;
 use super::syscall_request::{
     EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, KeccakRequest,
-    StorageReadRequest, StorageWriteRequest,
+    SecpAddRequest, StorageReadRequest, StorageWriteRequest,
 };
 use super::syscall_response::{
     DeployResponse, GetBlockHashResponse, GetBlockTimestampResponse, KeccakResponse,
@@ -524,7 +524,17 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             SyscallRequest::GetBlockHash(req) => self.get_block_hash(vm, req, remaining_gas),
             SyscallRequest::ReplaceClass(req) => self.replace_class(vm, req, remaining_gas),
             SyscallRequest::Keccak(req) => self.keccak(vm, req, remaining_gas),
+            SyscallRequest::Secp256Add(req) => self.secp256add(vm, req, remaining_gas),
         }
+    }
+
+    fn secp256add(
+        &mut self,
+        vm: &mut VirtualMachine,
+        request: SecpAddRequest,
+        remaining_gas: u128,
+    ) -> Result<SyscallResponse, SyscallHandlerError> {
+        todo!()
     }
 
     fn get_block_hash(

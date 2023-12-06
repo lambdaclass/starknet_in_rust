@@ -465,6 +465,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         _p1: cairo_native::starknet::Secp256k1Point,
         _gas: &mut u128,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        tracing::debug!("Called `secp256k1_add()` from Cairo Native");
         todo!()
     }
 
