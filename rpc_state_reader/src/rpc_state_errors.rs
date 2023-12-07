@@ -23,5 +23,5 @@ pub enum RpcStateError {
     #[error("The response does not have a field named '{0}'")]
     MissingRpcResponseField(String),
     #[error("Wrong type for response field '{0}'")]
-    RpcResponseWrongType(String)
+    RpcResponseWrongType(String),
 }
