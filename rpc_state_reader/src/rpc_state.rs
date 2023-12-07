@@ -372,7 +372,9 @@ impl RpcState {
             .set("Content-Type", "application/json")
             .set("accept", "application/json")
             .send_json(params)
-            .map_err(|err| RpcStateError::Request(err.to_string()))
+            .map_err(|err| if err.to_string().contains("request failed or timed out through") { 
+                RpcStateError::RpcConnectionNotAvailable 
+            } else { RpcStateError::Request(err.to_string())})
     }
 
     fn deserialize_call<T: for<'a> Deserialize<'a>>(
