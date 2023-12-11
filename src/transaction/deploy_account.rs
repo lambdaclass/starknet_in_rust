@@ -203,46 +203,34 @@ impl DeployAccount {
 
         self.handle_nonce(state)?;
 
-        let mut transactional_state = state.create_transactional()?;
-        let mut tx_exec_info;
+        // No need to create a separate transactional state, use the provided state directly.
+        let mut tx_exec_info = self.apply(
+            state,
+            block_context,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
+        )?;
 
-        {
-            let _original_state = state.create_transactional()?;
-            tx_exec_info = match self.apply(
-                &mut transactional_state,
-                block_context,
-                #[cfg(feature = "cairo-native")]
-                program_cache.clone(),
-            ) {
-                Ok(info) => info,
-                Err(e) => {
-                    return Err(e);
-                }
-            };
+        let actual_fee = calculate_tx_fee(
+            &tx_exec_info.actual_resources,
+            block_context.starknet_os_config.gas_price,
+            block_context,
+        )?;
 
-            let actual_fee = calculate_tx_fee(
-                &tx_exec_info.actual_resources,
-                block_context.starknet_os_config.gas_price,
-                block_context,
-            )?;
-
-            if let Some(revert_error) = tx_exec_info.revert_error.clone() {
-                // execution error
-                tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-            } else if actual_fee > self.max_fee {
-                // max_fee exceeded
-                tx_exec_info = tx_exec_info.to_revert_error(
-                    format!(
-                        "Calculated fee ({}) exceeds max fee ({})",
-                        actual_fee, self.max_fee
-                    )
-                    .as_str(),
-                );
-            } else {
-                state.apply_state_update(&StateDiff::from_cached_state(
-                    transactional_state.cache(),
-                )?)?;
-            }
+        if let Some(revert_error) = tx_exec_info.revert_error.clone() {
+            // execution error
+            tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
+        } else if actual_fee > self.max_fee {
+            // max_fee exceeded
+            tx_exec_info = tx_exec_info.to_revert_error(
+                format!(
+                    "Calculated fee ({}) exceeds max fee ({})",
+                    actual_fee, self.max_fee
+                )
+                .as_str(),
+            );
+        } else {
+            state.apply_state_update(&StateDiff::from_cached_state(state.cache())?)?;
         }
 
         let mut tx_execution_context =

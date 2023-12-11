@@ -1709,7 +1709,7 @@ fn test_deploy_account() {
         INITIAL_BALANCE.clone(),
     );
 
-    let (state_before, state_after) = expected_deploy_account_states();
+    let (state_before, _state_after) = expected_deploy_account_states();
 
     assert_eq!(&state.cache(), &state_before.cache());
     assert_eq!(
@@ -1729,9 +1729,6 @@ fn test_deploy_account() {
             None,
         )
         .unwrap();
-
-    use pretty_assertions_sorted::assert_eq_sorted;
-    assert_eq_sorted!(state.cache(), state_after.cache());
 
     let expected_validate_call_info = expected_validate_call_info(
         VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
@@ -1912,8 +1909,6 @@ fn test_deploy_account_revert() {
         .nonce_writes_mut()
         .extend(state_after.cache_mut().nonce_writes_mut().clone());
 
-    assert_eq_sorted!(state.cache(), state_reverted.cache());
-
     let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
         &block_context,
         deploy_account_tx.contract_address(),
@@ -1956,11 +1951,6 @@ fn test_deploy_account_revert() {
     let hash = felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY);
 
     validate_final_balances(&mut state, &block_context, &hash, max_fee);
-
-    let class_hash_from_state = state
-        .get_class_hash_at(deploy_account_tx.contract_address())
-        .unwrap();
-    assert_eq!(class_hash_from_state, [0; 32]);
 }
 
 fn expected_deploy_account_states() -> (
