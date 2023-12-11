@@ -9,7 +9,6 @@ use crate::services::api::contract_classes::deprecated_contract_class::EntryPoin
 use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
 use crate::state::state_api::StateChangesCount;
-use crate::state::StateDiff;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -229,8 +228,6 @@ impl DeployAccount {
                 )
                 .as_str(),
             );
-        } else {
-            state.apply_state_update(&StateDiff::from_cached_state(state.cache())?)?;
         }
 
         let mut tx_execution_context =
