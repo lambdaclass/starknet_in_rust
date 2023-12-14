@@ -130,7 +130,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
     }
 
     ///  System calls allow a contract to requires services from the Starknet OS
-    ///  See further documentation on https://docs.starknet.io/documentation/architecture_and_concepts/Contracts/system-calls/
+    ///  See further documentation on https://docs.starknet.io/documentation/architecture_and_concepts/Smart_Contracts/system-calls-cairo1/
     /// Constructor for testing purposes
     pub fn new_for_testing(
         block_info: BlockInfo,

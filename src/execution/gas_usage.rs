@@ -5,7 +5,7 @@ use crate::state::state_api::StateChangesCount;
 
 /// Estimates L1 gas usage by Starknet's update state and the verifier
 ///
-/// For information about the fee calculation visit the [starknet documentation](https://docs.starknet.io/documentation/architecture_and_concepts/Fees/fee-mechanism/).
+/// For information about the fee calculation visit the [starknet documentation](https://docs.starknet.io/documentation/architecture_and_concepts/Network_Architecture/fee-mechanism/).
 ///
 /// # Parameters:
 /// - `l2_to_l1_messages`: A vector of [`L2toL1MessageInfo`] objects representing the messages from L2 to L1.
