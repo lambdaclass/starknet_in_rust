@@ -1,5 +1,5 @@
 // This contract is a modification from:
-// https://github.com/OpenZeppelin/cairo-contracts/blob/main/src/openzeppelin/introspection/erc165/IERC165.cairo
+// https://github.com/OpenZeppelin/cairo-contracts/blob/release-v0.6.0/src/openzeppelin/introspection/erc165/IERC165.cairo
 
 %lang starknet
 
