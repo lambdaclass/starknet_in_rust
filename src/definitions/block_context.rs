@@ -43,7 +43,7 @@ impl StarknetChainId {
     ///
     /// ```
     /// use starknet_in_rust::definitions::block_context::StarknetChainId;
-    /// use starknet_in_rust::felt::felt_str;
+    /// use starknet_in_rust::Felt252;
     ///
     /// assert_eq!(
     ///     StarknetChainId::MainNet.to_felt(),

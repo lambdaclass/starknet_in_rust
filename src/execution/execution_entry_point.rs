@@ -684,17 +684,23 @@ impl ExecutionEntryPoint {
             EntryPointType::External => contract_entrypoints
                 .external
                 .iter()
-                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .find(|entry_point| {
+                    entry_point.selector == felt_to_biguint(self.entry_point_selector)
+                })
                 .unwrap(),
             EntryPointType::Constructor => contract_entrypoints
                 .constructor
                 .iter()
-                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .find(|entry_point| {
+                    entry_point.selector == felt_to_biguint(self.entry_point_selector)
+                })
                 .unwrap(),
             EntryPointType::L1Handler => contract_entrypoints
                 .l1_handler
                 .iter()
-                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .find(|entry_point| {
+                    entry_point.selector == felt_to_biguint(self.entry_point_selector)
+                })
                 .unwrap(),
         };
 

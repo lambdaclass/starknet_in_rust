@@ -1284,10 +1284,9 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=dc3ee4a746388c1f7fcc30f097da3220a5b1d3dc#dc3ee4a746388c1f7fcc30f097da3220a5b1d3dc"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=52f8e190ab3a812ed5f95ba5becc9a39a69131ca#52f8e190ab3a812ed5f95ba5becc9a39a69131ca"
 dependencies = [
  "bumpalo",
- "cairo-felt",
  "cairo-lang-compiler",
  "cairo-lang-defs",
  "cairo-lang-diagnostics",
@@ -1307,10 +1306,13 @@ dependencies = [
  "itertools 0.12.0",
  "lazy_static",
  "libc",
+ "llvm-sys",
  "melior",
  "mlir-sys",
  "num-bigint",
  "num-traits 0.2.17",
+ "starknet-types-core",
+ "tempfile",
  "thiserror",
  "tracing",
  "tracing-subscriber",
@@ -1319,13 +1321,13 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=dc3ee4a746388c1f7fcc30f097da3220a5b1d3dc#dc3ee4a746388c1f7fcc30f097da3220a5b1d3dc"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=52f8e190ab3a812ed5f95ba5becc9a39a69131ca#52f8e190ab3a812ed5f95ba5becc9a39a69131ca"
 dependencies = [
- "cairo-felt",
  "cairo-lang-runner",
  "libc",
  "starknet-crypto 0.6.1",
  "starknet-curve 0.4.0",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -1361,7 +1363,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.9.1"
-source = "git+https://github.com/lambdaclass/cairo-vm?rev=bc3d9b9303480dab7f2ef2833a119d828cfd3190#bc3d9b9303480dab7f2ef2833a119d828cfd3190"
+source = "git+https://github.com/lambdaclass/cairo-vm?rev=8d56be64cd9038ede45b3e0300cb3593c559b739#8d56be64cd9038ede45b3e0300cb3593c559b739"
 dependencies = [
  "anyhow",
  "ark-ff",
@@ -1510,9 +1512,9 @@ dependencies = [
 
 [[package]]
 name = "comrak"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82c995deda3bfdebd07d0e2af79e9da13e4b1be652b21a746f3f5b24bf0a49ef"
+checksum = "9f18e72341e6cdc7489cffb76f993812a14a906db54dedb020044ccc211dcaae"
 dependencies = [
  "clap",
  "derive_builder",
@@ -1914,14 +1916,14 @@ checksum = "545b22097d44f8a9581187cdf93de7a71e4722bf51200cfaba810865b49a495d"
 
 [[package]]
 name = "educe"
-version = "0.4.23"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f0042ff8246a363dbe77d2ceedb073339e85a804b9a47636c6e016a9a32c05f"
+checksum = "f39e09e750431c4f545eb575c1175640d5350282124120c32c295ea9c4f80d28"
 dependencies = [
  "enum-ordinalize",
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -1962,12 +1964,19 @@ checksum = "b5320ae4c3782150d900b79807611a59a99fc9a1d61d686faafc24b93fc8d7ca"
 
 [[package]]
 name = "enum-ordinalize"
-version = "3.1.15"
+version = "4.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bf1fa3f06bbff1ea5b1a9c7b14aa992a39657db60a2759457328d7e058f49ee"
+checksum = "6926bbe8b379bb3d8e9fb718a0496481531f338866666a848e6a02da99ffab79"
 dependencies = [
- "num-bigint",
- "num-traits 0.2.17",
+ "enum-ordinalize-derive",
+]
+
+[[package]]
+name = "enum-ordinalize-derive"
+version = "4.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05aa0010e0e391b9a82dc87bfc4dbee3cb8260eec12ad9d83c12788299fa9093"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -2707,8 +2716,9 @@ dependencies = [
 
 [[package]]
 name = "lambdaworks-math"
-version = "0.2.0"
-source = "git+https://github.com/lambdaclass/lambdaworks.git?rev=f940e14ed17370d29fe129951448037d11b65ce8#f940e14ed17370d29fe129951448037d11b65ce8"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "540c0715d7da472edc421ceca702d3f3a716b3b9168b6211f2e3939cb14c863c"
 
 [[package]]
 name = "language-tags"
@@ -2790,6 +2800,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "969488b55f8ac402214f3f5fd243ebb7206cf82de60d3172994707a4bcc2b829"
 
 [[package]]
+name = "llvm-sys"
+version = "170.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eed90f72df5504c0af2e3a08ee7762a4a3e42ec2605811fc19f64879de40c50a"
+dependencies = [
+ "anyhow",
+ "cc",
+ "lazy_static",
+ "libc",
+ "regex-lite",
+ "semver",
+]
+
+[[package]]
 name = "local-channel"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2860,9 +2884,9 @@ dependencies = [
 
 [[package]]
 name = "melior"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ded989056570433e795e2499bdb495a65e0e3cb90129e584b8897f6b86415b65"
+checksum = "d579dda794588eae5b4e470efb3acaa330c1b9af6148d40abbf4d683bf01922b"
 dependencies = [
  "dashmap",
  "melior-macro",
@@ -2872,9 +2896,9 @@ dependencies = [
 
 [[package]]
 name = "melior-macro"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c698b22dae02b9106a47ab2213abf7fc6a9746538d1a7200528b2dbacbf0845a"
+checksum = "8423fdf51f19a02f0fc34b1e4d603661e7b6ed6b2905d04c894cdccb65c6d0a0"
 dependencies = [
  "comrak",
  "convert_case 0.6.0",
@@ -3574,6 +3598,12 @@ dependencies = [
  "memchr",
  "regex-syntax 0.8.2",
 ]
+
+[[package]]
+name = "regex-lite"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30b661b2f27137bdbc16f00eda72866a92bb28af1753ffbd56744fb6e2e9cd8e"
 
 [[package]]
 name = "regex-syntax"
@@ -4409,10 +4439,11 @@ dependencies = [
 [[package]]
 name = "starknet-types-core"
 version = "0.0.3"
-source = "git+https://github.com/starknet-io/types-rs.git?rev=5c77a9184aaecfaddf39c49d8bf64343fa7c0720#5c77a9184aaecfaddf39c49d8bf64343fa7c0720"
+source = "git+https://github.com/starknet-io/types-rs.git?rev=4bc8a5db3c86f017e8be7dc43531a2cb6db011c0#4bc8a5db3c86f017e8be7dc43531a2cb6db011c0"
 dependencies = [
  "bitvec",
  "lambdaworks-math",
+ "lazy_static",
  "num-bigint",
  "num-integer",
  "num-traits 0.2.17",
@@ -4470,6 +4501,7 @@ dependencies = [
  "sha3",
  "starknet",
  "starknet-crypto 0.6.1",
+ "starknet-types-core",
  "starknet_api",
  "thiserror",
  "tracing",
