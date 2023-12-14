@@ -24,6 +24,7 @@ Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https
 - [📖 About](#-about)
 - [🌅 Getting Started](#-getting-started)
   - [Dependencies](#dependencies)
+  - [Requirements](#requirements)
   - [Installation](#installation)
     - [How to manually install the script dependencies](#how-to-manually-install-the-script-dependencies)
 - [🚀 Usage](#-usage)
@@ -53,6 +54,21 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 - Rust 1.70
 - A working installation of cairo-lang 0.12 (for compiling the cairo files)
 - [Optional, for testing purposes] Heaptrack
+
+### Requirements
+
+You need to have a version of `Python 3` installed. If you don't have it, you can install it for Debian-based GNU/Linux distributions with:
+```shell
+sudo apt install python3.9
+```
+On MacOS you can use Homebrew:
+```shell
+brew install python@3.9
+```
+Optionally, for setting environment, you can install `pyenv` for MacOS:
+```shell
+brew install pyenv
+```
 
 ### Installation
 
@@ -100,6 +116,7 @@ Starknet in Rust can be integrated with [Cairo Native](https://github.com/lambda
   ```
   brew install llvm@17
   export MLIR_SYS_170_PREFIX=/opt/homebrew/opt/llvm@17
+  export LLVM_SYS_170_PREFIX=/opt/homebrew/opt/llvm@17
   export TABLEGEN_170_PREFIX=/opt/homebrew/opt/llvm@17
   ```
   and you're set.
@@ -176,8 +193,7 @@ Run the following command:
 ```bash
 $ make test
 ```
-Take into account that some tests use the [RPC State Reader](#rpc-state-reader) so you need a full-node instance or an Infura API key.
-
+Take into account that some tests use the [RPC State Reader](#rpc-state-reader) so you need a full-node instance or an RPC provider that supports Starknet API version 0.5.0.
 
 ### RPC State Reader
 
@@ -188,12 +204,12 @@ Every time it needs to read a storage value, a contract class or contract, it go
 Right now we are using it for internal testing but we plan to release it as a library soon.
 
 #### How to configure it
-In order to use the RPC state reader add an Infura API key in a `.env` file at root:
+In order to use the RPC state reader add the endpoints to a full node instance or RPC provider supporting Starknet API version 0.5.0 in a `.env` file at root:
 
 ```
-INFURA_API_KEY={some_key}
+RPC_ENDPOINT_TESTNET={some endpoint}
+RPC_ENDPOINT_MAINNET={some endpoint}
 ```
-
 
 ### Profiling
 
