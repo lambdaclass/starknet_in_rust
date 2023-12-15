@@ -10,6 +10,7 @@ pub(crate) const ESTIMATED_DEPLOY_STEPS: usize = 0;
 pub(crate) const ESTIMATED_DEPLOY_ACCOUNT_STEPS: usize = 3612;
 pub(crate) const ESTIMATED_L1_HANDLER_STEPS: usize = 1068;
 
+/// Represents the operating system resources associated with syscalls and transactions.
 #[derive(Debug, Clone)]
 pub struct OsResources {
     execute_syscalls: HashMap<String, ExecutionResources>,
@@ -17,6 +18,7 @@ pub struct OsResources {
 }
 
 impl Default for OsResources {
+    /// Provide default values for `OsResources`.
     fn default() -> Self {
         let execute_txs_inner: HashMap<TransactionType, ExecutionResources> = HashMap::from([
             (
@@ -261,6 +263,8 @@ impl Default for OsResources {
     }
 }
 
+/// Calculate the additional operating system resources required to execute a transaction
+/// given a set of syscalls invoked and a transaction type.
 pub fn get_additional_os_resources(
     syscall_counter: HashMap<String, u64>,
     tx_type: &TransactionType,
@@ -289,6 +293,7 @@ pub fn get_additional_os_resources(
     Ok(additional_os_resources)
 }
 
+/// Test for the `get_additional_os_resources` function.
 #[test]
 fn get_additional_os_resources_test() {
     let syscall_counter = HashMap::from([("storage_read".into(), 2), ("storage_write".into(), 3)]);
