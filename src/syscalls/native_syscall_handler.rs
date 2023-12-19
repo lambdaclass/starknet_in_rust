@@ -6,7 +6,6 @@ use cairo_native::{
     starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
 };
 use cairo_vm::Felt252;
-use num_traits::Zero;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_types_core::felt::Felt as NaitiveFelt;
 

@@ -1284,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=52f8e190ab3a812ed5f95ba5becc9a39a69131ca#52f8e190ab3a812ed5f95ba5becc9a39a69131ca"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=f7357409240681933b8d4cc1f033b7dfd598d1b7#f7357409240681933b8d4cc1f033b7dfd598d1b7"
 dependencies = [
  "bumpalo",
  "cairo-lang-compiler",
@@ -1306,6 +1306,7 @@ dependencies = [
  "itertools 0.12.0",
  "lazy_static",
  "libc",
+ "libloading 0.8.1",
  "llvm-sys",
  "melior",
  "mlir-sys",
@@ -1321,9 +1322,10 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=52f8e190ab3a812ed5f95ba5becc9a39a69131ca#52f8e190ab3a812ed5f95ba5becc9a39a69131ca"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=f7357409240681933b8d4cc1f033b7dfd598d1b7#f7357409240681933b8d4cc1f033b7dfd598d1b7"
 dependencies = [
  "cairo-lang-runner",
+ "lazy_static",
  "libc",
  "starknet-crypto 0.6.1",
  "starknet-curve 0.4.0",
@@ -1449,7 +1451,7 @@ checksum = "c688fc74432808e3eb684cae8830a86be1d66a2bd58e1f248ed0960a590baf6f"
 dependencies = [
  "glob",
  "libc",
- "libloading",
+ "libloading 0.7.4",
 ]
 
 [[package]]
@@ -2758,6 +2760,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "libloading"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c571b676ddfc9a8c12f1f3d3085a7b163966a8fd8098a90640953ce5f6170161"
+dependencies = [
+ "cfg-if",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "libmimalloc-sys"
 version = "0.1.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2884,9 +2896,9 @@ dependencies = [
 
 [[package]]
 name = "melior"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d579dda794588eae5b4e470efb3acaa330c1b9af6148d40abbf4d683bf01922b"
+checksum = "b3bcffc01df9997b0976c7e053d8dff0c438a24539f74944e59d4f45636d3553"
 dependencies = [
  "dashmap",
  "melior-macro",
@@ -2896,9 +2908,9 @@ dependencies = [
 
 [[package]]
 name = "melior-macro"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8423fdf51f19a02f0fc34b1e4d603661e7b6ed6b2905d04c894cdccb65c6d0a0"
+checksum = "3113479e9b0b0f74ae36f3f99d01fdda54facff56129612f16fc0a9dee26807d"
 dependencies = [
  "comrak",
  "convert_case 0.6.0",
@@ -3121,9 +3133,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.18.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
+checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "onig"
