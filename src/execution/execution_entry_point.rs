@@ -78,6 +78,7 @@ pub struct ExecutionEntryPoint {
 }
 #[allow(clippy::too_many_arguments)]
 impl ExecutionEntryPoint {
+    /// Creates a new ExecutionEntryPoint instance.
     pub fn new(
         contract_address: Address,
         calldata: Vec<Felt252>,
@@ -227,7 +228,7 @@ impl ExecutionEntryPoint {
         }
     }
 
-    /// Returns the entry point with selector corresponding with self.entry_point_selector, or the
+    /// Returns for version 0 the entry point with selector corresponding with self.entry_point_selector, or the
     /// default if there is one and the requested one is not found.
     fn get_selected_entry_point_v0(
         &self,
@@ -260,6 +261,8 @@ impl ExecutionEntryPoint {
             .ok_or(TransactionError::EntryPointNotFound)
     }
 
+    // Returns the entry point with selector corresponding with self.entry_point_selector, or the
+    /// default if there is one and the requested one is not found.
     fn get_selected_entry_point(
         &self,
         contract_class: &CasmContractClass,
@@ -291,6 +294,7 @@ impl ExecutionEntryPoint {
             .ok_or(TransactionError::EntryPointNotFound)
     }
 
+    /// Constructs a CallInfo object for deprecated contract classes.
     fn build_call_info_deprecated<S: StateReader, C: ContractClassCache>(
         &self,
         previous_cairo_usage: ExecutionResources,
@@ -324,6 +328,7 @@ impl ExecutionEntryPoint {
         })
     }
 
+    /// Constructs a CallInfo object for current contract classes.
     fn build_call_info<S: StateReader, C: ContractClassCache>(
         &self,
         previous_cairo_usage: ExecutionResources,
@@ -383,6 +388,7 @@ impl ExecutionEntryPoint {
         get_deployed_address_class_hash_at_address(state, code_address)
     }
 
+    /// The function is designed to execute a contract class for version 0.
     fn _execute_version0_class<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
@@ -488,6 +494,7 @@ impl ExecutionEntryPoint {
         )
     }
 
+    /// This function executes a contract class.
     fn _execute<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
