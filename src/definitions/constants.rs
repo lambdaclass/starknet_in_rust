@@ -2,7 +2,7 @@ use super::block_context::{StarknetChainId, StarknetOsConfig};
 use crate::utils::Address;
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
+
 use std::collections::HashMap;
 
 pub(crate) const L2_TO_L1_MSG_HEADER_SIZE: usize = 3;

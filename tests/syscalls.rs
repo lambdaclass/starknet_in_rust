@@ -75,11 +75,11 @@ fn test_contract<'a>(
             10,
             0.into(),
             block_context.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
         )
     });
 
-    let nonce = tx_execution_context.nonce().clone();
+    let nonce = *tx_execution_context.nonce();
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -135,7 +135,7 @@ fn test_contract<'a>(
     let entry_point = ExecutionEntryPoint::new(
         contract_address.clone(),
         calldata.clone(),
-        entry_point_selector.clone(),
+        entry_point_selector,
         caller_address.clone(),
         EntryPointType::External,
         CallType::Delegate.into(),
@@ -403,7 +403,7 @@ fn get_caller_address_syscall() {
             "test_get_caller_address",
             ClassHash([1; 32]),
             Address(1111.into()),
-            Address(caller_address.clone()),
+            Address(caller_address),
             BlockContext::default(),
             None,
             [],
@@ -433,7 +433,7 @@ fn get_contract_address_syscall() {
             "starknet_programs/syscalls.json",
             "test_get_contract_address",
             ClassHash([1; 32]),
-            Address(contract_address.clone()),
+            Address(contract_address),
             Address(0.into()),
             BlockContext::default(),
             None,
@@ -461,7 +461,7 @@ fn get_contract_address_syscall() {
 fn get_sequencer_address_syscall() {
     let run = |sequencer_address: Felt252| {
         let mut block_context = BlockContext::default();
-        block_context.block_info_mut().sequencer_address = Address(sequencer_address.clone());
+        block_context.block_info_mut().sequencer_address = Address(sequencer_address);
 
         test_contract(
             "starknet_programs/syscalls.json",
@@ -501,7 +501,7 @@ fn get_tx_info_syscall() {
                chain_id: Felt252,
                execution_resources: ExecutionResources| {
         let mut block_context = BlockContext::default();
-        *block_context.starknet_os_config_mut().chain_id_mut() = chain_id.clone();
+        *block_context.starknet_os_config_mut().chain_id_mut() = chain_id;
 
         let n_steps = block_context.invoke_tx_max_n_steps();
         test_contract(
@@ -513,12 +513,12 @@ fn get_tx_info_syscall() {
             block_context,
             Some(TransactionExecutionContext::new(
                 account_contract_address.clone(),
-                transaction_hash.clone(),
+                transaction_hash,
                 signature.clone(),
                 max_fee,
                 3.into(),
                 n_steps,
-                version.clone(),
+                version,
             )),
             [],
             [],
@@ -893,9 +893,9 @@ fn deploy_syscall() {
         [Felt252::from_bytes_be(&deploy_class_hash.0), 0.into()],
         vec![CallInfo {
             caller_address: Address(0.into()),
-            contract_address: Address(deploy_address.clone()),
+            contract_address: Address(deploy_address),
             entry_point_type: Some(EntryPointType::Constructor),
-            entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
+            entry_point_selector: Some(*CONSTRUCTOR_ENTRY_POINT_SELECTOR),
             call_type: Some(CallType::Call),
             class_hash: Some(deploy_class_hash),
             ..Default::default()
@@ -949,7 +949,7 @@ fn deploy_with_constructor_syscall() {
         [CallInfo {
             caller_address,
             call_type: Some(CallType::Call),
-            contract_address: Address(deploy_address.clone()),
+            contract_address: Address(deploy_address),
             class_hash: Some(deploy_class_hash),
             entry_point_selector: Some(entry_point_selector),
             entry_point_type: Some(EntryPointType::Constructor),
@@ -1011,8 +1011,8 @@ fn test_deploy_and_call_contract_syscall() {
         [
             Felt252::from_bytes_be(&deploy_class_hash.0),
             0.into(),
-            constructor_constant.clone(),
-            new_constant.clone(),
+            constructor_constant,
+            new_constant,
         ],
         [
             // constructor
@@ -1054,8 +1054,8 @@ fn test_deploy_and_call_contract_syscall() {
                 ),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![4.into()],
-                retdata: vec![(constructor_constant.clone() * Felt252::from(4))],
-                storage_read_values: vec![constructor_constant.clone()],
+                retdata: vec![(constructor_constant * Felt252::from(4))],
+                storage_read_values: vec![constructor_constant],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
                 execution_resources: Some(ExecutionResources {
                     n_steps: 52,
@@ -1077,7 +1077,7 @@ fn test_deploy_and_call_contract_syscall() {
                     .unwrap(),
                 ),
                 entry_point_type: Some(EntryPointType::External),
-                calldata: vec![new_constant.clone()],
+                calldata: vec![new_constant],
                 retdata: vec![],
                 storage_read_values: vec![constructor_constant],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
@@ -1102,8 +1102,8 @@ fn test_deploy_and_call_contract_syscall() {
                 ),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![],
-                retdata: vec![new_constant.clone()],
-                storage_read_values: vec![new_constant.clone()],
+                retdata: vec![new_constant],
+                storage_read_values: vec![new_constant],
                 accessed_storage_keys: HashSet::from([constant_storage_key]),
                 execution_resources: Some(ExecutionResources {
                     n_steps: 46,
@@ -1179,7 +1179,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::from(entrypoint_selector),
+        entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1196,7 +1196,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1287,7 +1287,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::from(entrypoint_selector),
+        entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1304,7 +1304,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1397,7 +1397,7 @@ fn deploy_cairo1_and_invoke() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::from(entrypoint_selector),
+        entrypoint_selector,
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1414,7 +1414,7 @@ fn deploy_cairo1_and_invoke() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1542,7 +1542,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        entrypoint_selector.clone(),
+        *entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1559,7 +1559,7 @@ fn send_messages_to_l1_different_contract_calls() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

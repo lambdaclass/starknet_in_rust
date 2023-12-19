@@ -7,7 +7,7 @@ use cairo_vm::{
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
     Felt252,
 };
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -37,13 +37,12 @@ fn integration_test() {
     let contract_class = ContractClass::from_path(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
-    let fib_entrypoint_selector = entry_points_by_type
+    let fib_entrypoint_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //* --------------------------------------------
     //*    Create state reader with class hash data
@@ -86,7 +85,7 @@ fn integration_test() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        fib_entrypoint_selector.clone(),
+        fib_entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -105,7 +104,7 @@ fn integration_test() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -201,7 +200,7 @@ fn integration_test_cairo1() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

@@ -1,11 +1,11 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    utils::{biguint_to_felt, felt_to_biguint},
+    utils::{biguint_to_felt},
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
     Felt252,
 };
 use num_bigint::BigUint;
-use num_traits::{Num, One, Zero};
+
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::{
@@ -42,7 +42,7 @@ fn create_execute_extrypoint(
     ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&selector).unwrap(),
+        biguint_to_felt(selector).unwrap(),
         Address(0000.into()),
         entry_point_type,
         Some(CallType::Delegate),
@@ -93,7 +93,7 @@ fn storage_write_read() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -265,7 +265,7 @@ fn library_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -282,7 +282,7 @@ fn library_call() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
@@ -307,7 +307,7 @@ fn library_call() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(biguint_to_felt(&entrypoint_selector).unwrap()),
+        entry_point_selector: Some(biguint_to_felt(entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
@@ -437,7 +437,7 @@ fn call_contract_storage_write_read() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -451,7 +451,7 @@ fn call_contract_storage_write_read() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            biguint_to_felt(&selector).unwrap(),
+            biguint_to_felt(selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -487,7 +487,7 @@ fn call_contract_storage_write_read() {
 
     // RUN GET_BALANCE
     // Create an execution entry point
-    let calldata = [simple_wallet_address.0.clone()].to_vec();
+    let calldata = [simple_wallet_address.0].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
@@ -513,7 +513,7 @@ fn call_contract_storage_write_read() {
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
-    let calldata = [100.into(), simple_wallet_address.0.clone()].to_vec();
+    let calldata = [100.into(), simple_wallet_address.0].to_vec();
     let increase_balance_entry_point = create_execute_extrypoint(
         increase_balance_entrypoint_selector,
         calldata,
@@ -602,7 +602,7 @@ fn emit_event() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -619,7 +619,7 @@ fn emit_event() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -723,7 +723,7 @@ fn deploy_cairo1_from_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -740,7 +740,7 @@ fn deploy_cairo1_from_cairo1() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -830,7 +830,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -847,7 +847,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -926,7 +926,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // arguments of deploy contract
-    let calldata: Vec<_> = [test_felt_hash, salt, address.0.clone(), Felt252::ZERO].to_vec();
+    let calldata: Vec<_> = [test_felt_hash, salt, address.0, Felt252::ZERO].to_vec();
 
     // set up remaining structures
 
@@ -936,7 +936,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -953,7 +953,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1044,7 +1044,7 @@ fn deploy_cairo0_and_invoke() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1061,7 +1061,7 @@ fn deploy_cairo0_and_invoke() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1183,7 +1183,7 @@ fn test_send_message_to_l1_syscall() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1278,7 +1278,7 @@ fn test_get_execution_info() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1308,10 +1308,10 @@ fn test_get_execution_info() {
         .unwrap();
 
     let expected_ret_data = vec![
-        block_context.block_info().sequencer_address.0.clone(),
+        block_context.block_info().sequencer_address.0,
         0.into(),
         0.into(),
-        address.0.clone(),
+        address.0,
     ];
 
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -1403,7 +1403,7 @@ fn replace_class_internal() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(&upgrade_selector).unwrap(),
+        biguint_to_felt(upgrade_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1420,7 +1420,7 @@ fn replace_class_internal() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1479,7 +1479,7 @@ fn replace_class_contract_call() {
         .insert(address.clone(), class_hash_a);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_B
 
@@ -1536,7 +1536,7 @@ fn replace_class_contract_call() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1549,7 +1549,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(&get_number_entrypoint_selector).unwrap(),
+        biguint_to_felt(get_number_entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1578,7 +1578,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(&upgrade_entrypoint_selector).unwrap(),
+        biguint_to_felt(upgrade_entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1606,7 +1606,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&get_number_entrypoint_selector).unwrap(),
+        biguint_to_felt(get_number_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1662,7 +1662,7 @@ fn replace_class_contract_call_same_transaction() {
         .insert(address.clone(), class_hash_a);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_B
 
@@ -1718,7 +1718,7 @@ fn replace_class_contract_call_same_transaction() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1731,7 +1731,7 @@ fn replace_class_contract_call_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&get_numbers_entrypoint_selector).unwrap(),
+        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1787,7 +1787,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
         .insert(address.clone(), class_hash_c);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_B
 
@@ -1843,7 +1843,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1856,7 +1856,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&get_numbers_entrypoint_selector).unwrap(),
+        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1927,7 +1927,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
         .insert(address.clone(), class_hash_b);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_WRAPPER
 
@@ -1966,7 +1966,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1979,7 +1979,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&get_numbers_entrypoint_selector).unwrap(),
+        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2046,7 +2046,7 @@ fn call_contract_replace_class_cairo_0() {
         .insert(address.clone(), class_hash_d);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_WRAPPER
 
@@ -2085,7 +2085,7 @@ fn call_contract_replace_class_cairo_0() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2098,7 +2098,7 @@ fn call_contract_replace_class_cairo_0() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&get_numbers_entrypoint_selector).unwrap(),
+        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2164,7 +2164,7 @@ fn test_out_of_gas_failure() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2181,7 +2181,7 @@ fn test_out_of_gas_failure() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2243,7 +2243,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2260,7 +2260,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2319,7 +2319,7 @@ fn deploy_syscall_failure_in_constructor() {
     let f_c_contract_class: CasmContractClass = serde_json::from_slice(f_c_program_data).unwrap();
     let f_c_class_hash = Felt252::ONE;
     contract_class_cache.set_contract_class(
-        ClassHash::from(f_c_class_hash.clone()),
+        ClassHash::from(f_c_class_hash),
         CompiledClass::Casm(Arc::new(f_c_contract_class)),
     );
 
@@ -2334,7 +2334,7 @@ fn deploy_syscall_failure_in_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2351,7 +2351,7 @@ fn deploy_syscall_failure_in_constructor() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2415,7 +2415,7 @@ fn storage_read_no_value() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2489,7 +2489,7 @@ fn storage_read_unavailable_address_domain() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2566,7 +2566,7 @@ fn storage_write_unavailable_address_domain() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2664,7 +2664,7 @@ fn library_call_failure() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2681,7 +2681,7 @@ fn library_call_failure() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut expected_execution_resources = ExecutionResources::default();
@@ -2779,7 +2779,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2796,7 +2796,7 @@ fn send_messages_to_l1_different_contract_calls() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2902,7 +2902,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2919,7 +2919,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -3025,7 +3025,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        entrypoint_selector.clone(),
+        *entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3042,7 +3042,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -3122,7 +3122,7 @@ fn keccak_syscall() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -3227,7 +3227,7 @@ fn library_call_recursive_50_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3244,7 +3244,7 @@ fn library_call_recursive_50_calls() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources_internal_call = ExecutionResources {
@@ -3373,7 +3373,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -3387,7 +3387,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            biguint_to_felt(&selector).unwrap(),
+            biguint_to_felt(selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -3423,7 +3423,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 
     // RUN GET_BALANCE
     // Create an execution entry point
-    let calldata = [simple_wallet_address.0.clone()].to_vec();
+    let calldata = [simple_wallet_address.0].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
@@ -3449,7 +3449,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
-    let calldata = [50.into(), simple_wallet_address.0.clone()].to_vec();
+    let calldata = [50.into(), simple_wallet_address.0].to_vec();
     let increase_balance_entry_point = create_execute_extrypoint(
         increase_balance_entrypoint_selector,
         calldata,
@@ -3580,7 +3580,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -3594,7 +3594,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            biguint_to_felt(&selector).unwrap(),
+            biguint_to_felt(selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -3630,7 +3630,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 
     // RUN GET_BALANCE
     // Create an execution entry point
-    let calldata = [simple_wallet_address.0.clone()].to_vec();
+    let calldata = [simple_wallet_address.0].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
@@ -3656,7 +3656,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
-    let calldata = [100.into(), simple_wallet_address.0.clone()].to_vec();
+    let calldata = [100.into(), simple_wallet_address.0].to_vec();
     let increase_balance_entry_point = create_execute_extrypoint(
         increase_balance_entrypoint_selector,
         calldata,

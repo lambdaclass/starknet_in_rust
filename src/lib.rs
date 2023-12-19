@@ -289,7 +289,7 @@ mod test {
     };
     use cairo_vm::{utils::biguint_to_felt, Felt252};
     use lazy_static::lazy_static;
-    use num_traits::{Num, One, Zero};
+    
     use pretty_assertions_sorted::assert_eq;
     use std::{path::PathBuf, sync::Arc};
 
@@ -326,7 +326,7 @@ mod test {
         let calldata = [1.into(), 1.into(), 10.into()].to_vec();
         let invoke_function = InvokeFunction::new(
             TEST_CONTRACT_ADDRESS.clone(),
-            entrypoint_selector.clone(),
+            *entrypoint_selector,
             0, // should be ignored.
             1.into(),
             calldata,
@@ -381,7 +381,7 @@ mod test {
 
         let retdata = call_contract(
             address.0,
-            entrypoint_selector.into(),
+            entrypoint_selector,
             calldata,
             &mut state,
             BlockContext::default(),
@@ -524,7 +524,7 @@ mod test {
         // hack store account contract
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let acc_class_hash = felt_to_hash(&hash);
-        let entrypoint_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+        let entrypoint_selector = *EXECUTE_ENTRY_POINT_SELECTOR;
 
         // test with fibonacci
         #[cfg(not(feature = "cairo_1_tests"))]
@@ -569,8 +569,8 @@ mod test {
         );
 
         let calldata = [
-            address.0.clone(),
-            entrypoint_selector.clone(),
+            address.0,
+            entrypoint_selector,
             3.into(),
             1.into(),
             1.into(),
@@ -581,7 +581,7 @@ mod test {
         let invoke_1 = Transaction::InvokeFunction(
             InvokeFunction::new(
                 address.clone(),
-                entrypoint_selector.clone(),
+                entrypoint_selector,
                 1000000,
                 Felt252::ONE,
                 calldata.clone(),
@@ -595,7 +595,7 @@ mod test {
         let invoke_2 = Transaction::InvokeFunction(
             InvokeFunction::new(
                 address.clone(),
-                entrypoint_selector.clone(),
+                entrypoint_selector,
                 1000000,
                 Felt252::ONE,
                 calldata.clone(),
@@ -657,7 +657,7 @@ mod test {
         // hack store account contract
         let hash = compute_deprecated_class_hash(&contract_class).unwrap();
         let acc_class_hash = felt_to_hash(&hash);
-        let entrypoint_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+        let entrypoint_selector = *EXECUTE_ENTRY_POINT_SELECTOR;
 
         // test with fibonacci
         #[cfg(not(feature = "cairo_1_tests"))]
@@ -702,8 +702,8 @@ mod test {
         );
 
         let calldata = [
-            address.0.clone(),
-            entrypoint_selector.clone(),
+            address.0,
+            entrypoint_selector,
             3.into(),
             1.into(),
             1.into(),
@@ -880,15 +880,15 @@ mod test {
             )
             .unwrap();
 
-        let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
-        let calldata = vec![CONTRACT_ADDRESS.0.clone(), selector.clone(), Felt252::ZERO];
+        let selector = *VALIDATE_ENTRY_POINT_SELECTOR;
+        let calldata = vec![CONTRACT_ADDRESS.0, selector, Felt252::ZERO];
         // new consumes more execution time than raw struct instantiation
         let invoke_tx = Transaction::InvokeFunction(
             InvokeFunction::new(
                 CONTRACT_ADDRESS.clone(),
                 selector,
                 0,
-                TRANSACTION_VERSION.clone(),
+                *TRANSACTION_VERSION,
                 calldata,
                 SIGNATURE.clone(),
                 StarknetChainId::TestNet.to_felt(),
@@ -940,7 +940,7 @@ mod test {
                 Felt252::ZERO,
                 vec![],
                 SIGNATURE.clone(),
-                SALT.clone(),
+                *SALT,
                 StarknetChainId::TestNet.to_felt(),
             )
             .unwrap(),
@@ -972,13 +972,13 @@ mod test {
 
         DeclareV2 {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-            validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
+            validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             version: 2.into(),
             max_fee: 2900,
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),
-            compiled_class_hash: TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.clone(),
+            compiled_class_hash: *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
             sierra_contract_class: Some(sierra_contract_class),
             sierra_class_hash,
             casm_class: Default::default(),
@@ -1106,15 +1106,15 @@ mod test {
             .unwrap(),
         );
 
-        let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
-        let calldata = vec![CONTRACT_ADDRESS.0.clone(), selector.clone(), Felt252::ZERO];
+        let selector = *VALIDATE_ENTRY_POINT_SELECTOR;
+        let calldata = vec![CONTRACT_ADDRESS.0, selector, Felt252::ZERO];
         // new consumes more execution time than raw struct instantiation
         let invoke_tx = Transaction::InvokeFunction(
             InvokeFunction::new(
                 CONTRACT_ADDRESS.clone(),
                 selector,
                 0,
-                TRANSACTION_VERSION.clone(),
+                *TRANSACTION_VERSION,
                 calldata,
                 SIGNATURE.clone(),
                 StarknetChainId::TestNet.to_felt(),
@@ -1158,7 +1158,7 @@ mod test {
         let mut declare_v2 = declarev2_tx();
         let real_casm_class_hash = declare_v2.compiled_class_hash;
         let wrong_casm_class_hash = Felt252::from(1);
-        declare_v2.compiled_class_hash = wrong_casm_class_hash.clone();
+        declare_v2.compiled_class_hash = wrong_casm_class_hash;
         let declare_tx = Transaction::DeclareV2(Box::new(declare_v2));
 
         let err = declare_tx

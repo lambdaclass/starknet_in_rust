@@ -16,7 +16,7 @@ use cairo_vm::{
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use getset::Getters;
-use num_traits::{ToPrimitive, Zero};
+use num_traits::{ToPrimitive};
 use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 
@@ -97,7 +97,7 @@ impl CallInfo {
             class_hash,
             Some(CallType::Call),
             Some(EntryPointType::Constructor),
-            Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
+            Some(*CONSTRUCTOR_ENTRY_POINT_SELECTOR),
             None,
         )
     }

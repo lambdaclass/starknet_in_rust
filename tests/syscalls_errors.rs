@@ -51,11 +51,11 @@ fn test_contract<'a>(
             10,
             0.into(),
             block_context.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
         )
     });
 
-    let nonce = tx_execution_context.nonce().clone();
+    let nonce = *tx_execution_context.nonce();
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -162,7 +162,7 @@ fn call_contract_with_extra_arguments() {
 #[test]
 fn call_contract_not_deployed() {
     let contract_address = Address(2222.into());
-    let wrong_address = contract_address.0.clone() - Felt252::from(2); // another address
+    let wrong_address = contract_address.0 - Felt252::from(2); // another address
     let error_msg = format!(
         "Contract address {:?} is not deployed",
         felt_to_hash(&wrong_address)

@@ -195,7 +195,7 @@ impl StateCache {
 
     pub fn update_initial_values(&mut self) {
         for (k, v) in self.nonce_writes.iter() {
-            self.nonce_initial_values.insert(k.clone(), v.clone());
+            self.nonce_initial_values.insert(k.clone(), *v);
         }
 
         for (k, v) in self.class_hash_writes.iter() {
@@ -207,7 +207,7 @@ impl StateCache {
         }
 
         for (k, v) in self.storage_writes.iter() {
-            self.storage_initial_values.insert(k.clone(), v.clone());
+            self.storage_initial_values.insert(k.clone(), *v);
         }
 
         self.nonce_writes = HashMap::new();

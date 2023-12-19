@@ -59,7 +59,7 @@ impl StarknetChainId {
     /// );
     /// ```
     pub fn to_felt(self) -> Felt252 {
-        Felt252::from_bytes_be_slice(&self.to_string().as_bytes())
+        Felt252::from_bytes_be_slice(self.to_string().as_bytes())
     }
 }
 

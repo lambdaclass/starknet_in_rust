@@ -1,6 +1,6 @@
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::{
         block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -56,9 +56,9 @@ fn main() {
     for i in 0..RUNS {
         InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
-            INCREASE_BALANCE_SELECTOR.clone(),
+            *INCREASE_BALANCE_SELECTOR,
             2,
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
             vec![1000.into()],
             vec![],
             StarknetChainId::TestNet.to_felt(),
@@ -76,9 +76,9 @@ fn main() {
 
         let tx_exec_info = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
-            GET_BALANCE_SELECTOR.clone(),
+            *GET_BALANCE_SELECTOR,
             2,
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
             vec![],
             vec![],
             StarknetChainId::TestNet.to_felt(),

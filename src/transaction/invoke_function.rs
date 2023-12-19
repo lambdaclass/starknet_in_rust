@@ -34,7 +34,7 @@ use crate::{
 };
 use cairo_vm::Felt252;
 use getset::Getters;
-use num_traits::{One, Zero};
+use num_traits::{Zero};
 use std::{collections::HashMap, fmt::Debug};
 
 #[cfg(feature = "cairo-native")]
@@ -81,13 +81,13 @@ impl InvokeFunction {
         nonce: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
         let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
-            entry_point_selector.clone(),
-            nonce.clone(),
-            version.clone(),
+            entry_point_selector,
+            nonce,
+            version,
         )?;
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
-            version.clone(),
+            version,
             &contract_address,
             entry_point_selector_field,
             &calldata,
@@ -121,7 +121,7 @@ impl InvokeFunction {
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
 
-        let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_ENTRY_POINT_SELECTOR;
 
         Ok(InvokeFunction {
             contract_address,
@@ -159,16 +159,16 @@ impl InvokeFunction {
     ) -> Result<TransactionExecutionContext, TransactionError> {
         Ok(TransactionExecutionContext::new(
             self.contract_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
             self.max_fee,
             if self.version.is_zero() {
                 Felt252::ZERO
             } else {
-                self.nonce.clone().ok_or(TransactionError::MissingNonce)?
+                self.nonce.ok_or(TransactionError::MissingNonce)?
             },
             n_steps,
-            self.version.clone(),
+            self.version,
         ))
     }
 
@@ -196,7 +196,7 @@ impl InvokeFunction {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
-            self.validate_entry_point_selector.clone(),
+            self.validate_entry_point_selector,
             Address(0.into()),
             EntryPointType::External,
             None,
@@ -225,7 +225,7 @@ impl InvokeFunction {
             // return `VALID`.
             if !call_info
                 .as_ref()
-                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .map(|ci| ci.retdata == vec![*VALIDATE_RETDATA])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
@@ -253,7 +253,7 @@ impl InvokeFunction {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
-            self.entry_point_selector.clone(),
+            self.entry_point_selector,
             Address(Felt252::ZERO),
             EntryPointType::External,
             None,
@@ -365,7 +365,7 @@ impl InvokeFunction {
         if self.version != Felt252::ONE && self.version != Felt252::ZERO {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Invoke".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![0, 1],
             ));
         }
@@ -638,7 +638,7 @@ fn convert_invoke_v1(
     ));
     let max_fee = value.max_fee.0;
     let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
-    let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+    let entry_point_selector = *EXECUTE_ENTRY_POINT_SELECTOR;
 
     let signature = value
         .signature
@@ -682,7 +682,7 @@ mod tests {
         utils::{calculate_sn_keccak, ClassHash},
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use num_traits::Num;
+    
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         core::{ContractAddress, Nonce, PatriciaKey},
@@ -921,7 +921,7 @@ mod tests {
     fn test_apply_invoke_entrypoint_not_found_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
+            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR),
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
@@ -1067,7 +1067,7 @@ mod tests {
     fn test_run_validate_entrypoint_nonce_is_none_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
+            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR),
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
@@ -1449,7 +1449,7 @@ mod tests {
             Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
                 .unwrap();
         let result =
-            preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0.into());
+            preprocess_invoke_function_fields(entry_point_selector, None, 0.into());
 
         let expected_additional_data: Vec<Felt252> = Vec::new();
         let expected_entry_point_selector_field = entry_point_selector;
@@ -1483,7 +1483,7 @@ mod tests {
             Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
                 .unwrap(),
             None,
-            QUERY_VERSION_1.clone(),
+            *QUERY_VERSION_1,
         );
         assert!(expected_error.is_err());
     }

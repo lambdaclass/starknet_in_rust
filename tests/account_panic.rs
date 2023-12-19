@@ -29,7 +29,7 @@ fn account_panic() {
 
     let contract_class: CasmContractClass = serde_json::from_slice(contract_data).unwrap();
     let contract_class_hash_felt = compute_casm_class_hash(&contract_class).unwrap();
-    let contract_class_hash = ClassHash::from(contract_class_hash_felt.clone());
+    let contract_class_hash = ClassHash::from(contract_class_hash_felt);
 
     let account_address = Address(1111.into());
     let contract_address = Address(0000.into());
@@ -95,12 +95,12 @@ fn account_panic() {
 
     let invoke = InvokeFunction::new(
         account_address,
-        Felt252::from(selector),
+        selector,
         0,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         calldata,
         vec![],
-        block_context.starknet_os_config().chain_id().clone(),
+        *block_context.starknet_os_config().chain_id(),
         Some(0.into()),
     )
     .unwrap();

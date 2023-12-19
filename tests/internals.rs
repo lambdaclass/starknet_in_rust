@@ -15,7 +15,7 @@ use cairo_vm::{
 };
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
-use num_traits::{Num, One, Zero};
+use num_traits::{Zero};
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::core::errors::state_errors::StateError;
 use starknet_in_rust::definitions::constants::{
@@ -166,11 +166,11 @@ fn create_account_tx_test_state() -> Result<
         (test_erc20_address.clone(), test_erc20_class_hash),
     ]);
 
-    let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+    let test_erc20_account_balance_key = *TEST_ERC20_ACCOUNT_BALANCE_KEY;
 
     let storage_view = HashMap::from([(
         (test_erc20_address, test_erc20_account_balance_key),
-        INITIAL_BALANCE.clone(),
+        *INITIAL_BALANCE,
     )]);
 
     let cached_state = CachedState::new(
@@ -182,7 +182,7 @@ fn create_account_tx_test_state() -> Result<
                     .filter_map(|((address, storage_key), storage_value)| {
                         (address == &contract_address).then_some((
                             (address.clone(), storage_key.to_bytes_be()),
-                            storage_value.clone(),
+                            *storage_value,
                         ))
                     })
                     .collect();
@@ -254,11 +254,11 @@ fn create_account_tx_test_state_revert_test() -> Result<
         (test_erc20_address.clone(), test_erc20_class_hash),
     ]);
 
-    let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+    let test_erc20_account_balance_key = *TEST_ERC20_ACCOUNT_BALANCE_KEY;
 
     let storage_view = HashMap::from([(
         (test_erc20_address, test_erc20_account_balance_key),
-        INITIAL_BALANCE.clone(),
+        *INITIAL_BALANCE,
     )]);
 
     let cached_state = CachedState::new(
@@ -270,7 +270,7 @@ fn create_account_tx_test_state_revert_test() -> Result<
                     .filter_map(|((address, storage_key), storage_value)| {
                         (address == &contract_address).then_some((
                             (address.clone(), storage_key.to_bytes_be()),
-                            storage_value.clone(),
+                            *storage_value,
                         ))
                     })
                     .collect();
@@ -363,7 +363,7 @@ fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_bytes_be(),
             ),
-            INITIAL_BALANCE.clone(),
+            *INITIAL_BALANCE,
         ),
         (
             (
@@ -398,7 +398,7 @@ fn state_cache_after_invoke_tx(fee: u128) -> StateCache {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_bytes_be(),
             ),
-            INITIAL_BALANCE.clone() - Felt252::from(fee),
+            *INITIAL_BALANCE - Felt252::from(fee),
         ),
         (
             (
@@ -456,7 +456,7 @@ fn initial_in_memory_state_reader() -> InMemoryStateReader {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_bytes_be(),
             ),
-            INITIAL_BALANCE.clone(),
+            *INITIAL_BALANCE,
         )]),
         HashMap::from([
             (
@@ -512,9 +512,9 @@ fn expected_fee_transfer_call_info(
 ) -> CallInfo {
     CallInfo {
         entry_point_type: EntryPointType::External.into(),
-        entry_point_selector: TRANSFER_ENTRY_POINT_SELECTOR.clone().into(),
+        entry_point_selector: (*TRANSFER_ENTRY_POINT_SELECTOR).into(),
         calldata: vec![
-            block_context.block_info().sequencer_address.0.clone(),
+            block_context.block_info().sequencer_address.0,
             actual_fee.into(),
             Felt252::ZERO,
         ],
@@ -526,10 +526,10 @@ fn expected_fee_transfer_call_info(
         retdata: vec![Felt252::ONE],
         events: vec![OrderedEvent {
             order: 0,
-            keys: vec![TRANSFER_EVENT_SELECTOR.clone()],
+            keys: vec![*TRANSFER_EVENT_SELECTOR],
             data: vec![
-                account_address.0.clone(),
-                block_context.block_info().sequencer_address.0.clone(),
+                account_address.0,
+                block_context.block_info().sequencer_address.0,
                 actual_fee.into(),
                 Felt252::ZERO,
             ],
@@ -557,9 +557,9 @@ fn expected_fee_transfer_call_info(
             ]),
         ]),
         storage_read_values: vec![
-            INITIAL_BALANCE.clone(),
+            *INITIAL_BALANCE,
             Felt252::ZERO,
-            INITIAL_BALANCE.clone(),
+            *INITIAL_BALANCE,
             Felt252::ZERO,
             Felt252::ZERO,
             Felt252::ZERO,
@@ -597,7 +597,7 @@ fn validate_final_balances<S>(
         .unwrap();
     assert_eq!(
         account_balance,
-        INITIAL_BALANCE.clone() - Felt252::from(fee)
+        *INITIAL_BALANCE - Felt252::from(fee)
     );
 
     let sequencer_balance = state
@@ -689,9 +689,9 @@ fn test_create_account_tx_test_state() {
 fn invoke_tx(calldata: Vec<Felt252>, max_fee: u128) -> InvokeFunction {
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        EXECUTE_ENTRY_POINT_SELECTOR.clone(),
+        *EXECUTE_ENTRY_POINT_SELECTOR,
         max_fee,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -703,9 +703,9 @@ fn invoke_tx(calldata: Vec<Felt252>, max_fee: u128) -> InvokeFunction {
 fn invoke_tx_with_nonce(calldata: Vec<Felt252>, max_fee: u128, nonce: Felt252) -> InvokeFunction {
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        EXECUTE_ENTRY_POINT_SELECTOR.clone(),
+        *EXECUTE_ENTRY_POINT_SELECTOR,
         max_fee,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         calldata,
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -723,7 +723,7 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         contract_address: Address(Felt252::from(4097)),
         code_address: None,
         class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
-        entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_selector: Some(*TRANSFER_ENTRY_POINT_SELECTOR),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::ZERO],
         retdata: vec![Felt252::from(1)],
@@ -739,7 +739,7 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
         internal_calls: vec![],
         events: vec![OrderedEvent {
             order: 0,
-            keys: vec![TRANSFER_EVENT_SELECTOR.clone()],
+            keys: vec![*TRANSFER_EVENT_SELECTOR],
             data: vec![
                 Felt252::from(257),
                 Felt252::from(4096),
@@ -748,9 +748,9 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone(),
+            *INITIAL_BALANCE,
             Felt252::ZERO,
-            INITIAL_BALANCE.clone(),
+            *INITIAL_BALANCE,
             Felt252::ZERO,
             Felt252::ZERO,
             Felt252::ZERO,
@@ -787,7 +787,7 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
         contract_address: Address(Felt252::from(4097)),
         code_address: None,
         class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
-        entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_selector: Some(*TRANSFER_ENTRY_POINT_SELECTOR),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![Felt252::from(4096), Felt252::from(fee), Felt252::ZERO],
         retdata: vec![Felt252::from(1)],
@@ -803,7 +803,7 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
         internal_calls: vec![],
         events: vec![OrderedEvent {
             order: 0,
-            keys: vec![TRANSFER_EVENT_SELECTOR.clone()],
+            keys: vec![*TRANSFER_EVENT_SELECTOR],
             data: vec![
                 Felt252::from(257),
                 Felt252::from(4096),
@@ -812,9 +812,9 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone() - Felt252::from(3700),
+            *INITIAL_BALANCE - Felt252::from(3700),
             Felt252::ZERO,
-            INITIAL_BALANCE.clone() - Felt252::from(3700),
+            *INITIAL_BALANCE - Felt252::from(3700),
             Felt252::ZERO,
             Felt252::from(3700),
             Felt252::ZERO,
@@ -847,7 +847,7 @@ fn declare_tx() -> Declare {
         contract_class: ContractClass::from_path(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: *TEST_EMPTY_CONTRACT_CLASS_HASH,
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
+        validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         version: 1.into(),
         max_fee: 100000,
         signature: vec![],
@@ -873,7 +873,7 @@ fn declarev2_tx() -> DeclareV2 {
 
     DeclareV2 {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
-        validate_entry_point_selector: VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone(),
+        validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         version: 2.into(),
         max_fee: 50000000,
         signature: vec![],
@@ -928,10 +928,10 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: TEST_ERC20_CONTRACT_ADDRESS.clone(),
         class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
-        entry_point_selector: Some(TRANSFER_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_selector: Some(*TRANSFER_ENTRY_POINT_SELECTOR),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
-            TEST_SEQUENCER_ADDRESS.0.clone(),
+            TEST_SEQUENCER_ADDRESS.0,
             Felt252::from(fee),
             Felt252::ZERO,
         ],
@@ -950,9 +950,9 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         )],
         storage_read_values: vec![
-            INITIAL_BALANCE.clone(),
+            *INITIAL_BALANCE,
             Felt252::ZERO,
-            INITIAL_BALANCE.clone(),
+            *INITIAL_BALANCE,
             Felt252::ZERO,
             Felt252::ZERO,
             Felt252::ZERO,
@@ -1065,7 +1065,7 @@ fn test_declare_tx() {
             call_type: Some(CallType::Call),
             contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-            entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
+            entry_point_selector: Some(*VALIDATE_DECLARE_ENTRY_POINT_SELECTOR),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![Felt252::from_bytes_be(&TEST_EMPTY_CONTRACT_CLASS_HASH.0)],
             execution_resources: Some(ExecutionResources {
@@ -1173,7 +1173,7 @@ fn test_declarev2_tx() {
             call_type: Some(CallType::Call),
             contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-            entry_point_selector: Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone()),
+            entry_point_selector: Some(*VALIDATE_DECLARE_ENTRY_POINT_SELECTOR),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![Felt252::from_bytes_be(&contract_hash.0)],
             execution_resources: Some(ExecutionResources {
@@ -1200,7 +1200,7 @@ fn expected_execute_call_info() -> CallInfo {
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         code_address: None,
         class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-        entry_point_selector: Some(EXECUTE_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_selector: Some(*EXECUTE_ENTRY_POINT_SELECTOR),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt252::from(256),
@@ -1261,7 +1261,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         code_address: None,
         class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-        entry_point_selector: Some(EXECUTE_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_selector: Some(*EXECUTE_ENTRY_POINT_SELECTOR),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt252::from(27728),
@@ -1319,7 +1319,7 @@ fn expected_validate_call_info_2() -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-        entry_point_selector: Some(VALIDATE_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_selector: Some(*VALIDATE_ENTRY_POINT_SELECTOR),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt252::from(256),
@@ -1343,7 +1343,7 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
         call_type: Some(CallType::Call),
         contract_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
-        entry_point_selector: Some(VALIDATE_ENTRY_POINT_SELECTOR.clone()),
+        entry_point_selector: Some(*VALIDATE_ENTRY_POINT_SELECTOR),
         entry_point_type: Some(EntryPointType::External),
         calldata: vec![
             Felt252::from(27728),
@@ -1480,7 +1480,7 @@ fn test_invoke_tx_exceeded_max_fee() {
         .starknet_os_config()
         .fee_token_address()
         .clone();
-    let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+    let test_erc20_account_balance_key = *TEST_ERC20_ACCOUNT_BALANCE_KEY;
 
     let balance = state
         .get_storage_at(&(
@@ -1488,7 +1488,7 @@ fn test_invoke_tx_exceeded_max_fee() {
             test_erc20_account_balance_key.to_bytes_be(),
         ))
         .unwrap();
-    let expected_balance = INITIAL_BALANCE.clone() - Felt252::from(max_fee);
+    let expected_balance = *INITIAL_BALANCE - Felt252::from(max_fee);
 
     assert_eq!(balance, expected_balance);
 }
@@ -1680,7 +1680,7 @@ fn test_deploy_account() {
     let deploy_account_tx = DeployAccount::new(
         *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
         expected_fee,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         Default::default(),
         Default::default(),
         Default::default(),
@@ -1699,7 +1699,7 @@ fn test_deploy_account() {
                 .clone()
                 .to_bytes_be(),
         ),
-        INITIAL_BALANCE.clone(),
+        *INITIAL_BALANCE,
     );
 
     let (state_before, state_after) = expected_deploy_account_states();
@@ -1727,10 +1727,10 @@ fn test_deploy_account() {
     assert_eq_sorted!(state.cache(), state_after.cache());
 
     let expected_validate_call_info = expected_validate_call_info(
-        VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
+        *VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
         [
             Felt252::from_bytes_be(&deploy_account_tx.class_hash().0),
-            deploy_account_tx.contract_address_salt().clone(),
+            *deploy_account_tx.contract_address_salt(),
         ]
         .into_iter()
         .chain(deploy_account_tx.constructor_calldata().clone())
@@ -1740,7 +1740,7 @@ fn test_deploy_account() {
 
     let expected_execute_call_info = CallInfo {
         entry_point_type: EntryPointType::Constructor.into(),
-        entry_point_selector: CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone().into(),
+        entry_point_selector: (*CONSTRUCTOR_ENTRY_POINT_SELECTOR).into(),
         contract_address: deploy_account_tx.contract_address().clone(),
 
         // Entries **not** in blockifier.
@@ -1805,7 +1805,7 @@ fn test_deploy_account_revert() {
     let deploy_account_tx = DeployAccount::new(
         *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
         max_fee,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         Default::default(),
         Default::default(),
         Default::default(),
@@ -1824,7 +1824,7 @@ fn test_deploy_account_revert() {
                 .clone()
                 .to_bytes_be(),
         ),
-        INITIAL_BALANCE.clone(),
+        *INITIAL_BALANCE,
     );
 
     let (state_before, mut state_after) = expected_deploy_account_states();
@@ -1889,7 +1889,7 @@ fn test_deploy_account_revert() {
                 .clone()
                 .to_bytes_be(),
         ),
-        INITIAL_BALANCE.clone() - max_fee as u64, // minus the max fee that will be transfered
+        *INITIAL_BALANCE - max_fee as u64, // minus the max fee that will be transfered
     );
     state_reverted.cache_mut().storage_writes_mut().insert(
         (
@@ -1977,7 +1977,7 @@ fn expected_deploy_account_states() -> (
                     Address(0x1001.into()),
                     TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_bytes_be(),
                 ),
-                INITIAL_BALANCE.clone(),
+                *INITIAL_BALANCE,
             )]),
             HashMap::from([
                 (
@@ -2010,7 +2010,7 @@ fn expected_deploy_account_states() -> (
                 .clone()
                 .to_bytes_be(),
         ),
-        INITIAL_BALANCE.clone(),
+        *INITIAL_BALANCE,
     );
 
     let mut state_after = state_before.clone_for_testing();
@@ -2092,7 +2092,7 @@ fn expected_deploy_account_states() -> (
             Address(0x1001.into()),
             TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_bytes_be(),
         ),
-        INITIAL_BALANCE.clone() - &fee,
+        *INITIAL_BALANCE - &fee,
     );
     state_after.cache_mut().storage_writes_mut().insert(
         (
@@ -2187,7 +2187,7 @@ fn test_state_for_declare_tx() {
                 TEST_ERC20_CONTRACT_ADDRESS.clone(),
                 TEST_ERC20_ACCOUNT_BALANCE_KEY.to_bytes_be()
             ),
-            INITIAL_BALANCE.clone()
+            *INITIAL_BALANCE
         ),]),
     );
     // We cant compare this until a new implementation of Eq for programs, due to a change in the hints_ranges.
@@ -2254,7 +2254,7 @@ fn test_state_for_declare_tx() {
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
                         TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_bytes_be()
                     ),
-                    INITIAL_BALANCE.clone()
+                    *INITIAL_BALANCE
                 )
             ]),
             HashMap::new(),
@@ -2280,14 +2280,14 @@ fn test_state_for_declare_tx() {
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
                         TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_bytes_be()
                     ),
-                    fee.clone(),
+                    fee,
                 ),
                 (
                     (
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
                         TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_bytes_be()
                     ),
-                    INITIAL_BALANCE.clone() - &fee,
+                    *INITIAL_BALANCE - &fee,
                 ),
             ]),
             HashMap::new()
@@ -2359,7 +2359,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
         2483,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         vec![
             test_contract_address, // CONTRACT_ADDRESS
             Felt252::from_bytes_be(&calculate_sn_keccak(b"return_result")), // CONTRACT FUNCTION SELECTOR
@@ -2394,7 +2394,7 @@ fn test_deploy_undeclared_account() {
     let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
         0,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         Default::default(),
         Default::default(),
         Default::default(),
@@ -2482,7 +2482,7 @@ fn test_library_call_with_declare_v2() {
         ExecutionEntryPoint::new(
             address.clone(),
             calldata,
-            biguint_to_felt(&selector).unwrap(),
+            biguint_to_felt(selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -2524,7 +2524,7 @@ fn test_library_call_with_declare_v2() {
         100000000,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

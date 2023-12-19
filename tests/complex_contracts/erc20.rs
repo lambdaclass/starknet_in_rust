@@ -82,7 +82,7 @@ fn test_erc20_cairo2() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(&entrypoint_selector).unwrap(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -115,7 +115,7 @@ fn test_erc20_cairo2() {
             None,
         )
         .unwrap();
-    let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
+    let erc20_address = *call_info.call_info.unwrap().retdata.get(0).unwrap();
 
     // ACCOUNT 1
     let program_data_account =
@@ -233,7 +233,7 @@ fn test_erc20_cairo2() {
     let calldata = vec![account_address_2.clone().0, Felt252::from(123)];
 
     let retdata = call_contract(
-        erc20_address.clone(),
+        erc20_address,
         entrypoint_selector,
         calldata,
         &mut state,
@@ -249,7 +249,7 @@ fn test_erc20_cairo2() {
     // GET BALANCE ACCOUNT 1
     let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"balance_of"));
     let retdata = call_contract(
-        erc20_address.clone(),
+        erc20_address,
         entrypoint_selector,
         vec![account_address_1.clone().0],
         &mut state,

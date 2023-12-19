@@ -1,6 +1,6 @@
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::{
@@ -66,7 +66,7 @@ fn main() {
         },
         Arc::new(PermanentContractClassCache::default()),
     );
-    let chain_id = block_context.starknet_os_config().chain_id().clone();
+    let chain_id = *block_context.starknet_os_config().chain_id();
     let signature = Vec::new();
 
     state
@@ -77,12 +77,12 @@ fn main() {
     for i in 0..RUNS {
         let invoke_first = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
-            INCREASE_BALANCE_SELECTOR.clone(),
+            *INCREASE_BALANCE_SELECTOR,
             0,
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
             vec![1000.into()],
             signature.clone(),
-            chain_id.clone(),
+            chain_id,
             Some(Felt252::from(i * 2)),
         )
         .unwrap();
@@ -99,12 +99,12 @@ fn main() {
 
         let invoke_second = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
-            GET_BALANCE_SELECTOR.clone(),
+            *GET_BALANCE_SELECTOR,
             0,
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
             vec![],
             signature.clone(),
-            chain_id.clone(),
+            chain_id,
             Some(Felt252::from((i * 2) + 1)),
         )
         .unwrap();

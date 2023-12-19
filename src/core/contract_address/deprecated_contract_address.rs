@@ -13,7 +13,7 @@ use crate::{
     services::api::contract_classes::deprecated_contract_class::ContractClass,
 };
 use cairo_vm::Felt252;
-use num_traits::Zero;
+
 use serde::Serialize;
 use sha3::Digest;
 use std::{borrow::Cow, collections::BTreeMap, io};
@@ -298,7 +298,7 @@ fn get_contract_entry_points_hashed(
             .iter()
             .flat_map(|contract_entry_point| {
                 vec![
-                    contract_entry_point.selector().clone(),
+                    *contract_entry_point.selector(),
                     Felt252::from(contract_entry_point.offset()),
                 ]
             })
@@ -342,9 +342,8 @@ pub fn compute_deprecated_class_hash(
 
     for data in contract_class.program().iter_data() {
         bytecode_vector.push(
-            data.get_int_ref()
-                .ok_or(ContractAddressError::NoneIntMaybeRelocatable)?
-                .clone(),
+            *data.get_int_ref()
+                .ok_or(ContractAddressError::NoneIntMaybeRelocatable)?,
         );
     }
 
@@ -356,7 +355,7 @@ pub fn compute_deprecated_class_hash(
         l1_handlers,
         constructors,
         builtin_list,
-        hinted_class_hash.clone(),
+        *hinted_class_hash,
         bytecode,
     ];
 
@@ -368,7 +367,7 @@ mod tests {
     use super::*;
     use cairo_vm::Felt252;
     use coverage_helper::test;
-    use num_traits::Num;
+    
 
     #[test]
     fn test_compute_hinted_class_hash_with_abi() {

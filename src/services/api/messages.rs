@@ -23,8 +23,8 @@ impl StarknetMessageToL1 {
 
     pub fn encode(&self) -> Vec<Felt252> {
         let mut encoding = Vec::with_capacity(self.payload.len() + 3);
-        encoding.push(self.from_address.0.clone());
-        encoding.push(self.to_address.0.clone());
+        encoding.push(self.from_address.0);
+        encoding.push(self.to_address.0);
         encoding.push(self.payload.len().into());
         encoding.extend_from_slice(&self.payload);
 

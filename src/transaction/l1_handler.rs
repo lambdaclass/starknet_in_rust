@@ -60,11 +60,11 @@ impl L1Handler {
             TransactionHashPrefix::L1Handler,
             L1_HANDLER_VERSION.into(),
             &contract_address,
-            entry_point_selector.clone(),
+            entry_point_selector,
             &calldata,
             0,
             chain_id,
-            &[nonce.clone()],
+            &[nonce],
         )?;
 
         L1Handler::new_with_tx_hash(
@@ -123,7 +123,7 @@ impl L1Handler {
         let entrypoint = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
-            self.entry_point_selector.clone(),
+            self.entry_point_selector,
             Address(0.into()),
             EntryPointType::L1Handler,
             None,
@@ -165,7 +165,7 @@ impl L1Handler {
             // Backward compatibility; Continue running the transaction even when
             // L1 handler fee is enforced, and paid_fee_on_l1 is None; If this is the case,
             // the transaction is an old transaction.
-            if let Some(paid_fee) = self.paid_fee_on_l1.clone() {
+            if let Some(paid_fee) = self.paid_fee_on_l1 {
                 let required_fee = calculate_tx_fee(
                     &actual_resources,
                     block_context.starknet_os_config.gas_price,
@@ -203,10 +203,10 @@ impl L1Handler {
     ) -> Result<TransactionExecutionContext, TransactionError> {
         Ok(TransactionExecutionContext::new(
             self.contract_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             [].to_vec(),
             0,
-            self.nonce.clone().ok_or(TransactionError::MissingNonce)?,
+            self.nonce.ok_or(TransactionError::MissingNonce)?,
             n_steps,
             L1_HANDLER_VERSION.into(),
         ))
@@ -269,7 +269,7 @@ mod test {
     };
 
     use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
-    use num_traits::{Num, Zero};
+    
 
     /// Test the correct execution of the L1Handler.
     #[test]

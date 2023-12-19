@@ -16,7 +16,7 @@ use cairo_vm::{serde::deserialize_program::BuiltinName, vm::runners::builtin_run
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use core::fmt;
 use num_integer::Integer;
-use num_traits::{Num, ToPrimitive};
+use num_traits::{ToPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
@@ -117,7 +117,7 @@ pub struct Address(pub Felt252);
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.to_string())
+        write!(f, "{}", self.0)
     }
 }
 
@@ -224,9 +224,9 @@ pub fn to_state_diff_storage_mapping(
             .entry(address.clone())
             .and_modify(|updates_for_address: &mut HashMap<Felt252, Felt252>| {
                 let key_fe = Felt252::from_bytes_be(key);
-                updates_for_address.insert(key_fe, value.clone());
+                updates_for_address.insert(key_fe, *value);
             })
-            .or_insert_with(|| HashMap::from([(Felt252::from_bytes_be(key), value.clone())]));
+            .or_insert_with(|| HashMap::from([(Felt252::from_bytes_be(key), *value)]));
     }
     storage_updates
 }
@@ -343,7 +343,7 @@ pub fn to_cache_state_storage_mapping(
     let mut storage_writes = HashMap::new();
     for (address, contract_storage) in map {
         for (key, value) in contract_storage {
-            storage_writes.insert((address.clone(), key.to_bytes_be()), value.clone());
+            storage_writes.insert((address.clone(), key.to_bytes_be()), *value);
         }
     }
     storage_writes
@@ -817,11 +817,11 @@ pub mod test_utils {
             (test_erc20_address.clone(), test_erc20_class_hash),
         ]);
 
-        let test_erc20_account_balance_key = TEST_ERC20_ACCOUNT_BALANCE_KEY.clone();
+        let test_erc20_account_balance_key = *TEST_ERC20_ACCOUNT_BALANCE_KEY;
 
         let storage_view = HashMap::from([(
             (test_erc20_address, test_erc20_account_balance_key),
-            ACTUAL_FEE.clone(),
+            *ACTUAL_FEE,
         )]);
 
         let cached_state = CachedState::new(
@@ -833,7 +833,7 @@ pub mod test_utils {
                         .filter_map(|((address, storage_key), storage_value)| {
                             (address == &contract_address).then_some((
                                 (address.clone(), felt_to_hash(storage_key).0),
-                                storage_value.clone(),
+                                *storage_value,
                             ))
                         })
                         .collect();
@@ -868,7 +868,7 @@ pub mod test_utils {
 mod test {
     use super::*;
     use cairo_vm::Felt252;
-    use num_traits::{One, Zero};
+    
     use std::collections::HashMap;
 
     #[test]
@@ -883,8 +883,8 @@ mod test {
 
         let value2: Felt252 = 4.into();
 
-        storage.insert((address1.clone(), key1), value1.clone());
-        storage.insert((address2.clone(), key2), value2.clone());
+        storage.insert((address1.clone(), key1), value1);
+        storage.insert((address2.clone(), key2), value2);
 
         let map = to_state_diff_storage_mapping(&storage);
 
@@ -954,8 +954,8 @@ mod test {
 
         let value2: Felt252 = 4.into();
 
-        storage.insert((address1.clone(), key1), value1.clone());
-        storage.insert((address2.clone(), key2), value2.clone());
+        storage.insert((address1.clone(), key1), value1);
+        storage.insert((address2.clone(), key2), value2);
 
         let state_dff = to_state_diff_storage_mapping(&storage);
         let cache_storage = to_cache_state_storage_mapping(&state_dff);
@@ -1002,14 +1002,14 @@ mod test {
 
     #[test]
     fn test_address_display() {
-        let address = Address(Felt252::from(123456789));
+        let _address = Address(Felt252::from(123456789));
         // TODO fix format string
         // assert_eq!(format!("{}", address), "0x75bcd15".to_string());
     }
 
     #[test]
     pub fn test_class_hash_display() {
-        let class_hash = ClassHash::from(Felt252::from(123456789));
+        let _class_hash = ClassHash::from(Felt252::from(123456789));
         // TODO fix format string
         // assert_eq!(format!("{}", class_hash), "0x75bcd15".to_string());
     }

@@ -1,6 +1,6 @@
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
+
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -50,13 +50,12 @@ fn main() {
     let contract_class = ContractClass::from_path(&*CONTRACT_PATH).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
-    let fib_entrypoint_selector = entry_points_by_type
+    let fib_entrypoint_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //* --------------------------------------------
     //*    Create state reader with class hash data
@@ -100,7 +99,7 @@ fn main() {
         let exec_entry_point = ExecutionEntryPoint::new(
             contract_address.clone(),
             calldata.clone(),
-            fib_entrypoint_selector.clone(),
+            fib_entrypoint_selector,
             caller_address.clone(),
             entry_point_type,
             Some(CallType::Delegate),
@@ -119,7 +118,7 @@ fn main() {
             0,
             nonce.into(),
             block_context.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
         );
         let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -138,7 +137,7 @@ fn main() {
 
         assert_eq!(
             tx_exec_result.call_info.unwrap().retdata,
-            vec![EXPECTED_RES.clone()]
+            vec![*EXPECTED_RES]
         );
     }
 }

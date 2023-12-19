@@ -7,7 +7,7 @@ use cairo_vm::{
     },
     Felt252,
 };
-use num_traits::Zero;
+
 use starknet_crypto::FieldElement;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
@@ -70,9 +70,9 @@ fn erc721_constructor_test() {
     };
 
     let result_get_name = execute_entry_point("name", &[], &mut call_config).unwrap();
-    assert_eq!(result_get_name.retdata, vec![calldata[0].clone()]);
+    assert_eq!(result_get_name.retdata, vec![calldata[0]]);
     let result_get_symbol = execute_entry_point("symbol", &[], &mut call_config).unwrap();
-    assert_eq!(result_get_symbol.retdata, vec![calldata[1].clone()]);
+    assert_eq!(result_get_symbol.retdata, vec![calldata[1]]);
 }
 
 #[test]

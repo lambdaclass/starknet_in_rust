@@ -314,7 +314,7 @@ impl ExecutionEntryPoint {
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
             class_hash: Some(self.get_class_hash(starknet_storage_state.state)?),
-            entry_point_selector: Some(self.entry_point_selector.clone()),
+            entry_point_selector: Some(self.entry_point_selector),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata,
@@ -348,7 +348,7 @@ impl ExecutionEntryPoint {
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
             class_hash: Some(self.get_class_hash(starknet_storage_state.state)?),
-            entry_point_selector: Some(self.entry_point_selector.clone()),
+            entry_point_selector: Some(self.entry_point_selector),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata: call_result
@@ -446,7 +446,7 @@ impl ExecutionEntryPoint {
             .into();
 
         let entry_point_args = [
-            &CairoArg::Single(self.entry_point_selector.clone().into()),
+            &CairoArg::Single(self.entry_point_selector.into()),
             &CairoArg::Array(os_context.clone()),
             &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
             &CairoArg::Single(alloc_pointer),
@@ -545,7 +545,7 @@ impl ExecutionEntryPoint {
             block_context.clone(),
             initial_syscall_ptr,
             support_reverted,
-            self.entry_point_selector.clone(),
+            self.entry_point_selector,
         );
         // create and attach a syscall hint processor to the starknet runner.
         let hint_processor = SyscallHintProcessor::new(

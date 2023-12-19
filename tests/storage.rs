@@ -1,6 +1,6 @@
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use cairo_vm::Felt252;
-use num_traits::Zero;
+
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
@@ -30,13 +30,12 @@ fn integration_storage_test() {
     let contract_class = ContractClass::from_path(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
-    let storage_entrypoint_selector = entry_points_by_type
+    let storage_entrypoint_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //* --------------------------------------------
     //*    Create state reader with class hash data
@@ -84,7 +83,7 @@ fn integration_storage_test() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata.clone(),
-        storage_entrypoint_selector.clone(),
+        storage_entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -103,7 +102,7 @@ fn integration_storage_test() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

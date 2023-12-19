@@ -6,7 +6,7 @@ use cairo_vm::{
     },
     Felt252,
 };
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::block_context::BlockContext,
     execution::{CallInfo, CallType},

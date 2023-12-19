@@ -32,13 +32,12 @@ fn hello_starknet_increase_balance() {
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     // External entry point, increase_balance function increase_balance.cairo:L13
-    let increase_balance_selector = entry_points_by_type
+    let increase_balance_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //* --------------------------------------------
     //*    Create state reader with class hash data
@@ -86,7 +85,7 @@ fn hello_starknet_increase_balance() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        increase_balance_selector.clone(),
+        increase_balance_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -105,7 +104,7 @@ fn hello_starknet_increase_balance() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_key_bytes = calculate_sn_keccak("balance".as_bytes());

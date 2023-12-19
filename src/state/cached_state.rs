@@ -15,7 +15,7 @@ use crate::{
 use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
-use num_traits::Zero;
+
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
@@ -168,7 +168,7 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         self.cache
             .get_storage(storage_entry)
-            .map(|v| Ok(v.clone()))
+            .map(|v| Ok(*v))
             .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
     }
 
@@ -308,8 +308,8 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
-        let class_hash = ClassHash::from(class_hash.clone());
-        let compiled_class_hash = ClassHash::from(compiled_class_hash.clone());
+        let class_hash = ClassHash::from(*class_hash);
+        let compiled_class_hash = ClassHash::from(*compiled_class_hash);
 
         self.cache
             .compiled_class_hash_writes
@@ -411,11 +411,10 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         } else {
             self.add_hit();
         }
-        Ok(self
+        Ok(*self
             .cache
             .get_nonce(contract_address)
-            .unwrap_or(&Felt252::ZERO)
-            .clone())
+            .unwrap_or(&Felt252::ZERO))
     }
 
     /// Returns storage data for a given storage entry.
@@ -432,7 +431,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
                 let value = self.state_reader.get_storage_at(storage_entry)?;
                 self.cache
                     .storage_initial_values
-                    .insert(storage_entry.clone(), value.clone());
+                    .insert(storage_entry.clone(), value);
                 Ok(value)
             }
         }
@@ -627,7 +626,7 @@ mod tests {
             in_memory_state_reader::InMemoryStateReader,
         },
     };
-    use num_traits::One;
+    
     use std::collections::HashMap;
 
     /// Test checks if class hashes and nonces are correctly fetched from the state reader.
@@ -653,7 +652,7 @@ mod tests {
             .insert(contract_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(contract_address.clone(), nonce.clone());
+            .insert(contract_address.clone(), nonce);
         state_reader
             .address_to_storage_mut()
             .insert(storage_entry, storage_value);
@@ -720,7 +719,7 @@ mod tests {
 
         let storage_entry: StorageEntry = (Address(31.into()), [0; 32]);
         let value = Felt252::from(10);
-        cached_state.set_storage_at(&storage_entry, value.clone());
+        cached_state.set_storage_at(&storage_entry, value);
 
         assert_eq!(cached_state.get_storage_at(&storage_entry).unwrap(), value);
 
@@ -763,7 +762,7 @@ mod tests {
         );
 
         // set storage_key
-        cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
+        cached_state.set_storage_at(&(contract_address.clone(), storage_key), value);
         let result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
 
         assert_eq!(result.unwrap(), value);
@@ -771,7 +770,7 @@ mod tests {
         // rewrite storage_key
         let new_value = value + 3;
 
-        cached_state.set_storage_at(&(contract_address.clone(), storage_key), new_value.clone());
+        cached_state.set_storage_at(&(contract_address.clone(), storage_key), new_value);
 
         let new_result = cached_state.get_storage_at(&(contract_address, storage_key));
 
