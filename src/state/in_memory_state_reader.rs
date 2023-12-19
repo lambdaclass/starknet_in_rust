@@ -130,7 +130,7 @@ impl StateReader for InMemoryStateReader {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::{Zero};
+    use num_traits::Zero;
 
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;

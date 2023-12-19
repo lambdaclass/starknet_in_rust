@@ -31,8 +31,7 @@ impl<'a, S: StateReader, C: ContractClassCache> ContractStorageState<'a, S, C> {
 
     /// Read a value from contract storage given an address.
     pub(crate) fn read(&mut self, address: Address) -> Result<Felt252, StateError> {
-        self.accessed_keys
-            .insert(ClassHash::from(address.0));
+        self.accessed_keys.insert(ClassHash::from(address.0));
         let value = self
             .state
             .get_storage_at(&(self.contract_address.clone(), (address).0.to_bytes_be()))?;
@@ -43,8 +42,7 @@ impl<'a, S: StateReader, C: ContractClassCache> ContractStorageState<'a, S, C> {
 
     /// Write a value to contract storage at a given address.
     pub(crate) fn write(&mut self, address: Address, value: Felt252) {
-        self.accessed_keys
-            .insert(ClassHash::from(address.0));
+        self.accessed_keys.insert(ClassHash::from(address.0));
         self.state.set_storage_at(
             &(self.contract_address.clone(), (address).0.to_bytes_be()),
             value,

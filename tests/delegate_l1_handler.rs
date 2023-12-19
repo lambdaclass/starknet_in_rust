@@ -44,9 +44,7 @@ fn delegate_l1_handler() {
     state_reader
         .address_to_class_hash_mut()
         .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address, nonce);
+    state_reader.address_to_nonce_mut().insert(address, nonce);
 
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class

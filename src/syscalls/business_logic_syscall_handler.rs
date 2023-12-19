@@ -1099,8 +1099,8 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             keccak::f1600(&mut state)
         }
         let shift = Felt252::TWO.pow(64u32);
-        let hash_low = (Felt252::from(state[1]) * &shift) + Felt252::from(state[0]);
-        let hash_high = (Felt252::from(state[3]) * &shift) + Felt252::from(state[2]);
+        let hash_low = (Felt252::from(state[1]) * shift) + Felt252::from(state[0]);
+        let hash_high = (Felt252::from(state[3]) * shift) + Felt252::from(state[2]);
 
         Ok(SyscallResponse {
             gas,

@@ -8,7 +8,7 @@ use cairo_vm::{
     vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
 };
 
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 pub fn addr_bound_prime(
     vm: &mut VirtualMachine,

@@ -26,7 +26,7 @@ use crate::{
     },
 };
 use cairo_vm::Felt252;
-use num_traits::{Zero};
+use num_traits::Zero;
 
 use super::fee::{calculate_tx_fee, charge_fee};
 use super::{get_tx_version, Transaction};
@@ -473,7 +473,7 @@ mod tests {
         utils::{felt_to_hash, Address},
     };
     use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
-    
+
     use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     /// This test verifies the declaration of a Fibonacci contract.

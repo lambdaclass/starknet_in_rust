@@ -15,7 +15,7 @@ use cairo_vm::{
 };
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
-use num_traits::{Zero};
+use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::core::errors::state_errors::StateError;
 use starknet_in_rust::definitions::constants::{
@@ -595,10 +595,7 @@ fn validate_final_balances<S>(
             erc20_account_balance_storage_key.0,
         ))
         .unwrap();
-    assert_eq!(
-        account_balance,
-        *INITIAL_BALANCE - Felt252::from(fee)
-    );
+    assert_eq!(account_balance, *INITIAL_BALANCE - Felt252::from(fee));
 
     let sequencer_balance = state
         .get_storage_at(&(
@@ -930,11 +927,7 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
         class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(*TRANSFER_ENTRY_POINT_SELECTOR),
         entry_point_type: Some(EntryPointType::External),
-        calldata: vec![
-            TEST_SEQUENCER_ADDRESS.0,
-            Felt252::from(fee),
-            Felt252::ZERO,
-        ],
+        calldata: vec![TEST_SEQUENCER_ADDRESS.0, Felt252::from(fee), Felt252::ZERO],
         retdata: vec![1.into()],
         events: vec![OrderedEvent::new(
             0,
@@ -2092,7 +2085,7 @@ fn expected_deploy_account_states() -> (
             Address(0x1001.into()),
             TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY.to_bytes_be(),
         ),
-        *INITIAL_BALANCE - &fee,
+        *INITIAL_BALANCE - fee,
     );
     state_after.cache_mut().storage_writes_mut().insert(
         (
@@ -2287,7 +2280,7 @@ fn test_state_for_declare_tx() {
                         TEST_ERC20_CONTRACT_ADDRESS.clone(),
                         TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_bytes_be()
                     ),
-                    *INITIAL_BALANCE - &fee,
+                    *INITIAL_BALANCE - fee,
                 ),
             ]),
             HashMap::new()

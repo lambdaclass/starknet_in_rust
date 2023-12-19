@@ -298,7 +298,7 @@ mod tests {
         },
     };
     use cairo_vm::relocatable;
-    
+
     use std::sync::Arc;
 
     type DeprecatedBLSyscallHandler<'a> =
@@ -931,8 +931,7 @@ mod tests {
         );
 
         // StorageReadRequest.address
-        vm.insert_value(relocatable!(2, 1), address)
-            .unwrap();
+        vm.insert_value(relocatable!(2, 1), address).unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -960,7 +959,7 @@ mod tests {
                         .starknet_storage_state
                         .contract_address
                         .clone(),
-                    address.to_bytes_be().try_into().unwrap(),
+                    address.to_bytes_be(),
                 ),
                 storage_value,
             );
@@ -998,8 +997,7 @@ mod tests {
         );
 
         // StorageWriteRequest.address
-        vm.insert_value(relocatable!(2, 1), address)
-            .unwrap();
+        vm.insert_value(relocatable!(2, 1), address).unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -1026,7 +1024,7 @@ mod tests {
                         .starknet_storage_state
                         .contract_address
                         .clone(),
-                    address.to_bytes_be().try_into().unwrap(),
+                    address.to_bytes_be(),
                 ),
                 Felt252::from(3),
             );

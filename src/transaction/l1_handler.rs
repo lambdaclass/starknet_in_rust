@@ -269,7 +269,6 @@ mod test {
     };
 
     use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
-    
 
     /// Test the correct execution of the L1Handler.
     #[test]

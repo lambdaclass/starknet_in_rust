@@ -26,7 +26,6 @@ pub mod l1_handler;
 
 use cairo_vm::Felt252;
 
-
 #[cfg(feature = "cairo-native")]
 use {
     crate::utils::ClassHash,

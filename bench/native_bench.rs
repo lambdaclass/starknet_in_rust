@@ -231,12 +231,12 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_SALT: Felt252 = Felt252::from_dec_str("1234").unwrap();
         static ref ERC20_DEPLOYER_CALLDATA: [Felt252; 7] = [
             Felt252::from_bytes_be(&ERC20_CLASS_HASH.0),
-            ERC20_SALT.clone(),
-            ERC20_RECIPIENT.clone(),
-            ERC20_NAME.clone(),
-            ERC20_DECIMALS.clone(),
-            ERC20_INITIAL_SUPPLY.clone(),
-            ERC20_SYMBOL.clone(),
+            *ERC20_SALT,
+            *ERC20_RECIPIENT,
+            *ERC20_NAME,
+            *ERC20_DECIMALS,
+            *ERC20_INITIAL_SUPPLY,
+            *ERC20_SYMBOL,
         ];
         static ref ERC20_DEPLOYMENT_CALLER_ADDRESS: Address = Address(0000.into());
     }
@@ -289,7 +289,7 @@ fn bench_erc20(executions: usize, native: bool) {
             let exec_entry_point = ExecutionEntryPoint::new(
                 DEPLOYER_ADDRESS.clone(),
                 ERC20_DEPLOYER_CALLDATA.to_vec(),
-                biguint_to_felt(&deploy_entrypoint_selector).unwrap(),
+                biguint_to_felt(deploy_entrypoint_selector).unwrap(),
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
@@ -324,7 +324,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 .unwrap();
 
             // obtain the address of the deployed erc20 contract
-            let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
+            let erc20_address = *call_info.call_info.unwrap().retdata.get(0).unwrap();
 
             (Address(erc20_address), state)
         }
@@ -369,7 +369,7 @@ fn bench_erc20(executions: usize, native: bool) {
             let exec_entry_point = ExecutionEntryPoint::new(
                 DEPLOYER_ADDRESS.clone(),
                 ERC20_DEPLOYER_CALLDATA.to_vec(),
-                biguint_to_felt(&deploy_entrypoint_selector).unwrap(),
+                biguint_to_felt(deploy_entrypoint_selector).unwrap(),
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
@@ -404,7 +404,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 .unwrap();
 
             // obtain the address of the deployed erc20 contract
-            let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
+            let erc20_address = *call_info.call_info.unwrap().retdata.get(0).unwrap();
 
             (Address(erc20_address), state)
         }
@@ -454,7 +454,7 @@ fn bench_erc20(executions: usize, native: bool) {
             )
             .unwrap(),
         ], // signature
-        contract_address_salt.clone(), // salt
+        contract_address_salt, // salt
         StarknetChainId::TestNet.to_felt(), // network
     )
     .unwrap();
@@ -536,7 +536,7 @@ fn execute(
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
         calldata.to_vec(),
-        selector.clone(),
+        *selector,
         (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),
@@ -553,7 +553,7 @@ fn execute(
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

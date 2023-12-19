@@ -1086,7 +1086,7 @@ mod tests {
         },
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
-    
+
     use std::{any::Any, borrow::Cow, collections::HashMap, sync::Arc};
 
     type DeprecatedBLSyscallHandler<'a> =

@@ -586,7 +586,7 @@ mod tests {
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::Felt252;
-    
+
     use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
     #[test]
@@ -742,7 +742,7 @@ mod tests {
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = QUERY_VERSION_2.clone();
+            version = *QUERY_VERSION_2;
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 

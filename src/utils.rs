@@ -15,8 +15,7 @@ use cairo_vm::vm::runners::builtin_runner::SEGMENT_ARENA_BUILTIN_NAME;
 use cairo_vm::{serde::deserialize_program::BuiltinName, vm::runners::builtin_runner, Felt252};
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use core::fmt;
-use num_integer::Integer;
-use num_traits::{ToPrimitive};
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
@@ -205,7 +204,7 @@ pub fn felt_to_hash(value: &Felt252) -> ClassHash {
     ClassHash(output)
 }
 
-pub fn string_to_hash(class_string: &String) -> ClassHash {
+pub fn string_to_hash(class_string: &str) -> ClassHash {
     let parsed_felt = Felt252::from_hex(class_string).unwrap();
     felt_to_hash(&parsed_felt)
 }
@@ -398,7 +397,7 @@ pub fn get_uint256_storage_var_addresses(
     args: &[Felt252],
 ) -> Result<(Felt252, Felt252), FromByteArrayError> {
     let low_key = get_storage_var_address(storage_var_name, args)?;
-    let high_key = &low_key + &Felt252::from(1);
+    let high_key = low_key + Felt252::from(1);
     Ok((low_key, high_key))
 }
 
@@ -868,7 +867,7 @@ pub mod test_utils {
 mod test {
     use super::*;
     use cairo_vm::Felt252;
-    
+
     use std::collections::HashMap;
 
     #[test]

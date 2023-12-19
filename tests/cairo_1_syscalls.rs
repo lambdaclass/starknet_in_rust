@@ -1,6 +1,6 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    utils::{biguint_to_felt},
+    utils::biguint_to_felt,
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
     Felt252,
 };

@@ -20,7 +20,6 @@ use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
 };
-use num_traits::Zero;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &ClassHash([0u8; 32]);
 
@@ -627,7 +626,8 @@ mod tests {
             in_memory_state_reader::InMemoryStateReader,
         },
     };
-    
+    use num_traits::Zero;
+
     use std::collections::HashMap;
 
     /// Test checks if class hashes and nonces are correctly fetched from the state reader.

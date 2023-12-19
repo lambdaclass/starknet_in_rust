@@ -6,7 +6,6 @@ use cairo_native::{
     starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
 };
 use cairo_vm::Felt252;
-use num_traits::Zero;
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet_types_core::felt::Felt as NaitiveFelt;
 
@@ -67,7 +66,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
         if *gas < required_gas {
             let out_of_gas_felt = NaitiveFelt::from_bytes_be_slice("Out of gas".as_bytes());
             tracing::debug!("out of gas!: {:?} < {:?}", *gas, required_gas);
-            return Err(vec![out_of_gas_felt.clone()]);
+            return Err(vec![out_of_gas_felt]);
         }
 
         *gas = gas.saturating_sub(required_gas);
@@ -93,7 +92,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         let current_block_number = self.block_context.block_info.block_number;
 
         if current_block_number < 10 || block_number > current_block_number - 10 {
-            let out_of_range_felt = Felt252::from_bytes_be_slice("Block number out of range".as_bytes());
+            let out_of_range_felt =
+                Felt252::from_bytes_be_slice("Block number out of range".as_bytes());
             return Err(vec![out_of_range_felt]);
         }
         let key: Felt252 = block_number.into();
@@ -121,24 +121,20 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             block_info: BlockInfo {
                 block_number: self.block_context.block_info.block_number,
                 block_timestamp: self.block_context.block_info.block_timestamp,
-                sequencer_address: self.block_context.block_info.sequencer_address.0.clone(),
+                sequencer_address: self.block_context.block_info.sequencer_address.0,
             },
             tx_info: TxInfo {
-                version: self.tx_execution_context.version.clone(),
-                account_contract_address: self
-                    .tx_execution_context
-                    .account_contract_address
-                    .0
-                    .clone(),
+                version: self.tx_execution_context.version,
+                account_contract_address: self.tx_execution_context.account_contract_address.0,
                 max_fee: self.tx_execution_context.max_fee,
                 signature: self.tx_execution_context.signature.clone(),
-                transaction_hash: self.tx_execution_context.transaction_hash.clone(),
-                chain_id: self.block_context.starknet_os_config.chain_id.clone(),
-                nonce: self.tx_execution_context.nonce.clone(),
+                transaction_hash: self.tx_execution_context.transaction_hash,
+                chain_id: self.block_context.starknet_os_config.chain_id,
+                nonce: self.tx_execution_context.nonce,
             },
-            caller_address: self.caller_address.0.clone(),
-            contract_address: self.contract_address.0.clone(),
-            entry_point_selector: self.entry_point_selector.clone(),
+            caller_address: self.caller_address.0,
+            contract_address: self.contract_address.0,
+            entry_point_selector: self.entry_point_selector,
         })
     }
 
@@ -221,7 +217,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             Ok(_) => Ok(()),
             Err(e) => {
                 let replace_class_felt = Felt252::from_bytes_be_slice(e.to_string().as_bytes());
-                Err(vec![replace_class_felt.clone()])
+                Err(vec![replace_class_felt])
             }
         }
     }
@@ -355,7 +351,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     ) -> SyscallResult<Felt252> {
         tracing::debug!("Called `storage_read({address_domain}, {address})` from Cairo Native");
         self.handle_syscall_request(gas, "storage_read")?;
-        let value = match self.starknet_storage_state.read(Address(address.clone())) {
+        let value = match self.starknet_storage_state.read(Address(address)) {
             Ok(value) => Ok(value),
             Err(_e @ StateError::Io(_)) => todo!(),
             Err(_) => Ok(Felt252::ZERO),
@@ -653,7 +649,7 @@ where
         let call = ExecutionEntryPoint::new(
             contract_address.clone(),
             constructor_calldata,
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
             self.contract_address.clone(),
             EntryPointType::Constructor,
             Some(CallType::Call),

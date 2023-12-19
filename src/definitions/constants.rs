@@ -105,10 +105,7 @@ lazy_static! {
 lazy_static! {
     static ref QUERY_VERSION_BASE: Felt252 =
         Felt252::from_hex("100000000000000000000000000000000").unwrap();
-    pub(crate) static ref QUERY_VERSION_0: Felt252 =
-        &Into::<Felt252>::into(0) + &*QUERY_VERSION_BASE;
-    pub(crate) static ref QUERY_VERSION_1: Felt252 =
-        &Into::<Felt252>::into(1) + &*QUERY_VERSION_BASE;
-    pub(crate) static ref QUERY_VERSION_2: Felt252 =
-        &Into::<Felt252>::into(2) + &*QUERY_VERSION_BASE;
+    pub(crate) static ref QUERY_VERSION_0: Felt252 = Into::<Felt252>::into(0) + *QUERY_VERSION_BASE;
+    pub(crate) static ref QUERY_VERSION_1: Felt252 = Into::<Felt252>::into(1) + *QUERY_VERSION_BASE;
+    pub(crate) static ref QUERY_VERSION_2: Felt252 = Into::<Felt252>::into(2) + *QUERY_VERSION_BASE;
 }

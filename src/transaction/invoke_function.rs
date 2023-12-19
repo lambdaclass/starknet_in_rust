@@ -34,7 +34,7 @@ use crate::{
 };
 use cairo_vm::Felt252;
 use getset::Getters;
-use num_traits::{Zero};
+use num_traits::Zero;
 use std::{collections::HashMap, fmt::Debug};
 
 #[cfg(feature = "cairo-native")]
@@ -80,11 +80,8 @@ impl InvokeFunction {
         chain_id: Felt252,
         nonce: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
-        let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
-            entry_point_selector,
-            nonce,
-            version,
-        )?;
+        let (entry_point_selector_field, additional_data) =
+            preprocess_invoke_function_fields(entry_point_selector, nonce, version)?;
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
             version,
@@ -682,7 +679,7 @@ mod tests {
         utils::{calculate_sn_keccak, ClassHash},
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    
+
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         core::{ContractAddress, Nonce, PatriciaKey},
@@ -1448,8 +1445,7 @@ mod tests {
         let entry_point_selector =
             Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
                 .unwrap();
-        let result =
-            preprocess_invoke_function_fields(entry_point_selector, None, 0.into());
+        let result = preprocess_invoke_function_fields(entry_point_selector, None, 0.into());
 
         let expected_additional_data: Vec<Felt252> = Vec::new();
         let expected_entry_point_selector_field = entry_point_selector;

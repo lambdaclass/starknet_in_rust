@@ -1,7 +1,6 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer};
 use cairo_vm::{utils::felt_to_biguint, Felt252};
 use clap::{Args, Parser, Subcommand};
-use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
 use starknet_in_rust::{
     core::{
@@ -124,7 +123,7 @@ fn declare_parser(
         Felt252::ZERO,
         &Address(0.into()),
         0,
-        DECLARE_VERSION.clone(),
+        *DECLARE_VERSION,
         Felt252::ZERO,
     )?;
     Ok((class_hash, tx_hash))
@@ -146,10 +145,10 @@ fn deploy_parser(
         Address(0.into()),
     )?;
 
-    cached_state.deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))?;
+    cached_state.deploy_contract(Address(address), string_to_hash(&args.class_hash))?;
     let tx_hash = calculate_deploy_transaction_hash(
         0.into(),
-        &Address(address.clone()),
+        &Address(address),
         &constructor_calldata,
         Felt252::ZERO,
     )?;
@@ -185,8 +184,7 @@ fn invoke_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector()
-        .clone();
+        .selector();
 
     let calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
@@ -194,9 +192,9 @@ fn invoke_parser(
     };
     let internal_invoke = InvokeFunction::new_with_tx_hash(
         contract_address.clone(),
-        entrypoint_selector.clone(),
+        *entrypoint_selector,
         0,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         calldata.clone(),
         vec![],
         Some(Felt252::ZERO),
@@ -214,9 +212,9 @@ fn invoke_parser(
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         &contract_address,
-        entrypoint_selector,
+        *entrypoint_selector,
         &calldata,
         0,
         Felt252::ZERO,
@@ -250,8 +248,7 @@ fn call_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector()
-        .clone();
+        .selector();
     let caller_address = Address(0.into());
     let calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
@@ -260,7 +257,7 @@ fn call_parser(
     let execution_entry_point = ExecutionEntryPoint::new(
         contract_address,
         calldata,
-        entrypoint_selector,
+        *entrypoint_selector,
         caller_address,
         *entry_point_type,
         None,

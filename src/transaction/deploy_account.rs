@@ -42,7 +42,7 @@ use crate::{
 };
 use cairo_vm::Felt252;
 use getset::Getters;
-use num_traits::{Zero};
+use num_traits::Zero;
 use std::collections::HashMap;
 use std::fmt::Debug;
 

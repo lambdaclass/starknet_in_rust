@@ -16,7 +16,7 @@ use cairo_vm::{
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use getset::Getters;
-use num_traits::{ToPrimitive};
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 
@@ -948,7 +948,7 @@ mod tests {
         let hash1 = ClassHash::default();
         let hash2 = ClassHash::default();
         let hash3 = ClassHash::default();
-        let hash4 = string_to_hash(&"0x3".to_string());
+        let hash4 = string_to_hash("0x3");
 
         child1.accessed_storage_keys = HashSet::new();
         child1.accessed_storage_keys.insert(hash1);
@@ -996,10 +996,10 @@ mod tests {
             ..Default::default()
         };
 
-        let hash1 = string_to_hash(&"0x0".to_string());
-        let hash2 = string_to_hash(&"0x1".to_string());
-        let hash3 = string_to_hash(&"0x2".to_string());
-        let hash4 = string_to_hash(&"0x3".to_string());
+        let hash1 = string_to_hash("0x0");
+        let hash2 = string_to_hash("0x1");
+        let hash3 = string_to_hash("0x2");
+        let hash4 = string_to_hash("0x3");
 
         validate_info.accessed_storage_keys = HashSet::new();
         validate_info.accessed_storage_keys.insert(hash1);
@@ -1008,7 +1008,7 @@ mod tests {
         fee_transfer_info.accessed_storage_keys.insert(hash3);
         fee_transfer_info.accessed_storage_keys.insert(hash4);
 
-        let hash5 = string_to_hash(&"0x5".to_string());
+        let hash5 = string_to_hash("0x5");
         call_info.accessed_storage_keys.insert(hash5);
 
         let txexecinfo = TransactionExecutionInfo::from_calls_info(

@@ -1,7 +1,7 @@
 use crate::core::errors::contract_address_errors::ContractAddressError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
-use cairo_vm::{Felt252};
+use cairo_vm::Felt252;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"COMPILED_CLASS_V1";

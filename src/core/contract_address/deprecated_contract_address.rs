@@ -342,7 +342,8 @@ pub fn compute_deprecated_class_hash(
 
     for data in contract_class.program().iter_data() {
         bytecode_vector.push(
-            *data.get_int_ref()
+            *data
+                .get_int_ref()
                 .ok_or(ContractAddressError::NoneIntMaybeRelocatable)?,
         );
     }
@@ -367,7 +368,6 @@ mod tests {
     use super::*;
     use cairo_vm::Felt252;
     use coverage_helper::test;
-    
 
     #[test]
     fn test_compute_hinted_class_hash_with_abi() {

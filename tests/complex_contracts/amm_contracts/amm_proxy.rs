@@ -393,12 +393,7 @@ fn amm_proxy_get_account_token_balance() {
     //First argument is the amm contract address
     //Second argument is the account address, in this case the proxy address
     //Third argument is the token id
-    let calldata = [
-        contract_address.0,
-        proxy_address.0,
-        2.into(),
-    ]
-    .to_vec();
+    let calldata = [contract_address.0, proxy_address.0, 2.into()].to_vec();
     let amm_proxy_entrypoint_selector =
         Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_get_account_token_balance"));
     let result = execute_entry_point(
