@@ -93,7 +93,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         let current_block_number = self.block_context.block_info.block_number;
 
         if current_block_number < 10 || block_number > current_block_number - 10 {
-            let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
+            let out_of_range_felt = Felt252::from_bytes_be_slice("Block number out of range".as_bytes());
             return Err(vec![out_of_range_felt]);
         }
         let key: Felt252 = block_number.into();

@@ -20,6 +20,7 @@ use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
 };
+use num_traits::Zero;
 
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &ClassHash([0u8; 32]);
 
