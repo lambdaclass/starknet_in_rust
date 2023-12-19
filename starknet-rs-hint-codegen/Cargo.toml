@@ -1,0 +1,22 @@
+[package]
+name = "starknet-rs-hint-codegen"
+version = "0.4.0"
+edition = "2021"
+
+[features]
+default = ["with_mimalloc"]
+with_mimalloc = ["dep:mimalloc"]
+
+[dependencies]
+starknet_in_rust = { path = "../", version = "0.4.0" }
+num-traits = "0.2.15"
+serde = { version = "1.0.152", features = ["derive"] }
+cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
+mimalloc = { version = "0.1.29", default-features = false, optional = true }
+codegen = "0.2.0"
+phf = { version = "0.11.1", default-features = false }
+phf_codegen = "0.11.1"
+
+[dev-dependencies]
+assert_matches = "1.5.0"
+coverage-helper = "0.1.0"

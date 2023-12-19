@@ -1,6 +1,6 @@
 use super::{
-    deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, hint_code::*,
-    other_syscalls, syscall_handler::HintProcessorPostRun,
+    deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler, other_syscalls,
+    syscall_handler::HintProcessorPostRun,
 };
 use crate::{
     state::{contract_class_cache::ContractClassCache, state_api::StateReader},
@@ -24,6 +24,13 @@ use cairo_vm::{
     },
 };
 use std::{any::Any, collections::HashMap};
+
+#[cfg(feature = "cairo-native")]
+use {
+    crate::utils::ClassHash,
+    cairo_native::cache::ProgramCache,
+    std::{cell::RefCell, rc::Rc},
+};
 
 #[derive(Clone, Debug)]
 pub enum Hint {
@@ -51,7 +58,7 @@ pub enum Hint {
 }
 
 /// Definition of the deprecated syscall hint processor with associated structs
-pub(crate) struct DeprecatedSyscallHintProcessor<'a, S: StateReader, C: ContractClassCache> {
+pub struct DeprecatedSyscallHintProcessor<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) builtin_hint_processor: BuiltinHintProcessor,
     pub(crate) syscall_handler: DeprecatedBLSyscallHandler<'a, S, C>,
     run_resources: RunResources,
@@ -96,6 +103,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
         _exec_scopes: &mut ExecutionScopes,
         hint_data: &Box<dyn Any>,
         constants: &HashMap<String, Felt252>,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         // Match against specific syscall hint codes and call the appropriate handler
 
@@ -103,118 +113,165 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
             .downcast_ref::<HintProcessorData>()
             .ok_or(SyscallHandlerError::WrongHintData)?;
 
-        match hint_data.code.as_str() {
-            ADDR_BOUND_PRIME => other_syscalls::addr_bound_prime(vm, hint_data, constants),
-            ADDR_IS_250 => other_syscalls::addr_is_250(vm, hint_data),
-            DEPLOY => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.deploy(
-                    vm,
-                    syscall_ptr,
-                    // TODO: Get the program_cache somehow.
-                    #[cfg(feature = "cairo-native")]
-                    None,
-                )
-            }
-            EMIT_EVENT_CODE => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.emit_event(vm, syscall_ptr)
-            }
-            GET_BLOCK_NUMBER => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_block_number(vm, syscall_ptr)
-            }
-            GET_BLOCK_TIMESTAMP => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_block_timestamp(vm, syscall_ptr)
-            }
-            GET_CALLER_ADDRESS => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_caller_address(vm, syscall_ptr)
-            }
-            GET_SEQUENCER_ADDRESS => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_sequencer_address(vm, syscall_ptr)
-            }
-            LIBRARY_CALL => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.library_call(
-                    vm,
-                    syscall_ptr,
-                    // TODO: Get the program_cache somehow.
-                    #[cfg(feature = "cairo-native")]
-                    None,
-                )
-            }
-            LIBRARY_CALL_L1_HANDLER => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.library_call_l1_handler(
-                    vm,
-                    syscall_ptr,
-                    // TODO: Get the program_cache somehow.
-                    #[cfg(feature = "cairo-native")]
-                    None,
-                )
-            }
-            CALL_CONTRACT => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.call_contract(
-                    vm,
-                    syscall_ptr,
-                    // TODO: Get the program_cache somehow.
-                    #[cfg(feature = "cairo-native")]
-                    None,
-                )
-            }
-            STORAGE_READ => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.storage_read(vm, syscall_ptr)
-            }
-            STORAGE_WRITE => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.storage_write(vm, syscall_ptr)
-            }
-            SEND_MESSAGE_TO_L1 => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.send_message_to_l1(vm, syscall_ptr)
-            }
-            GET_TX_SIGNATURE => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_tx_signature(vm, syscall_ptr)
-            }
-            GET_TX_INFO => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_tx_info(vm, syscall_ptr)
-            }
-            GET_CONTRACT_ADDRESS => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.get_contract_address(vm, syscall_ptr)
-            }
-            DELEGATE_CALL => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.delegate_call(
-                    vm,
-                    syscall_ptr,
-                    // TODO: Get the program_cache somehow.
-                    #[cfg(feature = "cairo-native")]
-                    None,
-                )
-            }
-            DELEGATE_L1_HANDLER => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.delegate_l1_handler(
-                    vm,
-                    syscall_ptr,
-                    // TODO: Get the program_cache somehow.
-                    #[cfg(feature = "cairo-native")]
-                    None,
-                )
-            }
-            REPLACE_CLASS => {
-                let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
-                self.syscall_handler.replace_class(vm, syscall_ptr)
-            }
-            _ => Err(SyscallHandlerError::NotImplemented(hint_data.code.clone())),
+        let hint_code = &hint_data.code;
+        let syscall_ptr = get_syscall_ptr(vm, &hint_data.ids_data, &hint_data.ap_tracking)?;
+        if let Some(syscall) = super::hint_code_map::HINTCODE.get(hint_code) {
+            match syscall {
+                Hint::AddrBoundPrime => {
+                    other_syscalls::addr_bound_prime(vm, hint_data, constants)?;
+                }
+                Hint::AddrIs250 => {
+                    other_syscalls::addr_is_250(vm, hint_data)?;
+                }
+                Hint::Deploy => {
+                    self.syscall_handler.deploy(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::EmitEvent => {
+                    self.syscall_handler.emit_event(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::GetBlockNumber => {
+                    self.syscall_handler.get_block_number(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::GetBlockTimestamp => {
+                    self.syscall_handler.get_block_timestamp(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::GetCallerAddress => {
+                    self.syscall_handler.get_caller_address(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::GetSequencerAddress => {
+                    self.syscall_handler.get_sequencer_address(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::LibraryCall => {
+                    self.syscall_handler.library_call(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::LibraryCallL1Handler => {
+                    self.syscall_handler.library_call_l1_handler(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::CallContract => {
+                    self.syscall_handler.call_contract(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::StorageRead => {
+                    self.syscall_handler.storage_read(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::StorageWrite => {
+                    self.syscall_handler.storage_write(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::SendMessageToL1 => {
+                    self.syscall_handler.send_message_to_l1(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::GetTxSignature => {
+                    self.syscall_handler.get_tx_signature(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::GetTxInfo => {
+                    self.syscall_handler.get_tx_info(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::GetContractAddress => {
+                    self.syscall_handler.get_contract_address(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::DelegateCall => {
+                    self.syscall_handler.delegate_call(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::DelegateCallL1Handler => {
+                    self.syscall_handler.delegate_l1_handler(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+                Hint::ReplaceClass => {
+                    self.syscall_handler.replace_class(
+                        vm,
+                        syscall_ptr,
+                        #[cfg(feature = "cairo-native")]
+                        program_cache,
+                    )?;
+                }
+            };
+            Ok(())
+        } else {
+            // Make sure to return a Result type here
+            Err(SyscallHandlerError::NotImplemented(hint_data.code.clone()))
         }
     }
 }
@@ -232,13 +289,20 @@ impl<'a, S: StateReader, C: ContractClassCache> HintProcessorLogic
         constants: &HashMap<String, Felt252>,
     ) -> Result<(), HintError> {
         if self.should_run_syscall_hint(vm, exec_scopes, hint_data, constants)? {
-            self.execute_syscall_hint(vm, exec_scopes, hint_data, constants)
-                .map_err(|e| match e {
-                    SyscallHandlerError::NotImplemented(hint_code) => {
-                        HintError::UnknownHint(hint_code.into_boxed_str())
-                    }
-                    e => HintError::CustomHint(e.to_string().into_boxed_str()),
-                })?;
+            self.execute_syscall_hint(
+                vm,
+                exec_scopes,
+                hint_data,
+                constants,
+                #[cfg(feature = "cairo-native")]
+                None,
+            )
+            .map_err(|e| match e {
+                SyscallHandlerError::NotImplemented(hint_code) => {
+                    HintError::UnknownHint(hint_code.into_boxed_str())
+                }
+                e => HintError::CustomHint(e.to_string().into_boxed_str()),
+            })?;
         }
         Ok(())
     }

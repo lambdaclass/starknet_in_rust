@@ -298,6 +298,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         // Read and validate the syscall request for emitting an event.
         let request = match self.read_and_validate_syscall_request("emit_event", vm, syscall_ptr) {
@@ -588,6 +591,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let request =
             match self.read_and_validate_syscall_request("send_message_to_l1", vm, syscall_ptr)? {
@@ -645,6 +651,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let request =
             match self.read_and_validate_syscall_request("storage_read", vm, syscall_ptr)? {
@@ -668,6 +677,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let request =
             match self.read_and_validate_syscall_request("storage_write", vm, syscall_ptr)? {
@@ -760,6 +772,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         self.read_and_validate_syscall_request("get_block_number", vm, syscall_ptr)?;
         DeprecatedGetBlockNumberResponse::new(self.get_block_info().block_number)
@@ -771,6 +786,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let _request =
             match self.read_and_validate_syscall_request("get_tx_info", vm, syscall_ptr)? {
@@ -789,6 +807,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_tx_signature", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::GetTxSignature(_) => {}
@@ -813,6 +834,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_block_timestamp", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::GetBlockTimestamp(_) => {}
@@ -836,6 +860,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let caller_address = self.syscall_get_caller_address(vm, syscall_ptr)?;
         let response = DeprecatedGetCallerAddressResponse::new(caller_address);
@@ -847,6 +874,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let contract_address = self.syscall_get_contract_address(vm, syscall_ptr)?;
         let response = DeprecatedGetContractAddressResponse::new(contract_address);
@@ -858,6 +888,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &mut VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         match self.read_and_validate_syscall_request("get_sequencer_address", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::GetSequencerAddress(_) => {}
@@ -1026,6 +1059,9 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         &mut self,
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
+        #[cfg(feature = "cairo-native")] _program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
     ) -> Result<(), SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("replace_class", vm, syscall_ptr)
         {
@@ -1171,7 +1207,12 @@ mod tests {
             .unwrap();
 
         assert_matches!(
-            syscall.get_block_number(&mut vm, relocatable!(1, 0)),
+            syscall.get_block_number(
+                &mut vm,
+                relocatable!(1, 0),
+                #[cfg(feature = "cairo-native")]
+                None,
+            ),
             Ok(())
         );
         assert_matches!(

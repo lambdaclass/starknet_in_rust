@@ -18,6 +18,7 @@ members = [
     "rpc_state_reader",
     "replay",
     "examples/contract_execution",
+    "starknet-rs-hint-codegen",
 ]
 
 [workspace.dependencies]
@@ -65,6 +66,8 @@ starknet_api = { workspace = true }
 starknet-crypto = "0.6.1"
 thiserror = { workspace = true }
 tracing = "0.1.37"
+phf = "0.11"
+phf_macros = "0.11"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
@@ -72,11 +75,20 @@ coverage-helper = "0.2.0"
 lru = "0.11.0"
 pretty_assertions_sorted = "1.2.3"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+criterion = { version = "0.5.1", features = ["html_reports"] }
 
 [[bench]]
 path = "bench/internals.rs"
 name = "internals"
 harness = false
+
+[[bench]]
+path = "bench/hashing_running_time.rs"
+name = "hashing_running_time"
+harness = false
+
+[build-dependencies]
+phf_codegen = "0.11" 
 
 [[bin]]
 path = "bench/native_bench.rs"
