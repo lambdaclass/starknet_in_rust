@@ -88,9 +88,14 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         gas: &mut u128,
     ) -> SyscallResult<cairo_vm::Felt252> {
         tracing::debug!("Called `get_block_hash({block_number})` from Cairo Native");
-
         self.handle_syscall_request(gas, "get_block_hash")?;
 
+        let current_block_number = self.block_context.block_info.block_number;
+
+        if current_block_number < 10 || block_number > current_block_number - 10 {
+            let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
+            return Err(vec![out_of_range_felt]);
+        }
         let key: Felt252 = block_number.into();
         let block_hash_address = Address(1.into());
 

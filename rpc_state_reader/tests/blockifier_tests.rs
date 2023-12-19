@@ -122,9 +122,9 @@
 // ) {
 //     let tx_hash = tx_hash.strip_prefix("0x").unwrap();
 
-//     // Instantiate the RPC StateReader and the CachedState
-//     let rpc_reader = RpcStateReader(RpcState::new_infura(network, block_number.into()).unwrap());
-//     let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
+// Instantiate the RPC StateReader and the CachedState
+// let rpc_reader = RpcStateReader(RpcState::new_rpc(network, block_number.into()).unwrap());
+// let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
 
 //     // Get values for block context before giving ownership of the reader
 //     let chain_id = rpc_reader.0.get_chain_name();
@@ -179,34 +179,33 @@
 //         max_recursion_depth: 500,
 //     };
 
-//     // Map starknet_api transaction to blockifier's
-//     let blockifier_tx = match sn_api_tx.unwrap() {
-//         SNTransaction::Invoke(tx) => {
-//             let invoke = InvokeTransaction { tx, tx_hash };
-//             AccountTransaction::Invoke(invoke)
-//         }
-//         SNTransaction::DeployAccount(tx) => {
-//             let contract_address = calculate_contract_address(
-//                 tx.contract_address_salt,
-//                 tx.class_hash,
-//                 &tx.constructor_calldata,
-//                 ContractAddress::default(),
-//             )
+// Map starknet_api transaction to blockifier's
+// let blockifier_tx = match sn_api_tx.unwrap() {
+//     SNTransaction::Invoke(tx) => {
+//         let invoke = InvokeTransaction { tx, tx_hash };
+//         AccountTransaction::Invoke(invoke)
+//     }
+//     SNTransaction::DeployAccount(tx) => {
+//         let contract_address = calculate_contract_address(
+//             tx.contract_address_salt,
+//             tx.class_hash,
+//             &tx.constructor_calldata,
+//             ContractAddress::default(),
+//         )
+//         .unwrap();
+//         AccountTransaction::DeployAccount(DeployAccountTransaction {
+//             tx,
+//             tx_hash,
+//             contract_address,
+//         })
+//     }
+//     SNTransaction::Declare(tx) => {
+//         // Fetch the contract_class from the next block (as we don't have it in the previous one)
+//         let mut next_block_state_reader =
+//             RpcStateReader(RpcState::new_rpc(network, (block_number.next()).into()).unwrap());
+//         let contract_class = next_block_state_reader
+//             .get_compiled_contract_class(&tx.class_hash())
 //             .unwrap();
-//             AccountTransaction::DeployAccount(DeployAccountTransaction {
-//                 tx,
-//                 tx_hash,
-//                 contract_address,
-//             })
-//         }
-//         SNTransaction::Declare(tx) => {
-//             // Fetch the contract_class from the next block (as we don't have it in the previous one)
-//             let mut next_block_state_reader = RpcStateReader(
-//                 RpcState::new_infura(network, (block_number.next()).into()).unwrap(),
-//             );
-//             let contract_class = next_block_state_reader
-//                 .get_compiled_contract_class(&tx.class_hash())
-//                 .unwrap();
 
 //             let declare = DeclareTransaction::new(tx, tx_hash, contract_class).unwrap();
 //             AccountTransaction::Declare(declare)
@@ -241,7 +240,7 @@
 // #[test]
 // fn test_get_gas_price() {
 //     let block = BlockValue::Number(BlockNumber(169928));
-//     let rpc_state = RpcState::new_infura(RpcChain::MainNet, block).unwrap();
+//     let rpc_state = RpcState::new_rpc(RpcChain::MainNet, block).unwrap();
 
 //     let price = rpc_state.get_gas_price(169928).unwrap();
 //     assert_eq!(price, 22804578690);
@@ -268,18 +267,11 @@
 //     } = execute_call_info.unwrap();
 
 //     assert_eq!(actual_fee.0, receipt.actual_fee);
-//     assert_eq!(
-//         vm_resources,
-//         trace
-//             .function_invocation
-//             .as_ref()
-//             .unwrap()
-//             .execution_resources
-//     );
+//     assert_eq!(vm_resources, receipt.execution_resources);
 //     assert_eq!(
 //         inner_calls.len(),
 //         trace
-//             .function_invocation
+//             .execute_invocation
 //             .as_ref()
 //             .unwrap()
 //             .internal_calls
@@ -378,7 +370,6 @@
 // )]
 // fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
 //     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
-
 //     let TransactionExecutionInfo {
 //         execute_call_info,
 //         actual_fee,
@@ -403,18 +394,11 @@
 //         }
 //     }
 
-//     assert_eq_sorted!(
-//         vm_resources,
-//         trace
-//             .function_invocation
-//             .as_ref()
-//             .unwrap()
-//             .execution_resources
-//     );
+//     assert_eq_sorted!(vm_resources, receipt.execution_resources);
 //     assert_eq!(
 //         inner_calls.len(),
 //         trace
-//             .function_invocation
+//             .execute_invocation
 //             .as_ref()
 //             .unwrap()
 //             .internal_calls
@@ -436,8 +420,11 @@
 // fn blockifier_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
 //     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number));
 
-//     assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
-
+// assert_eq!(
+//     tx_info.revert_error.is_some(),
+//     trace.execute_invocation.unwrap().revert_reason.is_some()
+// );
+//
 //     let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee.0) / receipt.actual_fee;
 
 //     if diff >= 5 {

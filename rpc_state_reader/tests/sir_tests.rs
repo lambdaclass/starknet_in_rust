@@ -20,7 +20,7 @@ use test_case::test_case;
 
 #[test]
 fn test_get_transaction_try_from() {
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+    let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
     let str_hash = stark_felt!("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91");
     let tx_hash = TransactionHash(str_hash);
 
@@ -39,7 +39,7 @@ fn test_get_transaction_try_from() {
 #[test]
 fn test_get_gas_price() {
     let block = BlockValue::Number(BlockNumber(169928));
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, block).unwrap();
+    let rpc_state = RpcState::new_rpc(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
     assert_eq!(price, 22804578690);
@@ -162,13 +162,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     // check Cairo VM execution resources
     assert_eq_sorted!(
         execution_resources.as_ref(),
-        Some(
-            &trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources
-        ),
+        Some(&receipt.execution_resources),
         "execution resources mismatch"
     );
 
@@ -176,7 +170,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     assert_eq!(
         internal_calls.len(),
         trace
-            .function_invocation
+            .execute_invocation
             .as_ref()
             .unwrap()
             .internal_calls
@@ -252,10 +246,25 @@ fn test_sorted_events(
     RpcChain::MainNet
     => ignore["broken on both due to a cairo-vm error"]
 )]
+// Insufficient fee token balance
+#[test_case(
+    "0x006978ae71587d4ab1048d7836c2d656222a16976c82c0dc24d3b44316d63cfe",
+    440823, // real block     440824
+    RpcChain::MainNet
+)]
+// Insufficient fee token balance
+#[test_case(
+    "0x03e458ef06c17dd2601013746ae5622d8434348b246a335b20b6543f37aff0f8",
+    440849, // real block     440850
+    RpcChain::MainNet
+)]
 fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
 
-    assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
+    assert_eq!(
+        tx_info.revert_error.is_some(),
+        trace.execute_invocation.unwrap().revert_reason.is_some()
+    );
 
     let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee) / receipt.actual_fee;
 
@@ -339,13 +348,7 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
     // check Cairo VM execution resources
     assert_eq_sorted!(
         execution_resources.as_ref(),
-        Some(
-            &trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources
-        ),
+        Some(&receipt.execution_resources),
         "execution resources mismatch"
     );
 
@@ -353,7 +356,7 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
     assert_eq!(
         internal_calls.len(),
         trace
-            .function_invocation
+            .execute_invocation
             .as_ref()
             .unwrap()
             .internal_calls
@@ -407,7 +410,7 @@ fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: 
     }
 
     let rpc_retdata: Vec<Felt252> = trace
-        .function_invocation
+        .execute_invocation
         .unwrap()
         .retdata
         .unwrap()
