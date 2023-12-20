@@ -195,6 +195,11 @@ clean:
 clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo clippy --workspace --all-targets --all-features -- -D warnings
 
+TEST_COMMAND:=cargo nextest run --release
+ifdef TEST_COLLECT_COVERAGE
+	TEST_COMMAND:=cargo +nightly llvm-cov nextest --release --ignore-filename-regex 'main.rs' --no-report
+endif
+
 test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	echo "Cairo1 tests"
 	$(MAKE) test-cairo-1
@@ -202,13 +207,13 @@ test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	$(MAKE) test-cairo-2
 
 test-cairo-1: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics,cairo-native
+	$(TEST_COMMAND) --workspace --all-targets --features=cairo_1_tests,metrics,cairo-native
 
 test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --all-targets --features=metrics,cairo-native
+	$(TEST_COMMAND) --workspace --all-targets --features=metrics,cairo-native
 
 test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --test cairo_native --features=cairo-native
+	$(TEST_COMMAND) --workspace --test cairo_native --features=cairo-native
 
 test-doctests:
 	cargo test --workspace --doc
@@ -217,7 +222,7 @@ coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-ca
 	$(MAKE) coverage-report
 
 coverage-report: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo +nightly llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
+	cargo +nightly llvm-cov report --lcov --output-path lcov.info
 
 heaptrack:
 	./scripts/heaptrack.sh

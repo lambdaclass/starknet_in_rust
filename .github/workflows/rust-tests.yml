@@ -165,6 +165,8 @@ jobs:
   coverage:
     name: Generate and upload coverage report
     runs-on: ubuntu-latest
+    env:
+      TEST_COLLECT_COVERAGE: 1
     steps:
     - name: Checkout
       uses: actions/checkout@v3
