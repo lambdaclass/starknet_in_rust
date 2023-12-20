@@ -164,7 +164,7 @@ jobs:
       run: make ${{ matrix.target }}
 
     - name: Save coverage report
-      if: steps.restore-report.outputs.cache-hit != 'true' && ${{ matrix.target }} != 'test-doctest'
+      if: ${{ matrix.target != 'test-doctest' }}
       uses: actions/cache/save@v3
       with:
         path: lcov-${{ matrix.target }}.info
@@ -180,21 +180,18 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Fetch coverage report for test-cairo-1
-      id: restore-report
       uses: actions/cache/restore@v3
       with:
         path: lcov-test-cairo-1.info
         key: coverage-cache-${{ github.sha }}-test-cairo-1
 
     - name: Fetch coverage report for test-cairo-2
-      id: restore-report
       uses: actions/cache/restore@v3
       with:
         path: lcov-test-cairo-2.info
         key: coverage-cache-${{ github.sha }}-test-cairo-2
 
     - name: Fetch coverage report for test-cairo-native
-      id: restore-report
       uses: actions/cache/restore@v3
       with:
         path: lcov-test-cairo-native.info
