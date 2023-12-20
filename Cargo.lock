@@ -3724,6 +3724,7 @@ dependencies = [
  "blockifier",
  "cairo-lang-starknet",
  "cairo-lang-utils",
+ "cairo-vm 0.8.7",
  "cairo-vm 0.9.1",
  "dotenv",
  "flate2",
