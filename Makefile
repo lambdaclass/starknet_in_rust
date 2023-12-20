@@ -197,7 +197,8 @@ clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sier
 
 TEST_COMMAND:=cargo nextest run --release
 ifdef TEST_COLLECT_COVERAGE
-	TEST_COMMAND:=cargo +nightly llvm-cov nextest --release --ignore-filename-regex 'main.rs' --no-report
+	#TEST_COMMAND=cargo +nightly llvm-cov nextest --release --ignore-filename-regex 'main.rs' --lcov --output-path lcov-$%.info
+	TEST_COMMAND=cargo llvm-cov nextest --release --lcov --output-path lcov-$%.info
 endif
 
 test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
@@ -217,12 +218,6 @@ test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-c
 
 test-doctests:
 	cargo test --workspace --doc
-
-coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
-	$(MAKE) coverage-report
-
-coverage-report: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo +nightly llvm-cov report --lcov --output-path lcov.info
 
 heaptrack:
 	./scripts/heaptrack.sh

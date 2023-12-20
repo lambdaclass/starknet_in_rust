@@ -99,6 +99,7 @@ jobs:
       RPC_ENDPOINT_MAINNET: ${{ secrets.JUNO_ENDPOINT_MAINNET }}
       MLIR_SYS_170_PREFIX: /usr/lib/llvm-17/
       TABLEGEN_170_PREFIX: /usr/lib/llvm-17/
+      TEST_COLLECT_COVERAGE: 1
     strategy:
       fail-fast: false
       matrix:
@@ -162,6 +163,13 @@ jobs:
     - name: Run tests (${{ matrix.target }})
       run: make ${{ matrix.target }}
 
+    - name: Save coverage report
+      if: steps.restore-report.outputs.cache-hit != 'true' && ${{ matrix.target }} != 'test-doctest'
+      uses: actions/cache/save@v3
+      with:
+        path: lcov-${{ matrix.target }}.info
+        key: coverage-cache-${{ github.sha }}-${{ matrix.target }}
+
   coverage:
     name: Generate and upload coverage report
     runs-on: ubuntu-latest
@@ -171,48 +179,30 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Install Rust nightly
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: nightly
-
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-on-failure: true
-
-    - name: Cache coverage report
+    - name: Fetch coverage report for test-cairo-1
       id: restore-report
       uses: actions/cache/restore@v3
       with:
-        path: lcov.info
-        key: coverage-cache-${{ github.sha }}
+        path: lcov-test-cairo-1.info
+        key: coverage-cache-${{ github.sha }}-test-cairo-1
 
-    - name: Python3 Build
-      uses: actions/setup-python@v4
+    - name: Fetch coverage report for test-cairo-2
+      id: restore-report
+      uses: actions/cache/restore@v3
       with:
-        python-version: '3.9'
-        cache: 'pip'
-    - uses: Swatinem/rust-cache@v2
+        path: lcov-test-cairo-2.info
+        key: coverage-cache-${{ github.sha }}-test-cairo-2
+
+    - name: Fetch coverage report for test-cairo-native
+      id: restore-report
+      uses: actions/cache/restore@v3
       with:
-        cache-on-failure: true
-
-    - name: Install deps
-      run: make deps
-
-    - name: Generate coverage report
-      if: steps.restore-report.outputs.cache-hit != 'true'
-      run: make coverage-report
-
-    - name: Save coverage report
-      if: steps.restore-report.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v3
-      with:
-        path: lcov.info
-        key: coverage-cache-${{ github.sha }}
+        path: lcov-test-cairo-native.info
+        key: coverage-cache-${{ github.sha }}-test-cairo-native
 
     - name: Upload coverage to codecov.io
       uses: codecov/codecov-action@v3
       with:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: lcov.info
+        files: lcov-test-cairo-1.info lcov-test-cairo-2.info lcov-test-cairo-native.info
