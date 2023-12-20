@@ -6,7 +6,6 @@ use cairo_lang_starknet::contract_class::ContractClass;
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 use cairo_vm::with_std::collections::HashSet;
 use cairo_vm::Felt252;
-use starknet_types_core::felt::biguint_to_felt;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
@@ -30,6 +29,7 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
+use starknet_types_core::felt::biguint_to_felt;
 use std::sync::Arc;
 
 fn insert_sierra_class_into_cache(
@@ -150,10 +150,7 @@ fn get_block_hash_test() {
     assert!(!vm_result.failure_flag);
     assert_eq!(
         vm_result.retdata,
-        [Felt252::from_bytes_be(
-            &[5; 32]
-        )]
-        .to_vec()
+        [Felt252::from_bytes_be(&[5; 32])].to_vec()
     );
     assert_eq!(vm_result.class_hash, Some(casm_class_hash));
 
@@ -172,10 +169,7 @@ fn get_block_hash_test() {
     assert!(!native_result.failure_flag);
     assert_eq!(
         native_result.retdata,
-        [Felt252::from_bytes_be(
-            &[5; 32]
-        )]
-        .to_vec()
+        [Felt252::from_bytes_be(&[5; 32])].to_vec()
     );
     assert_eq!(native_result.execution_resources, None);
     assert_eq!(native_result.class_hash, Some(native_class_hash));
@@ -1079,7 +1073,10 @@ fn replace_class_test() {
         entry_point_type,
         &CLASS_HASH_A,
     );
-    let calldata = [Felt252::from_bytes_be_slice(CASM_CLASS_HASH_B.to_bytes_be())].to_vec();
+    let calldata = [Felt252::from_bytes_be_slice(
+        CASM_CLASS_HASH_B.to_bytes_be(),
+    )]
+    .to_vec();
     let vm_result = execute(
         &mut vm_state,
         &caller_address,
@@ -1560,7 +1557,7 @@ fn library_call() {
             contract_address: Address(1111.into()),
             entry_point_selector: Some(
                 Felt252::from_dec_str(
-                    "544923964202674311881044083303061611121949089655923191939299897061511784662"
+                    "544923964202674311881044083303061611121949089655923191939299897061511784662",
                 )
                 .unwrap(),
             ),
