@@ -4438,7 +4438,7 @@ dependencies = [
  "serde_json_pythonic",
  "sha3",
  "starknet",
- "starknet-crypto 0.5.2",
+ "starknet-crypto 0.6.1",
  "starknet_api",
  "thiserror",
  "tracing",

@@ -209,7 +209,9 @@ where
     let n_steps_str: String = serde_json::from_value(
         value
             .get("steps")
-            .ok_or(serde::de::Error::custom("Missing field steps"))?
+            .ok_or(serde::de::Error::custom(
+                RpcStateError::MissingRpcResponseField("steps".to_string()),
+            ))?
             .clone(),
     )
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
@@ -220,7 +222,9 @@ where
     let n_memory_holes_str: String = serde_json::from_value(
         value
             .get("memory_holes")
-            .ok_or(serde::de::Error::custom("Missing field memory_holes"))?
+            .ok_or(serde::de::Error::custom(
+                RpcStateError::MissingRpcResponseField("memory_holes".to_string()),
+            ))?
             .clone(),
     )
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
@@ -275,7 +279,9 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         // Parse retdata
         let retdata_value = value
             .get("result")
-            .ok_or(serde::de::Error::custom("Missing field result"))?
+            .ok_or(serde::de::Error::custom(
+                RpcStateError::MissingRpcResponseField("result".to_string()),
+            ))?
             .clone();
         let retdata = serde_json::from_value(retdata_value)
             .map_err(|e| serde::de::Error::custom(e.to_string()))?;
@@ -283,7 +289,9 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         // Parse calldata
         let calldata_value = value
             .get("calldata")
-            .ok_or(serde::de::Error::custom("Missing field calldata"))?
+            .ok_or(serde::de::Error::custom(
+                RpcStateError::MissingRpcResponseField("calldata".to_string()),
+            ))?
             .clone();
         let calldata = serde_json::from_value(calldata_value)
             .map_err(|e| serde::de::Error::custom(e.to_string()))?;
@@ -291,14 +299,16 @@ impl<'de> Deserialize<'de> for RpcCallInfo {
         // Parse internal calls
         let internal_calls_value = value
             .get("calls")
-            .ok_or(serde::de::Error::custom("Missing field calls"))?
+            .ok_or(serde::de::Error::custom(
+                RpcStateError::MissingRpcResponseField("calls".to_string()),
+            ))?
             .clone();
         let mut internal_calls = vec![];
 
         for call in internal_calls_value
             .as_array()
             .ok_or(serde::de::Error::custom(
-                "Wrong type for field internal_calls",
+                RpcStateError::RpcResponseWrongType("internal_calls".to_string()),
             ))?
         {
             internal_calls
@@ -371,7 +381,16 @@ impl RpcState {
             .set("Content-Type", "application/json")
             .set("accept", "application/json")
             .send_json(params)
-            .map_err(|err| RpcStateError::Request(err.to_string()))
+            .map_err(|err| {
+                if err
+                    .to_string()
+                    .contains("request failed or timed out through")
+                {
+                    RpcStateError::RpcConnectionNotAvailable
+                } else {
+                    RpcStateError::Request(err.to_string())
+                }
+            })
     }
 
     fn deserialize_call<T: for<'a> Deserialize<'a>>(
@@ -393,9 +412,7 @@ impl RpcState {
         let result = self
             .rpc_call::<serde_json::Value>("starknet_traceTransaction", &json!([hash.to_string()]))?
             .get("result")
-            .ok_or(RpcStateError::RpcCall(
-                "Response has no field result".into(),
-            ))?
+            .ok_or(RpcStateError::MissingRpcResponseField("result".into()))?
             .clone();
         serde_json::from_value(result).map_err(|e| RpcStateError::Request(e.to_string()))
     }
@@ -408,9 +425,7 @@ impl RpcState {
                 &json!([hash.to_string()]),
             )?
             .get("result")
-            .ok_or(RpcStateError::RpcCall(
-                "Response has no field result".into(),
-            ))?
+            .ok_or(RpcStateError::MissingRpcResponseField("result".into()))?
             .clone();
         utils::deserialize_transaction_json(result).map_err(RpcStateError::SerdeJson)
     }
@@ -423,21 +438,17 @@ impl RpcState {
                 &json!({"block_id" : { "block_number": block_number }}),
             )?
             .get("result")
-            .ok_or(RpcStateError::RpcCall(
-                "Response has no field result".into(),
-            ))?
+            .ok_or(RpcStateError::MissingRpcResponseField("result".into()))?
             .clone();
         let gas_price_hex = res
             .get("l1_gas_price")
             .and_then(|gp| gp.get("price_in_wei"))
             .and_then(|gp| gp.as_str())
-            .ok_or(RpcStateError::Request(
-                "Response has no field gas_price".to_string(),
+            .ok_or(RpcStateError::MissingRpcResponseField(
+                "gas_price".to_string(),
             ))?;
-        let gas_price =
-            u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16).map_err(|_| {
-                RpcStateError::Request("Response field gas_price has wrong type".to_string())
-            })?;
+        let gas_price = u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16)
+            .map_err(|_| RpcStateError::RpcResponseWrongType("gas_price".to_string()))?;
         Ok(gas_price)
     }
 
