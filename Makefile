@@ -197,8 +197,8 @@ clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sier
 
 TEST_COMMAND:=cargo nextest run
 ifdef TEST_COLLECT_COVERAGE
-	TEST_COMMAND=cargo +nightly llvm-cov nextest --ignore-filename-regex 'main.rs' --lcov --output-path lcov-$@.info
-	#TEST_COMMAND=cargo llvm-cov nextest --lcov --output-path lcov-$%.info
+	#TEST_COMMAND=cargo +nightly llvm-cov nextest --ignore-filename-regex 'main.rs' --lcov --output-path lcov-$@.info
+	TEST_COMMAND=cargo llvm-cov nextest --lcov --output-path lcov-$@.info
 endif
 
 test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
