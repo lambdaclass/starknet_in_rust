@@ -66,108 +66,44 @@ fn get_block_hash_test() {
 
 #[test]
 #[cfg(feature = "cairo-native")]
-fn get_block_hash_test_failure() {
-    // the result felt in the retdata does not match the 'block out of bound error',
-    // because it occurs a newer error when unwrapping the result of the syscall.
-    // we check both errors are the same in vm and native.
-    use starknet_in_rust::{
-        state::contract_class_cache::PermanentContractClassCache, utils::felt_to_hash,
-    };
+fn get_block_hash_test_failure2() {
+    let class_hash = ClassHash([1; 32]);
+    let caller_address = Address(1.into());
+    let callee_address = Address(1.into());
 
-    let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
-        serde_json::from_str(
-            std::fs::read_to_string("starknet_programs/cairo2/get_block_hash_basic.sierra")
-                .unwrap()
-                .as_str(),
+    let mut state = TestStateSetup::default();
+    state
+        .load_contract_at_address(
+            class_hash,
+            caller_address.clone(),
+            "starknet_programs/cairo2/get_block_hash_basic.cairo",
         )
         .unwrap();
 
-    let casm_data = include_bytes!("../starknet_programs/cairo2/get_block_hash_basic.casm");
-    let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
-
-    let native_entrypoints = sierra_contract_class.clone().entry_points_by_type;
-    let native_external_selector = &native_entrypoints.external.get(0).unwrap().selector;
-
-    let casm_entrypoints = casm_contract_class.clone().entry_points_by_type;
-    let casm_external_selector = &casm_entrypoints.external.get(0).unwrap().selector;
-
-    // Create state reader with class hash data
-    let contract_class_cache = PermanentContractClassCache::default();
-
-    let native_class_hash: ClassHash = ClassHash([1; 32]);
-    let casm_class_hash: ClassHash = ClassHash([2; 32]);
-    let caller_address = Address(1.into());
-
-    insert_sierra_class_into_cache(
-        &contract_class_cache,
-        native_class_hash,
-        sierra_contract_class,
+    let mut state = state.finalize();
+    state.insert_initial_storage_value(
+        (Address(Felt252::one()), felt_to_hash(&10.into()).0),
+        Felt252::from_bytes_be(&[5; 32]),
     );
 
-    contract_class_cache.set_contract_class(
-        casm_class_hash,
-        CompiledClass::Casm(Arc::new(casm_contract_class)),
-    );
+    let (result_vm, result_native) = state
+        .execute(
+            &callee_address,
+            &caller_address,
+            (
+                EntryPointType::External,
+                &felt_str!(
+                    "377ae94b690204c74c8d21938c5b72e80fdaee3d21c780fd7557a7f84a8b379",
+                    16
+                ),
+            ),
+            &[
+                25.into(), // block number (is not inside a valid range)
+            ],
+        )
+        .unwrap();
 
-    let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
-
-    state_reader
-        .address_to_class_hash_mut()
-        .insert(caller_address.clone(), casm_class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(caller_address.clone(), nonce);
-
-    // Create state from the state_reader and contract cache.
-    let state_reader = Arc::new(state_reader);
-    let mut state_vm =
-        CachedState::new(state_reader.clone(), Arc::new(contract_class_cache.clone()));
-
-    state_vm.cache_mut().storage_initial_values_mut().insert(
-        (Address(1.into()), felt_to_hash(&Felt252::from(10)).0),
-        Felt252::from_bytes_be(StarkHash::new([5; 32]).unwrap().bytes()),
-    );
-    let mut state_native = CachedState::new(state_reader, Arc::new(contract_class_cache));
-    state_native
-        .cache_mut()
-        .storage_initial_values_mut()
-        .insert(
-            (Address(1.into()), felt_to_hash(&Felt252::from(10)).0),
-            Felt252::from_bytes_be(StarkHash::new([5; 32]).unwrap().bytes()),
-        );
-
-    // block number (is not inside a valid range)
-    let calldata = [25.into()].to_vec();
-
-    let native_result = execute(
-        &mut state_native,
-        &caller_address,
-        &caller_address,
-        native_external_selector,
-        &calldata,
-        EntryPointType::External,
-        &native_class_hash,
-    );
-
-    let vm_result = execute(
-        &mut state_vm,
-        &caller_address,
-        &caller_address,
-        casm_external_selector,
-        &calldata,
-        EntryPointType::External,
-        &casm_class_hash,
-    );
-    assert_eq!(native_result.calldata, calldata);
-    assert!(vm_result.failure_flag);
-    assert!(native_result.failure_flag);
-    assert_eq!(vm_result.retdata, native_result.retdata);
-    assert_eq!(native_result.gas_consumed, vm_result.gas_consumed);
-    assert_eq!(
-        vm_result.accessed_storage_keys,
-        native_result.accessed_storage_keys
-    );
+    assert_eq_sorted!(result_vm, result_native);
 }
 
 #[test]
