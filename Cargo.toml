@@ -40,7 +40,7 @@ cairo-lang-runner = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "52f8e190ab3a812ed5f95ba5becc9a39a69131ca", optional = true }
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "ce6c68bba824a161cc72642458d88e674b386827", optional = true }
 starknet-types-core = { git = "https://github.com/starknet-io/types-rs.git", rev = "4bc8a5db3c86f017e8be7dc43531a2cb6db011c0", default-features = false }
 
 

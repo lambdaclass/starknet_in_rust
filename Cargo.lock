@@ -1284,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=52f8e190ab3a812ed5f95ba5becc9a39a69131ca#52f8e190ab3a812ed5f95ba5becc9a39a69131ca"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=ce6c68bba824a161cc72642458d88e674b386827#ce6c68bba824a161cc72642458d88e674b386827"
 dependencies = [
  "bumpalo",
  "cairo-lang-compiler",
@@ -1321,9 +1321,10 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=52f8e190ab3a812ed5f95ba5becc9a39a69131ca#52f8e190ab3a812ed5f95ba5becc9a39a69131ca"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=ce6c68bba824a161cc72642458d88e674b386827#ce6c68bba824a161cc72642458d88e674b386827"
 dependencies = [
  "cairo-lang-runner",
+ "lazy_static",
  "libc",
  "starknet-crypto 0.6.1",
  "starknet-curve 0.4.0",
