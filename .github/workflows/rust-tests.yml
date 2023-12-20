@@ -172,6 +172,7 @@ jobs:
 
   coverage:
     name: Generate and upload coverage report
+    needs: tests
     runs-on: ubuntu-latest
     env:
       TEST_COLLECT_COVERAGE: 1
