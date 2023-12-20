@@ -25,7 +25,7 @@ use cairo_lang_starknet::{
     casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
 };
 use cairo_vm_blockifier::types::program::Program;
-use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
+use pretty_assertions_sorted::assert_eq;
 use rpc_state_reader::rpc_state::*;
 use rpc_state_reader::utils;
 use starknet::core::types::ContractClass as SNContractClass;
