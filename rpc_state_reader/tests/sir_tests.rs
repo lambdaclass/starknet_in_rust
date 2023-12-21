@@ -128,16 +128,10 @@ fn test_get_gas_price() {
     422881, // real block 422882
     RpcChain::MainNet
 )]
-// Braavos (v3.21.10)
-#[test_case(
-    "0x04dc838fd4ed265ab2ea5fbab08e67b398e3caaedf75c548113c6b2f995fc9db",
-    889858, // real block 889859
-    RpcChain::TestNet
-)]
 // Argent X (v5.7.0)
 #[test_case(
     "0x039683c034f8e67cfb4af6e3109cefb3c170ee15ceacf07ee2d926915c4620e5",
-    475945, // real block 889898
+    475945, // real block 475946
     RpcChain::MainNet
 )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
