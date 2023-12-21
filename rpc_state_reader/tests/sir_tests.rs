@@ -101,9 +101,9 @@ fn test_get_gas_price() {
     RpcChain::MainNet
 )]
 #[test_case(
-    "0x1cbc74e101a1533082a021ce53235cfd744899b0ff948d1949a64646e0f15c2",
-    885298, // real block 885299
-    RpcChain::TestNet
+    "0x04db9b88e07340d18d53b8b876f28f449f77526224afb372daaf1023c8b08036",
+    398051, // real block 398052
+    RpcChain::MainNet
 )]
 #[test_case(
     "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
@@ -321,9 +321,9 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
 }
 
 #[test_case(
-    "0x05dc2a26a65b0fc9e8cb17d8b3e9142abdb2b2d2dd2f3eb275256f23bddfc9f2",
-    899787, // real block 899788
-    RpcChain::TestNet
+    "0x0200b493df8310215b188343f227dd1894c9edda597465cb336d25610172c701",
+    470061, // real block 470062
+    RpcChain::MainNet
 )]
 fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) =
