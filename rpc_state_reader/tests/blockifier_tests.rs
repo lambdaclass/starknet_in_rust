@@ -348,8 +348,8 @@ fn blockifier_test_recent_tx() {
     351225, // real block 351226
     RpcChain::MainNet
 )]
-// DeployAccount for different account providers (as of October 2023):
-// All of them were deployed on testnet using starkli
+// DeployAccount for different account providers:
+
 // OpenZeppelin (v0.7.0)
 #[test_case(
     "0x04df8a364233d995c33c7f4666a776bf458631bec2633e932b433a783db410f8",

@@ -204,12 +204,6 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     197000,
     3
 )]
-#[test_case(
-    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
-    RpcChain::TestNet,
-    895707,
-    1
-)]
 fn test_sorted_events(
     tx_hash: &str,
     chain: RpcChain,
@@ -367,14 +361,9 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
 }
 
 #[test_case(
-    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
-    895707, // real block 895708
-    RpcChain::TestNet
-)]
-#[test_case(
-    "0x048ffc49f04504710e984923980fb63c4f17fb3022467251329adc75aae93c4b",
-    900795, // real block 900796
-    RpcChain::TestNet
+    "0x05ee0cd7be18a4f8a2d6845a9960c0573318393122fe392c5d156eb460beff21",
+    422346, // real block 422347
+    RpcChain::MainNet
 )]
 fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
