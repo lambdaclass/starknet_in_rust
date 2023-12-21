@@ -120,13 +120,13 @@ fn test_get_gas_price() {
     351225, // real block 351226
     RpcChain::MainNet
 )]
-// DeployAccount for different account providers (as of October 2023):
-// All of them were deployed on testnet using starkli
+// DeployAccount for different account providers:
+
 // OpenZeppelin (v0.7.0)
 #[test_case(
-    "0x0012696c03a0f0301af190288d9824583be813b71882308e4c5d686bf5967ec5",
-    889866, // real block 889867
-    RpcChain::TestNet
+    "0x04df8a364233d995c33c7f4666a776bf458631bec2633e932b433a783db410f8",
+    422881, // real block 422882
+    RpcChain::MainNet
 )]
 // Braavos (v3.21.10)
 #[test_case(
@@ -136,14 +136,9 @@ fn test_get_gas_price() {
 )]
 // Argent X (v5.7.0)
 #[test_case(
-    "0x01583c47a929f81f6a8c74d31708a7f161603893435d51b6897017fdcdaafee4",
-    889897, // real block 889898
-    RpcChain::TestNet
-)]
-#[test_case(
-    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
-    895707, // real block 895708
-    RpcChain::TestNet
+    "0x039683c034f8e67cfb4af6e3109cefb3c170ee15ceacf07ee2d926915c4620e5",
+    475945, // real block 889898
+    RpcChain::MainNet
 )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
