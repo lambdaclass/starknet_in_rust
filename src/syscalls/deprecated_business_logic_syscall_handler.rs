@@ -1253,13 +1253,13 @@ mod tests {
 
     #[test]
     fn test_storage_write_update_initial_values() {
-        // Initialize state reader with value
+        // Initialize state reader with value.
         let mut state_reader = InMemoryStateReader::default();
         state_reader.address_to_storage.insert(
             (Address(Felt252::one()), Felt252::one().to_be_bytes()),
             Felt252::zero(),
         );
-        // Create empty-cached state
+        // Create empty-cached state.
         let mut state = CachedState::new(
             Arc::new(state_reader),
             Arc::new(PermanentContractClassCache::default()),
@@ -1269,7 +1269,7 @@ mod tests {
         assert!(syscall_handler
             .syscall_storage_write(Address(Felt252::one()), Felt252::one())
             .is_ok());
-        // Check that initial values have beed updated in the cache
+        // Check that initial values have beed updated in the cache.
         assert_eq!(
             state.cache().storage_initial_values,
             HashMap::from([(
