@@ -238,3 +238,4 @@ build-cairo-native-runtime:
 	cargo build --release --manifest-path cairo_native/Cargo.toml --package cairo-native-runtime
 	cp cairo_native/target/release/libcairo_native_runtime.* .
 	rm -rf cairo_native
+	export CAIRO_NATIVE_RUNTIME_LIBDIR=.
