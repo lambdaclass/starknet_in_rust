@@ -148,13 +148,15 @@ fn bench_fibo(executions: usize, bench_type: BenchType) {
         BenchType::VM => ProgramCache::Jit(JitProgramCache::new(&native_ctx)),
     }));
 
+    let constructor_selector: Felt252 = (&constructor_selector).into();
+
     for _ in 0..executions {
         calldata[2] = &calldata[2] + 1;
         let result = execute(
             &mut state.clone_for_testing(),
             &caller_address,
             &caller_address,
-            &biguint_to_felt(&constructor_selector).unwrap(),
+            &constructor_selector,
             &calldata,
             EntryPointType::External,
             &CASM_CLASS_HASH,
@@ -228,13 +230,15 @@ fn bench_fact(executions: usize, bench_type: BenchType) {
         _ => unreachable!(),
     }));
 
+    let constructor_selector: Felt252 = (&constructor_selector).into();
+
     for _ in 0..executions {
         calldata[0] = &calldata[0] + 1;
         let result = execute(
             &mut state.clone_for_testing(),
             &caller_address,
             &caller_address,
-            &biguint_to_felt(&constructor_selector).unwrap(),
+            &constructor_selector,
             &calldata,
             EntryPointType::External,
             &CASM_CLASS_HASH,
@@ -549,7 +553,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
             &mut state.clone_for_testing(),
             &account1_address,
             &erc20_address,
-            &transfer_entrypoint_selector.clone(),
+            &transfer_entrypoint_selector,
             &calldata.clone(),
             EntryPointType::External,
             &ERC20_CLASS_HASH,
