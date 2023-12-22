@@ -33,7 +33,7 @@ use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 #[cfg(feature = "cairo-native")]
-use cairo_native::cache::ProgramCache;
+use cairo_native::cache::{aot::AotProgramCache, ProgramCache};
 use cairo_vm::{
     types::{
         program::Program,
@@ -183,9 +183,9 @@ impl ExecutionEntryPoint {
                 let mut transactional_state = state.create_transactional()?;
 
                 let program_cache = program_cache.unwrap_or_else(|| {
-                    Rc::new(RefCell::new(ProgramCache::new(
+                    Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
                         crate::utils::get_native_context(),
-                    )))
+                    ))))
                 });
 
                 match self.native_execute(
@@ -673,7 +673,10 @@ impl ExecutionEntryPoint {
         class_hash: &ClassHash,
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
-        use cairo_native::values::JitValue;
+        use std::{
+            borrow::Borrow,
+            ops::{Deref, DerefMut},
+        };
 
         use crate::{
             syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
@@ -681,7 +684,10 @@ impl ExecutionEntryPoint {
 
         // Ensure we're using the global context, if initialized.
         if let Some(native_context) = NATIVE_CONTEXT.get() {
-            assert_eq!(program_cache.borrow().context(), native_context);
+            match (*program_cache).borrow().deref() {
+                ProgramCache::Jit(cache) => assert_eq!(cache.context(), native_context),
+                _ => {}
+            }
         }
 
         let sierra_program = &sierra_program_and_entrypoints.0;
@@ -711,15 +717,6 @@ impl ExecutionEntryPoint {
                 .unwrap(),
         };
 
-        let native_executor = {
-            let mut cache = program_cache.borrow_mut();
-            if let Some(executor) = cache.get(*class_hash) {
-                executor
-            } else {
-                cache.compile_and_insert(*class_hash, sierra_program)
-            }
-        };
-
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
 
@@ -737,15 +734,6 @@ impl ExecutionEntryPoint {
             resources_manager: Default::default(),
         };
 
-        native_executor
-            .borrow_mut()
-            .get_module_mut()
-            .remove_metadata::<SyscallHandlerMeta>();
-        native_executor
-            .borrow_mut()
-            .get_module_mut()
-            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler));
-
         let entry_point_fn = &sierra_program
             .funcs
             .iter()
@@ -754,17 +742,50 @@ impl ExecutionEntryPoint {
 
         let entry_point_id = &entry_point_fn.id;
 
-        let calldata: Vec<_> = self
-            .calldata
-            .iter()
-            .cloned()
-            .map(JitValue::Felt252)
-            .collect();
+        let value = match (*program_cache).borrow_mut().deref_mut() {
+            ProgramCache::Aot(cache) => {
+                let native_executor = {
+                    if let Some(executor) = cache.get(class_hash) {
+                        executor
+                    } else {
+                        cache.compile_and_insert(*class_hash, sierra_program)
+                    }
+                };
 
-        let value = native_executor
-            .borrow()
-            .execute_contract(entry_point_id, &calldata, self.initial_gas)
-            .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
+                (*native_executor)
+                    .borrow()
+                    .invoke_contract_dynamic(
+                        entry_point_id,
+                        &self.calldata,
+                        Some(self.initial_gas),
+                        Some(&SyscallHandlerMeta::new(&mut syscall_handler)),
+                    )
+                    .map_err(|e| {
+                        TransactionError::CustomError(format!("cairo-native error: {:?}", e))
+                    })?
+            }
+            ProgramCache::Jit(cache) => {
+                let native_executor = {
+                    if let Some(executor) = cache.get(class_hash) {
+                        executor
+                    } else {
+                        cache.compile_and_insert(*class_hash, sierra_program)
+                    }
+                };
+
+                (*native_executor)
+                    .borrow()
+                    .invoke_contract_dynamic(
+                        entry_point_id,
+                        &self.calldata,
+                        Some(self.initial_gas),
+                        Some(&SyscallHandlerMeta::new(&mut syscall_handler)),
+                    )
+                    .map_err(|e| {
+                        TransactionError::CustomError(format!("cairo-native error: {:?}", e))
+                    })?
+            }
+        };
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
