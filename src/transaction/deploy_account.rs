@@ -52,12 +52,14 @@ use {
     std::{cell::RefCell, rc::Rc},
 };
 
+/// Struct representing the state selector, containing contract addresses and class hashes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StateSelector {
     pub contract_addresses: Vec<Address>,
     pub class_hashes: Vec<ClassHash>,
 }
 
+/// Struct representing a type of transaction: deploy account.
 #[derive(Clone, Debug, Getters)]
 pub struct DeployAccount {
     #[getset(get = "pub")]
@@ -83,6 +85,7 @@ pub struct DeployAccount {
 
 impl DeployAccount {
     #[allow(clippy::too_many_arguments)]
+    /// Constructor create a new DeployAccount.
     pub fn new(
         class_hash: ClassHash,
         max_fee: u128,
@@ -130,6 +133,7 @@ impl DeployAccount {
     }
 
     #[allow(clippy::too_many_arguments)]
+    /// Creates a new L1Handler instance with a specified transaction hash.
     pub fn new_with_tx_hash(
         class_hash: ClassHash,
         max_fee: u128,
@@ -204,12 +208,31 @@ impl DeployAccount {
         self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional()?;
-        let mut tx_exec_info = self.apply(
+        let tx_exec_info = self.apply(
             &mut transactional_state,
             block_context,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
-        )?;
+        );
+        #[cfg(feature = "replay_benchmark")]
+        // Add initial values to cache despite tx outcome
+        {
+            state.cache_mut().storage_initial_values_mut().extend(
+                transactional_state
+                    .cache()
+                    .storage_initial_values
+                    .clone()
+                    .into_iter(),
+            );
+            state.cache_mut().class_hash_initial_values_mut().extend(
+                transactional_state
+                    .cache()
+                    .class_hash_initial_values
+                    .clone()
+                    .into_iter(),
+            );
+        }
+        let mut tx_exec_info = tx_exec_info?;
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
@@ -325,6 +348,7 @@ impl DeployAccount {
         ))
     }
 
+    /// Handles the constructor of a contract, executes it if necessary.
     pub fn handle_constructor<S: StateReader, C: ContractClassCache>(
         &self,
         contract_class: CompiledClass,
@@ -356,6 +380,7 @@ impl DeployAccount {
         }
     }
 
+    /// Handles the nonce of a transaction, verifies if it is valid and increments it.
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
         if self.version.is_zero() {
             return Ok(());
@@ -564,7 +589,7 @@ impl DeployAccount {
 
     pub fn from_sn_api_transaction(
         value: starknet_api::transaction::DeployAccountTransaction,
-        chain_id: Felt252,
+        tx_hash: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
@@ -586,7 +611,7 @@ impl DeployAccount {
             .map(|f| Felt252::from_bytes_be(f.bytes()))
             .collect();
 
-        DeployAccount::new(
+        DeployAccount::new_with_tx_hash(
             class_hash,
             max_fee,
             version,
@@ -594,7 +619,7 @@ impl DeployAccount {
             constructor_calldata,
             signature,
             contract_address_salt,
-            chain_id,
+            tx_hash,
         )
     }
 }
