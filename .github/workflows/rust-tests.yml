@@ -1,4 +1,9 @@
 name: rust-tests
+# TODO:
+# - Split tests from coverage so I can use nightly :'(
+#   A test matrix should do.
+# - Fix coverage creation, doesn't seem to work.
+# - Find out where the compilation slowness lies. Maybe just don't optimize, but let's see.
 
 on:
   merge_group:
@@ -171,7 +176,7 @@ jobs:
         key: coverage-cache-${{ github.sha }}-${{ matrix.target }}
 
   coverage:
-    name: Generate and upload coverage report
+    name: Upload coverage report
     needs: tests
     runs-on: ubuntu-latest
     env:
@@ -185,18 +190,21 @@ jobs:
       with:
         path: lcov-test-cairo-1.info
         key: coverage-cache-${{ github.sha }}-test-cairo-1
+        fail-on-cache-miss: true
 
     - name: Fetch coverage report for test-cairo-2
       uses: actions/cache/restore@v3
       with:
         path: lcov-test-cairo-2.info
         key: coverage-cache-${{ github.sha }}-test-cairo-2
+        fail-on-cache-miss: true
 
     - name: Fetch coverage report for test-cairo-native
       uses: actions/cache/restore@v3
       with:
         path: lcov-test-cairo-native.info
         key: coverage-cache-${{ github.sha }}-test-cairo-native
+        fail-on-cache-miss: true
 
     - name: Upload coverage to codecov.io
       uses: codecov/codecov-action@v3
