@@ -284,7 +284,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             .retdata
             .clone()
             .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt252::from(item)))
+            .map(MaybeRelocatable::from)
             .collect::<Vec<MaybeRelocatable>>();
 
         let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
@@ -377,7 +377,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let call = ExecutionEntryPoint::new(
             contract_address.clone(),
             constructor_calldata,
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
             self.contract_address.clone(),
             EntryPointType::Constructor,
             Some(CallType::Call),
@@ -536,7 +536,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let block_number = request.block_number;
         let current_block_number = self.block_context.block_info.block_number;
 
-        if block_number > current_block_number - 10 {
+        if current_block_number < 10 || block_number > current_block_number - 10 {
             let out_of_range_felt =
                 Felt252::from_bytes_be_slice("Block number out of range".as_bytes());
             let retdata_start =
@@ -1099,8 +1099,8 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             keccak::f1600(&mut state)
         }
         let shift = Felt252::TWO.pow(64u32);
-        let hash_low = (Felt252::from(state[1]) * &shift) + Felt252::from(state[0]);
-        let hash_high = (Felt252::from(state[3]) * &shift) + Felt252::from(state[2]);
+        let hash_low = (Felt252::from(state[1]) * shift) + Felt252::from(state[0]);
+        let hash_high = (Felt252::from(state[3]) * shift) + Felt252::from(state[2]);
 
         Ok(SyscallResponse {
             gas,

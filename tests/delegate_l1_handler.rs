@@ -44,9 +44,7 @@ fn delegate_l1_handler() {
     state_reader
         .address_to_class_hash_mut()
         .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address, nonce.clone());
+    state_reader.address_to_nonce_mut().insert(address, nonce);
 
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
@@ -113,7 +111,7 @@ fn delegate_l1_handler() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     assert!(exec_entry_point

@@ -42,7 +42,7 @@ use crate::{
 };
 use cairo_vm::Felt252;
 use getset::Getters;
-use num_traits::{One, Zero};
+use num_traits::Zero;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -102,13 +102,13 @@ impl DeployAccount {
         )?);
 
         let hash_value = calculate_deploy_account_transaction_hash(
-            version.clone(),
+            version,
             &contract_address,
             Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
             max_fee,
-            nonce.clone(),
-            contract_address_salt.clone(),
+            nonce,
+            contract_address_salt,
             chain_id,
         )?;
 
@@ -192,7 +192,7 @@ impl DeployAccount {
         if self.version != Felt252::ONE {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeployAccount".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![1],
             ));
         }
@@ -434,7 +434,7 @@ impl DeployAccount {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
             Address(Felt252::ZERO),
             EntryPointType::Constructor,
             None,
@@ -465,12 +465,12 @@ impl DeployAccount {
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
             self.max_fee,
-            self.nonce.clone(),
+            self.nonce,
             n_steps,
-            self.version.clone(),
+            self.version,
         )
     }
 
@@ -487,12 +487,12 @@ impl DeployAccount {
             self.contract_address.clone(),
             [
                 Felt252::from_bytes_be(&self.class_hash.0),
-                self.contract_address_salt.clone(),
+                self.contract_address_salt,
             ]
             .into_iter()
             .chain(self.constructor_calldata.iter().cloned())
             .collect(),
-            VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
+            *VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
             Address(Felt252::ZERO),
             EntryPointType::External,
             None,
@@ -525,7 +525,7 @@ impl DeployAccount {
             // return `VALID`.
             if !call_info
                 .as_ref()
-                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .map(|ci| ci.retdata == vec![*VALIDATE_RETDATA])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);

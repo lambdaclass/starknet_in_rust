@@ -162,7 +162,7 @@ fn test_contract(
     let declare_tx = DeclareV2::new_with_tx_hash(
         &sierra_contract_class,
         Some(casm_class),
-        compiled_class_hash.clone(),
+        compiled_class_hash,
         account_contract_address.clone(),
         0, // max fee
         2.into(),
@@ -193,7 +193,7 @@ fn test_contract(
         0.into(),
         vec![compiled_class_hash, 3.into(), 0.into()], // call data
         signature.clone(),
-        block_context.starknet_os_config().chain_id().clone(),
+        *block_context.starknet_os_config().chain_id(),
         None,
     )
     .unwrap();
@@ -209,8 +209,7 @@ fn test_contract(
         .expect("could not deploy contract")
         .call_info
         .unwrap()
-        .retdata[0]
-        .clone();
+        .retdata[0];
 
     //* ---------------------------------------------------------
     //*        Execute contract entrypoint through the account

@@ -26,7 +26,7 @@ use crate::{
     },
 };
 use cairo_vm::Felt252;
-use num_traits::{One, Zero};
+use num_traits::Zero;
 
 use super::fee::{calculate_tx_fee, charge_fee};
 use super::{get_tx_version, Transaction};
@@ -84,11 +84,11 @@ impl Declare {
             chain_id,
             &sender_address,
             max_fee,
-            version.clone(),
-            nonce.clone(),
+            version,
+            nonce,
         )?;
 
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = Declare {
             class_hash,
@@ -125,7 +125,7 @@ impl Declare {
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = Declare {
             class_hash,
@@ -158,7 +158,7 @@ impl Declare {
         class_hash: ClassHash,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = Declare {
             class_hash,
@@ -239,12 +239,12 @@ impl Declare {
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
             self.max_fee,
-            self.nonce.clone(),
+            self.nonce,
             n_steps,
-            self.version.clone(),
+            self.version,
         )
     }
 
@@ -267,7 +267,7 @@ impl Declare {
         let entry_point = ExecutionEntryPoint::new(
             self.sender_address.clone(),
             calldata,
-            self.validate_entry_point_selector.clone(),
+            self.validate_entry_point_selector,
             Address(Felt252::ZERO),
             EntryPointType::External,
             None,
@@ -384,7 +384,7 @@ impl Declare {
         if self.version != Felt252::ONE && self.version != Felt252::ZERO {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Declare".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![0, 1],
             ));
         }
@@ -473,7 +473,7 @@ mod tests {
         utils::{felt_to_hash, Address},
     };
     use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
-    use num_traits::{One, Zero};
+
     use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     /// This test verifies the declaration of a Fibonacci contract.
@@ -537,7 +537,7 @@ mod tests {
         //* ---------------------------------------
 
         // Value generated from selector _validate_declare_
-        let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone());
+        let entry_point_selector = Some(*VALIDATE_DECLARE_ENTRY_POINT_SELECTOR);
 
         let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
         let expected_class_hash = felt_to_hash(&class_hash_felt);
@@ -643,7 +643,7 @@ mod tests {
         // Declare same class twice
         let internal_declare = Declare::new(
             fib_contract_class.clone(),
-            chain_id.clone(),
+            chain_id,
             Address(Felt252::ONE),
             0,
             1.into(),

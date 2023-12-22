@@ -65,7 +65,7 @@ pub fn calculate_transaction_hash_common(
     let mut data_to_hash: Vec<Felt252> = vec![
         tx_hash_prefix.get_prefix(),
         version,
-        contract_address.0.clone(),
+        contract_address.0,
         entry_point_selector,
         calldata_hash,
         max_fee.into(),
@@ -88,7 +88,7 @@ pub fn calculate_deploy_transaction_hash(
         TransactionHashPrefix::Deploy,
         version,
         contract_address,
-        CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+        *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         constructor_calldata,
         0, // Considered 0 for Deploy transaction hash calculation purposes.
         chain_id,

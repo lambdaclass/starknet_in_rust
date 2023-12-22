@@ -25,7 +25,6 @@ pub mod invoke_function;
 pub mod l1_handler;
 
 use cairo_vm::Felt252;
-use num_traits::{One, Zero};
 
 #[cfg(feature = "cairo-native")]
 use {

@@ -45,9 +45,7 @@ fn delegate_call() {
     state_reader
         .address_to_class_hash_mut()
         .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address, nonce.clone());
+    state_reader.address_to_nonce_mut().insert(address, nonce);
 
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
@@ -58,13 +56,12 @@ fn delegate_call() {
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     // External entry point, delegate_call function delegate.cairo:L13
-    let test_delegate_call_selector = entry_points_by_type
+    let test_delegate_call_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //  ------------ contract data --------------------
 
@@ -118,7 +115,7 @@ fn delegate_call() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

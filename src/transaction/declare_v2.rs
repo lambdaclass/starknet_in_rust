@@ -94,13 +94,13 @@ impl DeclareV2 {
         let sierra_class_hash = compute_sierra_class_hash(sierra_contract_class)?;
 
         let hash_value = calculate_declare_v2_transaction_hash(
-            sierra_class_hash.clone(),
-            compiled_class_hash.clone(),
+            sierra_class_hash,
+            compiled_class_hash,
             chain_id,
             &sender_address,
             max_fee,
-            version.clone(),
-            nonce.clone(),
+            version,
+            nonce,
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
@@ -145,7 +145,7 @@ impl DeclareV2 {
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = DeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
@@ -233,13 +233,13 @@ impl DeclareV2 {
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
         let hash_value = calculate_declare_v2_transaction_hash(
-            sierra_class_hash.clone(),
-            compiled_class_hash.clone(),
+            sierra_class_hash,
+            compiled_class_hash,
             chain_id,
             &sender_address,
             max_fee,
-            version.clone(),
-            nonce.clone(),
+            version,
+            nonce,
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
@@ -266,18 +266,18 @@ impl DeclareV2 {
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
             self.max_fee,
-            self.nonce.clone(),
+            self.nonce,
             n_steps,
-            self.version.clone(),
+            self.version,
         )
     }
 
     /// returns the calldata with which the contract is executed
     pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = self.compiled_class_hash.clone();
+        let bytes = self.compiled_class_hash;
         Vec::from([bytes])
     }
 
@@ -369,7 +369,7 @@ impl DeclareV2 {
         if self.version != 2.into() {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeclareV2".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![2],
             ));
         }
@@ -462,7 +462,7 @@ impl DeclareV2 {
         state
             .set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash.clone())?;
 
-        let compiled_contract_class = ClassHash::from(self.compiled_class_hash.clone());
+        let compiled_contract_class = ClassHash::from(self.compiled_class_hash);
         state.set_contract_class(
             &compiled_contract_class,
             &CompiledClass::Casm(Arc::new(casm_class)),
@@ -481,11 +481,11 @@ impl DeclareV2 {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<(ExecutionResult, u128), TransactionError> {
-        let calldata = [self.compiled_class_hash.clone()].to_vec();
+        let calldata = [self.compiled_class_hash].to_vec();
 
         let entry_point = ExecutionEntryPoint {
             contract_address: self.sender_address.clone(),
-            entry_point_selector: self.validate_entry_point_selector.clone(),
+            entry_point_selector: self.validate_entry_point_selector,
             initial_gas: remaining_gas,
             entry_point_type: EntryPointType::External,
             calldata,
@@ -524,7 +524,7 @@ impl DeclareV2 {
             if !execution_result
                 .call_info
                 .as_ref()
-                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .map(|ci| ci.retdata == vec![*VALIDATE_RETDATA])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
@@ -586,7 +586,7 @@ mod tests {
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::Felt252;
-    use num_traits::{One, Zero};
+
     use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
     #[test]
@@ -736,13 +736,13 @@ mod tests {
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = QUERY_VERSION_2.clone();
+            version = *QUERY_VERSION_2;
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = QUERY_VERSION_2.clone();
+            version = *QUERY_VERSION_2;
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 
@@ -903,7 +903,7 @@ mod tests {
         let internal_declare = DeclareV2::new_with_tx_hash(
             &sierra_contract_class,
             None,
-            sended_class_hash.clone(),
+            sended_class_hash,
             sender_address,
             0,
             version,

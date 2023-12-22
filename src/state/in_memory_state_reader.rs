@@ -130,7 +130,7 @@ impl StateReader for InMemoryStateReader {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::{One, Zero};
+    use num_traits::Zero;
 
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
@@ -178,10 +178,10 @@ mod tests {
             .insert(contract_address.clone(), class_hash);
         state_reader
             .address_to_nonce
-            .insert(contract_address.clone(), nonce.clone());
+            .insert(contract_address.clone(), nonce);
         state_reader
             .address_to_storage
-            .insert(storage_entry.clone(), storage_value.clone());
+            .insert(storage_entry.clone(), storage_value);
 
         assert_eq!(
             state_reader.get_class_hash_at(&contract_address).unwrap(),

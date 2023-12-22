@@ -41,7 +41,7 @@ fn run_contract(
     contract_cache: Arc<LruContractCache>,
 ) -> Vec<Felt252> {
     let block_context = BlockContext::default();
-    let chain_id = block_context.starknet_os_config().chain_id().clone();
+    let chain_id = *block_context.starknet_os_config().chain_id();
     let sender_address = Address(1.into());
     let signature = vec![];
 
@@ -55,7 +55,7 @@ fn run_contract(
 
     let declare_tx = Declare::new(
         contract_class.clone(),
-        chain_id.clone(),
+        chain_id,
         sender_address,
         0,
         0.into(),
@@ -77,8 +77,8 @@ fn run_contract(
         Default::default(),
         contract_class,
         Vec::new(),
-        block_context.starknet_os_config().chain_id().clone(),
-        TRANSACTION_VERSION.clone(),
+        *block_context.starknet_os_config().chain_id(),
+        *TRANSACTION_VERSION,
     )
     .unwrap();
 
@@ -98,7 +98,7 @@ fn run_contract(
         deploy_tx.contract_address.clone(),
         entry_point_selector,
         0,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         calldata.into(),
         signature,
         chain_id,

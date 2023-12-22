@@ -95,8 +95,7 @@ fn main() {
                 .unwrap()
                 .get(0)
                 .unwrap()
-                .selector()
-                .clone();
+                .selector();
 
             fs::remove_file(cairo_file_name).expect("Failed to remove generated cairo source");
             fs::remove_file(json_file_name)
@@ -115,7 +114,7 @@ fn main() {
 
             contract_class_cache.set_contract_class(
                 class_hash,
-                CompiledClass::Deprecated(Arc::new(contract_class)),
+                CompiledClass::Deprecated(Arc::new(contract_class.clone())),
             );
             let mut state_reader = InMemoryStateReader::default();
             state_reader
@@ -140,7 +139,7 @@ fn main() {
             let exec_entry_point = ExecutionEntryPoint::new(
                 address.clone(),
                 calldata.clone(),
-                storage_entrypoint_selector.clone(),
+                *storage_entrypoint_selector,
                 caller_address,
                 entry_point_type,
                 Some(CallType::Delegate),
@@ -159,7 +158,7 @@ fn main() {
                 0,
                 10.into(),
                 block_context.invoke_tx_max_n_steps(),
-                TRANSACTION_VERSION.clone(),
+                *TRANSACTION_VERSION,
             );
             let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -173,7 +172,7 @@ fn main() {
                 caller_address: Address(0.into()),
                 call_type: Some(CallType::Delegate),
                 contract_address: Address(1111.into()),
-                entry_point_selector: Some(storage_entrypoint_selector),
+                entry_point_selector: Some(*storage_entrypoint_selector),
                 entry_point_type: Some(EntryPointType::External),
                 calldata,
                 retdata: [Felt252::from_bytes_be_slice(data_to_ascii(data).as_bytes())].to_vec(),

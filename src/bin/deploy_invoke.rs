@@ -1,6 +1,6 @@
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::{
@@ -51,14 +51,14 @@ fn main() {
 
     let call_data = vec![];
     let contract_address_salt = 1.into();
-    let chain_id = block_context.starknet_os_config().chain_id().clone();
+    let chain_id = *block_context.starknet_os_config().chain_id();
 
     let deploy = Deploy::new(
         contract_address_salt,
         CONTRACT_CLASS.clone(),
         call_data,
-        block_context.starknet_os_config().chain_id().clone(),
-        TRANSACTION_VERSION.clone(),
+        *block_context.starknet_os_config().chain_id(),
+        *TRANSACTION_VERSION,
     )
     .unwrap();
 
@@ -95,12 +95,12 @@ fn main() {
 
         let invoke_first = InvokeFunction::new(
             contract_address.clone(),
-            INCREASE_BALANCE_SELECTOR.clone(),
+            *INCREASE_BALANCE_SELECTOR,
             0,
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
             vec![1000.into()],
             signature.clone(),
-            chain_id.clone(),
+            chain_id,
             Some(nonce_first),
         )
         .unwrap();
@@ -117,12 +117,12 @@ fn main() {
 
         let invoke_second = InvokeFunction::new(
             contract_address.clone(),
-            GET_BALANCE_SELECTOR.clone(),
+            *GET_BALANCE_SELECTOR,
             0,
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
             vec![],
             signature.clone(),
-            chain_id.clone(),
+            chain_id,
             Some(nonce_second),
         )
         .unwrap();

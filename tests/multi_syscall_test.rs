@@ -1,6 +1,6 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::Felt252;
-use num_traits::{Num, Zero};
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -225,7 +225,7 @@ fn test_syscall(
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::from(entrypoint_selector),
+        entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -242,7 +242,7 @@ fn test_syscall(
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     exec_entry_point

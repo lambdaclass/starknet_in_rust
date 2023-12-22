@@ -298,7 +298,7 @@ mod tests {
         },
     };
     use cairo_vm::relocatable;
-    use num_traits::Num;
+
     use std::sync::Arc;
 
     type DeprecatedBLSyscallHandler<'a> =
@@ -931,8 +931,7 @@ mod tests {
         );
 
         // StorageReadRequest.address
-        vm.insert_value(relocatable!(2, 1), address.clone())
-            .unwrap();
+        vm.insert_value(relocatable!(2, 1), address).unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -960,9 +959,9 @@ mod tests {
                         .starknet_storage_state
                         .contract_address
                         .clone(),
-                    address.to_bytes_be().try_into().unwrap(),
+                    address.to_bytes_be(),
                 ),
-                storage_value.clone(),
+                storage_value,
             );
         assert!(syscall_handler_hint_processor
             .execute_hint(
@@ -998,8 +997,7 @@ mod tests {
         );
 
         // StorageWriteRequest.address
-        vm.insert_value(relocatable!(2, 1), address.clone())
-            .unwrap();
+        vm.insert_value(relocatable!(2, 1), address).unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -1026,7 +1024,7 @@ mod tests {
                         .starknet_storage_state
                         .contract_address
                         .clone(),
-                    address.to_bytes_be().try_into().unwrap(),
+                    address.to_bytes_be(),
                 ),
                 Felt252::from(3),
             );
@@ -1071,7 +1069,7 @@ mod tests {
         let class_hash_felt =
             Felt252::from_hex("0x284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6")
                 .unwrap();
-        let class_hash: ClassHash = ClassHash::from(class_hash_felt.clone());
+        let class_hash: ClassHash = ClassHash::from(class_hash_felt);
 
         vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
@@ -1163,7 +1161,7 @@ mod tests {
         let class_hash_felt =
             Felt252::from_hex("0x284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6")
                 .unwrap();
-        let class_hash: ClassHash = ClassHash::from(class_hash_felt.clone());
+        let class_hash: ClassHash = ClassHash::from(class_hash_felt);
 
         vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
@@ -1226,7 +1224,7 @@ mod tests {
                 .syscall_handler
                 .starknet_storage_state
                 .state
-                .get_class_hash_at(&Address(deployed_address.clone()))
+                .get_class_hash_at(&Address(deployed_address))
                 .unwrap(),
             class_hash
         );
@@ -1235,11 +1233,11 @@ mod tests {
         INVOKE
         */
         let internal_invoke_function = InvokeFunction::new(
-            Address(deployed_address.clone()),
+            Address(deployed_address),
             Felt252::from_hex("0x283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c")
                 .unwrap(),
             0,
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
             vec![10.into()],
             Vec::new(),
             0.into(),

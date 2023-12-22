@@ -49,7 +49,7 @@ impl ContractEntryPoint {
 impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
     fn from(entry_point: &ContractEntryPoint) -> Self {
         vec![
-            MaybeRelocatable::from(entry_point.selector.clone()),
+            MaybeRelocatable::from(entry_point.selector),
             MaybeRelocatable::from(entry_point.offset),
         ]
     }
@@ -218,7 +218,7 @@ pub(crate) fn convert_entry_points(
         let contracts_entry_points = entry_points
             .into_iter()
             .map(|e| {
-                let selector = Felt252::from_bytes_be_slice(&e.selector.0.bytes());
+                let selector = Felt252::from_bytes_be_slice(e.selector.0.bytes());
                 let offset = e.offset.0;
                 ContractEntryPoint::new(selector, offset)
             })
@@ -422,7 +422,7 @@ mod tests {
         let contract_class_from_program_json_and_class_hash =
             ContractClass::from_program_json_and_class_hash(
                 program_json,
-                contract_class_from_path.hinted_class_hash.clone(),
+                contract_class_from_path.hinted_class_hash,
             )
             .expect("should be able to read file");
         assert_eq!(

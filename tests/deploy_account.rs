@@ -40,7 +40,7 @@ fn internal_deploy_account() {
         ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
     let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
-    let class_hash = ClassHash::from(class_hash_felt.clone());
+    let class_hash = ClassHash::from(class_hash_felt);
 
     state
         .set_contract_class(
@@ -70,7 +70,7 @@ fn internal_deploy_account() {
             )
             .unwrap(),
         ],
-        contract_address_salt.clone(),
+        contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
     )
     .unwrap();
@@ -97,9 +97,9 @@ fn internal_deploy_account() {
         TransactionExecutionInfo::new(
             Some(CallInfo {
                 call_type: Some(CallType::Call),
-                contract_address: Address(contract_address.clone()),
+                contract_address: Address(contract_address),
                 class_hash: Some(class_hash),
-                entry_point_selector: Some(VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone()),
+                entry_point_selector: Some(*VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![Felt252::from_bytes_be(&class_hash.0), contract_address_salt],
                 execution_resources: Some(ExecutionResources {
@@ -113,7 +113,7 @@ fn internal_deploy_account() {
                 call_type: Some(CallType::Call),
                 contract_address: Address(contract_address),
                 class_hash: Some(class_hash),
-                entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
+                entry_point_selector: Some(*CONSTRUCTOR_ENTRY_POINT_SELECTOR),
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
             }),

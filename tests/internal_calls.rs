@@ -32,7 +32,7 @@ fn test_internal_calls() {
         10,
         0.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let address = Address(1111.into());

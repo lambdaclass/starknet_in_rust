@@ -263,7 +263,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         let call = ExecutionEntryPoint::new(
             contract_address.clone(),
             constructor_calldata,
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
             self.contract_address.clone(),
             EntryPointType::Constructor,
             Some(CallType::Call),
@@ -630,7 +630,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         let tx_info = TxInfoStruct::new(
             tx,
             signature,
-            self.block_context.starknet_os_config.chain_id.clone(),
+            self.block_context.starknet_os_config.chain_id,
         );
 
         let tx_info_ptr_temp = self.allocate_segment(vm, tx_info.to_vec())?;
@@ -735,7 +735,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         let retdata_maybe_reloc = retdata
             .clone()
             .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt252::from(item)))
+            .map(MaybeRelocatable::from)
             .collect::<Vec<MaybeRelocatable>>();
 
         let response = DeprecatedCallContractResponse::new(
@@ -1086,7 +1086,7 @@ mod tests {
         },
         vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
     };
-    use num_traits::{One, Zero};
+
     use std::{any::Any, borrow::Cow, collections::HashMap, sync::Arc};
 
     type DeprecatedBLSyscallHandler<'a> =

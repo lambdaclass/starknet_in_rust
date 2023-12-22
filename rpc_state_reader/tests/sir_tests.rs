@@ -20,7 +20,7 @@ use test_case::test_case;
 
 #[test]
 fn test_get_transaction_try_from() {
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
+    let rpc_state = RpcState::new_rpc(RpcChain::MainNet, BlockTag::Latest.into()).unwrap();
     let str_hash = stark_felt!("0x5d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91");
     let tx_hash = TransactionHash(str_hash);
 
@@ -39,7 +39,7 @@ fn test_get_transaction_try_from() {
 #[test]
 fn test_get_gas_price() {
     let block = BlockValue::Number(BlockNumber(169928));
-    let rpc_state = RpcState::new_infura(RpcChain::MainNet, block).unwrap();
+    let rpc_state = RpcState::new_rpc(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
     assert_eq!(price, 22804578690);
@@ -101,9 +101,9 @@ fn test_get_gas_price() {
     RpcChain::MainNet
 )]
 #[test_case(
-    "0x1cbc74e101a1533082a021ce53235cfd744899b0ff948d1949a64646e0f15c2",
-    885298, // real block 885299
-    RpcChain::TestNet
+    "0x04db9b88e07340d18d53b8b876f28f449f77526224afb372daaf1023c8b08036",
+    398051, // real block 398052
+    RpcChain::MainNet
 )]
 #[test_case(
     "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
@@ -120,30 +120,19 @@ fn test_get_gas_price() {
     351225, // real block 351226
     RpcChain::MainNet
 )]
-// DeployAccount for different account providers (as of October 2023):
-// All of them were deployed on testnet using starkli
+// DeployAccount for different account providers:
+
 // OpenZeppelin (v0.7.0)
 #[test_case(
-    "0x0012696c03a0f0301af190288d9824583be813b71882308e4c5d686bf5967ec5",
-    889866, // real block 889867
-    RpcChain::TestNet
-)]
-// Braavos (v3.21.10)
-#[test_case(
-    "0x04dc838fd4ed265ab2ea5fbab08e67b398e3caaedf75c548113c6b2f995fc9db",
-    889858, // real block 889859
-    RpcChain::TestNet
+    "0x04df8a364233d995c33c7f4666a776bf458631bec2633e932b433a783db410f8",
+    422881, // real block 422882
+    RpcChain::MainNet
 )]
 // Argent X (v5.7.0)
 #[test_case(
-    "0x01583c47a929f81f6a8c74d31708a7f161603893435d51b6897017fdcdaafee4",
-    889897, // real block 889898
-    RpcChain::TestNet
-)]
-#[test_case(
-    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
-    895707, // real block 895708
-    RpcChain::TestNet
+    "0x039683c034f8e67cfb4af6e3109cefb3c170ee15ceacf07ee2d926915c4620e5",
+    475945, // real block 475946
+    RpcChain::MainNet
 )]
 fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
@@ -162,13 +151,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     // check Cairo VM execution resources
     assert_eq_sorted!(
         execution_resources.as_ref(),
-        Some(
-            &trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources
-        ),
+        Some(&receipt.execution_resources),
         "execution resources mismatch"
     );
 
@@ -176,7 +159,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     assert_eq!(
         internal_calls.len(),
         trace
-            .function_invocation
+            .execute_invocation
             .as_ref()
             .unwrap()
             .internal_calls
@@ -221,12 +204,6 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     197000,
     3
 )]
-#[test_case(
-    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
-    RpcChain::TestNet,
-    895707,
-    1
-)]
 fn test_sorted_events(
     tx_hash: &str,
     chain: RpcChain,
@@ -252,10 +229,25 @@ fn test_sorted_events(
     RpcChain::MainNet
     => ignore["broken on both due to a cairo-vm error"]
 )]
+// Insufficient fee token balance
+#[test_case(
+    "0x006978ae71587d4ab1048d7836c2d656222a16976c82c0dc24d3b44316d63cfe",
+    440823, // real block     440824
+    RpcChain::MainNet
+)]
+// Insufficient fee token balance
+#[test_case(
+    "0x03e458ef06c17dd2601013746ae5622d8434348b246a335b20b6543f37aff0f8",
+    440849, // real block     440850
+    RpcChain::MainNet
+)]
 fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
 
-    assert_eq!(tx_info.revert_error.is_some(), trace.revert_error.is_some());
+    assert_eq!(
+        tx_info.revert_error.is_some(),
+        trace.execute_invocation.unwrap().revert_reason.is_some()
+    );
 
     let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee) / receipt.actual_fee;
 
@@ -317,9 +309,9 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
 }
 
 #[test_case(
-    "0x05dc2a26a65b0fc9e8cb17d8b3e9142abdb2b2d2dd2f3eb275256f23bddfc9f2",
-    899787, // real block 899788
-    RpcChain::TestNet
+    "0x0200b493df8310215b188343f227dd1894c9edda597465cb336d25610172c701",
+    470061, // real block 470062
+    RpcChain::MainNet
 )]
 fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) =
@@ -339,13 +331,7 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
     // check Cairo VM execution resources
     assert_eq_sorted!(
         execution_resources.as_ref(),
-        Some(
-            &trace
-                .function_invocation
-                .as_ref()
-                .unwrap()
-                .execution_resources
-        ),
+        Some(&receipt.execution_resources),
         "execution resources mismatch"
     );
 
@@ -353,7 +339,7 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
     assert_eq!(
         internal_calls.len(),
         trace
-            .function_invocation
+            .execute_invocation
             .as_ref()
             .unwrap()
             .internal_calls
@@ -375,14 +361,9 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
 }
 
 #[test_case(
-    "0x037e199c9560666d810862bc0cf62a67aae33af6b65823068143640cdeecd8ab",
-    895707, // real block 895708
-    RpcChain::TestNet
-)]
-#[test_case(
-    "0x048ffc49f04504710e984923980fb63c4f17fb3022467251329adc75aae93c4b",
-    900795, // real block 900796
-    RpcChain::TestNet
+    "0x05ee0cd7be18a4f8a2d6845a9960c0573318393122fe392c5d156eb460beff21",
+    422346, // real block 422347
+    RpcChain::MainNet
 )]
 fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info, trace, receipt) = execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
@@ -407,7 +388,7 @@ fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: 
     }
 
     let rpc_retdata: Vec<Felt252> = trace
-        .function_invocation
+        .execute_invocation
         .unwrap()
         .retdata
         .unwrap()

@@ -89,7 +89,7 @@ pub fn get_entry_points(
         ExecutionEntryPoint::new(
             address.clone(),
             calldata.to_vec(),
-            entrypoint_selector.clone(),
+            entrypoint_selector,
             caller_address.clone(),
             *entry_point_type,
             Some(CallType::Delegate),
@@ -125,7 +125,7 @@ pub fn execute_entry_point(
         0,
         10.into(),
         call_config.block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let ExecutionResult { call_info, .. } = exec_entry_point.execute(

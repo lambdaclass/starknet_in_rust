@@ -106,7 +106,7 @@ pub fn deploy_account(
                 Felt252::ZERO,
                 vec![],
                 signature,
-                SALT.clone(),
+                *SALT,
                 StarknetChainId::TestNet.to_felt(),
             )
             .unwrap();
@@ -259,16 +259,16 @@ pub fn invoke(
     for _ in 0..RUNS {
         let mut state_copy = state.clone_for_testing();
         let address = CONTRACT_ADDRESS.clone();
-        let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let selector = *VALIDATE_ENTRY_POINT_SELECTOR;
         let signature = SIGNATURE.clone();
-        let calldata = vec![address.0.clone(), selector.clone(), Felt252::ZERO];
+        let calldata = vec![address.0, selector, Felt252::ZERO];
         scope(|| {
             // new consumes more execution time than raw struct instantiation
             let internal_invoke = InvokeFunction::new(
                 address,
                 selector,
                 0,
-                TRANSACTION_VERSION.clone(),
+                *TRANSACTION_VERSION,
                 calldata,
                 signature,
                 StarknetChainId::TestNet.to_felt(),
