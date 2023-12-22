@@ -10,6 +10,9 @@ default = ["with_mimalloc"]
 with_mimalloc = ["dep:mimalloc"]
 cairo_1_tests = []
 metrics = []
+# Disclaimer: This feature enables state modifications being applied on reverted and failings txs, and also disables address availability check when deploying contracts.
+# Only use for benchmarking using the replay binary
+replay_benchmark = []
 
 [workspace]
 members = [

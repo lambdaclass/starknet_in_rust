@@ -12,7 +12,6 @@ use starknet_api::{
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
 use starknet_in_rust::{
-    definitions::block_context::StarknetChainId,
     execution::{CallInfo, TransactionExecutionInfo},
     transaction::InvokeFunction,
 };
@@ -27,9 +26,11 @@ fn test_get_transaction_try_from() {
     let sn_tx = rpc_state.get_transaction(&tx_hash).unwrap();
     match &sn_tx {
         SNTransaction::Invoke(sn_tx) => {
-            let tx =
-                InvokeFunction::from_invoke_transaction(sn_tx.clone(), StarknetChainId::MainNet)
-                    .unwrap();
+            let tx = InvokeFunction::from_invoke_transaction(
+                sn_tx.clone(),
+                Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
+            )
+            .unwrap();
             assert_eq!(tx.hash_value().to_bytes_be().as_slice(), str_hash.bytes())
         }
         _ => unimplemented!(),
