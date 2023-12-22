@@ -208,12 +208,31 @@ impl DeployAccount {
         self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional()?;
-        let mut tx_exec_info = self.apply(
+        let tx_exec_info = self.apply(
             &mut transactional_state,
             block_context,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
-        )?;
+        );
+        #[cfg(feature = "replay_benchmark")]
+        // Add initial values to cache despite tx outcome
+        {
+            state.cache_mut().storage_initial_values_mut().extend(
+                transactional_state
+                    .cache()
+                    .storage_initial_values
+                    .clone()
+                    .into_iter(),
+            );
+            state.cache_mut().class_hash_initial_values_mut().extend(
+                transactional_state
+                    .cache()
+                    .class_hash_initial_values
+                    .clone()
+                    .into_iter(),
+            );
+        }
+        let mut tx_exec_info = tx_exec_info?;
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
@@ -570,7 +589,7 @@ impl DeployAccount {
 
     pub fn from_sn_api_transaction(
         value: starknet_api::transaction::DeployAccountTransaction,
-        chain_id: Felt252,
+        tx_hash: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
         let max_fee = value.max_fee.0;
         let version = Felt252::from_bytes_be(value.version.0.bytes());
@@ -592,7 +611,7 @@ impl DeployAccount {
             .map(|f| Felt252::from_bytes_be(f.bytes()))
             .collect();
 
-        DeployAccount::new(
+        DeployAccount::new_with_tx_hash(
             class_hash,
             max_fee,
             version,
@@ -600,7 +619,7 @@ impl DeployAccount {
             constructor_calldata,
             signature,
             contract_address_salt,
-            chain_id,
+            tx_hash,
         )
     }
 }
