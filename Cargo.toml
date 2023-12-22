@@ -92,7 +92,4 @@ codegen-units = 1
 lto = "fat"
 
 [profile.test]
-opt-level = 2
-
-[profile.test.package."*"]
-opt-level = 1
+opt-level = 3
