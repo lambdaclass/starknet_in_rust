@@ -1284,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=ce6c68bba824a161cc72642458d88e674b386827#ce6c68bba824a161cc72642458d88e674b386827"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=fd908a40c8a392001836d56482d5f564f6c2e813#fd908a40c8a392001836d56482d5f564f6c2e813"
 dependencies = [
  "bumpalo",
  "cairo-lang-compiler",
@@ -1306,12 +1306,13 @@ dependencies = [
  "itertools 0.12.0",
  "lazy_static",
  "libc",
+ "libloading 0.8.1",
  "llvm-sys",
  "melior",
  "mlir-sys",
  "num-bigint",
  "num-traits 0.2.17",
- "starknet-types-core 0.0.3",
+ "starknet-types-core",
  "tempfile",
  "thiserror",
  "tracing",
@@ -1321,14 +1322,14 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=ce6c68bba824a161cc72642458d88e674b386827#ce6c68bba824a161cc72642458d88e674b386827"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=fd908a40c8a392001836d56482d5f564f6c2e813#fd908a40c8a392001836d56482d5f564f6c2e813"
 dependencies = [
  "cairo-lang-runner",
  "lazy_static",
  "libc",
  "starknet-crypto 0.6.1",
  "starknet-curve 0.4.0",
- "starknet-types-core 0.0.3",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -1390,7 +1391,7 @@ dependencies = [
  "sha2",
  "sha3",
  "starknet-crypto 0.6.1",
- "starknet-types-core 0.0.5",
+ "starknet-types-core",
  "thiserror-no-std",
 ]
 
@@ -1450,7 +1451,7 @@ checksum = "c688fc74432808e3eb684cae8830a86be1d66a2bd58e1f248ed0960a590baf6f"
 dependencies = [
  "glob",
  "libc",
- "libloading",
+ "libloading 0.7.4",
 ]
 
 [[package]]
@@ -2759,6 +2760,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "libloading"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c571b676ddfc9a8c12f1f3d3085a7b163966a8fd8098a90640953ce5f6170161"
+dependencies = [
+ "cfg-if",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "libmimalloc-sys"
 version = "0.1.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2885,9 +2896,9 @@ dependencies = [
 
 [[package]]
 name = "melior"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d579dda794588eae5b4e470efb3acaa330c1b9af6148d40abbf4d683bf01922b"
+checksum = "634f33663d2bcac794409829caf83a08967249e5429f34ec20c92230a85c025a"
 dependencies = [
  "dashmap",
  "melior-macro",
@@ -2897,9 +2908,9 @@ dependencies = [
 
 [[package]]
 name = "melior-macro"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8423fdf51f19a02f0fc34b1e4d603661e7b6ed6b2905d04c894cdccb65c6d0a0"
+checksum = "ac9339fd6934926500d5a5f378bb5cda44efe33c74e4c300f083bf89b1544005"
 dependencies = [
  "comrak",
  "convert_case 0.6.0",
@@ -3122,9 +3133,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.18.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
+checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "onig"
@@ -4418,6 +4429,7 @@ dependencies = [
  "coverage-helper",
  "mimalloc",
  "num-traits 0.2.17",
+ "once_cell",
  "serde",
  "starknet_in_rust",
 ]
@@ -4436,20 +4448,6 @@ dependencies = [
  "starknet-core 0.5.1",
  "starknet-crypto 0.6.1",
  "thiserror",
-]
-
-[[package]]
-name = "starknet-types-core"
-version = "0.0.3"
-source = "git+https://github.com/starknet-io/types-rs.git?rev=4bc8a5db3c86f017e8be7dc43531a2cb6db011c0#4bc8a5db3c86f017e8be7dc43531a2cb6db011c0"
-dependencies = [
- "bitvec",
- "lambdaworks-math",
- "lazy_static",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.17",
- "serde",
 ]
 
 [[package]]
@@ -4518,7 +4516,7 @@ dependencies = [
  "sha3",
  "starknet",
  "starknet-crypto 0.6.1",
- "starknet-types-core 0.0.5",
+ "starknet-types-core",
  "starknet_api",
  "thiserror",
  "tracing",
