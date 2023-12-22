@@ -26,7 +26,7 @@ cairo-lang-runner = "2.3.1"
 cairo-lang-sierra = "2.3.1"
 cairo-lang-starknet = "2.3.1"
 cairo-lang-utils = "2.3.1"
-cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "333dd4a78f520b1c442cd9dfbdef777f53b02d2b", features = ["cairo-1-hints"] }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "7af00641014f295d820cbc6417714d6470823440", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
 starknet = "0.5.0"
 starknet_api = "0.4.1"
@@ -40,7 +40,7 @@ cairo-lang-runner = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "67acb53493a42e768cb35690b5744a52f814de50", optional = true }
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "0c7810da264960083f1adf1b2fbaf0f7f79cadbf", optional = true }
 starknet-types-core = { version = "0.0.5", default-features = false, features = ["serde"] }
 
 
