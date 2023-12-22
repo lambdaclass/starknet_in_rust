@@ -1,6 +1,6 @@
 #![deny(warnings)]
 #[cfg(feature = "cairo-native")]
-use cairo_native::cache::{AotProgramCache, ProgramCache};
+use cairo_native::cache::{JitProgramCache, ProgramCache};
 
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
@@ -56,7 +56,7 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 fn main() {
     #[cfg(feature = "cairo-native")]
     {
-        let program_cache = Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
+        let program_cache = Rc::new(RefCell::new(ProgramCache::from(JitProgramCache::new(
             starknet_in_rust::utils::get_native_context(),
         ))));
 
