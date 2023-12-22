@@ -7,7 +7,6 @@ use cairo_native::{
 };
 use cairo_vm::Felt252;
 use starknet::core::utils::cairo_short_string_to_felt;
-use starknet_types_core::felt::Felt as NaitiveFelt;
 
 use crate::definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR;
 use crate::execution::CallResult;
@@ -64,7 +63,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
             .unwrap_or(0);
 
         if *gas < required_gas {
-            let out_of_gas_felt = NaitiveFelt::from_bytes_be_slice("Out of gas".as_bytes());
+            let out_of_gas_felt = Felt252::from_bytes_be_slice("Out of gas".as_bytes());
             tracing::debug!("out of gas!: {:?} < {:?}", *gas, required_gas);
             return Err(vec![out_of_gas_felt]);
         }
