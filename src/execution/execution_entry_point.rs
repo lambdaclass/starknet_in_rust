@@ -673,10 +673,8 @@ impl ExecutionEntryPoint {
         class_hash: &ClassHash,
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
-        use std::{
-            borrow::Borrow,
-            ops::{Deref, DerefMut},
-        };
+        use cairo_native::executor::NativeExecutor;
+        use std::ops::{Deref, DerefMut};
 
         use crate::{
             syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
@@ -741,7 +739,7 @@ impl ExecutionEntryPoint {
 
         let entry_point_id = &entry_point_fn.id;
 
-        let value = match (*program_cache).borrow_mut().deref_mut() {
+        let native_executor = match (*program_cache).borrow_mut().deref_mut() {
             ProgramCache::Aot(cache) => {
                 let native_executor = {
                     if let Some(executor) = cache.get(class_hash) {
@@ -750,18 +748,7 @@ impl ExecutionEntryPoint {
                         cache.compile_and_insert(*class_hash, sierra_program)
                     }
                 };
-
-                (*native_executor)
-                    .borrow()
-                    .invoke_contract_dynamic(
-                        entry_point_id,
-                        &self.calldata,
-                        Some(self.initial_gas),
-                        Some(&SyscallHandlerMeta::new(&mut syscall_handler)),
-                    )
-                    .map_err(|e| {
-                        TransactionError::CustomError(format!("cairo-native error: {:?}", e))
-                    })?
+                NativeExecutor::Aot(native_executor)
             }
             ProgramCache::Jit(cache) => {
                 let native_executor = {
@@ -771,19 +758,31 @@ impl ExecutionEntryPoint {
                         cache.compile_and_insert(*class_hash, sierra_program)
                     }
                 };
-
-                (*native_executor)
-                    .borrow()
-                    .invoke_contract_dynamic(
-                        entry_point_id,
-                        &self.calldata,
-                        Some(self.initial_gas),
-                        Some(&SyscallHandlerMeta::new(&mut syscall_handler)),
-                    )
-                    .map_err(|e| {
-                        TransactionError::CustomError(format!("cairo-native error: {:?}", e))
-                    })?
+                NativeExecutor::Jit(native_executor)
             }
+        };
+        let syscall_handler_meta = SyscallHandlerMeta::new(&mut syscall_handler);
+        let value = match native_executor {
+            NativeExecutor::Aot(executor) => executor
+                .invoke_contract_dynamic(
+                    entry_point_id,
+                    &self.calldata,
+                    Some(self.initial_gas),
+                    Some(&syscall_handler_meta),
+                )
+                .map_err(|e| {
+                    TransactionError::CustomError(format!("cairo-native error: {:?}", e))
+                })?,
+            NativeExecutor::Jit(executor) => executor
+                .invoke_contract_dynamic(
+                    entry_point_id,
+                    &self.calldata,
+                    Some(self.initial_gas),
+                    Some(&syscall_handler_meta),
+                )
+                .map_err(|e| {
+                    TransactionError::CustomError(format!("cairo-native error: {:?}", e))
+                })?,
         };
 
         Ok(CallInfo {
