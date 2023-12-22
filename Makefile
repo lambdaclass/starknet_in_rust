@@ -191,6 +191,7 @@ clean:
 	-rm -rf cairo1/
 	-rm -rf cairo2/
 	-rm -rf cairo-*.tar
+	-rm -f libcairo_native_runtime.*
 
 clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo clippy --workspace --all-targets --all-features -- -D warnings
@@ -235,5 +236,5 @@ benchmark: compile-cairo compile-starknet
 build-cairo-native-runtime:
 	git clone --depth 1 https://github.com/lambdaclass/cairo_native.git
 	cargo build --release --manifest-path cairo_native/Cargo.toml --package cairo-native-runtime
-	cp cairo_native/target/release/*.*
+	cp cairo_native/target/release/libcairo_native_runtime.*
 	rm -rf cairo_native
