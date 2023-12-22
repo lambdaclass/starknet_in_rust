@@ -33,7 +33,7 @@ use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 #[cfg(feature = "cairo-native")]
-use cairo_native::cache::{aot::AotProgramCache, ProgramCache};
+use cairo_native::cache::{jit::JitProgramCache, ProgramCache};
 use cairo_vm::{
     types::{
         program::Program,
@@ -183,7 +183,7 @@ impl ExecutionEntryPoint {
                 let mut transactional_state = state.create_transactional()?;
 
                 let program_cache = program_cache.unwrap_or_else(|| {
-                    Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
+                    Rc::new(RefCell::new(ProgramCache::from(JitProgramCache::new(
                         crate::utils::get_native_context(),
                     ))))
                 });
