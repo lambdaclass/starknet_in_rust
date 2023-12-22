@@ -723,14 +723,22 @@ impl ExecutionEntryPoint {
                     NativeExecutor::Aot(if let Some(executor) = cache.get(class_hash) {
                         executor
                     } else {
-                        cache.compile_and_insert(*class_hash, sierra_program)
+                        cache.compile_and_insert(
+                            *class_hash,
+                            sierra_program,
+                            cairo_native::OptLevel::Aggressive,
+                        )
                     })
                 }
                 ProgramCache::Jit(cache) => {
                     NativeExecutor::Jit(if let Some(executor) = cache.get(class_hash) {
                         executor
                     } else {
-                        cache.compile_and_insert(*class_hash, sierra_program)
+                        cache.compile_and_insert(
+                            *class_hash,
+                            sierra_program,
+                            cairo_native::OptLevel::Aggressive,
+                        )
                     })
                 }
             }
