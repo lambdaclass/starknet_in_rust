@@ -684,9 +684,8 @@ impl ExecutionEntryPoint {
 
         // Ensure we're using the global context, if initialized.
         if let Some(native_context) = NATIVE_CONTEXT.get() {
-            match (*program_cache).borrow().deref() {
-                ProgramCache::Jit(cache) => assert_eq!(cache.context(), native_context),
-                _ => {}
+            if let ProgramCache::Jit(cache) = (*program_cache).borrow().deref() {
+                assert_eq!(cache.context(), native_context)
             }
         }
 

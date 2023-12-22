@@ -1,8 +1,6 @@
 #![deny(warnings)]
-
-use cairo_native::cache::AotProgramCache;
 #[cfg(feature = "cairo-native")]
-use cairo_native::cache::ProgramCache;
+use cairo_native::cache::{AotProgramCache, ProgramCache};
 
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
