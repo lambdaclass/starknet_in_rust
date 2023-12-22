@@ -236,5 +236,5 @@ benchmark: compile-cairo compile-starknet
 build-cairo-native-runtime:
 	git clone --depth 1 https://github.com/lambdaclass/cairo_native.git
 	cargo build --release --manifest-path cairo_native/Cargo.toml --package cairo-native-runtime
-	cp cairo_native/target/release/libcairo_native_runtime.*
+	cp cairo_native/target/release/libcairo_native_runtime.* .
 	rm -rf cairo_native
