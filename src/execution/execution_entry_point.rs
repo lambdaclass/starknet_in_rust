@@ -673,7 +673,7 @@ impl ExecutionEntryPoint {
         class_hash: &ClassHash,
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
-        use cairo_native::values::JITValue;
+        use cairo_native::values::JitValue;
 
         use crate::{
             syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
@@ -758,7 +758,7 @@ impl ExecutionEntryPoint {
             .calldata
             .iter()
             .cloned()
-            .map(JITValue::Felt252)
+            .map(JitValue::Felt252)
             .collect();
 
         let value = native_executor
