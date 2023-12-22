@@ -1,5 +1,5 @@
 .PHONY: usage build check clean clippy compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra \
-		 compile-cairo-2-casm compile-cairo-2-sierra coverage deps test heaptrack check-python-version
+		 compile-cairo-2-casm compile-cairo-2-sierra coverage deps test heaptrack check-python-version build-cairo-native-runtime
 
 export PATH:=$(shell pyenv root)/shims:$(PATH)
 export PYENV_VERSION=3.9
@@ -159,7 +159,7 @@ build: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierr
 check: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo check --workspace --all-targets
 
-deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
+deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler build-cairo-native-runtime
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	-pyenv && pyenv install -s pypy3.9-7.3.9
@@ -168,7 +168,7 @@ deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest --version 0.9.49
 
-deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
+deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos build-cairo-native-runtime
 	cargo install flamegraph --version 0.6.2
 	cargo install cargo-llvm-cov --version 0.5.14
 	-pyenv install -s pypy3.9-7.3.9
@@ -231,3 +231,9 @@ benchmark: compile-cairo compile-starknet
 	./scripts/bench-deploy-invoke.sh
 	./scripts/bench-fibonacci.sh
 	./scripts/bench-deploy.sh
+
+build-cairo-native-runtime:
+	git clone --depth 1 https://github.com/lambdaclass/cairo_native.git
+	cargo build --release --manifest-path cairo_native/Cargo.toml --package cairo-native-runtime
+	mv cairo_native/target/release/libcairo_native_runtime.dylib .
+	rm -rf cairo_native
