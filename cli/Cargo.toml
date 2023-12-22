@@ -14,12 +14,9 @@ num-traits = "0.2.15"
 serde = { version = "1.0.152", features = ["derive"] }
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 clap = { version = "4.1.8", features = ["derive"] }
-
-# We need to import two different versions of "once_cell", one for the actix-web dependency
-# and another one for the melior dependency on cairo-native
-# FIXME: Remove these imports once actox-web publishes a new release
-once_cell_cli = { package = "once_cell", version = "1.18.0" }
-once_cell_native = { package = "once_cell", version = "1.19.0" }
+ 
+# FIXME: Remove this import once actix-web publishes a new release
+once_cell = { package = "once_cell", version = "1.19.0" }
 
 actix-web = "4.4.0"
 awc = "3.1.1"
