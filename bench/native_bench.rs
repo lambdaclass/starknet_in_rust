@@ -7,6 +7,7 @@
 // $ native_bench <n_executions> native <fibo|fact>
 // where fibo executes a fibonacci function and fact a factorial n times.
 
+use cairo_native::cache::AotProgramCache;
 use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
 use cairo_vm::utils::biguint_to_felt;
@@ -115,7 +116,9 @@ fn bench_fibo(executions: usize, native: bool) {
     let mut calldata = [1.into(), 1.into(), 2000000.into()];
 
     let native_ctx = NativeContext::new();
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
+    let program_cache = Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
+        &native_ctx,
+    ))));
 
     for _ in 0..executions {
         calldata[2] = &calldata[2] + 1;
@@ -191,7 +194,9 @@ fn bench_fact(executions: usize, native: bool) {
     let mut calldata = [2000000.into()];
 
     let native_ctx = NativeContext::new();
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
+    let program_cache = Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
+        &native_ctx,
+    ))));
 
     for _ in 0..executions {
         calldata[0] = &calldata[0] + 1;
@@ -241,7 +246,9 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_DEPLOYMENT_CALLER_ADDRESS: Address = Address(0000.into());
     }
 
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(get_native_context())));
+    let program_cache = Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
+        get_native_context(),
+    ))));
     let (erc20_address, mut state): (
         Address,
         CachedState<InMemoryStateReader, PermanentContractClassCache>,
