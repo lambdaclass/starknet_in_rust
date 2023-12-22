@@ -29,7 +29,6 @@ use starknet_in_rust::{
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     utils::{Address, ClassHash},
 };
-use starknet_types_core::felt::biguint_to_felt;
 use std::sync::Arc;
 
 fn insert_sierra_class_into_cache(
@@ -48,6 +47,7 @@ fn insert_sierra_class_into_cache(
 #[test]
 #[cfg(feature = "cairo-native")]
 fn get_block_hash_test() {
+    use cairo_vm::utils::biguint_to_felt;
     use starknet_in_rust::{
         state::contract_class_cache::PermanentContractClassCache, utils::felt_to_hash,
     };
@@ -143,7 +143,7 @@ fn get_block_hash_test() {
     assert_eq!(vm_result.contract_address, caller_address);
     assert_eq!(
         vm_result.entry_point_selector,
-        Some(biguint_to_felt(casm_external_selector))
+        Some(biguint_to_felt(casm_external_selector).unwrap())
     );
     assert_eq!(vm_result.entry_point_type, Some(EntryPointType::External));
     assert_eq!(vm_result.calldata, calldata);
@@ -159,7 +159,7 @@ fn get_block_hash_test() {
     assert_eq!(native_result.contract_address, caller_address);
     assert_eq!(
         native_result.entry_point_selector,
-        Some(biguint_to_felt(native_external_selector))
+        Some(biguint_to_felt(native_external_selector).unwrap())
     );
     assert_eq!(
         native_result.entry_point_type,
@@ -349,14 +349,7 @@ fn integration_test_erc20() {
         4 initial_supply
         5 symbol
     */
-    let calldata = [
-        caller_address.0.clone(),
-        2.into(),
-        3.into(),
-        4.into(),
-        5.into(),
-    ]
-    .to_vec();
+    let calldata = [caller_address.0, 2.into(), 3.into(), 4.into(), 5.into()].to_vec();
 
     let vm_result = execute(
         &mut state_vm,
@@ -383,7 +376,7 @@ fn integration_test_erc20() {
     assert_eq!(vm_result.contract_address, caller_address);
     assert_eq!(
         vm_result.entry_point_selector,
-        Some(biguint_to_felt(casm_constructor_selector))
+        Some(casm_constructor_selector.into())
     );
     assert_eq!(
         vm_result.entry_point_type,
@@ -399,7 +392,7 @@ fn integration_test_erc20() {
     assert_eq!(native_result.contract_address, caller_address);
     assert_eq!(
         native_result.entry_point_selector,
-        Some(biguint_to_felt(native_constructor_selector))
+        Some(native_constructor_selector.into())
     );
     assert_eq!(
         native_result.entry_point_type,
@@ -537,7 +530,7 @@ fn integration_test_erc20() {
         8,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone()],
+        &[caller_address.0],
         &caller_address,
         "get balance of caller",
     );
@@ -550,7 +543,7 @@ fn integration_test_erc20() {
         3,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone(), 1.into()],
+        &[caller_address.0, 1.into()],
         &caller_address,
         "get allowance of address 1",
     );
@@ -577,7 +570,7 @@ fn integration_test_erc20() {
         3,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone(), 1.into()],
+        &[caller_address.0, 1.into()],
         &caller_address,
         "allowance of address 1 part 2",
     );
@@ -616,7 +609,7 @@ fn integration_test_erc20() {
         8,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone()],
+        &[caller_address.0],
         &caller_address,
         "GET BALANCE OF CALLER",
     );
@@ -668,7 +661,7 @@ fn integration_test_erc20() {
         8,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone()],
+        &[caller_address.0],
         &caller_address,
         "GET BALANCE OF CALLER last",
     );
@@ -748,7 +741,7 @@ fn call_contract_test() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
-    let calldata = [biguint_to_felt(fn_selector)].to_vec();
+    let calldata = [fn_selector.into()].to_vec();
     let result = execute(
         &mut state,
         &caller_address,
@@ -836,7 +829,7 @@ fn call_echo_contract_test() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
-    let calldata = [biguint_to_felt(fn_selector), 99999999.into()].to_vec();
+    let calldata = [fn_selector.into(), 99999999.into()].to_vec();
     let result = execute(
         &mut state,
         &caller_address,
@@ -1191,7 +1184,7 @@ fn replace_class_contract_call() {
         .insert(address.clone(), class_hash_a);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     let mut native_state_reader = InMemoryStateReader::default();
     native_state_reader
@@ -1411,7 +1404,7 @@ fn execute(
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
         calldata.to_vec(),
-        biguint_to_felt(selector),
+        selector.into(),
         (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),
@@ -1431,7 +1424,7 @@ fn execute(
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1519,7 +1512,7 @@ fn library_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        biguint_to_felt(entrypoint_selector),
+        entrypoint_selector.into(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1536,7 +1529,7 @@ fn library_call() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1545,7 +1538,7 @@ fn library_call() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(biguint_to_felt(entrypoint_selector)),
+        entry_point_selector: Some(entrypoint_selector.into()),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
@@ -1608,7 +1601,7 @@ fn execute_deploy(
     let exec_entry_point = ExecutionEntryPoint::new(
         (*caller_address).clone(),
         calldata.to_vec(),
-        biguint_to_felt(selector),
+        selector.into(),
         (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),
@@ -1625,7 +1618,7 @@ fn execute_deploy(
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1902,7 +1895,7 @@ fn get_execution_info_test() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata.to_vec(),
-        biguint_to_felt(selector),
+        selector.into(),
         Address(0.into()),
         EntryPointType::External,
         Some(CallType::Delegate),
@@ -1921,7 +1914,7 @@ fn get_execution_info_test() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1942,10 +1935,10 @@ fn get_execution_info_test() {
         .unwrap();
 
     let expected_ret_data = vec![
-        block_context.block_info().sequencer_address.0.clone(),
+        block_context.block_info().sequencer_address.0,
         0.into(),
         0.into(),
-        address.0.clone(),
+        address.0,
     ];
 
     let expected_gas_consumed = 22980;
@@ -1955,7 +1948,7 @@ fn get_execution_info_test() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(biguint_to_felt(selector)),
+        entry_point_selector: Some(selector.into()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: None,

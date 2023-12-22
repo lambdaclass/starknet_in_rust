@@ -7,6 +7,8 @@
 // $ native_bench <n_executions> native <fibo|fact>
 // where fibo executes a fibonacci function and fact a factorial n times.
 
+use cairo_native::cache::AotProgramCache;
+use cairo_native::cache::JitProgramCache;
 use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
 use cairo_vm::utils::biguint_to_felt;
@@ -44,23 +46,26 @@ pub fn main() {
                 .and_then(|x| x.parse::<usize>().ok())
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
+            args.get(3) == Some(&"aot".to_string()),
         ),
         Some("fact") => bench_fact(
             args.get(1)
                 .and_then(|x| x.parse::<usize>().ok())
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
+            args.get(3) == Some(&"aot".to_string()),
         ),
         _ => bench_erc20(
             args.get(1)
                 .and_then(|x| x.parse::<usize>().ok())
                 .unwrap_or(1),
             args.get(2) == Some(&"native".to_string()),
+            args.get(3) == Some(&"aot".to_string()),
         ),
     }
 }
 
-fn bench_fibo(executions: usize, native: bool) {
+fn bench_fibo(executions: usize, native: bool, aot: bool) {
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
     static CASM_CLASS_HASH: ClassHash = ClassHash([2; 32]);
@@ -115,7 +120,10 @@ fn bench_fibo(executions: usize, native: bool) {
     let mut calldata = [1.into(), 1.into(), 2000000.into()];
 
     let native_ctx = NativeContext::new();
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
+    let program_cache = Rc::new(RefCell::new(match aot {
+        true => ProgramCache::Aot(AotProgramCache::new(&native_ctx)),
+        false => ProgramCache::Jit(JitProgramCache::new(&native_ctx)),
+    }));
 
     for _ in 0..executions {
         calldata[2] = &calldata[2] + 1;
@@ -134,7 +142,7 @@ fn bench_fibo(executions: usize, native: bool) {
     }
 }
 
-fn bench_fact(executions: usize, native: bool) {
+fn bench_fact(executions: usize, native: bool, aot: bool) {
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
     static CASM_CLASS_HASH: ClassHash = ClassHash([2; 32]);
@@ -191,7 +199,10 @@ fn bench_fact(executions: usize, native: bool) {
     let mut calldata = [2000000.into()];
 
     let native_ctx = NativeContext::new();
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
+    let program_cache = Rc::new(RefCell::new(match aot {
+        true => ProgramCache::Aot(AotProgramCache::new(&native_ctx)),
+        false => ProgramCache::Jit(JitProgramCache::new(&native_ctx)),
+    }));
 
     for _ in 0..executions {
         calldata[0] = &calldata[0] + 1;
@@ -210,7 +221,7 @@ fn bench_fact(executions: usize, native: bool) {
     }
 }
 
-fn bench_erc20(executions: usize, native: bool) {
+fn bench_erc20(executions: usize, native: bool, aot: bool) {
     // 1. setup ERC20 contract and state.
     // Create state reader and preload the contract classes.
     let contract_class_cache = PermanentContractClassCache::default();
@@ -241,7 +252,10 @@ fn bench_erc20(executions: usize, native: bool) {
         static ref ERC20_DEPLOYMENT_CALLER_ADDRESS: Address = Address(0000.into());
     }
 
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(get_native_context())));
+    let program_cache = Rc::new(RefCell::new(match aot {
+        true => ProgramCache::Aot(AotProgramCache::new(get_native_context())),
+        false => ProgramCache::Jit(JitProgramCache::new(get_native_context())),
+    }));
     let (erc20_address, mut state): (
         Address,
         CachedState<InMemoryStateReader, PermanentContractClassCache>,

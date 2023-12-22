@@ -1284,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=1ff2f0276ce009cc62d26dce592ac03a28e5e1b4#1ff2f0276ce009cc62d26dce592ac03a28e5e1b4"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=67acb53493a42e768cb35690b5744a52f814de50#67acb53493a42e768cb35690b5744a52f814de50"
 dependencies = [
  "bumpalo",
  "cairo-lang-compiler",
@@ -1312,7 +1312,7 @@ dependencies = [
  "mlir-sys",
  "num-bigint",
  "num-traits 0.2.17",
- "starknet-types-core 0.0.4",
+ "starknet-types-core",
  "tempfile",
  "thiserror",
  "tracing",
@@ -1322,14 +1322,14 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=1ff2f0276ce009cc62d26dce592ac03a28e5e1b4#1ff2f0276ce009cc62d26dce592ac03a28e5e1b4"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=67acb53493a42e768cb35690b5744a52f814de50#67acb53493a42e768cb35690b5744a52f814de50"
 dependencies = [
  "cairo-lang-runner",
  "lazy_static",
  "libc",
  "starknet-crypto 0.6.1",
  "starknet-curve 0.4.0",
- "starknet-types-core 0.0.3",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -1365,7 +1365,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "0.9.1"
-source = "git+https://github.com/lambdaclass/cairo-vm?rev=8d56be64cd9038ede45b3e0300cb3593c559b739#8d56be64cd9038ede45b3e0300cb3593c559b739"
+source = "git+https://github.com/lambdaclass/cairo-vm?rev=333dd4a78f520b1c442cd9dfbdef777f53b02d2b#333dd4a78f520b1c442cd9dfbdef777f53b02d2b"
 dependencies = [
  "anyhow",
  "ark-ff",
@@ -1391,7 +1391,7 @@ dependencies = [
  "sha2",
  "sha3",
  "starknet-crypto 0.6.1",
- "starknet-types-core 0.0.3",
+ "starknet-types-core",
  "thiserror-no-std",
 ]
 
@@ -4451,23 +4451,9 @@ dependencies = [
 
 [[package]]
 name = "starknet-types-core"
-version = "0.0.3"
-source = "git+https://github.com/starknet-io/types-rs.git?rev=4bc8a5db3c86f017e8be7dc43531a2cb6db011c0#4bc8a5db3c86f017e8be7dc43531a2cb6db011c0"
-dependencies = [
- "bitvec",
- "lambdaworks-math",
- "lazy_static",
- "num-bigint",
- "num-integer",
- "num-traits 0.2.17",
- "serde",
-]
-
-[[package]]
-name = "starknet-types-core"
-version = "0.0.4"
+version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78b4af540664e3dec02f36a47b79ba4df825a7752bf0941954f69753a98a397e"
+checksum = "b2441eb61d91a6bae832fda48e50b6ff09faa6cf63bfadd22dc16798d2cc024d"
 dependencies = [
  "bitvec",
  "lambdaworks-math",
@@ -4529,7 +4515,7 @@ dependencies = [
  "sha3",
  "starknet",
  "starknet-crypto 0.6.1",
- "starknet-types-core 0.0.3",
+ "starknet-types-core",
  "starknet_api",
  "thiserror",
  "tracing",

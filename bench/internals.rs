@@ -1,5 +1,6 @@
 #![deny(warnings)]
 
+use cairo_native::cache::JitProgramCache;
 #[cfg(feature = "cairo-native")]
 use cairo_native::cache::ProgramCache;
 
@@ -57,9 +58,9 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 fn main() {
     #[cfg(feature = "cairo-native")]
     {
-        let program_cache = Rc::new(RefCell::new(ProgramCache::new(
+        let program_cache = Rc::new(RefCell::new(ProgramCache::Jit(JitProgramCache::new(
             starknet_in_rust::utils::get_native_context(),
-        )));
+        ))));
 
         deploy_account(program_cache.clone());
         declare(program_cache.clone());
