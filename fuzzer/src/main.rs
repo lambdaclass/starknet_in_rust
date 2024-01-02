@@ -89,7 +89,7 @@ fn main() {
             let path = PathBuf::from(&json_file_name);
             let contract_class = ContractClass::from_path(path).unwrap();
 
-            let storage_entrypoint_selector = contract_class
+            let storage_entrypoint_selector = *contract_class
                 .entry_points_by_type()
                 .get(&EntryPointType::External)
                 .unwrap()
@@ -114,7 +114,7 @@ fn main() {
 
             contract_class_cache.set_contract_class(
                 class_hash,
-                CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+                CompiledClass::Deprecated(Arc::new(contract_class)),
             );
             let mut state_reader = InMemoryStateReader::default();
             state_reader
@@ -139,7 +139,7 @@ fn main() {
             let exec_entry_point = ExecutionEntryPoint::new(
                 address.clone(),
                 calldata.clone(),
-                *storage_entrypoint_selector,
+                storage_entrypoint_selector,
                 caller_address,
                 entry_point_type,
                 Some(CallType::Delegate),
@@ -172,7 +172,7 @@ fn main() {
                 caller_address: Address(0.into()),
                 call_type: Some(CallType::Delegate),
                 contract_address: Address(1111.into()),
-                entry_point_selector: Some(*storage_entrypoint_selector),
+                entry_point_selector: Some(storage_entrypoint_selector),
                 entry_point_type: Some(EntryPointType::External),
                 calldata,
                 retdata: [Felt252::from_bytes_be_slice(data_to_ascii(data).as_bytes())].to_vec(),
