@@ -7,7 +7,6 @@ use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use cairo_vm::{
-    felt::Felt252,
     hint_processor::{
         builtin_hint_processor::{
             builtin_hint_processor_definition::{BuiltinHintProcessor, HintProcessorData},
@@ -22,6 +21,7 @@ use cairo_vm::{
         runners::cairo_runner::{ResourceTracker, RunResources},
         vm_core::VirtualMachine,
     },
+    Felt252,
 };
 use std::{any::Any, collections::HashMap};
 
@@ -298,7 +298,7 @@ mod tests {
         },
     };
     use cairo_vm::relocatable;
-    use num_traits::Num;
+
     use std::sync::Arc;
 
     type DeprecatedBLSyscallHandler<'a> =
@@ -453,7 +453,13 @@ mod tests {
         // selector of syscall
         let selector = "1280709301550335749748";
 
-        allocate_selector!(vm, ((2, 0), selector.as_bytes()));
+        allocate_selector!(
+            vm,
+            (
+                (2, 0),
+                &Felt252::from_dec_str(selector).unwrap().to_bytes_be()
+            )
+        );
         memory_insert!(
             vm,
             [
@@ -911,9 +917,8 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        let address = Felt252::from_str_radix(
+        let address = Felt252::from_dec_str(
             "2151680050850558576753658069693146429350618838199373217695410689374331200218",
-            10,
         )
         .unwrap();
         // insert data to form the request
@@ -926,8 +931,7 @@ mod tests {
         );
 
         // StorageReadRequest.address
-        vm.insert_value(relocatable!(2, 1), address.clone())
-            .unwrap();
+        vm.insert_value(relocatable!(2, 1), address).unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -943,7 +947,7 @@ mod tests {
             RunResources::default(),
         );
 
-        let storage_value = Felt252::new(3);
+        let storage_value = Felt252::from(3);
         syscall_handler_hint_processor
             .syscall_handler
             .starknet_storage_state
@@ -955,9 +959,9 @@ mod tests {
                         .starknet_storage_state
                         .contract_address
                         .clone(),
-                    address.to_bytes_be().try_into().unwrap(),
+                    address.to_bytes_be(),
                 ),
-                storage_value.clone(),
+                storage_value,
             );
         assert!(syscall_handler_hint_processor
             .execute_hint(
@@ -978,9 +982,8 @@ mod tests {
         let mut vm = vm!();
         add_segments!(vm, 3);
 
-        let address = Felt252::from_str_radix(
+        let address = Felt252::from_dec_str(
             "2151680050850558576753658069693146429350618838199373217695410689374331200218",
-            10,
         )
         .unwrap();
 
@@ -994,8 +997,7 @@ mod tests {
         );
 
         // StorageWriteRequest.address
-        vm.insert_value(relocatable!(2, 1), address.clone())
-            .unwrap();
+        vm.insert_value(relocatable!(2, 1), address).unwrap();
 
         // syscall_ptr
         let ids_data = ids_data!["syscall_ptr"];
@@ -1022,9 +1024,9 @@ mod tests {
                         .starknet_storage_state
                         .contract_address
                         .clone(),
-                    address.to_bytes_be().try_into().unwrap(),
+                    address.to_bytes_be(),
                 ),
-                Felt252::new(3),
+                Felt252::from(3),
             );
         assert!(syscall_handler_hint_processor
             .execute_hint(
@@ -1041,7 +1043,7 @@ mod tests {
             .read(Address(address))
             .unwrap();
 
-        assert_eq!(write, Felt252::new(45));
+        assert_eq!(write, Felt252::from(45));
     }
 
     /// Tests the correct behavior of a deploy operation within a blockchain.
@@ -1064,12 +1066,10 @@ mod tests {
             ]
         );
 
-        let class_hash_felt = Felt252::from_str_radix(
-            "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
-            16,
-        )
-        .unwrap();
-        let class_hash: ClassHash = ClassHash::from(class_hash_felt.clone());
+        let class_hash_felt =
+            Felt252::from_hex("0x284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6")
+                .unwrap();
+        let class_hash: ClassHash = ClassHash::from(class_hash_felt);
 
         vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
@@ -1158,12 +1158,10 @@ mod tests {
             ]
         );
 
-        let class_hash_felt = Felt252::from_str_radix(
-            "284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6",
-            16,
-        )
-        .unwrap();
-        let class_hash: ClassHash = ClassHash::from(class_hash_felt.clone());
+        let class_hash_felt =
+            Felt252::from_hex("0x284536ad7de8852cc9101133f7f7670834084d568610335c94da1c4d9ce4be6")
+                .unwrap();
+        let class_hash: ClassHash = ClassHash::from(class_hash_felt);
 
         vm.insert_value(relocatable!(2, 1), class_hash_felt)
             .unwrap();
@@ -1226,7 +1224,7 @@ mod tests {
                 .syscall_handler
                 .starknet_storage_state
                 .state
-                .get_class_hash_at(&Address(deployed_address.clone()))
+                .get_class_hash_at(&Address(deployed_address))
                 .unwrap(),
             class_hash
         );
@@ -1235,14 +1233,11 @@ mod tests {
         INVOKE
         */
         let internal_invoke_function = InvokeFunction::new(
-            Address(deployed_address.clone()),
-            Felt252::from_str_radix(
-                "283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c",
-                16,
-            )
-            .unwrap(),
+            Address(deployed_address),
+            Felt252::from_hex("0x283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c")
+                .unwrap(),
             0,
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
             vec![10.into()],
             Vec::new(),
             0.into(),

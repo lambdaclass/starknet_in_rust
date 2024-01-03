@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use starknet_api::{
     block::BlockNumber,
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
@@ -22,8 +22,11 @@ use starknet_in_rust::{
     execution::TransactionExecutionInfo,
     services::api::contract_classes::compiled_class::CompiledClass,
     state::{
-        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
-        state_api::StateReader, state_cache::StorageEntry, BlockInfo,
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        state_api::StateReader,
+        state_cache::StorageEntry,
+        BlockInfo,
     },
     transaction::{
         error::TransactionError, Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler,
@@ -39,7 +42,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct RpcStateReader(RpcState);
+pub struct RpcStateReader(pub RpcState);
 
 impl RpcStateReader {
     pub fn new(state: RpcState) -> Self {
@@ -60,7 +63,7 @@ impl StateReader for RpcStateReader {
     fn get_class_hash_at(&self, contract_address: &Address) -> Result<ClassHash, StateError> {
         let address = ContractAddress(
             PatriciaKey::try_from(
-                StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
+                StarkHash::new(contract_address.clone().0.to_bytes_be()).unwrap(),
             )
             .unwrap(),
         );
@@ -72,25 +75,25 @@ impl StateReader for RpcStateReader {
     fn get_nonce_at(&self, contract_address: &Address) -> Result<Felt252, StateError> {
         let address = ContractAddress(
             PatriciaKey::try_from(
-                StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
+                StarkHash::new(contract_address.clone().0.to_bytes_be()).unwrap(),
             )
             .unwrap(),
         );
         let nonce = self.0.get_nonce_at(&address);
-        Ok(Felt252::from_bytes_be(nonce.bytes()))
+        Ok(Felt252::from_bytes_be_slice(nonce.bytes()))
     }
 
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         let (contract_address, key) = storage_entry;
         let address = ContractAddress(
             PatriciaKey::try_from(
-                StarkHash::new(contract_address.clone().0.to_be_bytes()).unwrap(),
+                StarkHash::new(contract_address.clone().0.to_bytes_be()).unwrap(),
             )
             .unwrap(),
         );
         let key = StorageKey(PatriciaKey::try_from(StarkHash::new(*key).unwrap()).unwrap());
         let value = self.0.get_storage_at(&address, &key);
-        Ok(Felt252::from_bytes_be(value.bytes()))
+        Ok(Felt252::from_bytes_be_slice(value.bytes()))
     }
 
     fn get_compiled_class_hash(&self, class_hash: &ClassHash) -> Result<ClassHash, StateError> {
@@ -112,64 +115,107 @@ pub fn execute_tx_configurable(
     ),
     TransactionError,
 > {
-    let fee_token_address = Address(felt_str!(
-        "049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-        16
-    ));
-
-    let tx_hash = tx_hash.strip_prefix("0x").unwrap();
-
-    // Instantiate the RPC StateReader and the CachedState
     let rpc_reader = RpcStateReader(RpcState::new_rpc(network, block_number.into()).unwrap());
-    let gas_price = rpc_reader.0.get_gas_price(block_number.0).unwrap();
+    let class_cache = PermanentContractClassCache::default();
+    let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
+    let tx_hash = TransactionHash(stark_felt!(tx_hash.strip_prefix("0x").unwrap()));
+    let tx = state.state_reader.0.get_transaction(&tx_hash).unwrap();
+    let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();
+    let RpcBlockInfo {
+        block_timestamp,
+        sequencer_address,
+        ..
+    } = state.state_reader.0.get_block_info().unwrap();
+    let sequencer_address = Address(Felt252::from_bytes_be_slice(
+        sequencer_address.0.key().bytes(),
+    ));
+    let block_info = BlockInfo {
+        block_number: block_number.0,
+        block_timestamp: block_timestamp.0,
+        gas_price,
+        sequencer_address,
+    };
+    let sir_exec_info = execute_tx_configurable_with_state(
+        &tx_hash,
+        tx,
+        network,
+        block_info,
+        skip_validate,
+        skip_nonce_check,
+        &mut state,
+    )?;
+    let trace = state
+        .state_reader
+        .0
+        .get_transaction_trace(&tx_hash)
+        .unwrap();
+    let receipt = state
+        .state_reader
+        .0
+        .get_transaction_receipt(&tx_hash)
+        .unwrap();
+    Ok((sir_exec_info, trace, receipt))
+}
+
+pub fn execute_tx_configurable_with_state(
+    tx_hash: &TransactionHash,
+    tx: SNTransaction,
+    network: RpcChain,
+    block_info: BlockInfo,
+    skip_validate: bool,
+    skip_nonce_check: bool,
+    state: &mut CachedState<RpcStateReader, PermanentContractClassCache>,
+) -> Result<TransactionExecutionInfo, TransactionError> {
+    let fee_token_address = Address(
+        Felt252::from_hex("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
+            .unwrap(),
+    );
 
     // Get values for block context before giving ownership of the reader
-    let chain_id = match rpc_reader.0.chain {
+    let chain_id = match state.state_reader.0.chain {
         RpcChain::MainNet => StarknetChainId::MainNet,
         RpcChain::TestNet => StarknetChainId::TestNet,
         RpcChain::TestNet2 => StarknetChainId::TestNet2,
     };
     let starknet_os_config =
-        StarknetOsConfig::new(chain_id.to_felt(), fee_token_address, gas_price);
-    let block_info = {
-        let RpcBlockInfo {
-            block_number,
-            block_timestamp,
-            sequencer_address,
-            ..
-        } = rpc_reader.0.get_block_info().unwrap();
-
-        let block_number = block_number.0;
-        let block_timestamp = block_timestamp.0;
-        let sequencer_address = Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
-
-        BlockInfo {
-            block_number,
-            block_timestamp,
-            gas_price,
-            sequencer_address,
-        }
-    };
+        StarknetOsConfig::new(chain_id.to_felt(), fee_token_address, block_info.gas_price);
 
     // Get transaction before giving ownership of the reader
-    let tx_hash = TransactionHash(stark_felt!(tx_hash));
-    let tx = match rpc_reader.0.get_transaction(&tx_hash).unwrap() {
-        SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(tx, chain_id)
-            .unwrap()
-            .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
-        SNTransaction::DeployAccount(tx) => {
-            DeployAccount::from_sn_api_transaction(tx, chain_id.to_felt())
-                .unwrap()
-                .create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
-        }
+    let tx = match tx {
+        SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(
+            tx,
+            Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
+        )
+        .unwrap()
+        .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
+        SNTransaction::DeployAccount(tx) => DeployAccount::from_sn_api_transaction(
+            tx,
+            Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
+        )
+        .unwrap()
+        .create_for_simulation(skip_validate, false, false, false, skip_nonce_check),
         SNTransaction::Declare(tx) => {
-            // Fetch the contract_class from the next block (as we don't have it in the previous one)
-            let next_block_state_reader =
-                RpcStateReader(RpcState::new_rpc(network, (block_number.next()).into()).unwrap());
-            let class_hash = tx.class_hash().0.bytes().try_into().unwrap();
-            let contract_class = next_block_state_reader
-                .get_contract_class(&ClassHash(class_hash))
-                .unwrap();
+            // Try to fetch contract class from cache
+            let class_hash = ClassHash(tx.class_hash().0.bytes().try_into().unwrap());
+            let contract_class = if let Ok(contract_class) = state.get_contract_class(&class_hash) {
+                contract_class
+            } else {
+                // Fetch the contract_class from the next block (as we don't have it in the previous one)
+                let next_block_state_reader = RpcStateReader(
+                    RpcState::new_rpc(network, BlockNumber(block_info.block_number).next().into())
+                        .unwrap(),
+                );
+
+                let contract_class = next_block_state_reader
+                    .get_contract_class(&class_hash)
+                    .unwrap();
+
+                // Manually add the contract class to the cache so we don't need to fetch it when benchmarking (replay crate)
+                state
+                    .contract_class_cache_mut()
+                    .set_contract_class(class_hash, contract_class.clone());
+                contract_class
+            };
 
             if tx.version() != TransactionVersion(2_u8.into()) {
                 let contract_class = match contract_class {
@@ -177,20 +223,21 @@ pub fn execute_tx_configurable(
                     _ => unreachable!(),
                 };
 
-                let class_hash = tx.class_hash().0.bytes().try_into().unwrap();
                 let declare = Declare::new_with_tx_and_class_hash(
                     contract_class,
-                    Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
+                    Address(Felt252::from_bytes_be_slice(
+                        tx.sender_address().0.key().bytes(),
+                    )),
                     tx.max_fee().0,
-                    Felt252::from_bytes_be(tx.version().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.version().0.bytes()),
                     tx.signature()
                         .0
                         .iter()
-                        .map(|f| Felt252::from_bytes_be(f.bytes()))
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
                         .collect(),
-                    Felt252::from_bytes_be(tx.nonce().0.bytes()),
-                    Felt252::from_bytes_be(tx_hash.0.bytes()),
-                    ClassHash(class_hash),
+                    Felt252::from_bytes_be_slice(tx.nonce().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
+                    class_hash,
                 )
                 .unwrap();
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
@@ -204,19 +251,21 @@ pub fn execute_tx_configurable(
 
                 let declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
                     None,
-                    Felt252::from_bytes_be(tx.class_hash().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.class_hash().0.bytes()),
                     Some(contract_class),
                     compiled_class_hash,
-                    Address(Felt252::from_bytes_be(tx.sender_address().0.key().bytes())),
+                    Address(Felt252::from_bytes_be_slice(
+                        tx.sender_address().0.key().bytes(),
+                    )),
                     tx.max_fee().0,
-                    Felt252::from_bytes_be(tx.version().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.version().0.bytes()),
                     tx.signature()
                         .0
                         .iter()
-                        .map(|f| Felt252::from_bytes_be(f.bytes()))
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
                         .collect(),
-                    Felt252::from_bytes_be(tx.nonce().0.bytes()),
-                    Felt252::from_bytes_be(tx_hash.0.bytes()),
+                    Felt252::from_bytes_be_slice(tx.nonce().0.bytes()),
+                    Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
                 )
                 .unwrap();
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
@@ -224,19 +273,13 @@ pub fn execute_tx_configurable(
         }
         SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(
             tx,
-            Felt252::from_bytes_be(tx_hash.0.bytes()),
+            Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
             Some(Felt252::from(u128::MAX)),
         )
         .unwrap()
         .create_for_simulation(skip_validate, false),
         SNTransaction::Deploy(_) => unimplemented!(),
     };
-
-    let trace = rpc_reader.0.get_transaction_trace(&tx_hash).unwrap();
-    let receipt = rpc_reader.0.get_transaction_receipt(&tx_hash).unwrap();
-
-    let class_cache = PermanentContractClassCache::default();
-    let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
 
     let block_context = BlockContext::new(
         starknet_os_config,
@@ -251,11 +294,11 @@ pub fn execute_tx_configurable(
     );
 
     #[cfg(not(feature = "cairo-native"))]
-    let sir_execution = tx.execute(&mut state, &block_context, u128::MAX)?;
+    let sir_execution = tx.execute(state, &block_context, u128::MAX)?;
     #[cfg(feature = "cairo-native")]
-    let sir_execution = tx.execute(&mut state, &block_context, u128::MAX, None)?;
+    let sir_execution = tx.execute(state, &block_context, u128::MAX, None)?;
 
-    Ok((sir_execution, trace, receipt))
+    Ok(sir_execution)
 }
 
 pub fn execute_tx(

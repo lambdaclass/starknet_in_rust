@@ -1,9 +1,5 @@
-use cairo_vm::{
-    felt::{felt_str, Felt252},
-    vm::runners::cairo_runner::ExecutionResources,
-};
+use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use lazy_static::lazy_static;
-use num_traits::Zero;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
@@ -28,7 +24,8 @@ use starknet_in_rust::{
 use std::{collections::HashSet, sync::Arc};
 
 lazy_static! {
-    static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 = felt_str!("1");
+    static ref TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH: Felt252 =
+        Felt252::from_dec_str("1").unwrap();
 }
 
 #[test]
@@ -43,7 +40,7 @@ fn internal_deploy_account() {
         ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
 
     let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
-    let class_hash = ClassHash::from(class_hash_felt.clone());
+    let class_hash = ClassHash::from(class_hash_felt);
 
     state
         .set_contract_class(
@@ -52,24 +49,28 @@ fn internal_deploy_account() {
         )
         .unwrap();
 
-    let contract_address_salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+    let contract_address_salt = Felt252::from_dec_str(
+        "2669425616857739096022668060305620640217901643963991674344872184515580705509",
+    )
+    .unwrap();
 
     let internal_deploy_account = DeployAccount::new(
         class_hash,
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![],
         vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
+            Felt252::from_dec_str(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074",
+            )
+            .unwrap(),
+            Felt252::from_dec_str(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203",
+            )
+            .unwrap(),
         ],
-        contract_address_salt.clone(),
+        contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
     )
     .unwrap();
@@ -87,7 +88,7 @@ fn internal_deploy_account() {
         &contract_address_salt,
         &class_hash_felt,
         &[],
-        Address(Felt252::zero()),
+        Address(Felt252::ZERO),
     )
     .unwrap();
 
@@ -96,14 +97,11 @@ fn internal_deploy_account() {
         TransactionExecutionInfo::new(
             Some(CallInfo {
                 call_type: Some(CallType::Call),
-                contract_address: Address(contract_address.clone()),
+                contract_address: Address(contract_address),
                 class_hash: Some(class_hash),
-                entry_point_selector: Some(VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone()),
+                entry_point_selector: Some(*VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR),
                 entry_point_type: Some(EntryPointType::External),
-                calldata: vec![
-                    Felt252::from_bytes_be(class_hash.to_bytes_be()),
-                    contract_address_salt
-                ],
+                calldata: vec![Felt252::from_bytes_be(&class_hash.0), contract_address_salt],
                 execution_resources: Some(ExecutionResources {
                     n_steps: 13,
                     n_memory_holes: 0,
@@ -115,7 +113,7 @@ fn internal_deploy_account() {
                 call_type: Some(CallType::Call),
                 contract_address: Address(contract_address),
                 class_hash: Some(class_hash),
-                entry_point_selector: Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
+                entry_point_selector: Some(*CONSTRUCTOR_ENTRY_POINT_SELECTOR),
                 entry_point_type: Some(EntryPointType::Constructor),
                 ..Default::default()
             }),
@@ -152,7 +150,7 @@ fn internal_deploy_account_cairo1() {
 
     state
         .set_contract_class(
-            &ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes()),
+            &ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_bytes_be()),
             &CompiledClass::Casm(Arc::new(contract_class)),
         )
         .unwrap();
@@ -163,22 +161,26 @@ fn internal_deploy_account_cairo1() {
         )
         .unwrap();
 
-    let contract_address_salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+    let contract_address_salt = Felt252::from_dec_str(
+        "2669425616857739096022668060305620640217901643963991674344872184515580705509",
+    )
+    .unwrap();
 
     let internal_deploy_account = DeployAccount::new(
-        ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes()),
+        ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_bytes_be()),
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![2.into()],
         vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
+            Felt252::from_dec_str(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074",
+            )
+            .unwrap(),
+            Felt252::from_dec_str(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203",
+            )
+            .unwrap(),
         ],
         contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
@@ -216,9 +218,7 @@ fn internal_deploy_account_cairo1() {
             Some(CallInfo {
                 caller_address: Address(0.into()),
                 call_type: Some(CallType::Call),
-                contract_address: Address(felt_str!(
-                    "397149464972449753182583229366244826403270781177748543857889179957856017275"
-                )),
+                contract_address: Address(Felt252::from_dec_str("397149464972449753182583229366244826403270781177748543857889179957856017275").unwrap()),
                 code_address: None,
                 #[cfg(not(feature="cairo_1_tests"))]
                 gas_consumed: 15540,
@@ -228,16 +228,16 @@ fn internal_deploy_account_cairo1() {
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 1
                 ])),
-                entry_point_selector: Some(felt_str!(
+                entry_point_selector: Some(Felt252::from_dec_str(
                     "1554466106298962091002569854891683800203193677547440645928814916929210362005"
-                )),
+                ).unwrap()),
                 entry_point_type: Some(EntryPointType::External),
                 calldata: vec![
                     1.into(),
-                   felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
+                   Felt252::from_dec_str("2669425616857739096022668060305620640217901643963991674344872184515580705509").unwrap(),
                     2.into()
                 ],
-                retdata: vec![felt_str!("370462705988")],
+                retdata: vec![Felt252::from_dec_str("370462705988").unwrap()],
                 execution_resources: Some(ExecutionResources {
                     #[cfg(not(feature="cairo_1_tests"))]
                     n_steps: 144,
@@ -257,14 +257,12 @@ fn internal_deploy_account_cairo1() {
 
             Some(CallInfo {
                 call_type: Some(CallType::Call),
-                contract_address: Address(felt_str!(
-                    "397149464972449753182583229366244826403270781177748543857889179957856017275"
-                )),
+                contract_address: Address(Felt252::from_dec_str("397149464972449753182583229366244826403270781177748543857889179957856017275").unwrap()),
                 class_hash: Some(
-                    ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_be_bytes()),
+                    ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_bytes_be()),
 
                 ),
-                entry_point_selector: Some(felt_str!("1159040026212278395030414237414753050475174923702621880048416706425641521556")),
+                entry_point_selector: Some(Felt252::from_dec_str("1159040026212278395030414237414753050475174923702621880048416706425641521556").unwrap()),
                 entry_point_type: Some(EntryPointType::Constructor),
                 #[cfg(not(feature="cairo_1_tests"))]
                 gas_consumed: 13840,

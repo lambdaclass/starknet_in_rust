@@ -14,7 +14,7 @@ use crate::{
         state_api::StateReader, ExecutionResourcesManager,
     },
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::HashMap;
 
@@ -49,7 +49,7 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
     let fee_token_address = block_context.starknet_os_config.fee_token_address.clone();
 
     let calldata = [
-        block_context.block_info.sequencer_address.0.clone(),
+        block_context.block_info.sequencer_address.0,
         Felt252::from(actual_fee), // U256.low
         0.into(),                  // U256.high
     ]
@@ -58,7 +58,7 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
     let fee_transfer_call = ExecutionEntryPoint::new(
         fee_token_address,
         calldata,
-        TRANSFER_ENTRY_POINT_SELECTOR.clone(),
+        *TRANSFER_ENTRY_POINT_SELECTOR,
         tx_execution_context.account_contract_address.clone(),
         EntryPointType::External,
         Some(CallType::Call),

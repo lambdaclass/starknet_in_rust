@@ -2,10 +2,10 @@ use crate::execution::CallResult;
 use crate::syscalls::syscall_handler::HintProcessorPostRun;
 use crate::transaction::error::TransactionError;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
 use cairo_vm::serde::deserialize_program::BuiltinName;
 use cairo_vm::types::errors::math_errors::MathError;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{
@@ -183,7 +183,7 @@ where
             ret_ptr,
             n_rets
                 .to_usize()
-                .ok_or_else(|| MathError::Felt252ToUsizeConversion(Box::new(n_rets.clone())))?,
+                .ok_or_else(|| MathError::Felt252ToUsizeConversion(Box::new(*n_rets)))?,
         )?;
         Ok(ret_data.into_iter().map(Cow::into_owned).collect())
     }

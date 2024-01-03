@@ -1,5 +1,4 @@
-use cairo_vm::felt::{felt_str, Felt252};
-use num_traits::Zero;
+use cairo_vm::{utils::biguint_to_felt, Felt252};
 use starknet_in_rust::{
     call_contract,
     definitions::block_context::{BlockContext, StarknetChainId},
@@ -35,7 +34,7 @@ fn test_erc20_cairo2() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.extend([
         (class_hash, CompiledClass::Casm(Arc::new(contract_class))),
@@ -56,16 +55,18 @@ fn test_erc20_cairo2() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), contract_class_cache);
 
-    let name_ = Felt252::from_bytes_be(b"some-token");
-    let symbol_ = Felt252::from_bytes_be(b"my-super-awesome-token");
+    let name_ = Felt252::from_bytes_be_slice(b"some-token");
+    let symbol_ = Felt252::from_bytes_be_slice(b"my-super-awesome-token");
     let decimals_ = Felt252::from(24);
     let initial_supply = Felt252::from(1000);
-    let recipient =
-        felt_str!("397149464972449753182583229366244826403270781177748543857889179957856017275");
-    let erc20_salt = felt_str!("1234");
+    let recipient = Felt252::from_dec_str(
+        "397149464972449753182583229366244826403270781177748543857889179957856017275",
+    )
+    .unwrap();
+    let erc20_salt = Felt252::from_dec_str("1234").unwrap();
     // arguments of deploy contract
     let calldata = vec![
-        Felt252::from_bytes_be(erc20_class_hash.to_bytes_be()),
+        Felt252::from_bytes_be(&erc20_class_hash.0),
         erc20_salt,
         recipient,
         name_,
@@ -81,7 +82,7 @@ fn test_erc20_cairo2() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -93,7 +94,7 @@ fn test_erc20_cairo2() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
@@ -114,7 +115,7 @@ fn test_erc20_cairo2() {
             None,
         )
         .unwrap();
-    let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
+    let erc20_address = *call_info.call_info.unwrap().retdata.get(0).unwrap();
 
     // ACCOUNT 1
     let program_data_account =
@@ -124,30 +125,37 @@ fn test_erc20_cairo2() {
 
     state
         .set_contract_class(
-            &ClassHash::from(felt_str!("1")),
+            &ClassHash::from(Felt252::from_dec_str("1").unwrap()),
             &CompiledClass::Casm(Arc::new(contract_class_account)),
         )
         .unwrap();
     state
-        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash.0))
+        .set_compiled_class_hash(
+            &Felt252::from_dec_str("1").unwrap(),
+            &Felt252::from_bytes_be(&class_hash.0),
+        )
         .unwrap();
 
-    let contract_address_salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+    let contract_address_salt = Felt252::from_dec_str(
+        "2669425616857739096022668060305620640217901643963991674344872184515580705509",
+    )
+    .unwrap();
 
     let internal_deploy_account = DeployAccount::new(
-        ClassHash::from(felt_str!("1")),
+        ClassHash::from(Felt252::from_dec_str("1").unwrap()),
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![2.into()],
         vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
+            Felt252::from_dec_str(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074",
+            )
+            .unwrap(),
+            Felt252::from_dec_str(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203",
+            )
+            .unwrap(),
         ],
         contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
@@ -174,29 +182,34 @@ fn test_erc20_cairo2() {
 
     state
         .set_contract_class(
-            &ClassHash::from(felt_str!("1")),
+            &ClassHash::from(Felt252::from_dec_str("1").unwrap()),
             &CompiledClass::Casm(Arc::new(contract_class_account)),
         )
         .unwrap();
     state
-        .set_compiled_class_hash(&felt_str!("1"), &Felt252::from_bytes_be(&class_hash.0))
+        .set_compiled_class_hash(
+            &Felt252::from_dec_str("1").unwrap(),
+            &Felt252::from_bytes_be(&class_hash.0),
+        )
         .unwrap();
 
-    let contract_address_salt = felt_str!("123123123123123");
+    let contract_address_salt = Felt252::from_dec_str("123123123123123").unwrap();
 
     let internal_deploy_account = DeployAccount::new(
-        ClassHash::from(felt_str!("1")),
+        ClassHash::from(Felt252::from_dec_str("1").unwrap()),
         0,
         1.into(),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![2.into()],
         vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
+            Felt252::from_dec_str(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074",
+            )
+            .unwrap(),
+            Felt252::from_dec_str(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203",
+            )
+            .unwrap(),
         ],
         contract_address_salt,
         StarknetChainId::TestNet.to_felt(),
@@ -220,7 +233,7 @@ fn test_erc20_cairo2() {
     let calldata = vec![account_address_2.clone().0, Felt252::from(123)];
 
     let retdata = call_contract(
-        erc20_address.clone(),
+        erc20_address,
         entrypoint_selector,
         calldata,
         &mut state,
@@ -236,7 +249,7 @@ fn test_erc20_cairo2() {
     // GET BALANCE ACCOUNT 1
     let entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"balance_of"));
     let retdata = call_contract(
-        erc20_address.clone(),
+        erc20_address,
         entrypoint_selector,
         vec![account_address_1.clone().0],
         &mut state,

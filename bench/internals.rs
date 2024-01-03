@@ -1,12 +1,9 @@
 #![deny(warnings)]
-
 #[cfg(feature = "cairo-native")]
-use cairo_native::cache::ProgramCache;
+use cairo_native::cache::{JitProgramCache, ProgramCache};
 
-use cairo_vm::felt;
-use felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
 use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::{
@@ -36,14 +33,14 @@ lazy_static! {
         "starknet_programs/account_without_validation.json",
     ).unwrap();
     static ref CLASS_HASH_FELT: Felt252 = compute_deprecated_class_hash(&CONTRACT_CLASS).unwrap();
-    static ref CLASS_HASH: ClassHash = ClassHash(CLASS_HASH_FELT.to_be_bytes());
-    static ref SALT: Felt252 = felt_str!(
+    static ref CLASS_HASH: ClassHash = ClassHash(CLASS_HASH_FELT.to_bytes_be());
+    static ref SALT: Felt252 = Felt252::from_dec_str(
         "2669425616857739096022668060305620640217901643963991674344872184515580705509"
-    );
+    ).unwrap();
     static ref CONTRACT_ADDRESS: Address = Address(calculate_contract_address(&SALT, &CLASS_HASH_FELT, &[], Address(0.into())).unwrap());
     static ref SIGNATURE: Vec<Felt252> = vec![
-        felt_str!("3233776396904427614006684968846859029149676045084089832563834729503047027074"),
-        felt_str!("707039245213420890976709143988743108543645298941971188668773816813012281203"),
+        Felt252::from_dec_str("3233776396904427614006684968846859029149676045084089832563834729503047027074").unwrap(),
+        Felt252::from_dec_str("707039245213420890976709143988743108543645298941971188668773816813012281203").unwrap(),
     ];
 }
 
@@ -59,9 +56,9 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 fn main() {
     #[cfg(feature = "cairo-native")]
     {
-        let program_cache = Rc::new(RefCell::new(ProgramCache::new(
+        let program_cache = Rc::new(RefCell::new(ProgramCache::from(JitProgramCache::new(
             starknet_in_rust::utils::get_native_context(),
-        )));
+        ))));
 
         deploy_account(program_cache.clone());
         declare(program_cache.clone());
@@ -105,10 +102,10 @@ pub fn deploy_account(
                 class_hash,
                 0,
                 1.into(),
-                Felt252::zero(),
+                Felt252::ZERO,
                 vec![],
                 signature,
-                SALT.clone(),
+                *SALT,
                 StarknetChainId::TestNet.to_felt(),
             )
             .unwrap();
@@ -150,7 +147,7 @@ pub fn declare(
                 0,
                 0.into(),
                 vec![],
-                Felt252::zero(),
+                Felt252::ZERO,
             )
             .expect("couldn't create transaction");
 
@@ -188,9 +185,10 @@ pub fn deploy(
 
     for _ in 0..RUNS {
         let mut state_copy = state.clone_for_testing();
-        let salt = felt_str!(
-            "2669425616857739096022668060305620640217901643963991674344872184515580705509"
-        );
+        let salt = Felt252::from_dec_str(
+            "2669425616857739096022668060305620640217901643963991674344872184515580705509",
+        )
+        .unwrap();
         let class = CONTRACT_CLASS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
@@ -234,8 +232,10 @@ pub fn invoke(
 
     let block_context = &Default::default();
 
-    let salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+    let salt = Felt252::from_dec_str(
+        "2669425616857739096022668060305620640217901643963991674344872184515580705509",
+    )
+    .unwrap();
     let class = CONTRACT_CLASS.clone();
     let deploy = Deploy::new(
         salt,
@@ -258,20 +258,20 @@ pub fn invoke(
     for _ in 0..RUNS {
         let mut state_copy = state.clone_for_testing();
         let address = CONTRACT_ADDRESS.clone();
-        let selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let selector = *VALIDATE_ENTRY_POINT_SELECTOR;
         let signature = SIGNATURE.clone();
-        let calldata = vec![address.0.clone(), selector.clone(), Felt252::zero()];
+        let calldata = vec![address.0, selector, Felt252::ZERO];
         scope(|| {
             // new consumes more execution time than raw struct instantiation
             let internal_invoke = InvokeFunction::new(
                 address,
                 selector,
                 0,
-                TRANSACTION_VERSION.clone(),
+                *TRANSACTION_VERSION,
                 calldata,
                 signature,
                 StarknetChainId::TestNet.to_felt(),
-                Some(Felt252::zero()),
+                Some(Felt252::ZERO),
             )
             .unwrap();
             internal_invoke.execute(

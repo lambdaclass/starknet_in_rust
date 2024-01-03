@@ -33,18 +33,19 @@ use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
 #[cfg(feature = "cairo-native")]
-use cairo_native::cache::ProgramCache;
+use cairo_native::cache::{jit::JitProgramCache, ProgramCache};
 use cairo_vm::{
-    felt::Felt252,
     types::{
         program::Program,
         relocatable::{MaybeRelocatable, Relocatable},
     },
+    utils::felt_to_biguint,
     vm::{
         errors::runner_errors::RunnerError,
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources, RunResources},
         vm_core::VirtualMachine,
     },
+    Felt252,
 };
 use std::sync::Arc;
 
@@ -182,9 +183,9 @@ impl ExecutionEntryPoint {
                 let mut transactional_state = state.create_transactional()?;
 
                 let program_cache = program_cache.unwrap_or_else(|| {
-                    Rc::new(RefCell::new(ProgramCache::new(
+                    Rc::new(RefCell::new(ProgramCache::from(JitProgramCache::new(
                         crate::utils::get_native_context(),
-                    )))
+                    ))))
                 });
 
                 match self.native_execute(
@@ -278,11 +279,11 @@ impl ExecutionEntryPoint {
         let entry_point = entry_points
             .iter()
             .filter(|x| {
-                if x.selector == DEFAULT_ENTRY_POINT_SELECTOR.to_biguint() {
+                if x.selector == felt_to_biguint(*DEFAULT_ENTRY_POINT_SELECTOR) {
                     default_entry_point = Some(*x);
                 }
 
-                x.selector == self.entry_point_selector.to_biguint()
+                x.selector == felt_to_biguint(self.entry_point_selector)
             })
             .try_fold(None, |acc, x| match acc {
                 None => Ok(Some(x)),
@@ -313,7 +314,7 @@ impl ExecutionEntryPoint {
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
             class_hash: Some(self.get_class_hash(starknet_storage_state.state)?),
-            entry_point_selector: Some(self.entry_point_selector.clone()),
+            entry_point_selector: Some(self.entry_point_selector),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata,
@@ -347,7 +348,7 @@ impl ExecutionEntryPoint {
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
             class_hash: Some(self.get_class_hash(starknet_storage_state.state)?),
-            entry_point_selector: Some(self.entry_point_selector.clone()),
+            entry_point_selector: Some(self.entry_point_selector),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata: call_result
@@ -445,7 +446,7 @@ impl ExecutionEntryPoint {
             .into();
 
         let entry_point_args = [
-            &CairoArg::Single(self.entry_point_selector.clone().into()),
+            &CairoArg::Single(self.entry_point_selector.into()),
             &CairoArg::Array(os_context.clone()),
             &CairoArg::Single(MaybeRelocatable::Int(self.calldata.len().into())),
             &CairoArg::Single(alloc_pointer),
@@ -544,7 +545,7 @@ impl ExecutionEntryPoint {
             block_context.clone(),
             initial_syscall_ptr,
             support_reverted,
-            self.entry_point_selector.clone(),
+            self.entry_point_selector,
         );
         // create and attach a syscall hint processor to the starknet runner.
         let hint_processor = SyscallHintProcessor::new(
@@ -672,7 +673,8 @@ impl ExecutionEntryPoint {
         class_hash: &ClassHash,
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     ) -> Result<CallInfo, TransactionError> {
-        use cairo_native::values::JITValue;
+        use cairo_native::executor::NativeExecutor;
+        use std::ops::{Deref, DerefMut};
 
         use crate::{
             syscalls::business_logic_syscall_handler::SYSCALL_BASE, utils::NATIVE_CONTEXT,
@@ -680,7 +682,9 @@ impl ExecutionEntryPoint {
 
         // Ensure we're using the global context, if initialized.
         if let Some(native_context) = NATIVE_CONTEXT.get() {
-            assert_eq!(program_cache.borrow().context(), native_context);
+            if let ProgramCache::Jit(cache) = (*program_cache).borrow().deref() {
+                assert_eq!(cache.context(), native_context)
+            }
         }
 
         let sierra_program = &sierra_program_and_entrypoints.0;
@@ -690,27 +694,24 @@ impl ExecutionEntryPoint {
             EntryPointType::External => contract_entrypoints
                 .external
                 .iter()
-                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .find(|entry_point| {
+                    entry_point.selector == felt_to_biguint(self.entry_point_selector)
+                })
                 .unwrap(),
             EntryPointType::Constructor => contract_entrypoints
                 .constructor
                 .iter()
-                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .find(|entry_point| {
+                    entry_point.selector == felt_to_biguint(self.entry_point_selector)
+                })
                 .unwrap(),
             EntryPointType::L1Handler => contract_entrypoints
                 .l1_handler
                 .iter()
-                .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
+                .find(|entry_point| {
+                    entry_point.selector == felt_to_biguint(self.entry_point_selector)
+                })
                 .unwrap(),
-        };
-
-        let native_executor = {
-            let mut cache = program_cache.borrow_mut();
-            if let Some(executor) = cache.get(*class_hash) {
-                executor
-            } else {
-                cache.compile_and_insert(*class_hash, sierra_program)
-            }
         };
 
         let contract_storage_state =
@@ -723,21 +724,12 @@ impl ExecutionEntryPoint {
             contract_address: self.contract_address.clone(),
             internal_calls: Vec::new(),
             caller_address: self.caller_address.clone(),
-            entry_point_selector: self.entry_point_selector.clone(),
+            entry_point_selector: self.entry_point_selector,
             tx_execution_context: tx_execution_context.clone(),
             block_context: block_context.clone(),
             program_cache: program_cache.clone(),
             resources_manager: Default::default(),
         };
-
-        native_executor
-            .borrow_mut()
-            .get_module_mut()
-            .remove_metadata::<SyscallHandlerMeta>();
-        native_executor
-            .borrow_mut()
-            .get_module_mut()
-            .insert_metadata(SyscallHandlerMeta::new(&mut syscall_handler));
 
         let entry_point_fn = &sierra_program
             .funcs
@@ -747,17 +739,51 @@ impl ExecutionEntryPoint {
 
         let entry_point_id = &entry_point_fn.id;
 
-        let calldata: Vec<_> = self
-            .calldata
-            .iter()
-            .cloned()
-            .map(JITValue::Felt252)
-            .collect();
-
-        let value = native_executor
-            .borrow()
-            .execute_contract(entry_point_id, &calldata, self.initial_gas)
-            .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
+        let native_executor = match (*program_cache).borrow_mut().deref_mut() {
+            ProgramCache::Aot(cache) => {
+                let native_executor = {
+                    if let Some(executor) = cache.get(class_hash) {
+                        executor
+                    } else {
+                        cache.compile_and_insert(*class_hash, sierra_program)
+                    }
+                };
+                NativeExecutor::Aot(native_executor)
+            }
+            ProgramCache::Jit(cache) => {
+                let native_executor = {
+                    if let Some(executor) = cache.get(class_hash) {
+                        executor
+                    } else {
+                        cache.compile_and_insert(*class_hash, sierra_program)
+                    }
+                };
+                NativeExecutor::Jit(native_executor)
+            }
+        };
+        let syscall_handler_meta = SyscallHandlerMeta::new(&mut syscall_handler);
+        let value = match native_executor {
+            NativeExecutor::Aot(executor) => executor
+                .invoke_contract_dynamic(
+                    entry_point_id,
+                    &self.calldata,
+                    Some(self.initial_gas),
+                    Some(&syscall_handler_meta),
+                )
+                .map_err(|e| {
+                    TransactionError::CustomError(format!("cairo-native error: {:?}", e))
+                })?,
+            NativeExecutor::Jit(executor) => executor
+                .invoke_contract_dynamic(
+                    entry_point_id,
+                    &self.calldata,
+                    Some(self.initial_gas),
+                    Some(&syscall_handler_meta),
+                )
+                .map_err(|e| {
+                    TransactionError::CustomError(format!("cairo-native error: {:?}", e))
+                })?,
+        };
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
@@ -765,7 +791,7 @@ impl ExecutionEntryPoint {
             contract_address: self.contract_address.clone(),
             code_address: self.code_address.clone(),
             class_hash: Some(self.get_class_hash(syscall_handler.starknet_storage_state.state)?),
-            entry_point_selector: Some(self.entry_point_selector.clone()),
+            entry_point_selector: Some(self.entry_point_selector),
             entry_point_type: Some(self.entry_point_type),
             calldata: self.calldata.clone(),
             retdata: value.return_values,
