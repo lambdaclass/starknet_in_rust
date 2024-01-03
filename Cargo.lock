@@ -1284,7 +1284,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=4abfe4cb45f49723e90872aaeacbc74f67204b36#4abfe4cb45f49723e90872aaeacbc74f67204b36"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=16b36c8fb609c5a16ca646b9784fac291994f80f#16b36c8fb609c5a16ca646b9784fac291994f80f"
 dependencies = [
  "bumpalo",
  "cairo-lang-compiler",
@@ -1322,7 +1322,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=4abfe4cb45f49723e90872aaeacbc74f67204b36#4abfe4cb45f49723e90872aaeacbc74f67204b36"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=16b36c8fb609c5a16ca646b9784fac291994f80f#16b36c8fb609c5a16ca646b9784fac291994f80f"
 dependencies = [
  "cairo-lang-runner",
  "lazy_static",
@@ -2896,9 +2896,9 @@ dependencies = [
 
 [[package]]
 name = "melior"
-version = "0.14.1"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3bcffc01df9997b0976c7e053d8dff0c438a24539f74944e59d4f45636d3553"
+checksum = "634f33663d2bcac794409829caf83a08967249e5429f34ec20c92230a85c025a"
 dependencies = [
  "dashmap",
  "melior-macro",
@@ -2908,9 +2908,9 @@ dependencies = [
 
 [[package]]
 name = "melior-macro"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3113479e9b0b0f74ae36f3f99d01fdda54facff56129612f16fc0a9dee26807d"
+checksum = "ac9339fd6934926500d5a5f378bb5cda44efe33c74e4c300f083bf89b1544005"
 dependencies = [
  "comrak",
  "convert_case 0.6.0",
@@ -4429,6 +4429,7 @@ dependencies = [
  "coverage-helper",
  "mimalloc",
  "num-traits 0.2.17",
+ "once_cell",
  "serde",
  "starknet_in_rust",
 ]

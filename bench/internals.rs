@@ -2,7 +2,7 @@
 
 use cairo_native::cache::JitProgramCache;
 #[cfg(feature = "cairo-native")]
-use cairo_native::cache::ProgramCache;
+use cairo_native::cache::{JitProgramCache, ProgramCache};
 
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;

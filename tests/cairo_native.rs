@@ -143,7 +143,7 @@ fn get_block_hash_test() {
     assert_eq!(vm_result.contract_address, caller_address);
     assert_eq!(
         vm_result.entry_point_selector,
-        Some(biguint_to_felt(casm_external_selector).unwrap())
+        Some(Felt252::from(casm_external_selector))
     );
     assert_eq!(vm_result.entry_point_type, Some(EntryPointType::External));
     assert_eq!(vm_result.calldata, calldata);
@@ -159,7 +159,7 @@ fn get_block_hash_test() {
     assert_eq!(native_result.contract_address, caller_address);
     assert_eq!(
         native_result.entry_point_selector,
-        Some(biguint_to_felt(native_external_selector).unwrap())
+        Some(Felt252::from(native_external_selector))
     );
     assert_eq!(
         native_result.entry_point_type,
@@ -376,7 +376,7 @@ fn integration_test_erc20() {
     assert_eq!(vm_result.contract_address, caller_address);
     assert_eq!(
         vm_result.entry_point_selector,
-        Some(casm_constructor_selector.into())
+        Some(Felt252::from(casm_constructor_selector))
     );
     assert_eq!(
         vm_result.entry_point_type,
@@ -392,7 +392,7 @@ fn integration_test_erc20() {
     assert_eq!(native_result.contract_address, caller_address);
     assert_eq!(
         native_result.entry_point_selector,
-        Some(native_constructor_selector.into())
+        Some(Felt252::from(native_constructor_selector))
     );
     assert_eq!(
         native_result.entry_point_type,
@@ -741,7 +741,7 @@ fn call_contract_test() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
-    let calldata = [fn_selector.into()].to_vec();
+    let calldata = [Felt252::from(fn_selector)].to_vec();
     let result = execute(
         &mut state,
         &caller_address,
@@ -829,7 +829,7 @@ fn call_echo_contract_test() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
-    let calldata = [fn_selector.into(), 99999999.into()].to_vec();
+    let calldata = [Felt252::from(fn_selector), 99999999.into()].to_vec();
     let result = execute(
         &mut state,
         &caller_address,
@@ -849,7 +849,6 @@ fn call_echo_contract_test() {
 fn call_events_contract_test() {
     // Caller contract
 
-    use cairo_vm::utils::biguint_to_felt;
     let caller_contract_class: cairo_lang_starknet::contract_class::ContractClass =
         serde_json::from_str(
             std::fs::read_to_string("starknet_programs/cairo2/caller.sierra")
@@ -921,7 +920,7 @@ fn call_events_contract_test() {
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
-    let calldata = [biguint_to_felt(fn_selector).unwrap()];
+    let calldata = [Felt252::from(fn_selector)];
     let result = execute(
         &mut state,
         &caller_address,
@@ -941,7 +940,7 @@ fn call_events_contract_test() {
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             2, 2, 2,
         ])),
-        entry_point_selector: Some(biguint_to_felt(fn_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(fn_selector)),
         entry_point_type: Some(External),
         calldata: Vec::new(),
         retdata: vec![1234.into()],
@@ -1404,7 +1403,7 @@ fn execute(
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
         calldata.to_vec(),
-        selector.into(),
+        Felt252::from(selector),
         (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),
@@ -1512,7 +1511,7 @@ fn library_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        entrypoint_selector.into(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1538,7 +1537,7 @@ fn library_call() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(entrypoint_selector.into()),
+        entry_point_selector: Some(Felt252::from(entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
@@ -1601,7 +1600,7 @@ fn execute_deploy(
     let exec_entry_point = ExecutionEntryPoint::new(
         (*caller_address).clone(),
         calldata.to_vec(),
-        selector.into(),
+        Felt252::from(selector),
         (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),
@@ -1895,7 +1894,7 @@ fn get_execution_info_test() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata.to_vec(),
-        selector.into(),
+        Felt252::from(selector),
         Address(0.into()),
         EntryPointType::External,
         Some(CallType::Delegate),
@@ -1948,7 +1947,7 @@ fn get_execution_info_test() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(selector.into()),
+        entry_point_selector: Some(Felt252::from(selector)),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: None,

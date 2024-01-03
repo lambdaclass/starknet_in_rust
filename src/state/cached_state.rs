@@ -255,7 +255,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
                 deploy_contract_address.clone(),
             ));
         }
-
+        #[cfg(not(feature = "replay_benchmark"))]
         match self.get_class_hash_at(&deploy_contract_address) {
             Ok(x) if x == [0; 32] => {}
             Ok(_) => {
