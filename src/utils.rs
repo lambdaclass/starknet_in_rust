@@ -18,7 +18,7 @@ use core::fmt;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sha3::{Digest, Keccak256};
+use sha3::{Digest, Keccak256, Keccak256Core};
 use starknet::core::types::FromByteArrayError;
 use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
 use starknet_crypto::{pedersen_hash, FieldElement};
@@ -453,7 +453,7 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     Ok(())
 }
 pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
-    let mut hasher = Keccak256::default();
+    let mut hasher = Keccak256::from_core(Keccak256Core::default());
     hasher.update(data);
     let mut result: [u8; 32] = hasher.finalize().into();
     // Only the first 250 bits from the hash are used.

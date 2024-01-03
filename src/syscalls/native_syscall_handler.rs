@@ -5,8 +5,8 @@ use cairo_native::{
     cache::ProgramCache,
     starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
 };
+use cairo_vm::Felt252;
 use starknet::core::utils::cairo_short_string_to_felt;
-use starknet_types_core::felt::Felt;
 
 use crate::definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR;
 use crate::execution::CallResult;
@@ -44,7 +44,7 @@ where
     pub(crate) starknet_storage_state: ContractStorageState<'a, S, C>,
     pub(crate) contract_address: Address,
     pub(crate) caller_address: Address,
-    pub(crate) entry_point_selector: Felt,
+    pub(crate) entry_point_selector: Felt252,
     pub(crate) events: Vec<OrderedEvent>,
     pub(crate) l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub(crate) resources_manager: ExecutionResourcesManager,
@@ -63,7 +63,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
             .unwrap_or(0);
 
         if *gas < required_gas {
-            let out_of_gas_felt = Felt::from_bytes_be_slice("Out of gas".as_bytes());
+            let out_of_gas_felt = Felt252::from_bytes_be_slice("Out of gas".as_bytes());
             tracing::debug!("out of gas!: {:?} < {:?}", *gas, required_gas);
             return Err(vec![out_of_gas_felt]);
         }
@@ -80,7 +80,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
 impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     for NativeSyscallHandler<'a, 'cache, S, C>
 {
-    fn get_block_hash(&mut self, block_number: u64, gas: &mut u128) -> SyscallResult<Felt> {
+    fn get_block_hash(
+        &mut self,
+        block_number: u64,
+        gas: &mut u128,
+    ) -> SyscallResult<cairo_vm::Felt252> {
         tracing::debug!("Called `get_block_hash({block_number})` from Cairo Native");
         self.handle_syscall_request(gas, "get_block_hash")?;
 
@@ -88,10 +92,10 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
         if current_block_number < 10 || block_number > current_block_number - 10 {
             let out_of_range_felt =
-                Felt::from_bytes_be_slice("Block number out of range".as_bytes());
+                Felt252::from_bytes_be_slice("Block number out of range".as_bytes());
             return Err(vec![out_of_range_felt]);
         }
-        let key: Felt = block_number.into();
+        let key: Felt252 = block_number.into();
         let block_hash_address = Address(1.into());
 
         match self
@@ -100,7 +104,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             .get_storage_at(&(block_hash_address, key.to_bytes_be()))
         {
             Ok(value) => Ok(value),
-            Err(e) => Err(vec![Felt::from_bytes_be_slice(e.to_string().as_bytes())]),
+            Err(e) => Err(vec![Felt252::from_bytes_be_slice(e.to_string().as_bytes())]),
         }
     }
 
@@ -135,12 +139,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn deploy(
         &mut self,
-        class_hash: Felt,
-        contract_address_salt: Felt,
-        calldata: &[Felt],
+        class_hash: Felt252,
+        contract_address_salt: Felt252,
+        calldata: &[Felt252],
         deploy_from_zero: bool,
         gas: &mut u128,
-    ) -> SyscallResult<(Felt, Vec<Felt>)> {
+    ) -> SyscallResult<(Felt252, Vec<Felt252>)> {
         tracing::debug!("Called `deploy({class_hash}, {calldata:?})` from Cairo Native");
         self.handle_syscall_request(gas, "deploy")?;
 
@@ -158,7 +162,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
                 deployer_address,
             )
             .map_err(|_| {
-                vec![Felt::from_bytes_be_slice(
+                vec![Felt252::from_bytes_be_slice(
                     b"FAILED_TO_CALCULATE_CONTRACT_ADDRESS",
                 )]
             })?,
@@ -169,7 +173,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         self.starknet_storage_state
             .state
             .deploy_contract(contract_address.clone(), class_hash_bytes)
-            .map_err(|_| vec![Felt::from_bytes_be_slice(b"CONTRACT_ADDRESS_UNAVAILABLE")])?;
+            .map_err(|_| {
+                vec![Felt252::from_bytes_be_slice(
+                    b"CONTRACT_ADDRESS_UNAVAILABLE",
+                )]
+            })?;
 
         let result = self
             .execute_constructor_entry_point(
@@ -178,7 +186,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
                 calldata.to_vec(),
                 *gas,
             )
-            .map_err(|_| vec![Felt::from_bytes_be_slice(b"CONSTRUCTOR_ENTRYPOINT_FAILURE")])?;
+            .map_err(|_| {
+                vec![Felt252::from_bytes_be_slice(
+                    b"CONSTRUCTOR_ENTRYPOINT_FAILURE",
+                )]
+            })?;
 
         *gas = gas.saturating_sub(result.gas_consumed);
 
@@ -192,7 +204,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         ))
     }
 
-    fn replace_class(&mut self, class_hash: Felt, gas: &mut u128) -> SyscallResult<()> {
+    fn replace_class(&mut self, class_hash: Felt252, gas: &mut u128) -> SyscallResult<()> {
         tracing::debug!("Called `replace_class({class_hash})` from Cairo Native");
 
         self.handle_syscall_request(gas, "replace_class")?;
@@ -203,7 +215,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         {
             Ok(_) => Ok(()),
             Err(e) => {
-                let replace_class_felt = Felt::from_bytes_be_slice(e.to_string().as_bytes());
+                let replace_class_felt = Felt252::from_bytes_be_slice(e.to_string().as_bytes());
                 Err(vec![replace_class_felt])
             }
         }
@@ -211,11 +223,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn library_call(
         &mut self,
-        class_hash: Felt,
-        function_selector: Felt,
-        calldata: &[Felt],
+        class_hash: Felt252,
+        function_selector: Felt252,
+        calldata: &[Felt252],
         gas: &mut u128,
-    ) -> SyscallResult<Vec<Felt>> {
+    ) -> SyscallResult<Vec<Felt252>> {
         tracing::debug!(
             "Called `library_call({class_hash}, {function_selector}, {calldata:?})` from Cairo Native"
         );
@@ -275,11 +287,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn call_contract(
         &mut self,
-        address: Felt,
-        entrypoint_selector: Felt,
-        calldata: &[Felt],
+        address: Felt252,
+        entrypoint_selector: Felt252,
+        calldata: &[Felt252],
         gas: &mut u128,
-    ) -> SyscallResult<Vec<Felt>> {
+    ) -> SyscallResult<Vec<Felt252>> {
         tracing::debug!(
             "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from Cairo Native"
         );
@@ -333,15 +345,15 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     fn storage_read(
         &mut self,
         address_domain: u32,
-        address: Felt,
+        address: Felt252,
         gas: &mut u128,
-    ) -> SyscallResult<Felt> {
+    ) -> SyscallResult<Felt252> {
         tracing::debug!("Called `storage_read({address_domain}, {address})` from Cairo Native");
         self.handle_syscall_request(gas, "storage_read")?;
         let value = match self.starknet_storage_state.read(Address(address)) {
             Ok(value) => Ok(value),
             Err(_e @ StateError::Io(_)) => todo!(),
-            Err(_) => Ok(Felt::ZERO),
+            Err(_) => Ok(Felt252::ZERO),
         };
 
         tracing::debug!(" = {value:?}` from Cairo Native");
@@ -352,8 +364,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     fn storage_write(
         &mut self,
         address_domain: u32,
-        address: Felt,
-        value: Felt,
+        address: Felt252,
+        value: Felt252,
         gas: &mut u128,
     ) -> SyscallResult<()> {
         tracing::debug!(
@@ -365,7 +377,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         Ok(())
     }
 
-    fn emit_event(&mut self, keys: &[Felt], data: &[Felt], gas: &mut u128) -> SyscallResult<()> {
+    fn emit_event(
+        &mut self,
+        keys: &[Felt252],
+        data: &[Felt252],
+        gas: &mut u128,
+    ) -> SyscallResult<()> {
         let order = self.tx_execution_context.n_emitted_events;
         tracing::debug!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from Cairo Native");
 
@@ -379,8 +396,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn send_message_to_l1(
         &mut self,
-        to_address: Felt,
-        payload: &[Felt],
+        to_address: Felt252,
+        payload: &[Felt252],
         gas: &mut u128,
     ) -> SyscallResult<()> {
         tracing::debug!("Called `send_message_to_l1({to_address}, {payload:?})` from Cairo Native");
@@ -413,7 +430,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
         if length % 17 != 0 {
             let error_msg = b"Invalid keccak input size";
-            let felt_error = Felt::from_bytes_be_slice(error_msg);
+            let felt_error = Felt252::from_bytes_be_slice(error_msg);
             return Err(vec![felt_error]);
         }
 
@@ -423,7 +440,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         for i in 0..n_chunks {
             if *gas < KECCAK_ROUND_COST {
                 let error_msg = b"Syscall out of gas";
-                let felt_error = Felt::from_bytes_be_slice(error_msg);
+                let felt_error = Felt252::from_bytes_be_slice(error_msg);
                 return Err(vec![felt_error]);
             }
             *gas -= KECCAK_ROUND_COST;
@@ -538,7 +555,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         todo!()
     }
 
-    fn set_account_contract_address(&mut self, contract_address: Felt) {
+    fn set_account_contract_address(&mut self, contract_address: Felt252) {
         self.tx_execution_context.account_contract_address = Address(contract_address);
     }
 
@@ -550,15 +567,15 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         self.block_context.block_info.block_timestamp = block_timestamp;
     }
 
-    fn set_caller_address(&mut self, address: Felt) {
+    fn set_caller_address(&mut self, address: Felt252) {
         self.caller_address = Address(address);
     }
 
-    fn set_chain_id(&mut self, chain_id: Felt) {
+    fn set_chain_id(&mut self, chain_id: Felt252) {
         self.block_context.starknet_os_config.chain_id = chain_id;
     }
 
-    fn set_contract_address(&mut self, address: Felt) {
+    fn set_contract_address(&mut self, address: Felt252) {
         self.contract_address = Address(address);
     }
 
@@ -566,23 +583,23 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         self.tx_execution_context.max_fee = max_fee;
     }
 
-    fn set_nonce(&mut self, nonce: Felt) {
+    fn set_nonce(&mut self, nonce: Felt252) {
         self.tx_execution_context.nonce = nonce;
     }
 
-    fn set_sequencer_address(&mut self, _address: Felt) {
+    fn set_sequencer_address(&mut self, _address: Felt252) {
         todo!()
     }
 
-    fn set_signature(&mut self, signature: &[Felt]) {
+    fn set_signature(&mut self, signature: &[Felt252]) {
         self.tx_execution_context.signature = signature.to_vec();
     }
 
-    fn set_transaction_hash(&mut self, transaction_hash: Felt) {
+    fn set_transaction_hash(&mut self, transaction_hash: Felt252) {
         self.tx_execution_context.transaction_hash = transaction_hash;
     }
 
-    fn set_version(&mut self, version: Felt) {
+    fn set_version(&mut self, version: Felt252) {
         self.tx_execution_context.version = version;
     }
 }
@@ -596,7 +613,7 @@ where
         &mut self,
         contract_address: &Address,
         class_hash_bytes: ClassHash,
-        constructor_calldata: Vec<Felt>,
+        constructor_calldata: Vec<Felt252>,
         remaining_gas: u128,
     ) -> Result<CallResult, StateError> {
         let compiled_class = if let Ok(compiled_class) = self
@@ -609,7 +626,7 @@ where
             return Ok(CallResult {
                 gas_consumed: 0,
                 is_success: false,
-                retdata: vec![Felt::from_bytes_be_slice(b"CLASS_HASH_NOT_FOUND").into()],
+                retdata: vec![Felt252::from_bytes_be_slice(b"CLASS_HASH_NOT_FOUND").into()],
             });
         };
 
@@ -676,12 +693,12 @@ where
     }
 }
 
-impl From<TransactionError> for Vec<Felt> {
+impl From<TransactionError> for Vec<Felt252> {
     fn from(value: TransactionError) -> Self {
         #[inline]
-        fn str_to_felt(x: &str) -> Felt {
+        fn str_to_felt(x: &str) -> Felt252 {
             let felt = cairo_short_string_to_felt(x).expect("shouldnt fail");
-            Felt::from_bytes_be(&felt.to_bytes_be())
+            Felt252::from_bytes_be(&felt.to_bytes_be())
         }
 
         let value = value.to_string();
@@ -712,12 +729,12 @@ impl From<TransactionError> for Vec<Felt> {
     }
 }
 
-impl From<SyscallHandlerError> for Vec<Felt> {
+impl From<SyscallHandlerError> for Vec<Felt252> {
     fn from(value: SyscallHandlerError) -> Self {
         #[inline]
-        fn str_to_felt(x: &str) -> Felt {
+        fn str_to_felt(x: &str) -> Felt252 {
             let felt = cairo_short_string_to_felt(x).expect("shouldnt fail");
-            Felt::from_bytes_be(&felt.to_bytes_be())
+            Felt252::from_bytes_be(&felt.to_bytes_be())
         }
 
         let value = value.to_string();

@@ -44,7 +44,6 @@ cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
 cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "16b36c8fb609c5a16ca646b9784fac291994f80f", optional = true }
-starknet-types-core = { version = "0.0.5", default-features = false, features = ["serde"] }
 
 
 cairo-vm = { workspace = true }

@@ -47,7 +47,6 @@ fn insert_sierra_class_into_cache(
 #[test]
 #[cfg(feature = "cairo-native")]
 fn get_block_hash_test() {
-    use cairo_vm::utils::biguint_to_felt;
     use starknet_in_rust::{
         state::contract_class_cache::PermanentContractClassCache, utils::felt_to_hash,
     };
