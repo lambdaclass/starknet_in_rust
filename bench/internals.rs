@@ -1,6 +1,5 @@
 #![deny(warnings)]
 
-use cairo_native::cache::JitProgramCache;
 #[cfg(feature = "cairo-native")]
 use cairo_native::cache::{JitProgramCache, ProgramCache};
 
