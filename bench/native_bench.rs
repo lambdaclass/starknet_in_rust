@@ -7,12 +7,12 @@
 // $ native_bench <n_executions> native <fibo|fact>
 // where fibo executes a fibonacci function and fact a factorial n times.
 
+use cairo_native::cache::AotProgramCache;
 use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
-use cairo_vm::felt::felt_str;
-use cairo_vm::felt::Felt252;
+use cairo_vm::utils::biguint_to_felt;
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::definitions::block_context::StarknetChainId;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
@@ -99,7 +99,7 @@ fn bench_fibo(executions: usize, native: bool) {
 
     contract_class_cache.set_contract_class(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     state_reader
         .address_to_class_hash_mut()
@@ -116,15 +116,17 @@ fn bench_fibo(executions: usize, native: bool) {
     let mut calldata = [1.into(), 1.into(), 2000000.into()];
 
     let native_ctx = NativeContext::new();
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
+    let program_cache = Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
+        &native_ctx,
+    ))));
 
     for _ in 0..executions {
-        calldata[2] = &calldata[2] + 1usize;
+        calldata[2] = &calldata[2] + 1;
         let result = execute(
             &mut state.clone_for_testing(),
             &caller_address,
             &caller_address,
-            &Felt252::new(constructor_selector.clone()),
+            &biguint_to_felt(&constructor_selector).unwrap(),
             &calldata,
             EntryPointType::External,
             &CASM_CLASS_HASH,
@@ -175,7 +177,7 @@ fn bench_fact(executions: usize, native: bool) {
 
     contract_class_cache.set_contract_class(CASM_CLASS_HASH, contract_class);
     let mut state_reader = InMemoryStateReader::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     state_reader
         .address_to_class_hash_mut()
@@ -192,15 +194,17 @@ fn bench_fact(executions: usize, native: bool) {
     let mut calldata = [2000000.into()];
 
     let native_ctx = NativeContext::new();
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(&native_ctx)));
+    let program_cache = Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
+        &native_ctx,
+    ))));
 
     for _ in 0..executions {
-        calldata[0] = &calldata[0] + 1usize;
+        calldata[0] = &calldata[0] + 1;
         let result = execute(
             &mut state.clone_for_testing(),
             &caller_address,
             &caller_address,
-            &Felt252::new(constructor_selector.clone()),
+            &biguint_to_felt(&constructor_selector).unwrap(),
             &calldata,
             EntryPointType::External,
             &CASM_CLASS_HASH,
@@ -217,29 +221,34 @@ fn bench_erc20(executions: usize, native: bool) {
     let contract_class_cache = PermanentContractClassCache::default();
 
     lazy_static! {
-        static ref ERC20_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("2"));
-        static ref DEPLOYER_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("10"));
-        static ref ACCOUNT1_CLASS_HASH: ClassHash = ClassHash::from(felt_str!("1"));
+        static ref ERC20_CLASS_HASH: ClassHash =
+            ClassHash::from(Felt252::from_dec_str("2").unwrap());
+        static ref DEPLOYER_CLASS_HASH: ClassHash =
+            ClassHash::from(Felt252::from_dec_str("10").unwrap());
+        static ref ACCOUNT1_CLASS_HASH: ClassHash =
+            ClassHash::from(Felt252::from_dec_str("1").unwrap());
         static ref DEPLOYER_ADDRESS: Address = Address(1111.into());
-        static ref ERC20_NAME: Felt252 = Felt252::from_bytes_be(b"be");
-        static ref ERC20_SYMBOL: Felt252 = Felt252::from_bytes_be(b"be");
+        static ref ERC20_NAME: Felt252 = Felt252::from_bytes_be_slice(b"be");
+        static ref ERC20_SYMBOL: Felt252 = Felt252::from_bytes_be_slice(b"be");
         static ref ERC20_DECIMALS: Felt252 = Felt252::from(24);
         static ref ERC20_INITIAL_SUPPLY: Felt252 = Felt252::from(1_000_000);
-        static ref ERC20_RECIPIENT: Felt252 = felt_str!("111");
-        static ref ERC20_SALT: Felt252 = felt_str!("1234");
+        static ref ERC20_RECIPIENT: Felt252 = Felt252::from_dec_str("111").unwrap();
+        static ref ERC20_SALT: Felt252 = Felt252::from_dec_str("1234").unwrap();
         static ref ERC20_DEPLOYER_CALLDATA: [Felt252; 7] = [
-            Felt252::from_bytes_be(ERC20_CLASS_HASH.to_bytes_be()),
-            ERC20_SALT.clone(),
-            ERC20_RECIPIENT.clone(),
-            ERC20_NAME.clone(),
-            ERC20_DECIMALS.clone(),
-            ERC20_INITIAL_SUPPLY.clone(),
-            ERC20_SYMBOL.clone(),
+            Felt252::from_bytes_be(&ERC20_CLASS_HASH.0),
+            *ERC20_SALT,
+            *ERC20_RECIPIENT,
+            *ERC20_NAME,
+            *ERC20_DECIMALS,
+            *ERC20_INITIAL_SUPPLY,
+            *ERC20_SYMBOL,
         ];
         static ref ERC20_DEPLOYMENT_CALLER_ADDRESS: Address = Address(0000.into());
     }
 
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(get_native_context())));
+    let program_cache = Rc::new(RefCell::new(ProgramCache::from(AotProgramCache::new(
+        get_native_context(),
+    ))));
     let (erc20_address, mut state): (
         Address,
         CachedState<InMemoryStateReader, PermanentContractClassCache>,
@@ -276,7 +285,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 .insert(DEPLOYER_ADDRESS.clone(), *DEPLOYER_CLASS_HASH);
             state_reader
                 .address_to_nonce_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
+                .insert(DEPLOYER_ADDRESS.clone(), Felt252::ZERO);
 
             // Create state from the state_reader and contract cache.
             let mut state =
@@ -287,7 +296,7 @@ fn bench_erc20(executions: usize, native: bool) {
             let exec_entry_point = ExecutionEntryPoint::new(
                 DEPLOYER_ADDRESS.clone(),
                 ERC20_DEPLOYER_CALLDATA.to_vec(),
-                Felt252::new(deploy_entrypoint_selector.clone()),
+                biguint_to_felt(deploy_entrypoint_selector).unwrap(),
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
@@ -299,7 +308,7 @@ fn bench_erc20(executions: usize, native: bool) {
             let block_context = BlockContext::default();
             let mut tx_execution_context = TransactionExecutionContext::new(
                 Address(0.into()),
-                Felt252::zero(),
+                Felt252::ZERO,
                 Vec::new(),
                 0,
                 10.into(),
@@ -322,7 +331,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 .unwrap();
 
             // obtain the address of the deployed erc20 contract
-            let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
+            let erc20_address = *call_info.call_info.unwrap().retdata.get(0).unwrap();
 
             (Address(erc20_address), state)
         }
@@ -356,7 +365,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 .insert(DEPLOYER_ADDRESS.clone(), *DEPLOYER_CLASS_HASH);
             state_reader
                 .address_to_nonce_mut()
-                .insert(DEPLOYER_ADDRESS.clone(), Felt252::zero());
+                .insert(DEPLOYER_ADDRESS.clone(), Felt252::ZERO);
 
             // Create state from the state_reader and contract cache.
             let mut state =
@@ -367,7 +376,7 @@ fn bench_erc20(executions: usize, native: bool) {
             let exec_entry_point = ExecutionEntryPoint::new(
                 DEPLOYER_ADDRESS.clone(),
                 ERC20_DEPLOYER_CALLDATA.to_vec(),
-                Felt252::new(deploy_entrypoint_selector.clone()),
+                biguint_to_felt(deploy_entrypoint_selector).unwrap(),
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
@@ -379,7 +388,7 @@ fn bench_erc20(executions: usize, native: bool) {
             let block_context = BlockContext::default();
             let mut tx_execution_context = TransactionExecutionContext::new(
                 Address(0.into()),
-                Felt252::zero(),
+                Felt252::ZERO,
                 Vec::new(),
                 0,
                 10.into(),
@@ -402,7 +411,7 @@ fn bench_erc20(executions: usize, native: bool) {
                 .unwrap();
 
             // obtain the address of the deployed erc20 contract
-            let erc20_address = call_info.call_info.unwrap().retdata.get(0).unwrap().clone();
+            let erc20_address = *call_info.call_info.unwrap().retdata.get(0).unwrap();
 
             (Address(erc20_address), state)
         }
@@ -425,30 +434,34 @@ fn bench_erc20(executions: usize, native: bool) {
         .unwrap();
     state
         .set_compiled_class_hash(
-            &Felt252::from_bytes_be(ACCOUNT1_CLASS_HASH.to_bytes_be()),
-            &Felt252::from_bytes_be(ACCOUNT1_CLASS_HASH.to_bytes_be()),
+            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH.0),
+            &Felt252::from_bytes_be(&ACCOUNT1_CLASS_HASH.0),
         )
         .unwrap();
 
-    let contract_address_salt =
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509");
+    let contract_address_salt = Felt252::from_dec_str(
+        "2669425616857739096022668060305620640217901643963991674344872184515580705509",
+    )
+    .unwrap();
 
     // create a transaction for deploying the first account
     let account1_deploy_tx = DeployAccount::new(
         *ACCOUNT1_CLASS_HASH, // class hash
         0,                    // max fee
         1.into(),             // tx version
-        Felt252::zero(),      // nonce
+        Felt252::ZERO,        // nonce
         vec![2.into()],       // constructor calldata
         vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
+            Felt252::from_dec_str(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074",
+            )
+            .unwrap(),
+            Felt252::from_dec_str(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203",
+            )
+            .unwrap(),
         ], // signature
-        contract_address_salt.clone(), // salt
+        contract_address_salt, // salt
         StarknetChainId::TestNet.to_felt(), // network
     )
     .unwrap();
@@ -468,15 +481,17 @@ fn bench_erc20(executions: usize, native: bool) {
         *ACCOUNT1_CLASS_HASH, // class hash
         0,                    // max fee
         1.into(),             // tx version
-        Felt252::zero(),      // nonce
+        Felt252::ZERO,        // nonce
         vec![3.into()],       // constructor calldata
         vec![
-            felt_str!(
-                "3233776396904427614006684968846859029149676045084089832563834729503047027074"
-            ),
-            felt_str!(
-                "707039245213420890976709143988743108543645298941971188668773816813012281203"
-            ),
+            Felt252::from_dec_str(
+                "3233776396904427614006684968846859029149676045084089832563834729503047027074",
+            )
+            .unwrap(),
+            Felt252::from_dec_str(
+                "707039245213420890976709143988743108543645298941971188668773816813012281203",
+            )
+            .unwrap(),
         ], // signature
         contract_address_salt, // salt
         StarknetChainId::TestNet.to_felt(), // network
@@ -528,7 +543,7 @@ fn execute(
     let exec_entry_point = ExecutionEntryPoint::new(
         (*callee_address).clone(),
         calldata.to_vec(),
-        selector.clone(),
+        *selector,
         (*caller_address).clone(),
         entrypoint_type,
         Some(CallType::Delegate),
@@ -540,12 +555,12 @@ fn execute(
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

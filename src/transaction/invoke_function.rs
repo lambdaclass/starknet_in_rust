@@ -32,9 +32,9 @@ use crate::{
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::Getters;
-use num_traits::{One, Zero};
+use num_traits::Zero;
 use std::{collections::HashMap, fmt::Debug};
 
 #[cfg(feature = "cairo-native")]
@@ -80,14 +80,11 @@ impl InvokeFunction {
         chain_id: Felt252,
         nonce: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
-        let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
-            entry_point_selector.clone(),
-            nonce.clone(),
-            version.clone(),
-        )?;
+        let (entry_point_selector_field, additional_data) =
+            preprocess_invoke_function_fields(entry_point_selector, nonce, version)?;
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
-            version.clone(),
+            version,
             &contract_address,
             entry_point_selector_field,
             &calldata,
@@ -121,7 +118,7 @@ impl InvokeFunction {
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
 
-        let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_ENTRY_POINT_SELECTOR;
 
         Ok(InvokeFunction {
             contract_address,
@@ -159,16 +156,16 @@ impl InvokeFunction {
     ) -> Result<TransactionExecutionContext, TransactionError> {
         Ok(TransactionExecutionContext::new(
             self.contract_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
             self.max_fee,
             if self.version.is_zero() {
-                Felt252::zero()
+                Felt252::ZERO
             } else {
-                self.nonce.clone().ok_or(TransactionError::MissingNonce)?
+                self.nonce.ok_or(TransactionError::MissingNonce)?
             },
             n_steps,
-            self.version.clone(),
+            self.version,
         ))
     }
 
@@ -196,7 +193,7 @@ impl InvokeFunction {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
-            self.validate_entry_point_selector.clone(),
+            self.validate_entry_point_selector,
             Address(0.into()),
             EntryPointType::External,
             None,
@@ -225,7 +222,7 @@ impl InvokeFunction {
             // return `VALID`.
             if !call_info
                 .as_ref()
-                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .map(|ci| ci.retdata == vec![*VALIDATE_RETDATA])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
@@ -253,8 +250,8 @@ impl InvokeFunction {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
-            self.entry_point_selector.clone(),
-            Address(Felt252::zero()),
+            self.entry_point_selector,
+            Address(Felt252::ZERO),
             EntryPointType::External,
             None,
             None,
@@ -362,10 +359,10 @@ impl InvokeFunction {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::one() && self.version != Felt252::zero() {
+        if self.version != Felt252::ONE && self.version != Felt252::ZERO {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Invoke".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![0, 1],
             ));
         }
@@ -600,7 +597,7 @@ pub(crate) fn preprocess_invoke_function_fields(
         match nonce {
             Some(n) => {
                 let additional_data = vec![n];
-                let entry_point_selector_field = Felt252::zero();
+                let entry_point_selector_field = Felt252::ZERO;
                 Ok((entry_point_selector_field, additional_data))
             }
             None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
@@ -616,32 +613,32 @@ fn convert_invoke_v0(
     value: starknet_api::transaction::InvokeTransactionV0,
     tx_hash: Felt252,
 ) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be(
+    let contract_address = Address(Felt252::from_bytes_be_slice(
         value.contract_address.0.key().bytes(),
     ));
     let max_fee = value.max_fee.0;
-    let entry_point_selector = Felt252::from_bytes_be(value.entry_point_selector.0.bytes());
+    let entry_point_selector = Felt252::from_bytes_be_slice(value.entry_point_selector.0.bytes());
     let nonce = None;
 
     let signature = value
         .signature
         .0
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
     let calldata = value
         .calldata
         .0
         .as_ref()
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
 
     InvokeFunction::new_with_tx_hash(
         contract_address,
         entry_point_selector,
         max_fee,
-        Felt252::new(0),
+        Felt252::from(0),
         calldata,
         signature,
         nonce,
@@ -653,30 +650,32 @@ fn convert_invoke_v1(
     value: starknet_api::transaction::InvokeTransactionV1,
     tx_hash: Felt252,
 ) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
+    let contract_address = Address(Felt252::from_bytes_be_slice(
+        value.sender_address.0.key().bytes(),
+    ));
     let max_fee = value.max_fee.0;
-    let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-    let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+    let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
+    let entry_point_selector = *EXECUTE_ENTRY_POINT_SELECTOR;
 
     let signature = value
         .signature
         .0
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
     let calldata = value
         .calldata
         .0
         .as_ref()
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
 
     InvokeFunction::new_with_tx_hash(
         contract_address,
         entry_point_selector,
         max_fee,
-        Felt252::new(1),
+        Felt252::ONE,
         calldata,
         signature,
         Some(nonce),
@@ -700,7 +699,7 @@ mod tests {
         utils::{calculate_sn_keccak, ClassHash},
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use num_traits::Num;
+
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         core::{ContractAddress, Nonce, PatriciaKey},
@@ -768,16 +767,15 @@ mod tests {
             ])),
         });
 
-        assert!(InvokeFunction::from_invoke_transaction(tx, Felt252::one()).is_ok())
+        assert!(InvokeFunction::from_invoke_transaction(tx, Felt252::ONE).is_ok())
     }
 
     #[test]
     fn test_invoke_apply_without_fees() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
+            entry_point_selector: Felt252::from_hex(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -802,7 +800,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -851,16 +849,15 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
     fn test_invoke_execute() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -885,7 +882,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -929,14 +926,14 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
     fn test_apply_invoke_entrypoint_not_found_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
+            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR),
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
@@ -959,7 +956,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1000,9 +997,8 @@ mod tests {
     fn test_apply_v0_with_no_nonce() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1027,7 +1023,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1076,14 +1072,14 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
     fn test_run_validate_entrypoint_nonce_is_none_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
+            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR),
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
@@ -1106,7 +1102,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1153,7 +1149,7 @@ mod tests {
         let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1164,9 +1160,8 @@ mod tests {
 
         let internal_invoke_function = InvokeFunction {
             contract_address,
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1217,9 +1212,8 @@ mod tests {
         let max_fee = 5;
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1244,7 +1238,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1293,9 +1287,8 @@ mod tests {
     fn test_execute_invoke_twice_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1320,7 +1313,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1370,9 +1363,8 @@ mod tests {
     fn test_execute_inovoke_nonce_missing_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1397,7 +1389,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1433,11 +1425,8 @@ mod tests {
     #[test]
     fn invoke_version_zero_with_non_zero_nonce_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             Some(1.into()),
             0.into(),
         )
@@ -1468,13 +1457,10 @@ mod tests {
 
     #[test]
     fn preprocess_invoke_function_fields_nonce_is_none() {
-        let entry_point_selector = Felt252::from_str_radix(
-            "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-            16,
-        )
-        .unwrap();
-        let result =
-            preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0.into());
+        let entry_point_selector =
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap();
+        let result = preprocess_invoke_function_fields(entry_point_selector, None, 0.into());
 
         let expected_additional_data: Vec<Felt252> = Vec::new();
         let expected_entry_point_selector_field = entry_point_selector;
@@ -1490,11 +1476,8 @@ mod tests {
     #[test]
     fn invoke_version_one_with_no_nonce_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             None,
             1.into(),
         );
@@ -1508,13 +1491,10 @@ mod tests {
     #[test]
     fn invoke_version_one_with_no_nonce_with_query_base_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             None,
-            QUERY_VERSION_1.clone(),
+            *QUERY_VERSION_1,
         );
         assert!(expected_error.is_err());
     }
@@ -1544,7 +1524,7 @@ mod tests {
         let program_data = include_bytes!("../../starknet_programs/cairo1/factorial.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1610,14 +1590,14 @@ mod tests {
     fn invoke_wrong_version() {
         // declare tx
         let internal_declare = InvokeFunction::new(
-            Address(Felt252::one()),
-            Felt252::one(),
+            Address(Felt252::ONE),
+            Felt252::ONE,
             9000,
             2.into(),
             vec![],
             vec![],
-            Felt252::one(),
-            Some(Felt252::zero()),
+            Felt252::ONE,
+            Some(Felt252::ZERO),
         )
         .unwrap();
         let result = internal_declare.execute(

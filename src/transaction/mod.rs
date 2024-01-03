@@ -24,8 +24,7 @@ pub mod fee;
 pub mod invoke_function;
 pub mod l1_handler;
 
-use cairo_vm::felt::Felt252;
-use num_traits::{One, Zero};
+use cairo_vm::Felt252;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -181,8 +180,8 @@ impl Transaction {
 // This is used to execute old transactions an may be removed in the future as its not part of the current standard implementation
 fn get_tx_version(version: Felt252) -> Felt252 {
     match version {
-        version if version == *QUERY_VERSION_0 => Felt252::zero(),
-        version if version == *QUERY_VERSION_1 => Felt252::one(),
+        version if version == *QUERY_VERSION_0 => Felt252::ZERO,
+        version if version == *QUERY_VERSION_1 => Felt252::ONE,
         version if version == *QUERY_VERSION_2 => 2.into(),
         version => version,
     }

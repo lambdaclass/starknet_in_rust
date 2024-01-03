@@ -13,9 +13,9 @@ use crate::{
     },
 };
 use cairo_lang_utils::bigint::BigUintAsHex;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
-use num_traits::Zero;
+
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
@@ -168,7 +168,7 @@ impl<T: StateReader, C: ContractClassCache> StateReader for CachedState<T, C> {
     fn get_storage_at(&self, storage_entry: &StorageEntry) -> Result<Felt252, StateError> {
         self.cache
             .get_storage(storage_entry)
-            .map(|v| Ok(v.clone()))
+            .map(|v| Ok(*v))
             .unwrap_or_else(|| self.state_reader.get_storage_at(storage_entry))
     }
 
@@ -308,8 +308,8 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         class_hash: &Felt252,
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError> {
-        let class_hash = ClassHash::from(class_hash.clone());
-        let compiled_class_hash = ClassHash::from(compiled_class_hash.clone());
+        let class_hash = ClassHash::from(*class_hash);
+        let compiled_class_hash = ClassHash::from(*compiled_class_hash);
 
         self.cache
             .compiled_class_hash_writes
@@ -411,11 +411,10 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         } else {
             self.add_hit();
         }
-        Ok(self
+        Ok(*self
             .cache
             .get_nonce(contract_address)
-            .unwrap_or(&Felt252::zero())
-            .clone())
+            .unwrap_or(&Felt252::ZERO))
     }
 
     /// Returns storage data for a given storage entry.
@@ -432,7 +431,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
                 let value = self.state_reader.get_storage_at(storage_entry)?;
                 self.cache
                     .storage_initial_values
-                    .insert(storage_entry.clone(), value.clone());
+                    .insert(storage_entry.clone(), value);
                 Ok(value)
             }
         }
@@ -453,7 +452,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             None => {
                 self.add_miss();
                 let compiled_class_hash = self.state_reader.get_compiled_class_hash(class_hash)?;
-                let address = Address(Felt252::from_bytes_be(compiled_class_hash.to_bytes_be()));
+                let address = Address(Felt252::from_bytes_be(&compiled_class_hash.0));
                 self.cache
                     .class_hash_initial_values
                     .insert(address, compiled_class_hash);
@@ -553,7 +552,7 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
         compiled_class_hash: &Felt252,
         _sierra_program: Vec<BigUintAsHex>,
     ) -> Result<(), StateError> {
-        let _compiled_class_hash = compiled_class_hash.to_be_bytes();
+        let _compiled_class_hash = compiled_class_hash.to_bytes_be();
 
         // TODO implement
         // self.sierra_programs
@@ -627,7 +626,8 @@ mod tests {
             in_memory_state_reader::InMemoryStateReader,
         },
     };
-    use num_traits::One;
+    use num_traits::Zero;
+
     use std::collections::HashMap;
 
     /// Test checks if class hashes and nonces are correctly fetched from the state reader.
@@ -644,16 +644,16 @@ mod tests {
 
         let contract_address = Address(4242.into());
         let class_hash: ClassHash = ClassHash([3; 32]);
-        let nonce = Felt252::new(47602);
+        let nonce = Felt252::from(47602);
         let storage_entry = (contract_address.clone(), [101; 32]);
-        let storage_value = Felt252::new(1);
+        let storage_value = Felt252::ONE;
 
         state_reader
             .address_to_class_hash_mut()
             .insert(contract_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(contract_address.clone(), nonce.clone());
+            .insert(contract_address.clone(), nonce);
         state_reader
             .address_to_storage_mut()
             .insert(storage_entry, storage_value);
@@ -671,7 +671,7 @@ mod tests {
         cached_state.increment_nonce(&contract_address).unwrap();
         assert_eq!(
             cached_state.get_nonce_at(&contract_address).unwrap(),
-            nonce + Felt252::new(1)
+            nonce + Felt252::ONE
         );
     }
 
@@ -719,8 +719,8 @@ mod tests {
         );
 
         let storage_entry: StorageEntry = (Address(31.into()), [0; 32]);
-        let value = Felt252::new(10);
-        cached_state.set_storage_at(&storage_entry, value.clone());
+        let value = Felt252::from(10);
+        cached_state.set_storage_at(&storage_entry, value);
 
         assert_eq!(cached_state.get_storage_at(&storage_entry).unwrap(), value);
 
@@ -755,7 +755,7 @@ mod tests {
 
         let contract_address = Address(31.into());
         let storage_key = [18; 32];
-        let value = Felt252::new(912);
+        let value = Felt252::from(912);
 
         let mut cached_state = CachedState::new(
             state_reader,
@@ -763,15 +763,15 @@ mod tests {
         );
 
         // set storage_key
-        cached_state.set_storage_at(&(contract_address.clone(), storage_key), value.clone());
+        cached_state.set_storage_at(&(contract_address.clone(), storage_key), value);
         let result = cached_state.get_storage_at(&(contract_address.clone(), storage_key));
 
         assert_eq!(result.unwrap(), value);
 
         // rewrite storage_key
-        let new_value = value + 3_usize;
+        let new_value = value + 3;
 
-        cached_state.set_storage_at(&(contract_address.clone(), storage_key), new_value.clone());
+        cached_state.set_storage_at(&(contract_address.clone(), storage_key), new_value);
 
         let new_result = cached_state.get_storage_at(&(contract_address, storage_key));
 
@@ -880,7 +880,7 @@ mod tests {
             HashMap::new(),
         );
 
-        let address_one = Address(Felt252::one());
+        let address_one = Address(Felt252::ONE);
 
         let mut cached_state = CachedState::new(
             Arc::new(state_reader),
@@ -890,28 +890,28 @@ mod tests {
         let state_diff = StateDiff {
             address_to_class_hash: HashMap::from([(
                 address_one.clone(),
-                ClassHash::from(Felt252::one()),
+                ClassHash::from(Felt252::ONE),
             )]),
-            address_to_nonce: HashMap::from([(address_one.clone(), Felt252::one())]),
+            address_to_nonce: HashMap::from([(address_one.clone(), Felt252::ONE)]),
             class_hash_to_compiled_class: HashMap::new(),
             storage_updates: HashMap::new(),
         };
         assert!(cached_state.apply_state_update(&state_diff).is_ok());
-        assert!(cached_state
-            .cache
-            .nonce_writes
-            .get(&address_one)
-            .unwrap()
-            .is_one());
-        assert!(Felt252::from_bytes_be(
-            cached_state
-                .cache
-                .class_hash_writes
-                .get(&address_one)
-                .unwrap()
-                .to_bytes_be()
-        )
-        .is_one());
+        assert_eq!(
+            cached_state.cache.nonce_writes.get(&address_one).unwrap(),
+            &Felt252::ONE
+        );
+        assert_eq!(
+            Felt252::from_bytes_be_slice(
+                cached_state
+                    .cache
+                    .class_hash_writes
+                    .get(&address_one)
+                    .unwrap()
+                    .to_bytes_be()
+            ),
+            Felt252::ONE
+        );
         assert!(cached_state.cache.storage_writes.is_empty());
         assert!(cached_state.cache.nonce_initial_values.is_empty());
         assert!(cached_state.cache.class_hash_initial_values.is_empty());
@@ -928,8 +928,8 @@ mod tests {
 
         let address_one = Address(1.into());
         let address_two = Address(2.into());
-        let storage_key_one = Felt252::from(1).to_be_bytes();
-        let storage_key_two = Felt252::from(2).to_be_bytes();
+        let storage_key_one = Felt252::from(1).to_bytes_be();
+        let storage_key_two = Felt252::from(2).to_bytes_be();
 
         cached_state.cache.storage_initial_values =
             HashMap::from([((address_one.clone(), storage_key_one), Felt252::from(1))]);

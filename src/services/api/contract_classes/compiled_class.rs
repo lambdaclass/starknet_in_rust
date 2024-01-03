@@ -15,8 +15,8 @@ use cairo_lang_starknet::contract_class::{
     ContractClass as SierraContractClass, ContractEntryPoints,
 };
 use cairo_lang_utils::bigint::BigUintAsHex;
-use cairo_vm::felt::Felt252;
 use cairo_vm::types::program::Program;
+use cairo_vm::Felt252;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::ContractClass as StarknetRsContractClass;
 use starknet::core::types::ContractClass::{Legacy, Sierra};

@@ -42,8 +42,8 @@ fn main() {
             contract_address_salt,
             CONTRACT_CLASS.clone(),
             call_data.clone(),
-            block_context.starknet_os_config().chain_id().clone(),
-            TRANSACTION_VERSION.clone(),
+            *block_context.starknet_os_config().chain_id(),
+            *TRANSACTION_VERSION,
         )
         .unwrap();
 

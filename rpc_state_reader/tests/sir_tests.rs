@@ -1,6 +1,6 @@
 #![cfg(feature = "starknet_in_rust")]
 
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use rpc_state_reader::{
     execute_tx, execute_tx_configurable, execute_tx_without_validate, rpc_state::*,
@@ -28,10 +28,10 @@ fn test_get_transaction_try_from() {
         SNTransaction::Invoke(sn_tx) => {
             let tx = InvokeFunction::from_invoke_transaction(
                 sn_tx.clone(),
-                Felt252::from_bytes_be(tx_hash.0.bytes()),
+                Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
             )
             .unwrap();
-            assert_eq!(tx.hash_value().to_be_bytes().as_slice(), str_hash.bytes())
+            assert_eq!(tx.hash_value().to_bytes_be().as_slice(), str_hash.bytes())
         }
         _ => unimplemented!(),
     };
@@ -394,7 +394,7 @@ fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: 
         .retdata
         .unwrap()
         .into_iter()
-        .map(|sf| Felt252::from_bytes_be(sf.bytes()))
+        .map(|sf| Felt252::from_bytes_be_slice(sf.bytes()))
         .collect();
 
     assert_eq!(retdata, rpc_retdata);

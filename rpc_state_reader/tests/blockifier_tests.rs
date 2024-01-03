@@ -24,8 +24,8 @@ use blockifier::{
 use cairo_lang_starknet::{
     casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
 };
-use cairo_vm::types::program::Program;
-use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
+use cairo_vm_blockifier::types::program::Program;
+use pretty_assertions_sorted::assert_eq;
 use rpc_state_reader::rpc_state::*;
 use rpc_state_reader::utils;
 use starknet::core::types::ContractClass as SNContractClass;
@@ -267,7 +267,15 @@ fn blockifier_test_recent_tx() {
     } = execute_call_info.unwrap();
 
     assert_eq!(actual_fee.0, receipt.actual_fee);
-    assert_eq!(vm_resources, receipt.execution_resources);
+    assert_eq!(
+        vm_resources.n_memory_holes,
+        receipt.execution_resources.n_memory_holes
+    );
+    assert_eq!(vm_resources.n_steps, receipt.execution_resources.n_steps);
+    assert_eq!(
+        vm_resources.builtin_instance_counter,
+        receipt.execution_resources.builtin_instance_counter
+    );
     assert_eq!(
         inner_calls.len(),
         trace
@@ -388,7 +396,16 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
         }
     }
 
-    assert_eq_sorted!(vm_resources, receipt.execution_resources);
+    assert_eq!(
+        vm_resources.n_memory_holes,
+        receipt.execution_resources.n_memory_holes
+    );
+    assert_eq!(vm_resources.n_steps, receipt.execution_resources.n_steps);
+    assert_eq!(
+        vm_resources.builtin_instance_counter,
+        receipt.execution_resources.builtin_instance_counter
+    );
+
     assert_eq!(
         inner_calls.len(),
         trace

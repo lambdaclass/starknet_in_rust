@@ -25,8 +25,8 @@ use crate::{
         ClassHash,
     },
 };
-use cairo_vm::felt::Felt252;
-use num_traits::{One, Zero};
+use cairo_vm::Felt252;
+use num_traits::Zero;
 
 use super::fee::{calculate_tx_fee, charge_fee};
 use super::{get_tx_version, Transaction};
@@ -84,11 +84,11 @@ impl Declare {
             chain_id,
             &sender_address,
             max_fee,
-            version.clone(),
-            nonce.clone(),
+            version,
+            nonce,
         )?;
 
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = Declare {
             class_hash,
@@ -125,7 +125,7 @@ impl Declare {
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = Declare {
             class_hash,
@@ -158,7 +158,7 @@ impl Declare {
         class_hash: ClassHash,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = Declare {
             class_hash,
@@ -181,7 +181,7 @@ impl Declare {
 
     /// Returns the calldata.
     pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(self.class_hash.to_bytes_be());
+        let bytes = Felt252::from_bytes_be(&self.class_hash.0);
         Vec::from([bytes])
     }
 
@@ -239,12 +239,12 @@ impl Declare {
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
             self.max_fee,
-            self.nonce.clone(),
+            self.nonce,
             n_steps,
-            self.version.clone(),
+            self.version,
         )
     }
 
@@ -267,8 +267,8 @@ impl Declare {
         let entry_point = ExecutionEntryPoint::new(
             self.sender_address.clone(),
             calldata,
-            self.validate_entry_point_selector.clone(),
-            Address(Felt252::zero()),
+            self.validate_entry_point_selector,
+            Address(Felt252::ZERO),
             EntryPointType::External,
             None,
             None,
@@ -381,10 +381,10 @@ impl Declare {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::one() && self.version != Felt252::zero() {
+        if self.version != Felt252::ONE && self.version != Felt252::ZERO {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Declare".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![0, 1],
             ));
         }
@@ -472,11 +472,8 @@ mod tests {
         state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
         utils::{felt_to_hash, Address},
     };
-    use cairo_vm::{
-        felt::{felt_str, Felt252},
-        vm::runners::cairo_runner::ExecutionResources,
-    };
-    use num_traits::{One, Zero};
+    use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
+
     use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
     /// This test verifies the declaration of a Fibonacci contract.
@@ -510,7 +507,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address, Felt252::new(1));
+            .insert(sender_address, Felt252::ONE);
 
         let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
@@ -527,11 +524,11 @@ mod tests {
         let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            Address(Felt252::ONE),
             0,
             1.into(),
             Vec::new(),
-            Felt252::zero(),
+            Felt252::ZERO,
         )
         .unwrap();
 
@@ -540,21 +537,22 @@ mod tests {
         //* ---------------------------------------
 
         // Value generated from selector _validate_declare_
-        let entry_point_selector = Some(VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone());
+        let entry_point_selector = Some(*VALIDATE_DECLARE_ENTRY_POINT_SELECTOR);
 
         let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
         let expected_class_hash = felt_to_hash(&class_hash_felt);
 
         // Calldata is the class hash represented as a Felt252
-        let calldata = [felt_str!(
-            "151449101692423517761547521693863750221386499114738230243355039033913267347"
-        )]
+        let calldata = [Felt252::from_dec_str(
+            "151449101692423517761547521693863750221386499114738230243355039033913267347",
+        )
+        .unwrap()]
         .to_vec();
 
         let validate_info = Some(CallInfo {
             caller_address: Address(0.into()),
             call_type: Some(CallType::Call),
-            contract_address: Address(Felt252::one()),
+            contract_address: Address(Felt252::ONE),
             entry_point_selector,
             entry_point_type: Some(EntryPointType::External),
             calldata,
@@ -629,7 +627,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address, Felt252::zero());
+            .insert(sender_address, Felt252::ZERO);
 
         let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
@@ -645,23 +643,23 @@ mod tests {
         // Declare same class twice
         let internal_declare = Declare::new(
             fib_contract_class.clone(),
-            chain_id.clone(),
-            Address(Felt252::one()),
+            chain_id,
+            Address(Felt252::ONE),
             0,
             1.into(),
             Vec::new(),
-            Felt252::zero(),
+            Felt252::ZERO,
         )
         .unwrap();
 
         let second_internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            Address(Felt252::ONE),
             0,
             1.into(),
             Vec::new(),
-            Felt252::one(),
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -719,7 +717,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address, Felt252::zero());
+            .insert(sender_address, Felt252::ZERO);
 
         let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
@@ -736,11 +734,11 @@ mod tests {
         let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            Address(Felt252::ONE),
             0,
             1.into(),
             Vec::new(),
-            Felt252::zero(),
+            Felt252::ZERO,
         )
         .unwrap();
 
@@ -790,11 +788,11 @@ mod tests {
         let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            Address(Felt252::ONE),
             0,
             1.into(),
             Vec::new(),
-            Felt252::zero(),
+            Felt252::ZERO,
         )
         .unwrap();
 
@@ -843,7 +841,7 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address, Felt252::zero());
+            .insert(sender_address, Felt252::ZERO);
 
         let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
@@ -860,11 +858,11 @@ mod tests {
         let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            Address(Felt252::ONE),
             10,
             1.into(),
             Vec::new(),
-            Felt252::zero(),
+            Felt252::ZERO,
         )
         .unwrap();
 
@@ -909,22 +907,24 @@ mod tests {
             .insert(sender_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
-            .insert(sender_address.clone(), Felt252::new(1));
+            .insert(sender_address.clone(), Felt252::ONE);
 
         let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
         // Insert pubkey storage var to pass validation
         let storage_entry = &(
             sender_address,
-            felt_str!(
-                "1672321442399497129215646424919402195095307045612040218489019266998007191460"
+            Felt252::from_dec_str(
+                "1672321442399497129215646424919402195095307045612040218489019266998007191460",
             )
-            .to_be_bytes(),
+            .unwrap()
+            .to_bytes_be(),
         );
         state.set_storage_at(
             storage_entry,
-            felt_str!(
-                "1735102664668487605176656616876767369909409133946409161569774794110049207117"
-            ),
+            Felt252::from_dec_str(
+                "1735102664668487605176656616876767369909409133946409161569774794110049207117",
+            )
+            .unwrap(),
         );
 
         //* ---------------------------------------
@@ -938,25 +938,26 @@ mod tests {
 
         // declare tx
         // Signature & tx hash values are hand-picked for account validations to pass
-        let mut declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::one()),
-            60000,
-            1.into(),
-            vec![
-                felt_str!(
+        let mut declare =
+            Declare::new(
+                fib_contract_class,
+                chain_id,
+                Address(Felt252::ONE),
+                60000,
+                1.into(),
+                vec![
+                Felt252::from_dec_str(
                     "3086480810278599376317923499561306189851900463386393948998357832163236918254"
-                ),
-                felt_str!(
+                ).unwrap(),
+                Felt252::from_dec_str(
                     "598673427589502599949712887611119751108407514580626464031881322743364689811"
-                ),
+                ).unwrap(),
             ],
-            Felt252::one(),
-        )
-        .unwrap();
+                Felt252::ONE,
+            )
+            .unwrap();
         declare.skip_fee_transfer = true;
-        declare.hash_value = felt_str!("2718");
+        declare.hash_value = Felt252::from_dec_str("2718").unwrap();
 
         let simulate_declare = declare
             .clone()
@@ -1002,11 +1003,11 @@ mod tests {
         let internal_declare = Declare::new(
             fib_contract_class,
             chain_id,
-            Address(Felt252::one()),
+            Address(Felt252::ONE),
             0,
             2.into(),
             Vec::new(),
-            Felt252::zero(),
+            Felt252::ZERO,
         )
         .unwrap();
         let result = internal_declare.execute(

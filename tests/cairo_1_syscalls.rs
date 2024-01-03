@@ -1,10 +1,11 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    felt::{felt_str, Felt252},
+    utils::biguint_to_felt,
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
+    Felt252,
 };
 use num_bigint::BigUint;
-use num_traits::{Num, One, Zero};
+
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::utils::calculate_sn_keccak;
 use starknet_in_rust::{
@@ -41,7 +42,7 @@ fn create_execute_extrypoint(
     ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(selector.clone()),
+        biguint_to_felt(selector).unwrap(),
         Address(0000.into()),
         entry_point_type,
         Some(CallType::Delegate),
@@ -69,7 +70,7 @@ fn storage_write_read() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -87,12 +88,12 @@ fn storage_write_read() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -217,7 +218,7 @@ fn library_call() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -240,7 +241,7 @@ fn library_call() {
 
     let lib_address = Address(1112.into());
     let lib_class_hash: ClassHash = ClassHash([2; 32]);
-    let lib_nonce = Felt252::zero();
+    let lib_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         lib_class_hash,
@@ -257,18 +258,14 @@ fn library_call() {
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
-    let calldata = [
-        25.into(),
-        Felt252::from_bytes_be(lib_class_hash.to_bytes_be()),
-    ]
-    .to_vec();
+    let calldata = [25.into(), Felt252::from_bytes_be(&lib_class_hash.0)].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -280,12 +277,12 @@ fn library_call() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
@@ -310,7 +307,7 @@ fn library_call() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(Felt252::new(entrypoint_selector)),
+        entry_point_selector: Some(biguint_to_felt(entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
@@ -321,9 +318,8 @@ fn library_call() {
             call_type: Some(CallType::Delegate),
             contract_address: Address(1111.into()),
             entry_point_selector: Some(
-                Felt252::from_str_radix(
+                Felt252::from_dec_str(
                     "544923964202674311881044083303061611121949089655923191939299897061511784662",
-                    10,
                 )
                 .unwrap(),
             ),
@@ -385,7 +381,7 @@ fn call_contract_storage_write_read() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -417,7 +413,7 @@ fn call_contract_storage_write_read() {
 
     let simple_wallet_address = Address(1112.into());
     let simple_wallet_class_hash: ClassHash = ClassHash([2; 32]);
-    let simple_wallet_nonce = Felt252::zero();
+    let simple_wallet_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
@@ -436,12 +432,12 @@ fn call_contract_storage_write_read() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -455,7 +451,7 @@ fn call_contract_storage_write_read() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            Felt252::new(selector.clone()),
+            biguint_to_felt(selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -491,7 +487,7 @@ fn call_contract_storage_write_read() {
 
     // RUN GET_BALANCE
     // Create an execution entry point
-    let calldata = [simple_wallet_address.0.clone()].to_vec();
+    let calldata = [simple_wallet_address.0].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
@@ -517,7 +513,7 @@ fn call_contract_storage_write_read() {
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
-    let calldata = [100.into(), simple_wallet_address.0.clone()].to_vec();
+    let calldata = [100.into(), simple_wallet_address.0].to_vec();
     let increase_balance_entry_point = create_execute_extrypoint(
         increase_balance_entrypoint_selector,
         calldata,
@@ -583,7 +579,7 @@ fn emit_event() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -606,7 +602,7 @@ fn emit_event() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -618,12 +614,12 @@ fn emit_event() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -643,27 +639,24 @@ fn emit_event() {
         vec![
             OrderedEvent {
                 order: 0,
-                keys: vec![Felt252::from_str_radix(
-                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                    10
+                keys: vec![Felt252::from_dec_str(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                 )
                 .unwrap()],
                 data: vec![1.into()]
             },
             OrderedEvent {
                 order: 1,
-                keys: vec![Felt252::from_str_radix(
-                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                    10
+                keys: vec![Felt252::from_dec_str(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                 )
                 .unwrap()],
                 data: vec![2.into()]
             },
             OrderedEvent {
                 order: 2,
-                keys: vec![Felt252::from_str_radix(
-                    "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                    10
+                keys: vec![Felt252::from_dec_str(
+                    "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                 )
                 .unwrap()],
                 data: vec![3.into()]
@@ -678,7 +671,7 @@ fn deploy_cairo1_from_cairo1() {
     let test_class_hash_bytes: [u8; 32] = [2; 32];
     let test_class_hash = ClassHash(test_class_hash_bytes);
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash_bytes);
-    let salt = Felt252::zero();
+    let salt = Felt252::ZERO;
     #[cfg(not(feature = "cairo_1_tests"))]
     let test_data = include_bytes!("../starknet_programs/cairo2/contract_a.casm");
     #[cfg(feature = "cairo_1_tests")]
@@ -699,7 +692,7 @@ fn deploy_cairo1_from_cairo1() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -730,7 +723,7 @@ fn deploy_cairo1_from_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -742,12 +735,12 @@ fn deploy_cairo1_from_cairo1() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -764,9 +757,12 @@ fn deploy_cairo1_from_cairo1() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "619464431559909356793718633071398796109800070568878623926447195121629120356"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "619464431559909356793718633071398796109800070568878623926447195121629120356",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -783,7 +779,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     // data to deploy
     let test_class_hash: ClassHash = ClassHash([2; 32]);
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.0);
-    let salt = Felt252::zero();
+    let salt = Felt252::ZERO;
     let contract_path = "starknet_programs/fibonacci.json";
     let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
 
@@ -803,7 +799,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -834,7 +830,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -846,12 +842,12 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -868,9 +864,12 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "3326516449409112130211257005742850249535379011750934837578774621442000311202"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "3326516449409112130211257005742850249535379011750934837578774621442000311202",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -887,7 +886,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     // data to deploy
     let test_class_hash: ClassHash = ClassHash([2; 32]);
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.0);
-    let salt = Felt252::zero();
+    let salt = Felt252::ZERO;
     let contract_path = "starknet_programs/test_contract.json";
     let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
 
@@ -905,7 +904,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     // simulate contract declare
     contract_class_cache
@@ -927,7 +926,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // arguments of deploy contract
-    let calldata: Vec<_> = [test_felt_hash, salt, address.0.clone(), Felt252::zero()].to_vec();
+    let calldata: Vec<_> = [test_felt_hash, salt, address.0, Felt252::ZERO].to_vec();
 
     // set up remaining structures
 
@@ -937,7 +936,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -949,12 +948,12 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -971,9 +970,12 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "2981367321579044137695643605491580626686793431687828656373743652416610344312"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "2981367321579044137695643605491580626686793431687828656373743652416610344312",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -990,7 +992,7 @@ fn deploy_cairo0_and_invoke() {
     // data to deploy
     let test_class_hash: ClassHash = ClassHash([2; 32]);
     let test_felt_hash = Felt252::from_bytes_be(&test_class_hash.0);
-    let salt = Felt252::zero();
+    let salt = Felt252::ZERO;
     let contract_path = "starknet_programs/factorial.json";
     let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
 
@@ -1010,7 +1012,7 @@ fn deploy_cairo0_and_invoke() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -1042,7 +1044,7 @@ fn deploy_cairo0_and_invoke() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1054,12 +1056,12 @@ fn deploy_cairo0_and_invoke() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1076,9 +1078,12 @@ fn deploy_cairo0_and_invoke() {
 
     assert!(call_info.is_ok());
 
-    let ret_address = Address(felt_str!(
-        "3326516449409112130211257005742850249535379011750934837578774621442000311202"
-    ));
+    let ret_address = Address(
+        Felt252::from_dec_str(
+            "3326516449409112130211257005742850249535379011750934837578774621442000311202",
+        )
+        .unwrap(),
+    );
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
@@ -1092,8 +1097,10 @@ fn deploy_cairo0_and_invoke() {
     // invoke factorial
 
     let calldata = [3.into()].to_vec();
-    let selector =
-        felt_str!("1554360238305724106620514039016755337737024783182305317707426109255385571750");
+    let selector = Felt252::from_dec_str(
+        "1554360238305724106620514039016755337737024783182305317707426109255385571750",
+    )
+    .unwrap();
 
     let exec_entry_point = ExecutionEntryPoint::new(
         ret_address,
@@ -1141,7 +1148,7 @@ fn test_send_message_to_l1_syscall() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -1171,12 +1178,12 @@ fn test_send_message_to_l1_syscall() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1221,7 +1228,7 @@ fn test_send_message_to_l1_syscall() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(external_entrypoint_selector.into()),
+        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
         execution_resources: Some(expected_execution_resources),
@@ -1248,7 +1255,7 @@ fn test_get_execution_info() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -1266,12 +1273,12 @@ fn test_get_execution_info() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         vec![22.into(), 33.into()],
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -1301,10 +1308,10 @@ fn test_get_execution_info() {
         .unwrap();
 
     let expected_ret_data = vec![
-        block_context.block_info().sequencer_address.0.clone(),
+        block_context.block_info().sequencer_address.0,
         0.into(),
         0.into(),
-        address.0.clone(),
+        address.0,
     ];
 
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -1328,7 +1335,7 @@ fn test_get_execution_info() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(external_entrypoint_selector.into()),
+        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: Some(expected_execution_resources),
@@ -1356,7 +1363,7 @@ fn replace_class_internal() {
 
     let address = Address(1111.into());
     let class_hash_a: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash_a,
@@ -1396,7 +1403,7 @@ fn replace_class_internal() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        Felt252::new(upgrade_selector.clone()),
+        biguint_to_felt(upgrade_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1408,12 +1415,12 @@ fn replace_class_internal() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1458,9 +1465,9 @@ fn replace_class_contract_call() {
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
 
-    let address = Address(Felt252::one());
+    let address = Address(Felt252::ONE);
     let class_hash_a: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash_a,
@@ -1472,7 +1479,7 @@ fn replace_class_contract_call() {
         .insert(address.clone(), class_hash_a);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_B
 
@@ -1524,12 +1531,12 @@ fn replace_class_contract_call() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1542,7 +1549,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        Felt252::new(get_number_entrypoint_selector.clone()),
+        biguint_to_felt(get_number_entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1571,7 +1578,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        Felt252::new(upgrade_entrypoint_selector.clone()),
+        biguint_to_felt(upgrade_entrypoint_selector).unwrap(),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1599,7 +1606,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_number_entrypoint_selector.clone()),
+        biguint_to_felt(get_number_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1641,9 +1648,9 @@ fn replace_class_contract_call_same_transaction() {
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
 
-    let address = Address(Felt252::one());
+    let address = Address(Felt252::ONE);
     let class_hash_a: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash_a,
@@ -1655,7 +1662,7 @@ fn replace_class_contract_call_same_transaction() {
         .insert(address.clone(), class_hash_a);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_B
 
@@ -1706,12 +1713,12 @@ fn replace_class_contract_call_same_transaction() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1724,7 +1731,7 @@ fn replace_class_contract_call_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1766,9 +1773,9 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
 
-    let address = Address(Felt252::one());
-    let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
-    let nonce = Felt252::zero();
+    let address = Address(Felt252::ONE);
+    let class_hash_c: ClassHash = ClassHash::from(Felt252::ONE);
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash_c,
@@ -1780,7 +1787,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
         .insert(address.clone(), class_hash_c);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_B
 
@@ -1831,12 +1838,12 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1849,7 +1856,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1889,9 +1896,9 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
 
-    let address = Address(Felt252::one());
-    let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
-    let nonce = Felt252::zero();
+    let address = Address(Felt252::ONE);
+    let class_hash_c: ClassHash = ClassHash::from(Felt252::ONE);
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash_c,
@@ -1920,7 +1927,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
         .insert(address.clone(), class_hash_b);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_WRAPPER
 
@@ -1954,12 +1961,12 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1972,7 +1979,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2012,9 +2019,9 @@ fn call_contract_replace_class_cairo_0() {
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
 
-    let address = Address(Felt252::one());
-    let class_hash_c: ClassHash = ClassHash::from(Felt252::one());
-    let nonce = Felt252::zero();
+    let address = Address(Felt252::ONE);
+    let class_hash_c: ClassHash = ClassHash::from(Felt252::ONE);
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash_c,
@@ -2039,7 +2046,7 @@ fn call_contract_replace_class_cairo_0() {
         .insert(address.clone(), class_hash_d);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     // SET GET_NUMBER_WRAPPER
 
@@ -2073,12 +2080,12 @@ fn call_contract_replace_class_cairo_0() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2091,7 +2098,7 @@ fn call_contract_replace_class_cairo_0() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(get_numbers_entrypoint_selector.clone()),
+        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2133,7 +2140,7 @@ fn test_out_of_gas_failure() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2157,7 +2164,7 @@ fn test_out_of_gas_failure() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2169,12 +2176,12 @@ fn test_out_of_gas_failure() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2192,7 +2199,7 @@ fn test_out_of_gas_failure() {
     let call_info = call_info.call_info.unwrap();
     assert_eq!(
         call_info.retdata,
-        vec![Felt252::from_bytes_be("Out of gas".as_bytes())]
+        vec![Felt252::from_bytes_be_slice("Out of gas".as_bytes())]
     );
     assert!(call_info.failure_flag)
 }
@@ -2213,7 +2220,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2229,14 +2236,14 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
-    let calldata = [Felt252::zero()].to_vec();
+    let calldata = [Felt252::ZERO].to_vec();
     let caller_address = Address(0000.into());
     let entry_point_type = EntryPointType::External;
 
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2248,12 +2255,12 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2269,7 +2276,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         )
         .unwrap();
     assert_eq!(
-        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "CLASS_HASH_NOT_FOUND"
@@ -2292,7 +2299,7 @@ fn deploy_syscall_failure_in_constructor() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2310,9 +2317,9 @@ fn deploy_syscall_failure_in_constructor() {
     #[cfg(feature = "cairo_1_tests")]
     let f_c_program_data = include_bytes!("../starknet_programs/cairo1/failing_constructor.casm");
     let f_c_contract_class: CasmContractClass = serde_json::from_slice(f_c_program_data).unwrap();
-    let f_c_class_hash = Felt252::one();
+    let f_c_class_hash = Felt252::ONE;
     contract_class_cache.set_contract_class(
-        ClassHash::from(f_c_class_hash.clone()),
+        ClassHash::from(f_c_class_hash),
         CompiledClass::Casm(Arc::new(f_c_contract_class)),
     );
 
@@ -2327,7 +2334,7 @@ fn deploy_syscall_failure_in_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2339,12 +2346,12 @@ fn deploy_syscall_failure_in_constructor() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let call_info = exec_entry_point
@@ -2362,7 +2369,7 @@ fn deploy_syscall_failure_in_constructor() {
     // Check that we get the error from the constructor
     // assert( 1 == 0 , 'Oops');
     assert_eq!(
-        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.call_info.unwrap().retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "Oops"
@@ -2385,7 +2392,7 @@ fn storage_read_no_value() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2403,12 +2410,12 @@ fn storage_read_no_value() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2459,7 +2466,7 @@ fn storage_read_unavailable_address_domain() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2477,12 +2484,12 @@ fn storage_read_unavailable_address_domain() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2514,7 +2521,7 @@ fn storage_read_unavailable_address_domain() {
 
     assert_eq!(
         call_info.call_info.unwrap().retdata[0],
-        Felt252::from_bytes_be(b"Unsupported address domain")
+        Felt252::from_bytes_be_slice(b"Unsupported address domain")
     );
 }
 
@@ -2536,7 +2543,7 @@ fn storage_write_unavailable_address_domain() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2554,12 +2561,12 @@ fn storage_write_unavailable_address_domain() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -2591,7 +2598,7 @@ fn storage_write_unavailable_address_domain() {
 
     assert_eq!(
         call_info.call_info.unwrap().retdata[0],
-        Felt252::from_bytes_be(b"Unsupported address domain")
+        Felt252::from_bytes_be_slice(b"Unsupported address domain")
     );
 }
 
@@ -2611,7 +2618,7 @@ fn library_call_failure() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2633,7 +2640,7 @@ fn library_call_failure() {
 
     let lib_address = Address(1112.into());
     let lib_class_hash: ClassHash = ClassHash([2; 32]);
-    let lib_nonce = Felt252::zero();
+    let lib_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         lib_class_hash,
@@ -2657,7 +2664,7 @@ fn library_call_failure() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2669,12 +2676,12 @@ fn library_call_failure() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let mut expected_execution_resources = ExecutionResources::default();
@@ -2699,7 +2706,7 @@ fn library_call_failure() {
     let call_info = call_info.call_info.unwrap();
 
     assert_eq!(
-        std::str::from_utf8(&call_info.retdata[0].to_be_bytes())
+        std::str::from_utf8(&call_info.retdata[0].to_bytes_be())
             .unwrap()
             .trim_start_matches('\0'),
         "Unimplemented"
@@ -2726,7 +2733,7 @@ fn send_messages_to_l1_different_contract_calls() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2748,7 +2755,7 @@ fn send_messages_to_l1_different_contract_calls() {
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
     let send_msg_class_hash: ClassHash = ClassHash([2; 32]);
-    let send_msg_nonce = Felt252::zero();
+    let send_msg_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         send_msg_class_hash,
@@ -2772,7 +2779,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        entrypoint_selector.clone().into(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2784,12 +2791,12 @@ fn send_messages_to_l1_different_contract_calls() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2852,7 +2859,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -2871,7 +2878,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
     let send_msg_class_hash: ClassHash = ClassHash([2; 32]);
-    let send_msg_nonce = Felt252::zero();
+    let send_msg_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         send_msg_class_hash,
@@ -2895,7 +2902,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        entrypoint_selector.clone().into(),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2907,12 +2914,12 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -2970,7 +2977,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash,
@@ -2994,7 +3001,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
     let send_msg_class_hash: ClassHash = ClassHash([2; 32]);
-    let send_msg_nonce = Felt252::zero();
+    let send_msg_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         send_msg_class_hash,
@@ -3018,7 +3025,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        entrypoint_selector.clone(),
+        *entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3030,12 +3037,12 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -3092,7 +3099,7 @@ fn keccak_syscall() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -3110,12 +3117,12 @@ fn keccak_syscall() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -3147,7 +3154,7 @@ fn keccak_syscall() {
 
     let call_info = call_info.call_info.unwrap();
 
-    assert_eq!(call_info.retdata[0], Felt252::one());
+    assert_eq!(call_info.retdata[0], Felt252::ONE);
     assert_eq!(call_info.gas_consumed, 545370);
 }
 
@@ -3168,7 +3175,7 @@ fn library_call_recursive_50_calls() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -3191,7 +3198,7 @@ fn library_call_recursive_50_calls() {
 
     let lib_address = Address(1112.into());
     let lib_class_hash: ClassHash = ClassHash([2; 32]);
-    let lib_nonce = Felt252::zero();
+    let lib_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         lib_class_hash,
@@ -3209,8 +3216,8 @@ fn library_call_recursive_50_calls() {
 
     // Create an execution entry point
     let calldata = [
-        felt_str!("1125899906842624"),
-        Felt252::from_bytes_be(lib_class_hash.to_bytes_be()),
+        Felt252::from_dec_str("1125899906842624").unwrap(),
+        Felt252::from_bytes_be(&lib_class_hash.0),
         Felt252::from(50),
     ]
     .to_vec();
@@ -3220,7 +3227,7 @@ fn library_call_recursive_50_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector.clone()),
+        biguint_to_felt(entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3232,12 +3239,12 @@ fn library_call_recursive_50_calls() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources_internal_call = ExecutionResources {
@@ -3272,15 +3279,14 @@ fn library_call_recursive_50_calls() {
             call_type: Some(CallType::Delegate),
             contract_address: Address(1111.into()),
             entry_point_selector: Some(
-                Felt252::from_str_radix(
-                    "544923964202674311881044083303061611121949089655923191939299897061511784662",
-                    10,
+                Felt252::from_dec_str(
+                    "544923964202674311881044083303061611121949089655923191939299897061511784662"
                 )
                 .unwrap(),
             ),
             entry_point_type: Some(EntryPointType::External),
-            calldata: vec![felt_str!("1125899906842624")],
-            retdata: [felt_str!("33554432")].to_vec(),
+            calldata: vec![Felt252::from_dec_str("1125899906842624").unwrap()],
+            retdata: [Felt252::from_dec_str("33554432").unwrap()].to_vec(),
             execution_resources: Some(expected_execution_resources_internal_call),
             class_hash: Some(lib_class_hash),
             gas_consumed: 0,
@@ -3311,7 +3317,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -3343,7 +3349,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 
     let simple_wallet_address = Address(1112.into());
     let simple_wallet_class_hash: ClassHash = ClassHash([2; 32]);
-    let simple_wallet_nonce = Felt252::zero();
+    let simple_wallet_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
@@ -3362,12 +3368,12 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -3381,7 +3387,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            Felt252::new(selector.clone()),
+            biguint_to_felt(selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -3417,7 +3423,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 
     // RUN GET_BALANCE
     // Create an execution entry point
-    let calldata = [simple_wallet_address.0.clone()].to_vec();
+    let calldata = [simple_wallet_address.0].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
@@ -3443,7 +3449,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
-    let calldata = [50.into(), simple_wallet_address.0.clone()].to_vec();
+    let calldata = [50.into(), simple_wallet_address.0].to_vec();
     let increase_balance_entry_point = create_execute_extrypoint(
         increase_balance_entrypoint_selector,
         calldata,
@@ -3518,7 +3524,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache
         .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
@@ -3550,7 +3556,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 
     let simple_wallet_address = Address(1112.into());
     let simple_wallet_class_hash: ClassHash = ClassHash([2; 32]);
-    let simple_wallet_nonce = Felt252::zero();
+    let simple_wallet_nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
@@ -3569,12 +3575,12 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -3588,7 +3594,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            Felt252::new(selector.clone()),
+            biguint_to_felt(selector).unwrap(),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -3624,7 +3630,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 
     // RUN GET_BALANCE
     // Create an execution entry point
-    let calldata = [simple_wallet_address.0.clone()].to_vec();
+    let calldata = [simple_wallet_address.0].to_vec();
     let get_balance_exec_entry_point = create_execute_extrypoint(
         get_balance_entrypoint_selector,
         calldata,
@@ -3650,7 +3656,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 
     // RUN INCREASE_BALANCE
     // Create an execution entry point
-    let calldata = [100.into(), simple_wallet_address.0.clone()].to_vec();
+    let calldata = [100.into(), simple_wallet_address.0].to_vec();
     let increase_balance_entry_point = create_execute_extrypoint(
         increase_balance_entrypoint_selector,
         calldata,

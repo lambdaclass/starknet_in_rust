@@ -40,9 +40,9 @@ use crate::{
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::Getters;
-use num_traits::{One, Zero};
+use num_traits::Zero;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -99,19 +99,19 @@ impl DeployAccount {
         let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
-            &Felt252::from_bytes_be(class_hash.to_bytes_be()),
+            &Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
         )?);
 
         let hash_value = calculate_deploy_account_transaction_hash(
-            version.clone(),
+            version,
             &contract_address,
-            Felt252::from_bytes_be(class_hash.to_bytes_be()),
+            Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
             max_fee,
-            nonce.clone(),
-            contract_address_salt.clone(),
+            nonce,
+            contract_address_salt,
             chain_id,
         )?;
 
@@ -147,9 +147,9 @@ impl DeployAccount {
         let version = get_tx_version(version);
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
-            &Felt252::from_bytes_be(class_hash.to_bytes_be()),
+            &Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
         )?);
 
         Ok(Self {
@@ -193,10 +193,10 @@ impl DeployAccount {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::one() {
+        if self.version != Felt252::ONE {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeployAccount".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![1],
             ));
         }
@@ -366,7 +366,7 @@ impl DeployAccount {
 
             Ok(CallInfo::empty_constructor_call(
                 self.contract_address.clone(),
-                Address(Felt252::zero()),
+                Address(Felt252::ZERO),
                 Some(self.class_hash),
             ))
         } else {
@@ -459,8 +459,8 @@ impl DeployAccount {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
-            Address(Felt252::zero()),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+            Address(Felt252::ZERO),
             EntryPointType::Constructor,
             None,
             None,
@@ -490,12 +490,12 @@ impl DeployAccount {
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.contract_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
             self.max_fee,
-            self.nonce.clone(),
+            self.nonce,
             n_steps,
-            self.version.clone(),
+            self.version,
         )
     }
 
@@ -511,14 +511,14 @@ impl DeployAccount {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             [
-                Felt252::from_bytes_be(self.class_hash.to_bytes_be()),
-                self.contract_address_salt.clone(),
+                Felt252::from_bytes_be(&self.class_hash.0),
+                self.contract_address_salt,
             ]
             .into_iter()
             .chain(self.constructor_calldata.iter().cloned())
             .collect(),
-            VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR.clone(),
-            Address(Felt252::zero()),
+            *VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
+            Address(Felt252::ZERO),
             EntryPointType::External,
             None,
             None,
@@ -550,7 +550,7 @@ impl DeployAccount {
             // return `VALID`.
             if !call_info
                 .as_ref()
-                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .map(|ci| ci.retdata == vec![*VALIDATE_RETDATA])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
@@ -592,23 +592,24 @@ impl DeployAccount {
         tx_hash: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
         let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+        let version = Felt252::from_bytes_be_slice(value.version.0.bytes());
+        let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
         let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
-        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
+        let contract_address_salt =
+            Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
 
         let signature = value
             .signature
             .0
             .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
             .collect();
         let constructor_calldata = value
             .constructor_calldata
             .0
             .as_ref()
             .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
             .collect();
 
         DeployAccount::new_with_tx_hash(
@@ -635,26 +636,27 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
         value: starknet_api::transaction::DeployAccountTransaction,
     ) -> Result<Self, SyscallHandlerError> {
         let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
+        let version = Felt252::from_bytes_be_slice(value.version.0.bytes());
+        let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
         let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
-        let contract_address_salt = Felt252::from_bytes_be(value.contract_address_salt.0.bytes());
+        let contract_address_salt =
+            Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
 
         let signature = value
             .signature
             .0
             .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
             .collect();
         let constructor_calldata = value
             .constructor_calldata
             .0
             .as_ref()
             .iter()
-            .map(|f| Felt252::from_bytes_be(f.bytes()))
+            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
             .collect();
 
-        let chain_id = Felt252::zero();
+        let chain_id = Felt252::ZERO;
 
         DeployAccount::new(
             class_hash,
@@ -831,10 +833,10 @@ mod tests {
             ClassHash([2; 32]),
             9000,
             2.into(),
-            Felt252::zero(),
+            Felt252::ZERO,
             vec![],
             vec![],
-            Felt252::one(),
+            Felt252::ONE,
             chain_id,
         )
         .unwrap();

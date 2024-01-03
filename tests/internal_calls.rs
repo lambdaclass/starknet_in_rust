@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use cairo_vm::Felt252;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -33,14 +32,14 @@ fn test_internal_calls() {
         10,
         0.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
     let storage_entry: StorageEntry = (address.clone(), [1; 32]);
-    let storage = Felt252::zero();
+    let storage = Felt252::ZERO;
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader

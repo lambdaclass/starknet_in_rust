@@ -19,17 +19,16 @@ use starknet_api::{
 use starknet_in_rust::execution::TransactionExecutionInfo;
 #[cfg(feature = "benchmark")]
 use starknet_in_rust::{
-    felt::Felt252,
     state::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
     },
     utils::Address,
+    Felt252,
 };
+#[cfg(feature = "benchmark")]
 use std::ops::Div;
 #[cfg(feature = "benchmark")]
-use std::time::Instant;
-#[cfg(feature = "benchmark")]
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 
 #[derive(Debug, Parser)]
 #[command(about = "Replay is a tool for executing Starknet transactions.", long_about = None)]
@@ -153,8 +152,9 @@ fn main() {
                     ..
                 } = state.state_reader.0.get_block_info().unwrap();
                 block_timestamps.insert(block_number, block_timestamp.0);
-                let sequencer_address =
-                    Address(Felt252::from_bytes_be(sequencer_address.0.key().bytes()));
+                let sequencer_address = Address(Felt252::from_bytes_be_slice(
+                    sequencer_address.0.key().bytes(),
+                ));
                 sequencer_addresses.insert(block_number, sequencer_address.clone());
                 // Fetch gas price
                 let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();

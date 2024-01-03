@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
-use num_traits::{One, Zero};
+use cairo_vm::Felt252;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
@@ -28,14 +27,14 @@ fn delegate_call() {
     //* --------------------------------------------
 
     let contract_class_cache = PermanentContractClassCache::default();
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     // Add get_number.cairo contract to the state
 
     let path = PathBuf::from("starknet_programs/get_number.json");
     let contract_class = ContractClass::from_path(path).unwrap();
 
-    let address = Address(Felt252::one()); // const CONTRACT_ADDRESS = 1;
+    let address = Address(Felt252::ONE); // const CONTRACT_ADDRESS = 1;
     let class_hash = ClassHash([2; 32]);
 
     contract_class_cache.set_contract_class(
@@ -46,9 +45,7 @@ fn delegate_call() {
     state_reader
         .address_to_class_hash_mut()
         .insert(address.clone(), class_hash);
-    state_reader
-        .address_to_nonce_mut()
-        .insert(address, nonce.clone());
+    state_reader.address_to_nonce_mut().insert(address, nonce);
 
     // ---------------------------------------------------------
     //  Create program and entry point types for contract class
@@ -59,13 +56,12 @@ fn delegate_call() {
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
     // External entry point, delegate_call function delegate.cairo:L13
-    let test_delegate_call_selector = entry_points_by_type
+    let test_delegate_call_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //  ------------ contract data --------------------
 
@@ -114,12 +110,12 @@ fn delegate_call() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

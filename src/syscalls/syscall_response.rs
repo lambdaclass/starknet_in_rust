@@ -1,5 +1,5 @@
-use cairo_vm::felt::Felt252;
 use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
+use cairo_vm::Felt252;
 
 /// Abstracts every response variant body for each syscall.
 pub(crate) enum ResponseBody {
@@ -32,12 +32,12 @@ impl SyscallResponse {
         match self.body.as_ref() {
             Some(ResponseBody::StorageReadResponse { value }) => {
                 if let Some(v) = value.as_ref() {
-                    cairo_args.push(v.clone().into())
+                    cairo_args.push((*v).into())
                 }
             }
             Some(ResponseBody::GetBlockNumber { number }) => cairo_args.push(number.into()),
             Some(ResponseBody::Deploy(deploy_response)) => {
-                cairo_args.push(deploy_response.contract_address.clone().into());
+                cairo_args.push(deploy_response.contract_address.into());
                 cairo_args.push(deploy_response.retdata_start.into());
                 cairo_args.push(deploy_response.retdata_end.into());
             }
@@ -50,13 +50,13 @@ impl SyscallResponse {
                 cairo_args.push(failure_reason.retdata_end.into());
             }
             Some(ResponseBody::GetBlockTimestamp(get_block_timestamp_response)) => {
-                cairo_args.push(get_block_timestamp_response.timestamp.clone().into())
+                cairo_args.push(get_block_timestamp_response.timestamp.into())
             }
             Some(ResponseBody::GetExecutionInfo { exec_info_ptr }) => {
                 cairo_args.push(exec_info_ptr.into())
             }
             Some(ResponseBody::GetBlockHash(get_block_hash_response)) => {
-                cairo_args.push(get_block_hash_response.block_hash.clone().into())
+                cairo_args.push(get_block_hash_response.block_hash.into())
             }
             Some(ResponseBody::Keccak(KeccakResponse {
                 hash_low,
