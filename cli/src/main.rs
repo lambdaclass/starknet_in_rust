@@ -1,7 +1,6 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer};
-use cairo_vm::felt::Felt252;
+use cairo_vm::{utils::felt_to_biguint, Felt252};
 use clap::{Args, Parser, Subcommand};
-use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
 use starknet_in_rust::{
     core::{
@@ -23,14 +22,18 @@ use starknet_in_rust::{
     hash_utils::calculate_contract_address,
     parser_errors::ParserError,
     serde_structs::read_abi,
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
     state::{cached_state::CachedState, state_api::State},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager, StateDiff,
+    },
     transaction::{error::TransactionError, InvokeFunction},
     utils::{felt_to_hash, string_to_hash, Address},
 };
 use std::{
-    collections::HashMap,
     path::PathBuf,
     sync::{Arc, Mutex},
 };
@@ -100,31 +103,34 @@ struct DevnetArgs {
 }
 
 struct AppState {
-    cached_state: Mutex<CachedState<InMemoryStateReader>>,
+    cached_state: Mutex<CachedState<InMemoryStateReader, PermanentContractClassCache>>,
 }
 
 fn declare_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     args: &DeclareArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_class =
         ContractClass::from_path(&args.contract).map_err(ContractAddressError::Program)?;
     let class_hash = compute_deprecated_class_hash(&contract_class)?;
-    cached_state.set_contract_class(&felt_to_hash(&class_hash), &contract_class)?;
+    cached_state.set_contract_class(
+        &felt_to_hash(&class_hash),
+        &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
+    )?;
 
     let tx_hash = calculate_declare_transaction_hash(
         &contract_class,
-        Felt252::zero(),
+        Felt252::ZERO,
         &Address(0.into()),
         0,
-        DECLARE_VERSION.clone(),
-        Felt252::zero(),
+        *DECLARE_VERSION,
+        Felt252::ZERO,
     )?;
     Ok((class_hash, tx_hash))
 }
 
 fn deploy_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     args: &DeployArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let constructor_calldata = match &args.inputs {
@@ -133,28 +139,28 @@ fn deploy_parser(
     };
     let address = calculate_contract_address(
         &args.salt.into(),
-        &Felt252::from_str_radix(&args.class_hash[2..], 16)
+        &Felt252::from_hex(&args.class_hash)
             .map_err(|_| ParserError::ParseFelt(args.class_hash.clone()))?,
         &constructor_calldata,
         Address(0.into()),
     )?;
 
-    cached_state.deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))?;
+    cached_state.deploy_contract(Address(address), string_to_hash(&args.class_hash))?;
     let tx_hash = calculate_deploy_transaction_hash(
         0.into(),
-        &Address(address.clone()),
+        &Address(address),
         &constructor_calldata,
-        Felt252::zero(),
+        Felt252::ZERO,
     )?;
     Ok((address, tx_hash))
 }
 
 fn invoke_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     args: &InvokeArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_address = Address(
-        Felt252::from_str_radix(&args.address[2..], 16)
+        Felt252::from_hex(&args.address)
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
@@ -164,7 +170,7 @@ fn invoke_parser(
         .map_err(StateError::from)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
     let transaction_hash = args.hash.clone().map(|f| {
-        Felt252::from_str_radix(&f, 16)
+        Felt252::from_hex(&f)
             .map_err(|_| ParserError::ParseFelt(f.clone()))
             .unwrap()
     });
@@ -178,8 +184,7 @@ fn invoke_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector()
-        .clone();
+        .selector();
 
     let calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
@@ -187,24 +192,32 @@ fn invoke_parser(
     };
     let internal_invoke = InvokeFunction::new_with_tx_hash(
         contract_address.clone(),
-        entrypoint_selector.clone(),
+        *entrypoint_selector,
         0,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         calldata.clone(),
         vec![],
-        Some(Felt252::zero()),
+        Some(Felt252::ZERO),
         transaction_hash.unwrap(),
     )?;
-    let _tx_info = internal_invoke.apply(cached_state, &BlockContext::default(), 0)?;
+    let mut transactional_state = cached_state.create_transactional()?;
+    let _tx_info = internal_invoke.apply(
+        &mut transactional_state,
+        &BlockContext::default(),
+        0,
+        #[cfg(feature = "cairo-native")]
+        None,
+    )?;
+    cached_state.apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         &contract_address,
-        entrypoint_selector,
+        *entrypoint_selector,
         &calldata,
         0,
-        Felt252::zero(),
+        Felt252::ZERO,
         &[],
     )?;
 
@@ -212,11 +225,11 @@ fn invoke_parser(
 }
 
 fn call_parser(
-    cached_state: &mut CachedState<InMemoryStateReader>,
+    cached_state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     args: &CallArgs,
 ) -> Result<Vec<Felt252>, ParserError> {
     let contract_address = Address(
-        Felt252::from_str_radix(&args.address[2..], 16)
+        Felt252::from_hex(&args.address)
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
@@ -235,8 +248,7 @@ fn call_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector()
-        .clone();
+        .selector();
     let caller_address = Address(0.into());
     let calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
@@ -245,7 +257,7 @@ fn call_parser(
     let execution_entry_point = ExecutionEntryPoint::new(
         contract_address,
         calldata,
-        entrypoint_selector,
+        *entrypoint_selector,
         caller_address,
         *entry_point_type,
         None,
@@ -260,6 +272,8 @@ fn call_parser(
         &mut TransactionExecutionContext::default(),
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
@@ -311,10 +325,9 @@ async fn call_req(data: web::Data<AppState>, args: web::Json<CallArgs>) -> HttpR
 
 pub async fn start_devnet(port: u16) -> Result<(), std::io::Error> {
     let cached_state = web::Data::new(AppState {
-        cached_state: Mutex::new(CachedState::<InMemoryStateReader>::new(
+        cached_state: Mutex::new(CachedState::new(
             Arc::new(InMemoryStateReader::default()),
-            Some(HashMap::new()),
-            None,
+            Arc::new(PermanentContractClassCache::default()),
         )),
     });
 
@@ -343,7 +356,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },
@@ -359,7 +372,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },
@@ -375,7 +388,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Invoke transaction was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Invoke transaction was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },

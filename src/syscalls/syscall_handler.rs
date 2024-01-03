@@ -1,13 +1,13 @@
 use super::business_logic_syscall_handler::BusinessLogicSyscallHandler;
-use crate::state::state_api::StateReader;
+use crate::state::{contract_class_cache::ContractClassCache, state_api::StateReader};
 use crate::transaction::error::TransactionError;
 use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
+use cairo_vm::utils::bigint_to_felt;
 use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
-    felt::Felt252,
     hint_processor::{
         cairo_1_hint_processor::hint_processor::Cairo1HintProcessor,
         hint_processor_definition::{HintProcessorLogic, HintReference},
@@ -19,6 +19,7 @@ use cairo_vm::{
         errors::{hint_errors::HintError, vm_errors::VirtualMachineError},
         vm_core::VirtualMachine,
     },
+    Felt252,
 };
 use std::{any::Any, boxed::Box, collections::HashMap};
 
@@ -32,15 +33,15 @@ pub(crate) trait HintProcessorPostRun {
 }
 
 #[allow(unused)]
-pub(crate) struct SyscallHintProcessor<'a, S: StateReader> {
+pub(crate) struct SyscallHintProcessor<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
-    pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S>,
+    pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S, C>,
     pub(crate) run_resources: RunResources,
 }
 
-impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> SyscallHintProcessor<'a, S, C> {
     pub fn new(
-        syscall_handler: BusinessLogicSyscallHandler<'a, S>,
+        syscall_handler: BusinessLogicSyscallHandler<'a, S, C>,
         hints: &[(usize, Vec<Hint>)],
         run_resources: RunResources,
     ) -> Self {
@@ -52,7 +53,9 @@ impl<'a, S: StateReader> SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> HintProcessorLogic
+    for SyscallHintProcessor<'a, S, C>
+{
     fn execute_hint(
         &mut self,
         vm: &mut VirtualMachine,
@@ -70,7 +73,13 @@ impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
                     StarknetHint::SystemCall { system } => {
                         let syscall_ptr = as_relocatable(vm, system)?;
                         self.syscall_handler
-                            .syscall(vm, syscall_ptr)
+                            .syscall(
+                                vm,
+                                syscall_ptr,
+                                // TODO: Get the program_cache somehow.
+                                #[cfg(feature = "cairo-native")]
+                                None,
+                            )
                             .map_err(|err| {
                                 HintError::CustomHint(
                                     format!("Syscall handler invocation error: {err}")
@@ -111,7 +120,7 @@ impl<'a, S: StateReader> HintProcessorLogic for SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> ResourceTracker for SyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> ResourceTracker for SyscallHintProcessor<'a, S, C> {
     fn consumed(&self) -> bool {
         self.run_resources.consumed()
     }
@@ -129,7 +138,9 @@ impl<'a, S: StateReader> ResourceTracker for SyscallHintProcessor<'a, S> {
     }
 }
 
-impl<'a, S: StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, S> {
+impl<'a, S: StateReader, C: ContractClassCache> HintProcessorPostRun
+    for SyscallHintProcessor<'a, S, C>
+{
     fn post_run(
         &self,
         runner: &mut VirtualMachine,
@@ -142,7 +153,7 @@ impl<'a, S: StateReader> HintProcessorPostRun for SyscallHintProcessor<'a, S> {
 // TODO: These four functions were copied from cairo-rs in
 // hint_processor/cairo-1-hint-processor/hint_processor_utils.rs as these functions are private.
 // They will became public soon and then we have to remove this ones and use the ones in cairo-rs instead
-fn as_relocatable(vm: &mut VirtualMachine, value: &ResOperand) -> Result<Relocatable, HintError> {
+fn as_relocatable(vm: &VirtualMachine, value: &ResOperand) -> Result<Relocatable, HintError> {
     let (base, offset) = extract_buffer(value)?;
     get_ptr(vm, base, &offset).map_err(HintError::from)
 }
@@ -152,7 +163,9 @@ fn extract_buffer(buffer: &ResOperand) -> Result<(&CellRef, Felt252), HintError>
         ResOperand::Deref(cell) => (cell, 0.into()),
         ResOperand::BinOp(bin_op) => {
             if let DerefOrImmediate::Immediate(val) = &bin_op.b {
-                (&bin_op.a, val.clone().value.into())
+                // TODO
+                // Remove this unwrap()
+                (&bin_op.a, bigint_to_felt(&val.value).unwrap())
             } else {
                 return Err(HintError::CustomHint("Failed to extract buffer, expected ResOperand of BinOp type to have Inmediate b value".to_owned().into_boxed_str()));
             }

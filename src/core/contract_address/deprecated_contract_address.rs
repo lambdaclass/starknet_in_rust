@@ -12,8 +12,8 @@ use crate::{
     hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass,
 };
-use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use cairo_vm::Felt252;
+
 use serde::Serialize;
 use sha3::Digest;
 use std::{borrow::Cow, collections::BTreeMap, io};
@@ -158,7 +158,7 @@ impl serde_json::ser::Formatter for PythonDefaultFormatter {
             } else {
                 let buf = c.encode_utf16(&mut buf);
                 for i in buf {
-                    write!(writer, r"\u{:4x}", i)?;
+                    write!(writer, r"\u{:04x}", i)?;
                 }
             }
         }
@@ -169,7 +169,6 @@ impl serde_json::ser::Formatter for PythonDefaultFormatter {
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
-
 pub struct CairoContractDefinition<'a> {
     /// Contract ABI, which has no schema definition.
     pub abi: serde_json::Value,
@@ -257,7 +256,7 @@ pub(crate) fn compute_hinted_class_hash(
                 None => {}
             }
             // We don't know what this type is supposed to be, but if its missing it is null.
-            if let Some(serde_json::Value::Null) = vals.get_mut("flow_tracking_data") {
+            if vals.get("flow_tracking_data") == Some(&serde_json::Value::Null) {
                 vals.remove("flow_tracking_data");
             }
 
@@ -299,7 +298,7 @@ fn get_contract_entry_points_hashed(
             .iter()
             .flat_map(|contract_entry_point| {
                 vec![
-                    contract_entry_point.selector().clone(),
+                    *contract_entry_point.selector(),
                     Felt252::from(contract_entry_point.offset()),
                 ]
             })
@@ -312,7 +311,7 @@ pub fn compute_deprecated_class_hash(
     contract_class: &ContractClass,
 ) -> Result<Felt252, ContractAddressError> {
     // Deprecated API version.
-    let api_version = Felt252::zero();
+    let api_version = Felt252::ZERO;
 
     // Entrypoints by type, hashed.
     let external_functions =
@@ -326,7 +325,7 @@ pub fn compute_deprecated_class_hash(
     let mut builtin_list_vec = Vec::new();
 
     for builtin_name in contract_class.program().iter_builtins() {
-        builtin_list_vec.push(Felt252::from_bytes_be(
+        builtin_list_vec.push(Felt252::from_bytes_be_slice(
             builtin_name
                 .name()
                 .strip_suffix("_builtin")
@@ -343,9 +342,9 @@ pub fn compute_deprecated_class_hash(
 
     for data in contract_class.program().iter_data() {
         bytecode_vector.push(
-            data.get_int_ref()
-                .ok_or(ContractAddressError::NoneIntMaybeRelocatable)?
-                .clone(),
+            *data
+                .get_int_ref()
+                .ok_or(ContractAddressError::NoneIntMaybeRelocatable)?,
         );
     }
 
@@ -357,7 +356,7 @@ pub fn compute_deprecated_class_hash(
         l1_handlers,
         constructors,
         builtin_list,
-        hinted_class_hash.clone(),
+        *hinted_class_hash,
         bytecode,
     ];
 
@@ -367,9 +366,8 @@ pub fn compute_deprecated_class_hash(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::felt::{felt_str, Felt252};
+    use cairo_vm::Felt252;
     use coverage_helper::test;
-    use num_traits::Num;
 
     #[test]
     fn test_compute_hinted_class_hash_with_abi() {
@@ -379,9 +377,8 @@ mod tests {
 
         assert_eq!(
             contract_class.hinted_class_hash(),
-            &Felt252::from_str_radix(
+            &Felt252::from_dec_str(
                 "1164033593603051336816641706326288678020608687718343927364853957751413025239",
-                10
             )
             .unwrap()
         );
@@ -393,11 +390,8 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            Felt252::from_str_radix(
-                "1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4",
-                16
-            )
-            .unwrap()
+            Felt252::from_hex("1354433237b0039baa138bf95b98fe4a8ae3df7ac4fd4d4845f0b41cd11bec4")
+                .unwrap()
         );
     }
 
@@ -408,11 +402,8 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            Felt252::from_str_radix(
-                "03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e",
-                16
-            )
-            .unwrap()
+            Felt252::from_hex("03131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e")
+                .unwrap()
         );
     }
 
@@ -423,9 +414,8 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            Felt252::from_str_radix(
-                "025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
-                16
+            Felt252::from_hex(
+                "0x025ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918",
             )
             .unwrap()
         );
@@ -438,11 +428,8 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            Felt252::from_str_radix(
-                "02c3348ad109f7f3967df6494b3c48741d61675d9a7915b265aa7101a631dc33",
-                16
-            )
-            .unwrap()
+            Felt252::from_hex("0x02c3348ad109f7f3967df6494b3c48741d61675d9a7915b265aa7101a631dc33")
+                .unwrap()
         );
     }
 
@@ -455,9 +442,10 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            felt_str!(
+            Felt252::from_dec_str(
                 "226341635385251092193534262877925620859725853394183386505497817801290939008"
             )
+            .unwrap()
         );
     }
 
@@ -470,10 +458,8 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f",
-                16
-            )
+            Felt252::from_hex("0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f",)
+                .unwrap()
         );
     }
 
@@ -486,10 +472,8 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f",
-                16
-            )
+            Felt252::from_hex("0x4d07e40e93398ed3c76981e72dd1fd22557a78ce36c0515f679e27f0bb5bc5f")
+                .unwrap()
         );
     }
 }

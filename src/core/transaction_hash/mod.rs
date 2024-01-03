@@ -4,7 +4,7 @@ use crate::{
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass, utils::Address,
 };
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use num_traits::Zero;
 
 #[derive(Debug)]
@@ -21,11 +21,15 @@ pub enum TransactionHashPrefix {
 impl TransactionHashPrefix {
     fn get_prefix(&self) -> Felt252 {
         match self {
-            TransactionHashPrefix::Declare => felt_str!("28258975365558885"),
-            TransactionHashPrefix::Deploy => felt_str!("110386840629113"),
-            TransactionHashPrefix::DeployAccount => felt_str!("2036277798190617858034555652763252"),
-            TransactionHashPrefix::Invoke => felt_str!("115923154332517"),
-            TransactionHashPrefix::L1Handler => felt_str!("510926345461491391292786"),
+            TransactionHashPrefix::Declare => Felt252::from_dec_str("28258975365558885").unwrap(),
+            TransactionHashPrefix::Deploy => Felt252::from_dec_str("110386840629113").unwrap(),
+            TransactionHashPrefix::DeployAccount => {
+                Felt252::from_dec_str("2036277798190617858034555652763252").unwrap()
+            }
+            TransactionHashPrefix::Invoke => Felt252::from_dec_str("115923154332517").unwrap(),
+            TransactionHashPrefix::L1Handler => {
+                Felt252::from_dec_str("510926345461491391292786").unwrap()
+            }
         }
     }
 }
@@ -61,7 +65,7 @@ pub fn calculate_transaction_hash_common(
     let mut data_to_hash: Vec<Felt252> = vec![
         tx_hash_prefix.get_prefix(),
         version,
-        contract_address.0.clone(),
+        contract_address.0,
         entry_point_selector,
         calldata_hash,
         max_fee.into(),
@@ -84,7 +88,7 @@ pub fn calculate_deploy_transaction_hash(
         TransactionHashPrefix::Deploy,
         version,
         contract_address,
-        CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+        *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
         constructor_calldata,
         0, // Considered 0 for Deploy transaction hash calculation purposes.
         chain_id,
@@ -111,7 +115,7 @@ pub fn calculate_deploy_account_transaction_hash(
         TransactionHashPrefix::DeployAccount,
         version,
         contract_address,
-        Felt252::zero(),
+        Felt252::ZERO,
         &calldata,
         max_fee,
         chain_id,
@@ -141,7 +145,7 @@ pub fn calculate_declare_transaction_hash(
         TransactionHashPrefix::Declare,
         version,
         sender_address,
-        Felt252::zero(),
+        Felt252::ZERO,
         &calldata,
         max_fee,
         chain_id,
@@ -169,7 +173,7 @@ pub fn calculate_declare_v2_transaction_hash(
         TransactionHashPrefix::Declare,
         version,
         sender_address,
-        Felt252::zero(),
+        Felt252::ZERO,
         &calldata,
         max_fee,
         chain_id,
@@ -179,7 +183,7 @@ pub fn calculate_declare_v2_transaction_hash(
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::felt::felt_str;
+    use cairo_vm::Felt252;
     use coverage_helper::test;
 
     use crate::definitions::block_context::StarknetChainId;
@@ -198,9 +202,10 @@ mod tests {
         let additional_data: Vec<Felt252> = Vec::new();
 
         // Expected value taken from Python implementation of calculate_transaction_hash_common function
-        let expected = felt_str!(
-            "2401716064129505935860131145275652294383308751137512921151718435935971973354"
-        );
+        let expected = Felt252::from_dec_str(
+            "2401716064129505935860131145275652294383308751137512921151718435935971973354",
+        )
+        .unwrap();
 
         let result = calculate_transaction_hash_common(
             tx_hash_prefix,
@@ -220,15 +225,19 @@ mod tests {
     #[test]
     fn calculate_declare_hash_test() {
         let chain_id = StarknetChainId::MainNet;
-        let sender_address = Address(felt_str!(
-            "78963962122521774108119849325604561253807220406669671815499681746608877924"
-        ));
+        let sender_address = Address(
+            Felt252::from_dec_str(
+                "78963962122521774108119849325604561253807220406669671815499681746608877924",
+            )
+            .unwrap(),
+        );
         let max_fee = 30580718124600;
         let version = 1.into();
         let nonce = 3746.into();
-        let class_hash = felt_str!(
-            "1935775813346111469198021973672033051732472907985289186515250543849860001197"
-        );
+        let class_hash = Felt252::from_dec_str(
+            "1935775813346111469198021973672033051732472907985289186515250543849860001197",
+        )
+        .unwrap();
 
         let (calldata, additional_data) = (vec![class_hash], vec![nonce]);
 
@@ -236,7 +245,7 @@ mod tests {
             TransactionHashPrefix::Declare,
             version,
             &sender_address,
-            Felt252::zero(),
+            Felt252::ZERO,
             &calldata,
             max_fee,
             chain_id.to_felt(),
@@ -246,9 +255,10 @@ mod tests {
 
         assert_eq!(
             tx,
-            felt_str!(
+            Felt252::from_dec_str(
                 "446404108171603570739811156347043235876209711235222547918688109133687877504"
             )
+            .unwrap()
         )
     }
 }

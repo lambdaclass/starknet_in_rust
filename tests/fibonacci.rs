@@ -1,24 +1,31 @@
 #![cfg(not(feature = "cairo_1_tests"))]
-#![deny(warnings)]
+// #![deny(warnings)]
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME};
-use num_traits::Zero;
-use starknet_in_rust::definitions::block_context::BlockContext;
-use starknet_in_rust::EntryPointType;
+use cairo_vm::{
+    utils::biguint_to_felt,
+    vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
+    Felt252,
+};
+
 use starknet_in_rust::{
-    definitions::constants::TRANSACTION_VERSION,
+    definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::cached_state::CachedState,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        ExecutionResourcesManager,
+    },
     utils::{Address, ClassHash},
+    EntryPointType,
 };
-use std::sync::Arc;
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 #[test]
 fn integration_test() {
@@ -30,27 +37,29 @@ fn integration_test() {
     let contract_class = ContractClass::from_path(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
-    let fib_entrypoint_selector = entry_points_by_type
+    let fib_entrypoint_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //* --------------------------------------------
     //*    Create state reader with class hash data
     //* --------------------------------------------
 
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     //  ------------ contract data --------------------
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
+    let class_hash: ClassHash = ClassHash([1; 32]);
+    let nonce = Felt252::ZERO;
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Deprecated(Arc::new(contract_class)),
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -63,7 +72,7 @@ fn integration_test() {
     //*    Create state with previous data
     //* ---------------------------------------
 
-    let mut state = CachedState::new(Arc::new(state_reader), Some(contract_class_cache), None);
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     //* ------------------------------------
     //*    Create execution entry point
@@ -76,7 +85,7 @@ fn integration_test() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        fib_entrypoint_selector.clone(),
+        fib_entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -90,12 +99,12 @@ fn integration_test() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -108,10 +117,10 @@ fn integration_test() {
         calldata,
         retdata: [144.into()].to_vec(),
         class_hash: Some(class_hash),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 94,
             ..Default::default()
-        },
+        }),
         ..Default::default()
     };
 
@@ -124,6 +133,8 @@ fn integration_test() {
                 &mut tx_execution_context,
                 false,
                 block_context.invoke_tx_max_n_steps(),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap()
             .call_info
@@ -145,13 +156,14 @@ fn integration_test_cairo1() {
     let fib_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
     // Create state reader with class hash data
-    let mut contract_class_cache = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
+    let class_hash: ClassHash = ClassHash([1; 32]);
+    let nonce = Felt252::ZERO;
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -161,7 +173,7 @@ fn integration_test_cairo1() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(Arc::new(state_reader), None, Some(contract_class_cache));
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [0.into(), 1.into(), 12.into()].to_vec();
@@ -171,7 +183,7 @@ fn integration_test_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        Felt252::new(fib_entrypoint_selector.clone()),
+        biguint_to_felt(fib_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -183,12 +195,12 @@ fn integration_test_cairo1() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -197,17 +209,17 @@ fn integration_test_cairo1() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(Felt252::new(fib_entrypoint_selector)),
+        entry_point_selector: Some(biguint_to_felt(fib_entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),
-        execution_resources: ExecutionResources {
-            n_steps: 418,
+        execution_resources: Some(ExecutionResources {
+            n_steps: 414,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
-        },
+        }),
         class_hash: Some(class_hash),
-        gas_consumed: 35220,
+        gas_consumed: 34820,
         ..Default::default()
     };
 
@@ -220,6 +232,8 @@ fn integration_test_cairo1() {
                 &mut tx_execution_context,
                 false,
                 block_context.invoke_tx_max_n_steps(),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap()
             .call_info

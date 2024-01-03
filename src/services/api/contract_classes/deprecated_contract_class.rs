@@ -1,12 +1,13 @@
 use crate::core::contract_address::compute_hinted_class_hash;
 use crate::services::api::contract_class_errors::ContractClassError;
-use cairo_vm::felt::{Felt252, PRIME_STR};
 use cairo_vm::serde::deserialize_program::{
     deserialize_array_of_bigint_hex, Attribute, BuiltinName, HintParams, Identifier,
     ReferenceManager,
 };
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
+use cairo_vm::utils::PRIME_STR;
+use cairo_vm::Felt252;
 use core::str::FromStr;
 use getset::{CopyGetters, Getters};
 use serde_json::Value;
@@ -36,7 +37,7 @@ pub struct ContractEntryPoint {
 }
 
 impl ContractEntryPoint {
-    pub fn new(selector: Felt252, offset: usize) -> ContractEntryPoint {
+    pub const fn new(selector: Felt252, offset: usize) -> ContractEntryPoint {
         ContractEntryPoint { selector, offset }
     }
 }
@@ -48,7 +49,7 @@ impl ContractEntryPoint {
 impl From<&ContractEntryPoint> for Vec<MaybeRelocatable> {
     fn from(entry_point: &ContractEntryPoint) -> Self {
         vec![
-            MaybeRelocatable::from(entry_point.selector.clone()),
+            MaybeRelocatable::from(entry_point.selector),
             MaybeRelocatable::from(entry_point.offset),
         ]
     }
@@ -217,7 +218,7 @@ pub(crate) fn convert_entry_points(
         let contracts_entry_points = entry_points
             .into_iter()
             .map(|e| {
-                let selector = Felt252::from_bytes_be(e.selector.0.bytes());
+                let selector = Felt252::from_bytes_be_slice(e.selector.0.bytes());
                 let offset = e.offset.0;
                 ContractEntryPoint::new(selector, offset)
             })
@@ -261,13 +262,8 @@ mod tests {
     use crate::core::contract_address::compute_deprecated_class_hash;
 
     use super::*;
-    use cairo_vm::{
-        felt::{felt_str, PRIME_STR},
-        serde::deserialize_program::BuiltinName,
-    };
-    use starknet_api::deprecated_contract_class::{
-        FunctionAbiEntry, FunctionAbiEntryType, FunctionAbiEntryWithType, TypedParameter,
-    };
+    use cairo_vm::{serde::deserialize_program::BuiltinName, Felt252};
+    use starknet_api::deprecated_contract_class::{FunctionAbiEntry, TypedParameter};
 
     #[test]
     fn deserialize_contract_class() {
@@ -306,9 +302,10 @@ mod tests {
                 .get(&EntryPointType::Constructor)
                 .unwrap(),
             &vec![ContractEntryPoint::new(
-                felt_str!(
+                Felt252::from_dec_str(
                     "1159040026212278395030414237414753050475174923702621880048416706425641521556"
-                ),
+                )
+                .unwrap(),
                 366
             )]
         );
@@ -321,10 +318,8 @@ mod tests {
 
         assert_eq!(
             compute_deprecated_class_hash(&contract_class).unwrap(),
-            felt_str!(
-                "4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad",
-                16
-            )
+            Felt252::from_hex("0x4479c3b883b34f1eafa5065418225d78a11ee7957c371e1b285e4b77afc6dad")
+                .unwrap()
         );
     }
 
@@ -333,34 +328,28 @@ mod tests {
         // This specific contract compiles with --no_debug_info
         let res = ContractClass::from_path("starknet_programs/fibonacci.json");
         let contract_class = res.expect("should be able to read file");
-
-        let expected_abi = Some(vec![ContractClassAbiEntry::Function(
-            FunctionAbiEntryWithType {
-                r#type: FunctionAbiEntryType::Function,
-                entry: FunctionAbiEntry {
-                    name: "fib".to_string(),
-                    inputs: vec![
-                        TypedParameter {
-                            name: "first_element".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                        TypedParameter {
-                            name: "second_element".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                        TypedParameter {
-                            name: "n".to_string(),
-                            r#type: "felt".to_string(),
-                        },
-                    ],
-                    outputs: vec![TypedParameter {
-                        name: "res".to_string(),
-                        r#type: "felt".to_string(),
-                    }],
-                    state_mutability: None,
+        let expected_abi = Some(vec![ContractClassAbiEntry::Function(FunctionAbiEntry {
+            name: "fib".to_string(),
+            inputs: vec![
+                TypedParameter {
+                    name: "first_element".to_string(),
+                    r#type: "felt".to_string(),
                 },
-            },
-        )]);
+                TypedParameter {
+                    name: "second_element".to_string(),
+                    r#type: "felt".to_string(),
+                },
+                TypedParameter {
+                    name: "n".to_string(),
+                    r#type: "felt".to_string(),
+                },
+            ],
+            outputs: vec![TypedParameter {
+                name: "res".to_string(),
+                r#type: "felt".to_string(),
+            }],
+            state_mutability: None,
+        })]);
         assert_eq!(contract_class.abi, expected_abi);
     }
 
@@ -395,9 +384,10 @@ mod tests {
                 .get(&EntryPointType::Constructor)
                 .unwrap(),
             &vec![ContractEntryPoint {
-                selector: felt_str!(
+                selector: Felt252::from_dec_str(
                     "1159040026212278395030414237414753050475174923702621880048416706425641521556"
-                ),
+                )
+                .unwrap(),
                 offset: 366
             }]
         );
@@ -432,7 +422,7 @@ mod tests {
         let contract_class_from_program_json_and_class_hash =
             ContractClass::from_program_json_and_class_hash(
                 program_json,
-                contract_class_from_path.hinted_class_hash.clone(),
+                contract_class_from_path.hinted_class_hash,
             )
             .expect("should be able to read file");
         assert_eq!(

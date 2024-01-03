@@ -1,36 +1,43 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-
+use crate::complex_contracts::utils::*;
 use assert_matches::assert_matches;
-use cairo_vm::felt::Felt252;
-use cairo_vm::vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME};
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-use num_traits::Zero;
+use cairo_vm::{
+    vm::runners::{
+        builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
+        cairo_runner::ExecutionResources,
+    },
+    Felt252,
+};
+
 use starknet_crypto::FieldElement;
 use starknet_in_rust::definitions::block_context::BlockContext;
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::cached_state::CachedState;
 use starknet_in_rust::transaction::error::TransactionError;
+use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     execution::{CallInfo, CallType, OrderedEvent},
-    state::state_api::StateReader,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
+    state::{
+        contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
+        ExecutionResourcesManager,
+    },
     utils::{calculate_sn_keccak, Address},
 };
-
-use crate::complex_contracts::utils::*;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 #[test]
 fn erc721_constructor_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be(b"some-nft");
+    let collection_name = Felt252::from_bytes_be_slice(b"some-nft");
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = vec![collection_name, collection_symbol, to];
@@ -63,9 +70,9 @@ fn erc721_constructor_test() {
     };
 
     let result_get_name = execute_entry_point("name", &[], &mut call_config).unwrap();
-    assert_eq!(result_get_name.retdata, vec![calldata[0].clone()]);
+    assert_eq!(result_get_name.retdata, vec![calldata[0]]);
     let result_get_symbol = execute_entry_point("symbol", &[], &mut call_config).unwrap();
-    assert_eq!(result_get_symbol.retdata, vec![calldata[1].clone()]);
+    assert_eq!(result_get_symbol.retdata, vec![calldata[1]]);
 }
 
 #[test]
@@ -73,11 +80,10 @@ fn erc721_balance_of_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -126,9 +132,9 @@ fn erc721_balance_of_test() {
     let mut accessed_storage_keys = HashSet::new();
     let mut balance = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
         .drain()
-        .collect::<Vec<[u8; 32]>>()[0];
+        .collect::<Vec<ClassHash>>()[0];
     accessed_storage_keys.insert(balance);
-    balance[31] += 1;
+    balance.0[31] += 1;
     accessed_storage_keys.insert(balance);
 
     let expected_call_info = CallInfo {
@@ -139,14 +145,14 @@ fn erc721_balance_of_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result.clone(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 105,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
                 (HASH_BUILTIN_NAME.to_string(), 1),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: expected_read_result,
@@ -164,11 +170,10 @@ fn erc721_test_owner_of() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -222,14 +227,14 @@ fn erc721_test_owner_of() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result.clone(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 116,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 5),
                 (HASH_BUILTIN_NAME.to_string(), 2),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: expected_read_result,
@@ -247,11 +252,10 @@ fn erc721_test_get_approved() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -322,14 +326,14 @@ fn erc721_test_get_approved() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 192,
             n_memory_holes: 20,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 8),
                 (HASH_BUILTIN_NAME.to_string(), 4),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values,
@@ -347,11 +351,10 @@ fn erc721_test_is_approved_for_all() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -425,14 +428,14 @@ fn erc721_test_is_approved_for_all() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 101,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
                 (HASH_BUILTIN_NAME.to_string(), 2),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values,
@@ -450,11 +453,10 @@ fn erc721_test_approve() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -498,7 +500,7 @@ fn erc721_test_approve() {
     let expected_read_result = vec![];
 
     // Checks only the storage variable ERC721_operator_approvals
-    let storage_read_values = vec![Felt252::from(666), Felt252::from(666)];
+    let storage_read_values = vec![Felt252::from(666), Felt252::ZERO, Felt252::from(666)];
 
     // Ask for the owner of the token
     let mut accessed_storage_keys =
@@ -517,7 +519,7 @@ fn erc721_test_approve() {
             Felt252::from(666),
             Felt252::from(777),
             Felt252::from(1),
-            Felt252::zero(),
+            Felt252::ZERO,
         ],
     )];
 
@@ -529,14 +531,14 @@ fn erc721_test_approve() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 332,
             n_memory_holes: 30,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 13),
                 (HASH_BUILTIN_NAME.to_string(), 6),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values,
@@ -555,11 +557,10 @@ fn erc721_set_approval_for_all() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -605,7 +606,7 @@ fn erc721_set_approval_for_all() {
     let expected_read_result = vec![];
 
     // Only writes in operator_approvals
-    let storage_read_values = vec![];
+    let storage_read_values = vec![Felt252::ZERO];
 
     // Writes to the operator the new set value
     let accessed_storage_keys = get_accessed_keys(
@@ -628,14 +629,14 @@ fn erc721_set_approval_for_all() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: expected_read_result,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 154,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
                 (HASH_BUILTIN_NAME.to_string(), 2),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values,
@@ -654,11 +655,10 @@ fn erc721_transfer_from_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -698,7 +698,7 @@ fn erc721_transfer_from_test() {
         Felt252::from(666),
         Felt252::from(777),
         Felt252::from(1),
-        Felt252::zero(),
+        Felt252::ZERO,
     ]
     .to_vec();
 
@@ -715,27 +715,33 @@ fn erc721_transfer_from_test() {
 
     let mut balance_from = get_accessed_keys("ERC721_balances", vec![vec![666_u32.into()]])
         .drain()
-        .collect::<Vec<[u8; 32]>>()[0];
+        .collect::<Vec<ClassHash>>()[0];
     accessed_storage_keys.insert(balance_from);
-    balance_from[31] += 1;
+    balance_from.0[31] += 1;
     accessed_storage_keys.insert(balance_from);
 
     let mut balance_to = get_accessed_keys("ERC721_balances", vec![vec![777_u32.into()]])
         .drain()
-        .collect::<Vec<[u8; 32]>>()[0];
+        .collect::<Vec<ClassHash>>()[0];
     accessed_storage_keys.insert(balance_to);
-    balance_to[31] += 1;
+    balance_to.0[31] += 1;
     accessed_storage_keys.insert(balance_to);
 
     let expected_read_values = vec![
-        Felt252::from(666),
-        Felt252::from(666),
-        Felt252::from(666),
-        Felt252::from(666),
-        Felt252::from(1),
-        Felt252::zero(),
-        Felt252::zero(),
-        Felt252::zero(),
+        666.into(),
+        666.into(),
+        666.into(),
+        0.into(),
+        666.into(),
+        1.into(),
+        0.into(),
+        1.into(),
+        0.into(),
+        0.into(),
+        0.into(),
+        0.into(),
+        0.into(),
+        666.into(),
     ];
 
     let approval_event_hash = Felt252::from_bytes_be(&calculate_sn_keccak("Approval".as_bytes()));
@@ -744,9 +750,9 @@ fn erc721_transfer_from_test() {
         vec![approval_event_hash],
         vec![
             Felt252::from(666),
-            Felt252::zero(),
+            Felt252::ZERO,
             Felt252::from(1),
-            Felt252::zero(),
+            Felt252::ZERO,
         ],
     );
     let transfer_event_hash = Felt252::from_bytes_be(&calculate_sn_keccak("Transfer".as_bytes()));
@@ -757,7 +763,7 @@ fn erc721_transfer_from_test() {
             Felt252::from(666),
             Felt252::from(777),
             Felt252::from(1),
-            Felt252::zero(),
+            Felt252::ZERO,
         ],
     );
     let expected_events = vec![approval_event, transfer_event];
@@ -773,14 +779,14 @@ fn erc721_transfer_from_test() {
         accessed_storage_keys,
         storage_read_values: expected_read_values,
         events: expected_events,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 1131,
             n_memory_holes: 117,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 53),
                 (HASH_BUILTIN_NAME.to_string(), 16),
             ]),
-        },
+        }),
         ..Default::default()
     };
 
@@ -795,11 +801,10 @@ fn erc721_transfer_from_and_get_owner_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -839,7 +844,7 @@ fn erc721_transfer_from_and_get_owner_test() {
         Felt252::from(666),
         Felt252::from(777),
         Felt252::from(1),
-        Felt252::zero(),
+        Felt252::ZERO,
     ]
     .to_vec();
     execute_entry_point("transferFrom", &calldata, &mut call_config).unwrap();
@@ -865,14 +870,14 @@ fn erc721_transfer_from_and_get_owner_test() {
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: expected_read_result,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 116,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 5),
                 (HASH_BUILTIN_NAME.to_string(), 2),
             ]),
-        },
+        }),
         ..Default::default()
     };
 
@@ -887,11 +892,10 @@ fn erc721_safe_transfer_from_should_fail_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -941,8 +945,8 @@ fn erc721_safe_transfer_from_should_fail_test() {
         Felt252::from(666),
         Felt252::from(1000000),
         Felt252::from(1),
-        Felt252::zero(),
-        Felt252::zero(),
+        Felt252::ZERO,
+        Felt252::ZERO,
     ]
     .to_vec();
 
@@ -955,11 +959,10 @@ fn erc721_calling_constructor_twice_should_fail_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -1005,11 +1008,10 @@ fn erc721_constructor_should_fail_with_to_equal_zero() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(0);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -1033,11 +1035,10 @@ fn erc721_transfer_fail_to_zero_address() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -1075,9 +1076,9 @@ fn erc721_transfer_fail_to_zero_address() {
 
     let calldata = [
         Felt252::from(666),
-        Felt252::zero(),
+        Felt252::ZERO,
         Felt252::from(1),
-        Felt252::zero(),
+        Felt252::ZERO,
     ]
     .to_vec();
     assert!(execute_entry_point("transferFrom", &calldata, &mut call_config).is_err());
@@ -1088,11 +1089,10 @@ fn erc721_transfer_fail_not_owner() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
 
-    let collection_name = Felt252::from_bytes_be("some-nft".as_bytes());
+    let collection_name = Felt252::from_bytes_be_slice("some-nft".as_bytes());
     let collection_symbol = Felt252::from(555);
     let to = Felt252::from(666);
     let calldata = [collection_name, collection_symbol, to].to_vec();
@@ -1132,7 +1132,7 @@ fn erc721_transfer_fail_not_owner() {
         Felt252::from(777),
         Felt252::from(777),
         Felt252::from(1),
-        Felt252::zero(),
+        Felt252::ZERO,
     ]
     .to_vec();
 

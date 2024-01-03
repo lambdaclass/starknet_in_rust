@@ -17,7 +17,9 @@ use cairo_vm::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
         trace_errors::TraceError, vm_errors::VirtualMachineError,
     },
+    Felt252,
 };
+use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -144,4 +146,16 @@ pub enum TransactionError {
     UnsupportedVersion(String),
     #[error("Invalid compiled class, expected class hash: {0}, but received: {1}")]
     InvalidCompiledClassHash(String, String),
+    #[error(transparent)]
+    FromByteArrayError(#[from] FromByteArrayError),
+    #[error("DeclareV2 transaction has neither Sierra nor Casm contract class set")]
+    DeclareV2NoSierraOrCasm,
+    #[error("Unsupported {0} transaction version: {1}. Supported versions:{2:?}")]
+    UnsupportedTxVersion(String, Felt252, Vec<usize>),
+    #[error("The `validate` entry point should return `VALID`.")]
+    WrongValidateRetdata,
+    #[error("Max fee ({0}) is too low. Minimum fee: {1}.")]
+    MaxFeeTooLow(u128, u128),
+    #[error("Max fee ({0}) exceeds balance (Uint256({1}, {2})).")]
+    MaxFeeExceedsBalance(u128, Felt252, Felt252),
 }

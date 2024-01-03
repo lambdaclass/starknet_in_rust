@@ -1,22 +1,27 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-
-use cairo_vm::vm::runners::builtin_runner::HASH_BUILTIN_NAME;
-use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
-use cairo_vm::{felt::Felt252, vm::runners::builtin_runner::RANGE_CHECK_BUILTIN_NAME};
-use num_traits::Zero;
-use starknet_in_rust::definitions::block_context::BlockContext;
-use starknet_in_rust::EntryPointType;
-use starknet_in_rust::{
-    execution::{CallInfo, CallType},
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{cached_state::CachedState, state_api::StateReader},
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    transaction::error::TransactionError,
-    utils::{calculate_sn_keccak, Address},
+use crate::complex_contracts::utils::*;
+use cairo_vm::{
+    vm::runners::{
+        builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
+        cairo_runner::ExecutionResources,
+    },
+    Felt252,
 };
 
-use crate::complex_contracts::utils::*;
+use starknet_in_rust::{
+    definitions::block_context::BlockContext,
+    execution::{CallInfo, CallType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
+        ExecutionResourcesManager,
+    },
+    transaction::error::TransactionError,
+    utils::{calculate_sn_keccak, Address},
+    EntryPointType,
+};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 fn init_pool(
     calldata: &[Felt252],
@@ -56,8 +61,7 @@ fn amm_init_pool_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -91,16 +95,17 @@ fn amm_init_pool_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata.clone(),
         retdata: [].to_vec(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 232,
             n_memory_holes: 20,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 14),
                 (HASH_BUILTIN_NAME.to_string(), 2),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
+        storage_read_values: vec![Felt252::ZERO, Felt252::ZERO],
         ..Default::default()
     };
 
@@ -126,8 +131,7 @@ fn amm_add_demo_tokens_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -180,17 +184,17 @@ fn amm_add_demo_tokens_test() {
         entry_point_selector: Some(add_demo_token_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_add_demo_token.clone(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 393,
             n_memory_holes: 44,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 20),
                 (HASH_BUILTIN_NAME.to_string(), 8),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys_add_demo_token,
-        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
+        storage_read_values: vec![Felt252::ZERO, Felt252::ZERO, Felt252::ZERO, Felt252::ZERO],
         ..Default::default()
     };
 
@@ -205,8 +209,7 @@ fn amm_get_pool_token_balance() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -255,14 +258,14 @@ fn amm_get_pool_token_balance() {
         entry_point_selector: Some(get_pool_balance_selector),
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_get_pool_token_balance.clone(),
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 84,
             n_memory_holes: 10,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
                 (HASH_BUILTIN_NAME.to_string(), 1),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys_get_pool_token_balance,
         storage_read_values: vec![10000.into()],
@@ -281,8 +284,7 @@ fn amm_swap_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -351,14 +353,14 @@ fn amm_swap_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_swap.clone(),
         retdata: expected_return,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 820,
             n_memory_holes: 95,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 41),
                 (HASH_BUILTIN_NAME.to_string(), 14),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: [
@@ -367,6 +369,10 @@ fn amm_swap_test() {
             10000.into(),
             100.into(),
             100.into(),
+            10000.into(),
+            100.into(),
+            100.into(),
+            10000.into(),
         ]
         .to_vec(),
         ..Default::default()
@@ -383,8 +389,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -400,7 +405,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::new(2_u32.pow(30)), Felt252::new(2_u32.pow(30))].to_vec();
+    let calldata = [Felt252::from(2_u32.pow(30)), Felt252::from(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -423,8 +428,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -440,7 +444,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::zero(), Felt252::new(10)].to_vec();
+    let calldata = [Felt252::ZERO, Felt252::from(10)].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -463,8 +467,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -480,7 +483,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::new(1), Felt252::new(2_u32.pow(30))].to_vec();
+    let calldata = [Felt252::ONE, Felt252::from(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -503,8 +506,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -520,7 +522,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::new(1), Felt252::new(100)].to_vec();
+    let calldata = [Felt252::ONE, Felt252::from(100)].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -535,8 +537,12 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
         resources_manager: &mut resources_manager,
     };
 
-    init_pool(&[Felt252::new(1000), Felt252::new(1000)], &mut call_config).unwrap();
-    add_demo_token(&[Felt252::new(10), Felt252::new(10)], &mut call_config).unwrap();
+    init_pool(
+        &[Felt252::from(1000), Felt252::from(1000)],
+        &mut call_config,
+    )
+    .unwrap();
+    add_demo_token(&[Felt252::from(10), Felt252::from(10)], &mut call_config).unwrap();
 
     assert!(swap(&calldata, &mut call_config).is_err());
 }
@@ -546,8 +552,7 @@ fn amm_get_account_token_balance_test() {
     let block_context = BlockContext::default();
     let mut state = CachedState::new(
         Arc::new(InMemoryStateReader::default()),
-        Some(Default::default()),
-        None,
+        Arc::new(PermanentContractClassCache::default()),
     );
     // Deploy contract
     let (contract_address, class_hash) = deploy(
@@ -602,14 +607,14 @@ fn amm_get_account_token_balance_test() {
         entry_point_type: Some(EntryPointType::External),
         calldata: calldata_get_balance,
         retdata: expected_return,
-        execution_resources: ExecutionResources {
+        execution_resources: Some(ExecutionResources {
             n_steps: 92,
             n_memory_holes: 11,
             builtin_instance_counter: HashMap::from([
                 (RANGE_CHECK_BUILTIN_NAME.to_string(), 3),
                 (HASH_BUILTIN_NAME.to_string(), 2),
             ]),
-        },
+        }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
         storage_read_values: [10.into()].to_vec(),

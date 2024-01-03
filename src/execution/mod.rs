@@ -1,8 +1,6 @@
 pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
-
-use crate::definitions::constants::QUERY_VERSION_BASE;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::utils::parse_felt_array;
 use crate::{
@@ -12,13 +10,13 @@ use crate::{
     transaction::error::TransactionError,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use getset::Getters;
-use num_traits::{ToPrimitive, Zero};
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 
@@ -43,7 +41,7 @@ pub struct CallInfo {
     pub entry_point_type: Option<EntryPointType>,
     pub calldata: Vec<Felt252>,
     pub retdata: Vec<Felt252>,
-    pub execution_resources: ExecutionResources,
+    pub execution_resources: Option<ExecutionResources>,
     pub events: Vec<OrderedEvent>,
     pub l2_to_l1_messages: Vec<OrderedL2ToL1Message>,
     pub storage_read_values: Vec<Felt252>,
@@ -73,11 +71,11 @@ impl CallInfo {
             entry_point_type,
             calldata: Vec::new(),
             retdata: Vec::new(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 0,
                 builtin_instance_counter: HashMap::new(),
                 n_memory_holes: 0,
-            },
+            }),
             events: Vec::new(),
             l2_to_l1_messages: Vec::new(),
             storage_read_values: Vec::new(),
@@ -99,53 +97,69 @@ impl CallInfo {
             class_hash,
             Some(CallType::Call),
             Some(EntryPointType::Constructor),
-            Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
+            Some(*CONSTRUCTOR_ENTRY_POINT_SELECTOR),
             None,
         )
     }
 
-    /// Yields the contract calls in DFS (preorder).
+    /// Returns the contract calls in DFS (preorder).
     pub fn gen_call_topology(&self) -> Vec<CallInfo> {
         let mut calls = Vec::new();
-        if self.internal_calls.is_empty() {
-            calls.push(self.clone())
-        } else {
-            calls.push(self.clone());
-            for call_info in self.internal_calls.clone() {
-                calls.extend(call_info.gen_call_topology());
+        // add the current call
+        calls.push(self.clone());
+
+        // if it has internal calls we need to add them too.
+        if !self.internal_calls.is_empty() {
+            for inner_call in self.internal_calls.clone() {
+                calls.extend(inner_call.gen_call_topology());
             }
         }
+
         calls
     }
 
-    /// Returns a list of Starknet Event objects collected during the execution, sorted by the order
+    /// Returns a list of [`Event`] objects collected during the execution, sorted by the order
     /// in which they were emitted.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
+        // collect a vector of the full call topology (all the internal
+        // calls performed during the current call)
         let calls = self.gen_call_topology();
-        let n_events = calls.iter().fold(0, |acc, c| acc + c.events.len());
+        let mut collected_events = Vec::new();
 
-        let mut starknet_events: Vec<Option<Event>> = (0..n_events).map(|_| None).collect();
+        // for each call, collect its ordered events
+        for c in calls {
+            collected_events.extend(
+                c.events
+                    .iter()
+                    .map(|oe| (oe.clone(), c.contract_address.clone())),
+            );
+        }
+        // sort the collected events using the ordering given by the order
+        collected_events.sort_by_key(|(oe, _)| oe.order);
 
-        for call in calls {
-            for ordered_event in call.events {
-                let event = Event::new(ordered_event.clone(), call.contract_address.clone());
-                starknet_events.remove((ordered_event.order as isize - 1).max(0) as usize);
-                starknet_events.insert(
-                    (ordered_event.order as isize - 1).max(0) as usize,
-                    Some(event),
-                );
+        // check that there is no holes.
+        // since it is already sorted, we only need to check for continuity
+        let mut i = 0;
+        for (oe, _) in collected_events.iter() {
+            if i == oe.order {
+                continue;
+            }
+            i += 1;
+            if i != oe.order {
+                return Err(TransactionError::UnexpectedHolesInEventOrder);
             }
         }
 
-        let are_all_some = starknet_events.iter().all(|e| e.is_some());
-
-        if !are_all_some {
-            return Err(TransactionError::UnexpectedHolesInEventOrder);
-        }
-        Ok(starknet_events.into_iter().flatten().collect())
+        // now that it is ordered and without holes, we can discard the order and
+        // convert each [`OrderedEvent`] to the underlying [`Event`].
+        let collected_events = collected_events
+            .into_iter()
+            .map(|(oe, ca)| Event::new(oe, ca))
+            .collect();
+        Ok(collected_events)
     }
 
-    /// Returns a list of Starknet L2ToL1MessageInfo objects collected during the execution, sorted
+    /// Returns a list of L2ToL1MessageInfo objects collected during the execution, sorted
     /// by the order in which they were sent.
     pub fn get_sorted_l2_to_l1_messages(&self) -> Result<Vec<L2toL1MessageInfo>, TransactionError> {
         let calls = self.gen_call_topology();
@@ -177,8 +191,8 @@ impl CallInfo {
         let storage_entries = self
             .accessed_storage_keys
             .into_iter()
-            .map(|key| (self.contract_address.clone(), key))
-            .collect::<HashSet<(Address, ClassHash)>>();
+            .map(|key| (self.contract_address.clone(), key.0))
+            .collect::<HashSet<(Address, [u8; 32])>>();
 
         let internal_visited_storage_entries =
             CallInfo::get_visited_storage_entries_of_many(self.internal_calls);
@@ -213,7 +227,7 @@ impl Default for CallInfo {
             call_type: None,
             contract_address: Address(0.into()),
             code_address: None,
-            class_hash: Some([0; 32]),
+            class_hash: Some(ClassHash::default()),
             internal_calls: Vec::new(),
             entry_point_type: Some(EntryPointType::Constructor),
             storage_read_values: Vec::new(),
@@ -222,11 +236,11 @@ impl Default for CallInfo {
             l2_to_l1_messages: Vec::new(),
             accessed_storage_keys: HashSet::new(),
             calldata: Vec::new(),
-            execution_resources: ExecutionResources {
+            execution_resources: Some(ExecutionResources {
                 n_steps: 0,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::new(),
-            },
+            }),
             events: Vec::new(),
             gas_consumed: 0,
             failure_flag: false,
@@ -275,7 +289,7 @@ impl<'de> Deserialize<'de> for CallInfo {
         }
 
         Ok(CallInfo {
-            execution_resources,
+            execution_resources: Some(execution_resources),
             retdata,
             calldata,
             internal_calls,
@@ -354,6 +368,7 @@ pub struct TransactionExecutionContext {
     pub(crate) nonce: Felt252,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
+    // pub(crate) use_cairo_native: bool,
 }
 
 impl TransactionExecutionContext {
@@ -366,8 +381,8 @@ impl TransactionExecutionContext {
         n_steps: u64,
         version: Felt252,
     ) -> Self {
-        let nonce = if version == 0.into() || version == *QUERY_VERSION_BASE {
-            0.into()
+        let nonce = if version == 0.into() {
+            Felt252::ZERO
         } else {
             nonce
         };
@@ -397,7 +412,7 @@ impl TransactionExecutionContext {
             version,
             account_contract_address,
             max_fee: 0,
-            transaction_hash: Felt252::zero(),
+            transaction_hash: Felt252::ZERO,
             signature: Vec::new(),
             nonce,
             n_sent_messages: 0,
@@ -440,8 +455,8 @@ impl TxInfoStruct {
         vec![
             MaybeRelocatable::from(&self.version),
             MaybeRelocatable::from(&self.account_contract_address.0),
-            MaybeRelocatable::from(Felt252::new(self.max_fee)),
-            MaybeRelocatable::from(Felt252::new(self.signature_len)),
+            MaybeRelocatable::from(Felt252::from(self.max_fee)),
+            MaybeRelocatable::from(Felt252::from(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
             MaybeRelocatable::from(&self.transaction_hash),
             MaybeRelocatable::from(&self.chain_id),
@@ -494,7 +509,7 @@ pub struct TransactionExecutionInfo {
 }
 
 impl TransactionExecutionInfo {
-    pub fn new(
+    pub const fn new(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
         revert_error: Option<String>,
@@ -553,7 +568,7 @@ impl TransactionExecutionInfo {
         }
     }
 
-    pub fn new_without_fee_info(
+    pub const fn new_without_fee_info(
         validate_info: Option<CallInfo>,
         call_info: Option<CallInfo>,
         revert_error: Option<String>,
@@ -586,6 +601,8 @@ impl TransactionExecutionInfo {
         })
     }
 
+    /// Returns an ordered vector with all the event emitted during the transaction.
+    /// Including the ones emitted by internal calls.
     pub fn get_sorted_events(&self) -> Result<Vec<Event>, TransactionError> {
         let calls = self.non_optional_calls();
         let mut sorted_events: Vec<Event> = Vec::new();
@@ -608,6 +625,16 @@ impl TransactionExecutionInfo {
         }
 
         Ok(sorted_messages)
+    }
+
+    pub fn to_revert_error(self, revert_error: &str) -> Self {
+        TransactionExecutionInfo {
+            validate_info: None,
+            call_info: None,
+            revert_error: Some(revert_error.to_string()),
+            fee_transfer_info: None,
+            ..self
+        }
     }
 }
 
@@ -670,7 +697,7 @@ mod tests {
 
     #[test]
     fn test_get_sorted_single_event() {
-        let address = Address(Felt252::zero());
+        let address = Address(Felt252::ZERO);
         let ordered_event = OrderedEvent::new(0, vec![], vec![]);
         let event = Event::new(ordered_event.clone(), address.clone());
         let internal_calls = vec![CallInfo {
@@ -828,7 +855,7 @@ mod tests {
 
         call_root.internal_calls = [child1, child2].to_vec();
 
-        assert!(call_root.get_sorted_events().is_err())
+        assert!(call_root.get_sorted_events().is_ok())
     }
 
     #[test]
@@ -921,7 +948,7 @@ mod tests {
         let hash1 = ClassHash::default();
         let hash2 = ClassHash::default();
         let hash3 = ClassHash::default();
-        let hash4 = string_to_hash(&"0x3".to_string());
+        let hash4 = string_to_hash("0x3");
 
         child1.accessed_storage_keys = HashSet::new();
         child1.accessed_storage_keys.insert(hash1);
@@ -934,7 +961,7 @@ mod tests {
 
         assert_eq!(
             call_root.get_visited_storage_entries(),
-            HashSet::from([(addr1, hash1), (addr2.clone(), hash3), (addr2, hash4)])
+            HashSet::from([(addr1, hash1.0), (addr2.clone(), hash3.0), (addr2, hash4.0)])
         )
     }
 
@@ -969,10 +996,10 @@ mod tests {
             ..Default::default()
         };
 
-        let hash1 = string_to_hash(&"0x0".to_string());
-        let hash2 = string_to_hash(&"0x1".to_string());
-        let hash3 = string_to_hash(&"0x2".to_string());
-        let hash4 = string_to_hash(&"0x3".to_string());
+        let hash1 = string_to_hash("0x0");
+        let hash2 = string_to_hash("0x1");
+        let hash3 = string_to_hash("0x2");
+        let hash4 = string_to_hash("0x3");
 
         validate_info.accessed_storage_keys = HashSet::new();
         validate_info.accessed_storage_keys.insert(hash1);
@@ -981,7 +1008,7 @@ mod tests {
         fee_transfer_info.accessed_storage_keys.insert(hash3);
         fee_transfer_info.accessed_storage_keys.insert(hash4);
 
-        let hash5 = string_to_hash(&"0x5".to_string());
+        let hash5 = string_to_hash("0x5");
         call_info.accessed_storage_keys.insert(hash5);
 
         let txexecinfo = TransactionExecutionInfo::from_calls_info(
@@ -994,11 +1021,11 @@ mod tests {
         assert_eq!(
             txexecinfo.get_visited_storage_entries(),
             HashSet::from([
-                (addr1.clone(), hash1),
-                (addr1, hash2),
-                (addr2.clone(), hash3),
-                (addr2, hash4),
-                (Address(0.into()), hash5)
+                (addr1.clone(), hash1.0),
+                (addr1, hash2.0),
+                (addr2.clone(), hash3.0),
+                (addr2, hash4.0),
+                (Address(0.into()), hash5.0)
             ])
         )
     }

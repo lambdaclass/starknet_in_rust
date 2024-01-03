@@ -6,8 +6,7 @@ use super::deprecated_syscall_request::{
     DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
 use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine, Felt252};
 
 /// Trait to write the response of a deprecated system call
 /// Takes in a mutable reference to a VirtualMachine and a Relocatable pointer to the system
@@ -60,7 +59,7 @@ pub(crate) struct DeprecatedGetBlockNumberResponse {
 }
 
 impl DeprecatedCallContractResponse {
-    pub(crate) fn new(retdata_size: usize, retdata: Relocatable) -> Self {
+    pub(crate) const fn new(retdata_size: usize, retdata: Relocatable) -> Self {
         Self {
             retdata_size,
             retdata,
@@ -86,19 +85,19 @@ pub(crate) struct DeprecatedDeployResponse {
 }
 
 impl DeprecatedGetTxInfoResponse {
-    pub fn new(tx_info: Relocatable) -> Self {
+    pub const fn new(tx_info: Relocatable) -> Self {
         DeprecatedGetTxInfoResponse { tx_info }
     }
 }
 
 impl DeprecatedGetBlockTimestampResponse {
-    pub(crate) fn new(block_timestamp: u64) -> Self {
+    pub(crate) const fn new(block_timestamp: u64) -> Self {
         DeprecatedGetBlockTimestampResponse { block_timestamp }
     }
 }
 
 impl DeprecatedGetSequencerAddressResponse {
-    pub(crate) fn new(sequencer_address: Address) -> Self {
+    pub(crate) const fn new(sequencer_address: Address) -> Self {
         Self { sequencer_address }
     }
 }
@@ -111,7 +110,7 @@ impl DeprecatedGetCallerAddressResponse {
 }
 
 impl DeprecatedGetTxSignatureResponse {
-    pub fn new(signature: Relocatable, signature_len: usize) -> Self {
+    pub const fn new(signature: Relocatable, signature_len: usize) -> Self {
         DeprecatedGetTxSignatureResponse {
             signature,
             signature_len,
@@ -119,24 +118,24 @@ impl DeprecatedGetTxSignatureResponse {
     }
 }
 impl DeprecatedGetContractAddressResponse {
-    pub fn new(contract_address: Address) -> Self {
+    pub const fn new(contract_address: Address) -> Self {
         DeprecatedGetContractAddressResponse { contract_address }
     }
 }
 
 impl DeprecatedStorageReadResponse {
-    pub fn new(value: Felt252) -> Self {
+    pub const fn new(value: Felt252) -> Self {
         DeprecatedStorageReadResponse { value }
     }
 }
 
 impl DeprecatedGetBlockNumberResponse {
-    pub(crate) fn new(block_number: u64) -> Self {
+    pub(crate) const fn new(block_number: u64) -> Self {
         Self { block_number }
     }
 }
 impl DeprecatedDeployResponse {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         contract_address: Felt252,
         constructor_retdata_size: Felt252,
         constructor_retdata: Relocatable,
@@ -178,7 +177,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedGetCallerAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
             (syscall_ptr + DeprecatedGetCallerAddressRequest::count_fields())?,
-            &self.caller_address,
+            self.caller_address,
         )?;
         Ok(())
     }
@@ -206,7 +205,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedGetSequencerAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
             (syscall_ptr + DeprecatedGetSequencerAddressRequest::count_fields())?,
-            self.sequencer_address.0.clone(),
+            self.sequencer_address.0,
         )?;
         Ok(())
     }
@@ -234,7 +233,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedGetContractAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
             (syscall_ptr + DeprecatedGetContractAddressRequest::count_fields())?,
-            self.contract_address.0.clone(),
+            self.contract_address.0,
         )?;
         Ok(())
     }
@@ -279,11 +278,11 @@ impl DeprecatedWriteSyscallResponse for DeprecatedDeployResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
             (syscall_ptr + DeprecatedDeployRequest::count_fields())?,
-            self.contract_address.clone(),
+            self.contract_address,
         )?;
         vm.insert_value(
             (syscall_ptr + (DeprecatedDeployRequest::count_fields() + 1))?,
-            self.constructor_retdata_size.clone(),
+            self.constructor_retdata_size,
         )?;
         vm.insert_value(
             (syscall_ptr + (DeprecatedDeployRequest::count_fields() + 2))?,
@@ -301,7 +300,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
             (syscall_ptr + DeprecatedStorageReadRequest::count_fields())?,
-            self.value.clone(),
+            self.value,
         )?;
         Ok(())
     }
@@ -309,28 +308,34 @@ impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use super::*;
     use crate::{
         add_segments,
         state::cached_state::CachedState,
-        state::in_memory_state_reader::InMemoryStateReader,
+        state::{
+            contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
         utils::{get_integer, test_utils::vm},
     };
     use cairo_vm::relocatable;
+    use std::sync::Arc;
 
     type DeprecatedBLSyscallHandler<'a> =
         crate::syscalls::deprecated_business_logic_syscall_handler::DeprecatedBLSyscallHandler<
             'a,
             InMemoryStateReader,
+            PermanentContractClassCache,
         >;
 
     /// Unit test to check the write_get_caller_address_response function
     #[test]
     fn write_get_caller_address_response() {
         // Initialize a VM and syscall handler
-        let mut state = CachedState::new(Arc::new(InMemoryStateReader::default()), None, None);
+        let mut state = CachedState::new(
+            Arc::new(InMemoryStateReader::default()),
+            Arc::new(PermanentContractClassCache::default()),
+        );
         let syscall = DeprecatedBLSyscallHandler::default_with(&mut state);
         let mut vm = vm!();
 

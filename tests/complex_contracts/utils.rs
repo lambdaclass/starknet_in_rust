@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use cairo_vm::Felt252;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use starknet_in_rust::{
     definitions::{
@@ -12,27 +11,38 @@ use starknet_in_rust::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, CallType, TransactionExecutionContext,
     },
-    services::api::contract_classes::deprecated_contract_class::ContractClass,
-    state::{cached_state::CachedState, state_api::State},
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    },
+    state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        state_api::State,
+    },
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
     transaction::{error::TransactionError, Deploy},
-    utils::{calculate_sn_keccak, Address},
+    utils::{calculate_sn_keccak, Address, ClassHash},
+    ContractEntryPoint, EntryPointType,
 };
-use starknet_in_rust::{ContractEntryPoint, EntryPointType};
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 pub struct CallConfig<'a> {
-    pub state: &'a mut CachedState<InMemoryStateReader>,
+    pub state: &'a mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     pub caller_address: &'a Address,
     pub address: &'a Address,
-    pub class_hash: &'a [u8; 32],
+    pub class_hash: &'a ClassHash,
     pub entry_points_by_type: &'a HashMap<EntryPointType, Vec<ContractEntryPoint>>,
     pub entry_point_type: &'a EntryPointType,
     pub block_context: &'a BlockContext,
     pub resources_manager: &'a mut ExecutionResourcesManager,
 }
 
-pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) -> HashSet<[u8; 32]> {
+pub fn get_accessed_keys(
+    variable_name: &str,
+    fields: Vec<Vec<FieldElement>>,
+) -> HashSet<ClassHash> {
     let variable_hash = calculate_sn_keccak(variable_name.as_bytes());
     let variable_hash = FieldElement::from_bytes_be(&variable_hash).unwrap();
 
@@ -45,13 +55,13 @@ pub fn get_accessed_keys(variable_name: &str, fields: Vec<Vec<FieldElement>>) ->
         })
         .collect::<Vec<FieldElement>>();
 
-    let mut accessed_storage_keys: HashSet<[u8; 32]> = HashSet::new();
+    let mut accessed_storage_keys: HashSet<ClassHash> = HashSet::new();
 
     if keys.is_empty() {
-        accessed_storage_keys.insert(variable_hash.to_bytes_be());
+        accessed_storage_keys.insert(ClassHash(variable_hash.to_bytes_be()));
     }
     for key in keys {
-        accessed_storage_keys.insert(key.to_bytes_be());
+        accessed_storage_keys.insert(ClassHash(key.to_bytes_be()));
     }
 
     accessed_storage_keys
@@ -61,7 +71,7 @@ pub fn get_entry_points(
     function_name: &str,
     entry_point_type: &EntryPointType,
     address: &Address,
-    class_hash: &[u8; 32],
+    class_hash: &ClassHash,
     calldata: &[Felt252],
     caller_address: &Address,
 ) -> (ExecutionEntryPoint, Felt252) {
@@ -79,7 +89,7 @@ pub fn get_entry_points(
         ExecutionEntryPoint::new(
             address.clone(),
             calldata.to_vec(),
-            entrypoint_selector.clone(),
+            entrypoint_selector,
             caller_address.clone(),
             *entry_point_type,
             Some(CallType::Delegate),
@@ -110,12 +120,12 @@ pub fn execute_entry_point(
     //* ---------------------
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         call_config.block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
 
     let ExecutionResult { call_info, .. } = exec_entry_point.execute(
@@ -125,18 +135,20 @@ pub fn execute_entry_point(
         &mut tx_execution_context,
         false,
         call_config.block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     Ok(call_info.unwrap())
 }
 
 pub fn deploy(
-    state: &mut CachedState<InMemoryStateReader>,
+    state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
     path: &str,
     calldata: &[Felt252],
     block_context: &BlockContext,
     hash_value: Option<Felt252>,
-) -> Result<(Address, [u8; 32]), TransactionError> {
+) -> Result<(Address, ClassHash), TransactionError> {
     let contract_class = ContractClass::from_path(path).unwrap();
 
     let internal_deploy = match hash_value {
@@ -156,9 +168,17 @@ pub fn deploy(
         )?,
     };
     let class_hash = internal_deploy.class_hash();
-    state.set_contract_class(&class_hash, &contract_class)?;
+    state.set_contract_class(
+        &class_hash,
+        &CompiledClass::Deprecated(Arc::new(contract_class)),
+    )?;
 
-    let tx_execution_info = internal_deploy.apply(state, block_context)?;
+    let tx_execution_info = internal_deploy.apply(
+        state,
+        block_context,
+        #[cfg(feature = "cairo-native")]
+        None,
+    )?;
 
     let call_info = tx_execution_info.call_info.unwrap();
     let contract_address = call_info.contract_address;

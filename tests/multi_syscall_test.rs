@@ -1,19 +1,23 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::Felt252;
-use num_traits::{Num, Zero};
-use starknet_in_rust::utils::calculate_sn_keccak;
-use starknet_in_rust::EntryPointType;
+use cairo_vm::Felt252;
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, OrderedEvent,
         OrderedL2ToL1Message, TransactionExecutionContext,
     },
-    state::cached_state::CachedState,
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    utils::{Address, ClassHash},
+    services::api::contract_classes::compiled_class::CompiledClass,
+    state::{
+        cached_state::CachedState,
+        contract_class_cache::{ContractClassCache, PermanentContractClassCache},
+        in_memory_state_reader::InMemoryStateReader,
+        ExecutionResourcesManager,
+    },
+    utils::{calculate_sn_keccak, Address, ClassHash},
+    EntryPointType,
 };
-use std::{collections::HashMap, sync::Arc, vec};
+use std::{sync::Arc, vec};
 
 #[test]
 fn test_multiple_syscall() {
@@ -22,13 +26,14 @@ fn test_multiple_syscall() {
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
-    let mut contract_class_cache: HashMap<[u8; 32], _> = HashMap::new();
+    let contract_class_cache = PermanentContractClassCache::default();
 
     let address = Address(1111.into());
-    let class_hash: ClassHash = [1; 32];
-    let nonce = Felt252::zero();
+    let class_hash: ClassHash = ClassHash([1; 32]);
+    let nonce = Felt252::ZERO;
 
-    contract_class_cache.insert(class_hash, contract_class);
+    contract_class_cache
+        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -38,11 +43,7 @@ fn test_multiple_syscall() {
         .insert(address.clone(), nonce);
 
     // Create state from the state_reader and contract cache.
-    let mut state = CachedState::new(
-        Arc::new(state_reader),
-        None,
-        Some(contract_class_cache.clone()),
-    );
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
 
     // Create an execution entry point
     let calldata = [].to_vec();
@@ -63,7 +64,7 @@ fn test_multiple_syscall() {
         assert_eq!(call_info.retdata, vec![caller_address.clone().0])
     }
 
-    // Block for get_contact_address.
+    // Block for get_contract_address.
     {
         let call_info = test_syscall(
             "contract_address",
@@ -95,7 +96,7 @@ fn test_multiple_syscall() {
         let entrypoint_selector =
             Felt252::from_bytes_be(&calculate_sn_keccak("get_number".as_bytes()));
         let new_call_data = vec![
-            Felt252::from_bytes_be(&class_hash),
+            Felt252::from_bytes_be(&class_hash.0),
             entrypoint_selector,
             Felt252::from(25),
         ];
@@ -163,7 +164,7 @@ fn test_multiple_syscall() {
         );
         assert_eq!(
             call_info.retdata,
-            vec![Felt252::from_str_radix("310939249775", 10).unwrap()]
+            vec![Felt252::from_dec_str("310939249775").unwrap()]
         )
     }
 
@@ -183,27 +184,24 @@ fn test_multiple_syscall() {
             vec![
                 OrderedEvent {
                     order: 0,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![1.into()]
                 },
                 OrderedEvent {
                     order: 1,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![2.into()]
                 },
                 OrderedEvent {
                     order: 2,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![3.into()]
@@ -219,15 +217,15 @@ fn test_syscall(
     calldata: Vec<Felt252>,
     caller_address: Address,
     entry_point_type: EntryPointType,
-    class_hash: [u8; 32],
-    state: &mut CachedState<InMemoryStateReader>,
+    class_hash: ClassHash,
+    state: &mut CachedState<InMemoryStateReader, PermanentContractClassCache>,
 ) -> CallInfo {
     let entrypoint_selector =
         Felt252::from_bytes_be(&calculate_sn_keccak(entrypoint_selector.as_bytes()));
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector),
+        entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -239,12 +237,12 @@ fn test_syscall(
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     exec_entry_point
@@ -255,6 +253,8 @@ fn test_syscall(
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info

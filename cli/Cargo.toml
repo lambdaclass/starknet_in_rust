@@ -1,22 +1,27 @@
 [package]
 name = "starknet-rs-cli"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 
 [features]
 default = ["with_mimalloc"]
+cairo-native = ["starknet_in_rust/cairo-native"]
 with_mimalloc = ["dep:mimalloc"]
 
 [dependencies]
-starknet_in_rust = { path = "../", version = "0.3.1" }
+starknet_in_rust = { path = "../", version = "0.4.0" }
 num-traits = "0.2.15"
 serde = { version = "1.0.152", features = ["derive"] }
 cairo-vm = { workspace = true, features = ["cairo-1-hints"] }
 clap = { version = "4.1.8", features = ["derive"] }
-actix-web = "4.3.1"
+
+# FIXME: Remove this import once actix-web publishes a new release
+once_cell = { package = "once_cell", version = "1.19.0" }
+
+actix-web = "4.4.0"
 awc = "3.1.1"
 mimalloc = { version = "0.1.29", default-features = false, optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-coverage-helper = "0.1.0"
+coverage-helper = "0.2.0"
