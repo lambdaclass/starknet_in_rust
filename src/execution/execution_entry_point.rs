@@ -13,7 +13,7 @@ use crate::{
         contract_class_cache::ContractClassCache,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
-        ExecutionResourcesManager, StateDiff,
+        ExecutionResourcesManager,
     },
     syscalls::{
         business_logic_syscall_handler::BusinessLogicSyscallHandler,
@@ -30,8 +30,6 @@ use crate::{
 use cairo_lang_sierra::program::Program as SierraProgram;
 use cairo_lang_starknet::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_lang_starknet::contract_class::ContractEntryPoints;
-#[cfg(feature = "cairo-native")]
-use cairo_native::cache::{JitProgramCache, ProgramCache};
 use cairo_vm::{
     types::{
         program::Program,
@@ -45,8 +43,14 @@ use cairo_vm::{
     },
     Felt252,
 };
-use std::{cell::RefCell, rc::Rc, sync::Arc};
-use tracing::debug;
+use std::sync::Arc;
+#[cfg(feature = "cairo-native")]
+use {
+    crate::state::StateDiff,
+    cairo_native::cache::{JitProgramCache, ProgramCache},
+    std::{cell::RefCell, rc::Rc},
+    tracing::debug,
+};
 
 #[derive(Debug, Default, PartialEq)]
 pub struct ExecutionResult {
