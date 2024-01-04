@@ -1,7 +1,6 @@
 #![deny(clippy::pedantic)]
 #![deny(warnings)]
 
-use cairo_native::cache::{AotProgramCache, JitProgramCache};
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use starknet::core::utils::get_selector_from_name;
@@ -20,9 +19,8 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[cfg(feature = "cairo-native")]
 use {
-    cairo_native::cache::ProgramCache,
+    cairo_native::cache::{AotProgramCache, JitProgramCache, ProgramCache},
     starknet_in_rust::utils::{get_native_context, ClassHash},
-    std::{cell::RefCell, rc::Rc},
 };
 
 const WARMUP_TIME: Duration = Duration::from_secs(3);
@@ -37,7 +35,9 @@ lazy_static! {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Change this variable to switch to AOT mode
     // FIXME: Should we move this bench to a binary target so we can choose from the command line (like native_bench)?
+    #[cfg(feature = "cairo-native")]
     let jit_run = true;
+
     tracing::subscriber::set_global_default(
         FmtSubscriber::builder()
             .with_env_filter(EnvFilter::from_default_env())
@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         ProgramCache::from(AotProgramCache::new(get_native_context()))
     };
-
+    #[cfg(feature = "cairo-native")]
     let program_cache = Rc::new(RefCell::new(cache));
 
     // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
