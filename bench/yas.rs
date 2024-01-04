@@ -21,6 +21,7 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 use {
     cairo_native::cache::{AotProgramCache, JitProgramCache, ProgramCache},
     starknet_in_rust::utils::{get_native_context, ClassHash},
+    std::{cell::RefCell, rc::Rc},
 };
 
 const WARMUP_TIME: Duration = Duration::from_secs(3);
