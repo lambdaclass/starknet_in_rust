@@ -6,8 +6,7 @@ use super::deprecated_syscall_request::{
     DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
 use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
-use cairo_vm::{felt, types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use felt::Felt252;
+use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine, Felt252};
 
 /// Trait to write the response of a deprecated system call
 /// Takes in a mutable reference to a VirtualMachine and a Relocatable pointer to the system
@@ -178,7 +177,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedGetCallerAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
             (syscall_ptr + DeprecatedGetCallerAddressRequest::count_fields())?,
-            &self.caller_address,
+            self.caller_address,
         )?;
         Ok(())
     }
@@ -206,7 +205,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedGetSequencerAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
             (syscall_ptr + DeprecatedGetSequencerAddressRequest::count_fields())?,
-            self.sequencer_address.0.clone(),
+            self.sequencer_address.0,
         )?;
         Ok(())
     }
@@ -234,7 +233,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedGetContractAddressResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value::<Felt252>(
             (syscall_ptr + DeprecatedGetContractAddressRequest::count_fields())?,
-            self.contract_address.0.clone(),
+            self.contract_address.0,
         )?;
         Ok(())
     }
@@ -279,11 +278,11 @@ impl DeprecatedWriteSyscallResponse for DeprecatedDeployResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
             (syscall_ptr + DeprecatedDeployRequest::count_fields())?,
-            self.contract_address.clone(),
+            self.contract_address,
         )?;
         vm.insert_value(
             (syscall_ptr + (DeprecatedDeployRequest::count_fields() + 1))?,
-            self.constructor_retdata_size.clone(),
+            self.constructor_retdata_size,
         )?;
         vm.insert_value(
             (syscall_ptr + (DeprecatedDeployRequest::count_fields() + 2))?,
@@ -301,7 +300,7 @@ impl DeprecatedWriteSyscallResponse for DeprecatedStorageReadResponse {
     ) -> Result<(), SyscallHandlerError> {
         vm.insert_value(
             (syscall_ptr + DeprecatedStorageReadRequest::count_fields())?,
-            self.value.clone(),
+            self.value,
         )?;
         Ok(())
     }

@@ -10,7 +10,7 @@ use crate::{
         ClassHash, CompiledClassHash,
     },
 };
-use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
+use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use getset::Getters;
 use std::{collections::HashMap, sync::Arc};
 
@@ -248,7 +248,7 @@ mod test {
         },
         utils::{Address, ClassHash},
     };
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
     use std::{collections::HashMap, sync::Arc};
 
     /// Ensures that a StateDiff constructed from a CachedState without any updates has no storage updates.
@@ -258,7 +258,7 @@ mod test {
 
         let contract_address = Address(32123.into());
         let class_hash = ClassHash([9; 32]);
-        let nonce = Felt252::new(42);
+        let nonce = Felt252::from(42);
 
         state_reader
             .address_to_class_hash
@@ -335,7 +335,7 @@ mod test {
 
         let contract_address = Address(32123.into());
         let class_hash = ClassHash([9; 32]);
-        let nonce = Felt252::new(42);
+        let nonce = Felt252::from(42);
 
         state_reader
             .address_to_class_hash
@@ -381,7 +381,7 @@ mod test {
 
         let contract_address = Address(32123.into());
         let class_hash = ClassHash([9; 32]);
-        let nonce = Felt252::new(42);
+        let nonce = Felt252::from(42);
 
         state_reader
             .address_to_class_hash
@@ -392,7 +392,7 @@ mod test {
 
         let entry: StorageEntry = (Address(555.into()), [0; 32]);
         let mut storage_writes = HashMap::new();
-        storage_writes.insert(entry, Felt252::new(666));
+        storage_writes.insert(entry, Felt252::from(666));
         let cache = StateCache::new(
             HashMap::new(),
             HashMap::new(),

@@ -1,9 +1,9 @@
 #![deny(clippy::pedantic)]
 #![deny(warnings)]
 
-use cairo_vm::felt::Felt252;
+use cairo_native::cache::{AotProgramCache, JitProgramCache};
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::{One, Zero};
 use starknet::core::utils::get_selector_from_name;
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
@@ -35,6 +35,9 @@ lazy_static! {
 
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Change this variable to switch to AOT mode
+    // FIXME: Should we move this bench to a binary target so we can choose from the command line (like native_bench)?
+    let jit_run = true;
     tracing::subscriber::set_global_default(
         FmtSubscriber::builder()
             .with_env_filter(EnvFilter::from_default_env())
@@ -44,7 +47,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut state = utils::default_state()?;
     #[cfg(feature = "cairo-native")]
-    let program_cache = Rc::new(RefCell::new(ProgramCache::new(get_native_context())));
+    let cache = if jit_run {
+        ProgramCache::from(JitProgramCache::new(get_native_context()))
+    } else {
+        ProgramCache::from(AotProgramCache::new(get_native_context()))
+    };
+
+    let program_cache = Rc::new(RefCell::new(cache));
 
     // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
     info!("Declaring the ERC20 contract.");
@@ -82,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "TYAS0",
         "$YAS0",
         (0x3782_dace_9d90_0000, 0),
-        OWNER_ADDRESS.clone(),
+        *OWNER_ADDRESS,
     )?;
     info!("Deploying TYAS1 token on ERC20.");
     let yas1_token_address = deploy_erc20(
@@ -93,7 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "TYAS1",
         "$YAS1",
         (0x3782_dace_9d90_0000, 0),
-        OWNER_ADDRESS.clone(),
+        *OWNER_ADDRESS,
     )?;
 
     // Deploy YASFactory contract.
@@ -103,8 +112,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
         &yas_factory_class_hash,
-        OWNER_ADDRESS.clone(),
-        yas_pool_class_hash.clone(),
+        *OWNER_ADDRESS,
+        yas_pool_class_hash,
     )?;
 
     // Deploy YASRouter contract.
@@ -124,8 +133,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         program_cache.clone(),
         &yas_pool_class_hash,
         yas_factory_address,
-        yas0_token_address.clone(),
-        yas1_token_address.clone(),
+        yas0_token_address,
+        yas1_token_address,
         0x0bb8,
         0x3c,
     )?;
@@ -148,7 +157,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             &yas0_token_address,
-            OWNER_ADDRESS.clone()
+            *OWNER_ADDRESS
         )?
     );
     debug!(
@@ -158,7 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             &yas1_token_address,
-            OWNER_ADDRESS.clone()
+            *OWNER_ADDRESS
         )?
     );
 
@@ -169,16 +178,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
         &ACCOUNT_ADDRESS,
-        yas0_token_address.clone(),
-        yas_router_address.clone(),
+        yas0_token_address,
+        yas_router_address,
     )?;
     approve_max(
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
         &ACCOUNT_ADDRESS,
-        yas1_token_address.clone(),
-        yas_router_address.clone(),
+        yas1_token_address,
+        yas_router_address,
     )?;
 
     debug!(
@@ -188,7 +197,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             &yas0_token_address,
-            OWNER_ADDRESS.clone()
+            *OWNER_ADDRESS
         )?
     );
     debug!(
@@ -198,7 +207,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             &yas1_token_address,
-            OWNER_ADDRESS.clone()
+            *OWNER_ADDRESS
         )?
     );
 
@@ -209,9 +218,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
         &ACCOUNT_ADDRESS,
-        yas_router_address.clone(),
-        yas_pool_address.clone(),
-        OWNER_ADDRESS.clone(),
+        yas_router_address,
+        yas_pool_address,
+        *OWNER_ADDRESS,
         -887_220,
         887_220,
         2_000_000_000_000_000_000,
@@ -224,7 +233,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             &yas0_token_address,
-            OWNER_ADDRESS.clone()
+            *OWNER_ADDRESS
         )?
     );
     debug!(
@@ -234,7 +243,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             &yas1_token_address,
-            OWNER_ADDRESS.clone()
+            *OWNER_ADDRESS
         )?
     );
 
@@ -243,8 +252,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = loop {
         let mut state = state.clone();
 
-        let yas_router_address = yas_router_address.clone();
-        let yas_pool_address = yas_pool_address.clone();
+        let yas_router_address = yas_router_address;
+        let yas_pool_address = yas_pool_address;
 
         // Swap (invoke).
         info!("Swapping tokens.");
@@ -256,7 +265,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &ACCOUNT_ADDRESS,
             yas_router_address,
             yas_pool_address,
-            OWNER_ADDRESS.clone(),
+            *OWNER_ADDRESS,
             true,
             (500_000_000_000_000_000, 0, true),
             (4_295_128_740, 0, false),
@@ -287,7 +296,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             &yas0_token_address,
-            OWNER_ADDRESS.clone()
+            *OWNER_ADDRESS
         )?
     );
     debug!(
@@ -297,7 +306,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             &yas1_token_address,
-            OWNER_ADDRESS.clone()
+            *OWNER_ADDRESS
         )?
     );
 
@@ -315,13 +324,13 @@ where
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("ERC20")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
-    let sender_address = Address(ACCOUNT_ADDRESS.clone());
+    let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
     let tx_execution_info = DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
-        casm_class_hash.clone(),
+        casm_class_hash,
         StarknetChainId::TestNet.to_felt(),
         sender_address,
         0,
@@ -356,13 +365,13 @@ where
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASFactory")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
-    let sender_address = Address(ACCOUNT_ADDRESS.clone());
+    let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
     let tx_execution_info = DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
-        casm_class_hash.clone(),
+        casm_class_hash,
         StarknetChainId::TestNet.to_felt(),
         sender_address,
         0,
@@ -397,13 +406,13 @@ where
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASRouter")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
-    let sender_address = Address(ACCOUNT_ADDRESS.clone());
+    let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
     let tx_execution_info = DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
-        casm_class_hash.clone(),
+        casm_class_hash,
         StarknetChainId::TestNet.to_felt(),
         sender_address,
         0,
@@ -438,13 +447,13 @@ where
     let (sierra_contract_class, casm_contract_class) = utils::load_contract("YASPool")?;
     let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?;
 
-    let sender_address = Address(ACCOUNT_ADDRESS.clone());
+    let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
     let tx_execution_info = DeclareV2::new(
         &sierra_contract_class,
         Some(casm_contract_class),
-        casm_class_hash.clone(),
+        casm_class_hash,
         StarknetChainId::TestNet.to_felt(),
         sender_address,
         0,
@@ -481,20 +490,20 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let contract_address = Address(ACCOUNT_ADDRESS.clone());
+    let contract_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&contract_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
-        Felt252::one(),
+        Felt252::ONE,
         vec![
-            erc20_class_hash.clone(),
-            nonce.clone(),
+            *erc20_class_hash,
+            nonce,
             5.into(),
-            utils::str_to_felt252(name),
-            utils::str_to_felt252(symbol),
+            Felt252::from_bytes_be_slice(name.as_bytes()),
+            Felt252::from_bytes_be_slice(symbol.as_bytes()),
             initial_supply.0.into(),
             initial_supply.1.into(),
             recipient,
@@ -517,7 +526,7 @@ where
         utils::panic_with_cairo_error(&call_info.retdata);
     }
 
-    Ok(call_info.retdata[0].clone())
+    Ok(call_info.retdata[0])
 }
 
 fn deploy_yas_factory<S, C>(
@@ -531,17 +540,17 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let contract_address = Address(ACCOUNT_ADDRESS.clone());
+    let contract_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&contract_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
-        Felt252::one(),
+        Felt252::ONE,
         vec![
-            yas_factory_class_hash.clone(),
-            nonce.clone(),
+            *yas_factory_class_hash,
+            nonce,
             2.into(),
             owner_address,
             pool_class_hash,
@@ -564,7 +573,7 @@ where
         utils::panic_with_cairo_error(&call_info.retdata);
     }
 
-    Ok(call_info.retdata[0].clone())
+    Ok(call_info.retdata[0])
 }
 
 fn deploy_yas_router<S, C>(
@@ -576,19 +585,15 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let contract_address = Address(ACCOUNT_ADDRESS.clone());
+    let contract_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&contract_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
-        Felt252::one(),
-        vec![
-            yas_router_class_hash.clone(),
-            nonce.clone(),
-            Felt252::zero(),
-        ],
+        Felt252::ONE,
+        vec![*yas_router_class_hash, nonce, Felt252::ZERO],
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
@@ -607,7 +612,7 @@ where
         utils::panic_with_cairo_error(&call_info.retdata);
     }
 
-    Ok(call_info.retdata[0].clone())
+    Ok(call_info.retdata[0])
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -625,17 +630,17 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let contract_address = Address(ACCOUNT_ADDRESS.clone());
+    let contract_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&contract_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
-        Felt252::one(),
+        Felt252::ONE,
         vec![
-            yas_pool_class_hash.clone(),
-            nonce.clone(),
+            *yas_pool_class_hash,
+            nonce,
             6.into(),
             yas_factory_address,
             yas0_token_address,
@@ -662,7 +667,7 @@ where
         utils::panic_with_cairo_error(&call_info.retdata);
     }
 
-    Ok(call_info.retdata[0].clone())
+    Ok(call_info.retdata[0])
 }
 
 fn initialize_pool<S, C>(
@@ -676,14 +681,14 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let contract_address = Address(yas_pool_address.clone());
+    let contract_address = Address(*yas_pool_address);
     let nonce = state.get_nonce_at(&contract_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("initialize").unwrap().to_bytes_be()),
         0,
-        Felt252::one(),
+        Felt252::ONE,
         vec![
             price_sqrt.0.into(),
             price_sqrt.1.into(),
@@ -721,14 +726,14 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let account_address = Address(account_address.clone());
+    let account_address = Address(*account_address);
     let nonce = state.get_nonce_at(&account_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         account_address,
         Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
         0,
-        Felt252::one(),
+        Felt252::ONE,
         vec![
             1.into(),
             token_address,
@@ -775,14 +780,14 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let account_address = Address(account_address.clone());
+    let account_address = Address(*account_address);
     let nonce = state.get_nonce_at(&account_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         account_address,
         Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
         0,
-        Felt252::one(),
+        Felt252::ONE,
         vec![
             1.into(),
             yas_router_address,
@@ -833,14 +838,14 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let account_address = Address(account_address.clone());
+    let account_address = Address(*account_address);
     let nonce = state.get_nonce_at(&account_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         account_address,
         Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
         0,
-        Felt252::one(),
+        Felt252::ONE,
         vec![
             1.into(),
             yas_router_address,
@@ -887,14 +892,14 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let contract_address = Address(token_address.clone());
+    let contract_address = Address(*token_address);
     let nonce = state.get_nonce_at(&contract_address).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("balanceOf").unwrap().to_bytes_be()),
         0,
-        Felt252::one(),
+        Felt252::ONE,
         vec![wallet_address],
         vec![],
         StarknetChainId::TestNet.to_felt(),
@@ -914,13 +919,12 @@ where
         utils::panic_with_cairo_error(&call_info.retdata);
     }
 
-    Ok(call_info.retdata[0].clone())
+    Ok(call_info.retdata[0])
 }
 
 mod utils {
     use crate::ACCOUNT_ADDRESS;
-    use cairo_vm::felt::Felt252;
-    use num_traits::{One, Zero};
+    use cairo_vm::Felt252;
     use starknet_in_rust::{
         core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash},
         services::api::contract_classes::compiled_class::CompiledClass,
@@ -935,20 +939,12 @@ mod utils {
 
     const BASE_DIR: &str = "bench/yas/";
 
-    pub fn str_to_felt252(value: &str) -> Felt252 {
-        assert!(value.len() < 32);
-        value
-            .bytes()
-            .fold(Felt252::zero(), |acc, ch| (acc << 8u32) + u32::from(ch))
-    }
-
     pub fn panic_with_cairo_error(retdata: &[Felt252]) {
         panic!(
             "{:#?}",
             retdata
                 .iter()
-                .map(Felt252::to_bytes_be)
-                .map(String::from_utf8)
+                .map(|x| String::from_utf8(Felt252::to_bytes_be(x).to_vec()))
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap()
         )
@@ -959,16 +955,16 @@ mod utils {
         Box<dyn std::error::Error>,
     > {
         let (sierra_contract_class, casm_contract_class) = load_contract("YasCustomAccount")?;
-        let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?.to_be_bytes();
-        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class)?.to_be_bytes();
+        let casm_class_hash = compute_casm_class_hash(&casm_contract_class)?.to_bytes_be();
+        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class)?.to_bytes_be();
 
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
-            .insert(Address(ACCOUNT_ADDRESS.clone()), ClassHash(casm_class_hash));
+            .insert(Address(*ACCOUNT_ADDRESS), ClassHash(casm_class_hash));
         state_reader
             .address_to_nonce_mut()
-            .insert(Address(ACCOUNT_ADDRESS.clone()), Felt252::one());
+            .insert(Address(*ACCOUNT_ADDRESS), Felt252::ONE);
 
         let mut cached_state = CachedState::new(Arc::new(state_reader), {
             let cache = PermanentContractClassCache::default();

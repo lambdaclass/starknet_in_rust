@@ -6,7 +6,8 @@ use crate::{
     state::StateDiff,
     utils::{get_erc20_balance_var_addresses, Address, ClassHash, CompiledClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_lang_utils::bigint::BigUintAsHex;
+use cairo_vm::Felt252;
 
 pub trait StateReader {
     /// Returns the contract class of the given class hash or compiled class hash.
@@ -24,30 +25,6 @@ pub trait StateReader {
         &self,
         class_hash: &ClassHash,
     ) -> Result<CompiledClassHash, StateError>;
-    /// Returns the storage value representing the balance (in fee token) at the given address as a (low, high) pair
-    fn get_fee_token_balance(
-        &mut self,
-        block_context: &BlockContext,
-        contract_address: &Address,
-    ) -> Result<(Felt252, Felt252), StateError> {
-        let (low_key, high_key) = get_erc20_balance_var_addresses(contract_address)?;
-        let low = self.get_storage_at(&(
-            block_context
-                .starknet_os_config()
-                .fee_token_address()
-                .clone(),
-            low_key,
-        ))?;
-        let high = self.get_storage_at(&(
-            block_context
-                .starknet_os_config()
-                .fee_token_address()
-                .clone(),
-            high_key,
-        ))?;
-
-        Ok((low, high))
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -109,4 +86,34 @@ pub trait State {
     fn get_compiled_class_hash(&mut self, class_hash: &ClassHash) -> Result<ClassHash, StateError>;
 
     fn get_contract_class(&mut self, class_hash: &ClassHash) -> Result<CompiledClass, StateError>;
+
+    fn get_sierra_program(
+        &mut self,
+        class_hash: &ClassHash,
+    ) -> Result<Vec<BigUintAsHex>, StateError>;
+
+    /// Returns the storage value representing the balance (in fee token) at the given address as a (low, high) pair
+    fn get_fee_token_balance(
+        &mut self,
+        block_context: &BlockContext,
+        contract_address: &Address,
+    ) -> Result<(Felt252, Felt252), StateError> {
+        let (low_key, high_key) = get_erc20_balance_var_addresses(contract_address)?;
+        let low = self.get_storage_at(&(
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
+            low_key,
+        ))?;
+        let high = self.get_storage_at(&(
+            block_context
+                .starknet_os_config()
+                .fee_token_address()
+                .clone(),
+            high_key,
+        ))?;
+
+        Ok((low, high))
+    }
 }

@@ -2,7 +2,7 @@ use crate::{
     core::errors::state_errors::StateError,
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::{HashMap, HashSet};
 
@@ -195,7 +195,7 @@ impl StateCache {
 
     pub fn update_initial_values(&mut self) {
         for (k, v) in self.nonce_writes.iter() {
-            self.nonce_initial_values.insert(k.clone(), v.clone());
+            self.nonce_initial_values.insert(k.clone(), *v);
         }
 
         for (k, v) in self.class_hash_writes.iter() {
@@ -207,7 +207,7 @@ impl StateCache {
         }
 
         for (k, v) in self.storage_writes.iter() {
-            self.storage_initial_values.insert(k.clone(), v.clone());
+            self.storage_initial_values.insert(k.clone(), *v);
         }
 
         self.nonce_writes = HashMap::new();
@@ -237,7 +237,7 @@ mod tests {
                 .unwrap();
         let compiled_class_bytes = compute_deprecated_class_hash(&contract_class)
             .unwrap()
-            .to_be_bytes();
+            .to_bytes_be();
         let class_hash_to_compiled_class_hash =
             HashMap::from([(ClassHash([8; 32]), ClassHash(compiled_class_bytes))]);
         let address_to_nonce = HashMap::from([(Address(9.into()), 12.into())]);

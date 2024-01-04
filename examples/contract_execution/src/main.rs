@@ -9,7 +9,7 @@
 //! It also includes some small tests that assert the data returned by
 //! running some pre-compiled contracts is as expected.
 
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use starknet_in_rust::{
     core::contract_address::{compute_casm_class_hash, compute_deprecated_class_hash},
     definitions::block_context::BlockContext,
@@ -60,8 +60,14 @@ fn test_contract(
     let block_context = BlockContext::default();
     // Values hardcoded to pass signature validation
     let signature = vec![
-        felt_str!("3086480810278599376317923499561306189851900463386393948998357832163236918254"),
-        felt_str!("598673427589502599949712887611119751108407514580626464031881322743364689811"),
+        Felt252::from_dec_str(
+            "3086480810278599376317923499561306189851900463386393948998357832163236918254",
+        )
+        .unwrap(),
+        Felt252::from_dec_str(
+            "598673427589502599949712887611119751108407514580626464031881322743364689811",
+        )
+        .unwrap(),
     ];
 
     //* --------------------------------------------
@@ -113,11 +119,15 @@ fn test_contract(
         1.into(),
         0.into(),
         // Values hardcoded to pass signature validation
-        vec![felt_str!(
-            "1735102664668487605176656616876767369909409133946409161569774794110049207117"
-        )],
+        vec![Felt252::from_dec_str(
+            "1735102664668487605176656616876767369909409133946409161569774794110049207117",
+        )
+        .unwrap()],
         signature.clone(),
-        felt_str!("2669425616857739096022668060305620640217901643963991674344872184515580705509"),
+        Felt252::from_dec_str(
+            "2669425616857739096022668060305620640217901643963991674344872184515580705509",
+        )
+        .unwrap(),
         2718.into(),
     )
     .unwrap();
@@ -152,7 +162,7 @@ fn test_contract(
     let declare_tx = DeclareV2::new_with_tx_hash(
         &sierra_contract_class,
         Some(casm_class),
-        compiled_class_hash.clone(),
+        compiled_class_hash,
         account_contract_address.clone(),
         0, // max fee
         2.into(),
@@ -183,7 +193,7 @@ fn test_contract(
         0.into(),
         vec![compiled_class_hash, 3.into(), 0.into()], // call data
         signature.clone(),
-        block_context.starknet_os_config().chain_id().clone(),
+        *block_context.starknet_os_config().chain_id(),
         None,
     )
     .unwrap();
@@ -199,8 +209,7 @@ fn test_contract(
         .expect("could not deploy contract")
         .call_info
         .unwrap()
-        .retdata[0]
-        .clone();
+        .retdata[0];
 
     //* ---------------------------------------------------------
     //*        Execute contract entrypoint through the account

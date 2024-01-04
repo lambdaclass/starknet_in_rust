@@ -1,12 +1,12 @@
 use crate::complex_contracts::utils::*;
 use cairo_vm::{
-    felt::Felt252,
     vm::runners::{
         builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
         cairo_runner::ExecutionResources,
     },
+    Felt252,
 };
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::block_context::BlockContext,
     execution::{CallInfo, CallType},
@@ -105,7 +105,7 @@ fn amm_init_pool_test() {
         }),
         class_hash: Some(class_hash),
         accessed_storage_keys,
-        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
+        storage_read_values: vec![Felt252::ZERO, Felt252::ZERO],
         ..Default::default()
     };
 
@@ -194,12 +194,7 @@ fn amm_add_demo_tokens_test() {
         }),
         class_hash: Some(class_hash),
         accessed_storage_keys: accessed_storage_keys_add_demo_token,
-        storage_read_values: vec![
-            Felt252::zero(),
-            Felt252::zero(),
-            Felt252::zero(),
-            Felt252::zero(),
-        ],
+        storage_read_values: vec![Felt252::ZERO, Felt252::ZERO, Felt252::ZERO, Felt252::ZERO],
         ..Default::default()
     };
 
@@ -410,7 +405,7 @@ fn amm_init_pool_should_fail_with_amount_out_of_bounds() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::new(2_u32.pow(30)), Felt252::new(2_u32.pow(30))].to_vec();
+    let calldata = [Felt252::from(2_u32.pow(30)), Felt252::from(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -449,7 +444,7 @@ fn amm_swap_should_fail_with_unexistent_token() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::zero(), Felt252::new(10)].to_vec();
+    let calldata = [Felt252::ZERO, Felt252::from(10)].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -488,7 +483,7 @@ fn amm_swap_should_fail_with_amount_out_of_bounds() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::new(1), Felt252::new(2_u32.pow(30))].to_vec();
+    let calldata = [Felt252::ONE, Felt252::from(2_u32.pow(30))].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -527,7 +522,7 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
             .unwrap()
             .entry_points_by_type()
             .clone();
-    let calldata = [Felt252::new(1), Felt252::new(100)].to_vec();
+    let calldata = [Felt252::ONE, Felt252::from(100)].to_vec();
     let caller_address = Address(0000.into());
     let block_context = BlockContext::default();
     let mut resources_manager = ExecutionResourcesManager::default();
@@ -542,8 +537,12 @@ fn amm_swap_should_fail_when_user_does_not_have_enough_funds() {
         resources_manager: &mut resources_manager,
     };
 
-    init_pool(&[Felt252::new(1000), Felt252::new(1000)], &mut call_config).unwrap();
-    add_demo_token(&[Felt252::new(10), Felt252::new(10)], &mut call_config).unwrap();
+    init_pool(
+        &[Felt252::from(1000), Felt252::from(1000)],
+        &mut call_config,
+    )
+    .unwrap();
+    add_demo_token(&[Felt252::from(10), Felt252::from(10)], &mut call_config).unwrap();
 
     assert!(swap(&calldata, &mut call_config).is_err());
 }

@@ -1,6 +1,6 @@
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
+
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -39,9 +39,9 @@ lazy_static! {
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
-    static ref FIB_SELECTOR: Felt252 = felt_str!("485685360977693822178494178685050472186234432883326654755380582597179924681");
+    static ref FIB_SELECTOR: Felt252 = Felt252::from_dec_str("485685360977693822178494178685050472186234432883326654755380582597179924681").unwrap();
 
-    static ref EXPECTED_RES: Felt252 = felt_str!("222450955505511890955301767713383614666194461405743219770606958667979327682");
+    static ref EXPECTED_RES: Felt252 = Felt252::from_dec_str("222450955505511890955301767713383614666194461405743219770606958667979327682").unwrap();
 }
 
 fn main() {
@@ -50,13 +50,12 @@ fn main() {
     let contract_class = ContractClass::from_path(&*CONTRACT_PATH).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
-    let fib_entrypoint_selector = entry_points_by_type
+    let fib_entrypoint_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //* --------------------------------------------
     //*    Create state reader with class hash data
@@ -68,7 +67,7 @@ fn main() {
 
     let contract_address = CONTRACT_ADDRESS.clone();
     let class_hash = *CONTRACT_CLASS_HASH;
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.extend([(
         class_hash,
@@ -100,7 +99,7 @@ fn main() {
         let exec_entry_point = ExecutionEntryPoint::new(
             contract_address.clone(),
             calldata.clone(),
-            fib_entrypoint_selector.clone(),
+            fib_entrypoint_selector,
             caller_address.clone(),
             entry_point_type,
             Some(CallType::Delegate),
@@ -114,12 +113,12 @@ fn main() {
         let block_context = BlockContext::default();
         let mut tx_execution_context = TransactionExecutionContext::new(
             Address(0.into()),
-            Felt252::zero(),
+            Felt252::ZERO,
             Vec::new(),
             0,
             nonce.into(),
             block_context.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
         );
         let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -138,7 +137,7 @@ fn main() {
 
         assert_eq!(
             tx_exec_result.call_info.unwrap().retdata,
-            vec![EXPECTED_RES.clone()]
+            vec![*EXPECTED_RES]
         );
     }
 }

@@ -6,7 +6,7 @@ use crate::{
     },
     utils::{Address, ClassHash, CompiledClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
 use std::collections::HashMap;
 
@@ -130,7 +130,7 @@ impl StateReader for InMemoryStateReader {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::{One, Zero};
+    use num_traits::Zero;
 
     use super::*;
     use crate::services::api::contract_classes::deprecated_contract_class::ContractClass;
@@ -139,9 +139,9 @@ mod tests {
     #[test]
     fn get_class_hash_at_returns_zero_if_missing() {
         let state_reader = InMemoryStateReader::default();
-        assert!(Felt252::from_bytes_be(
+        assert!(Felt252::from_bytes_be_slice(
             state_reader
-                .get_class_hash_at(&Address(Felt252::one()))
+                .get_class_hash_at(&Address(Felt252::ONE))
                 .unwrap()
                 .to_bytes_be()
         )
@@ -152,7 +152,7 @@ mod tests {
     fn get_storage_returns_zero_if_missing() {
         let state_reader = InMemoryStateReader::default();
         assert!(state_reader
-            .get_storage_at(&(Address(Felt252::one()), Felt252::one().to_be_bytes()))
+            .get_storage_at(&(Address(Felt252::ONE), Felt252::ONE.to_bytes_be()))
             .unwrap()
             .is_zero())
     }
@@ -169,19 +169,19 @@ mod tests {
 
         let contract_address = Address(37810.into());
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let nonce = Felt252::new(109);
+        let nonce = Felt252::from(109);
         let storage_entry = (contract_address.clone(), [8; 32]);
-        let storage_value = Felt252::new(800);
+        let storage_value = Felt252::from(800);
 
         state_reader
             .address_to_class_hash
             .insert(contract_address.clone(), class_hash);
         state_reader
             .address_to_nonce
-            .insert(contract_address.clone(), nonce.clone());
+            .insert(contract_address.clone(), nonce);
         state_reader
             .address_to_storage
-            .insert(storage_entry.clone(), storage_value.clone());
+            .insert(storage_entry.clone(), storage_value);
 
         assert_eq!(
             state_reader.get_class_hash_at(&contract_address).unwrap(),

@@ -2,7 +2,7 @@ use crate::{
     hash_utils::compute_hash_on_elements, syscalls::syscall_handler_errors::SyscallHandlerError,
 };
 use crate::core::errors::hash_errors::HashError;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use std::iter::zip;
 

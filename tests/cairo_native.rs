@@ -1,8 +1,7 @@
 #![cfg(feature = "cairo-native")]
 
 use assert_matches::assert_matches;
-use cairo_vm::felt::{felt_str, Felt252};
-use num_traits::One;
+use cairo_vm::Felt252;
 use pretty_assertions_sorted::*;
 use starknet_in_rust::hash_utils::calculate_contract_address;
 use starknet_in_rust::{
@@ -40,7 +39,7 @@ fn get_block_hash_test() {
 
     let mut state = state.finalize();
     state.insert_initial_storage_value(
-        (Address(Felt252::one()), felt_to_hash(&10.into()).0),
+        (Address(Felt252::ONE), felt_to_hash(&10.into()).0),
         Felt252::from_bytes_be(&[5; 32]),
     );
 
@@ -50,10 +49,10 @@ fn get_block_hash_test() {
             &caller_address,
             (
                 EntryPointType::External,
-                &felt_str!(
+                &Felt252::from_hex(
                     "377ae94b690204c74c8d21938c5b72e80fdaee3d21c780fd7557a7f84a8b379",
-                    16
-                ),
+                )
+                .unwrap(),
             ),
             &[
                 10.into(), // Block number.
@@ -82,7 +81,7 @@ fn get_block_hash_test_failure2() {
 
     let mut state = state.finalize();
     state.insert_initial_storage_value(
-        (Address(Felt252::one()), felt_to_hash(&10.into()).0),
+        (Address(Felt252::ONE), felt_to_hash(&10.into()).0),
         Felt252::from_bytes_be(&[5; 32]),
     );
 
@@ -92,10 +91,10 @@ fn get_block_hash_test_failure2() {
             &caller_address,
             (
                 EntryPointType::External,
-                &felt_str!(
+                &Felt252::from_hex(
                     "377ae94b690204c74c8d21938c5b72e80fdaee3d21c780fd7557a7f84a8b379",
-                    16
-                ),
+                )
+                .unwrap(),
             ),
             &[
                 25.into(), // block number (is not inside a valid range)
@@ -132,11 +131,11 @@ fn integration_test_erc20() {
                 &Felt252::from_bytes_be(&calculate_sn_keccak("constructor".as_bytes())),
             ),
             &[
-                caller_address.0.clone(), // recipient
-                2.into(),                 // name
-                3.into(),                 // decimals
-                4.into(),                 // initial_supply
-                5.into(),                 // symbol
+                caller_address.0, // recipient
+                2.into(),         // name
+                3.into(),         // decimals
+                4.into(),         // initial_supply
+                5.into(),         // symbol
             ],
         )
         .unwrap();
@@ -217,7 +216,7 @@ fn integration_test_erc20() {
                 EntryPointType::External,
                 &Felt252::from_bytes_be(&calculate_sn_keccak("balance_of".as_bytes())),
             ),
-            &[caller_address.0.clone()],
+            &[caller_address.0],
         )
         .unwrap();
 
@@ -233,7 +232,7 @@ fn integration_test_erc20() {
                 EntryPointType::External,
                 &Felt252::from_bytes_be(&calculate_sn_keccak("allowance".as_bytes())),
             ),
-            &[caller_address.0.clone(), 1.into()],
+            &[caller_address.0, 1.into()],
         )
         .unwrap();
 
@@ -266,7 +265,7 @@ fn integration_test_erc20() {
                 EntryPointType::External,
                 &Felt252::from_bytes_be(&calculate_sn_keccak("allowance".as_bytes())),
             ),
-            &[caller_address.0.clone(), 1.into()],
+            &[caller_address.0, 1.into()],
         )
         .unwrap();
 
@@ -314,7 +313,7 @@ fn integration_test_erc20() {
                 EntryPointType::External,
                 &Felt252::from_bytes_be(&calculate_sn_keccak("balance_of".as_bytes())),
             ),
-            &[caller_address.0.clone()],
+            &[caller_address.0],
         )
         .unwrap();
 
@@ -378,7 +377,7 @@ fn integration_test_erc20() {
                 EntryPointType::External,
                 &Felt252::from_bytes_be(&calculate_sn_keccak("balance_of".as_bytes())),
             ),
-            &[caller_address.0.clone()],
+            &[caller_address.0],
         )
         .unwrap();
 
@@ -697,7 +696,7 @@ fn library_call() {
             ),
             &[
                 25.into(),
-                Felt252::from_bytes_be(lib_class_hash.to_bytes_be()),
+                Felt252::from_bytes_be_slice(lib_class_hash.to_bytes_be()),
             ],
         )
         .unwrap();
@@ -711,7 +710,7 @@ fn deploy_syscall_test() {
     let deployer_address = Address(1.into());
 
     let deployee_class_hash = ClassHash([2; 32]);
-    let salt = Felt252::one();
+    let salt = Felt252::ONE;
 
     let mut state = TestStateSetup::default();
     state
@@ -749,7 +748,7 @@ fn deploy_syscall_address_unavailable_test() {
     let deployer_address = Address(1.into());
 
     let deployee_class_hash = ClassHash([2; 32]);
-    let salt = Felt252::one();
+    let salt = Felt252::ONE;
     let deployee_constructor_calldata = vec![100.into()];
     let deployee_address = Address(
         calculate_contract_address(
@@ -915,7 +914,7 @@ impl TestState {
         self.state_native
             .cache_mut()
             .storage_initial_values_mut()
-            .insert(k.clone(), v.clone());
+            .insert(k.clone(), v);
         self.state_vm
             .cache_mut()
             .storage_initial_values_mut()
@@ -956,7 +955,7 @@ impl TestState {
         let mut execution_result_vm = ExecutionEntryPoint::new(
             callee_address.clone(),
             call_data.to_vec(),
-            entry_point.1.clone(),
+            *entry_point.1,
             caller_address.clone(),
             entry_point.0,
             Some(CallType::Delegate),
@@ -974,7 +973,7 @@ impl TestState {
                 u128::default(),
                 10.into(),
                 block_context.invoke_tx_max_n_steps(),
-                TRANSACTION_VERSION.clone(),
+                *TRANSACTION_VERSION,
             ),
             false,
             block_context.invoke_tx_max_n_steps(),
@@ -992,7 +991,7 @@ impl TestState {
         let execution_result_native = ExecutionEntryPoint::new(
             callee_address.clone(),
             call_data.to_vec(),
-            entry_point.1.clone(),
+            *entry_point.1,
             caller_address.clone(),
             entry_point.0,
             Some(CallType::Delegate),
@@ -1010,7 +1009,7 @@ impl TestState {
                 u128::default(),
                 10.into(),
                 block_context.invoke_tx_max_n_steps(),
-                TRANSACTION_VERSION.clone(),
+                *TRANSACTION_VERSION,
             ),
             false,
             block_context.invoke_tx_max_n_steps(),

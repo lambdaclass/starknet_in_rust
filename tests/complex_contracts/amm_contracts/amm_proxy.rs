@@ -1,6 +1,6 @@
 use crate::complex_contracts::utils::*;
-use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
-use num_traits::Zero;
+use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
+
 use starknet_crypto::FieldElement;
 use starknet_in_rust::{
     definitions::block_context::BlockContext,
@@ -51,7 +51,7 @@ fn amm_proxy_init_pool_test() {
             .entry_points_by_type()
             .clone();
 
-    let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
+    let calldata = [contract_address.0, 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -92,7 +92,7 @@ fn amm_proxy_init_pool_test() {
         }),
         class_hash: Some(contract_class_hash),
         accessed_storage_keys,
-        storage_read_values: vec![Felt252::zero(), Felt252::zero()],
+        storage_read_values: vec![Felt252::ZERO, Felt252::ZERO],
         ..Default::default()
     }];
 
@@ -152,7 +152,7 @@ fn amm_proxy_get_pool_token_balance_test() {
             .entry_points_by_type()
             .clone();
 
-    let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
+    let calldata = [contract_address.0, 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -170,7 +170,7 @@ fn amm_proxy_get_pool_token_balance_test() {
     // Add pool balance
     execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
 
-    let calldata = [contract_address.0.clone(), 1.into()].to_vec();
+    let calldata = [contract_address.0, 1.into()].to_vec();
     let result =
         execute_entry_point("proxy_get_pool_token_balance", &calldata, &mut call_config).unwrap();
 
@@ -259,7 +259,7 @@ fn amm_proxy_add_demo_token_test() {
             .entry_points_by_type()
             .clone();
 
-    let calldata = [contract_address.0.clone(), 555.into(), 666.into()].to_vec();
+    let calldata = [contract_address.0, 555.into(), 666.into()].to_vec();
     let caller_address = Address(1000000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -277,7 +277,7 @@ fn amm_proxy_add_demo_token_test() {
     // Add pool balance
     execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
 
-    let calldata = [contract_address.0.clone(), 55.into(), 66.into()].to_vec();
+    let calldata = [contract_address.0, 55.into(), 66.into()].to_vec();
     let amm_proxy_entrypoint_selector =
         Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_add_demo_token"));
     let result = execute_entry_point("proxy_add_demo_token", &calldata, &mut call_config).unwrap();
@@ -372,7 +372,7 @@ fn amm_proxy_get_account_token_balance() {
             .entry_points_by_type()
             .clone();
 
-    let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
+    let calldata = [contract_address.0, 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -393,12 +393,7 @@ fn amm_proxy_get_account_token_balance() {
     //First argument is the amm contract address
     //Second argument is the account address, in this case the proxy address
     //Third argument is the token id
-    let calldata = [
-        contract_address.0.clone(),
-        proxy_address.0.clone(),
-        2.into(),
-    ]
-    .to_vec();
+    let calldata = [contract_address.0, proxy_address.0, 2.into()].to_vec();
     let amm_proxy_entrypoint_selector =
         Felt252::from_bytes_be(&calculate_sn_keccak(b"proxy_get_account_token_balance"));
     let result = execute_entry_point(
@@ -498,7 +493,7 @@ fn amm_proxy_swap() {
             .entry_points_by_type()
             .clone();
 
-    let calldata = [contract_address.0.clone(), 100.into(), 200.into()].to_vec();
+    let calldata = [contract_address.0, 100.into(), 200.into()].to_vec();
     let caller_address = Address(1000000.into());
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -517,14 +512,14 @@ fn amm_proxy_swap() {
     execute_entry_point("proxy_add_demo_token", &calldata, &mut call_config).unwrap();
 
     //Init pool to have 1000 tokens of each type
-    let calldata = [contract_address.0.clone(), 1000.into(), 1000.into()].to_vec();
+    let calldata = [contract_address.0, 1000.into(), 1000.into()].to_vec();
     execute_entry_point("proxy_init_pool", &calldata, &mut call_config).unwrap();
 
     //Swap 100 tokens of type 1 for type 2
     //First argument is the amm contract address
     //Second argunet is the token to swap (type 1)
     //Third argument is the amount of tokens to swap (100)
-    let calldata = [contract_address.0.clone(), 1.into(), 100.into()].to_vec();
+    let calldata = [contract_address.0, 1.into(), 100.into()].to_vec();
     let expected_result = [90.into()].to_vec();
     let result = execute_entry_point("proxy_swap", &calldata, &mut call_config).unwrap();
 

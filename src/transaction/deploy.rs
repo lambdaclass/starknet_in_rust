@@ -30,8 +30,8 @@ use crate::{
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use cairo_vm::Felt252;
+
 use std::sync::Arc;
 
 use std::fmt::Debug;
@@ -74,11 +74,11 @@ impl Deploy {
             &contract_address_salt,
             &class_hash,
             &constructor_calldata,
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
         )?);
 
         let hash_value = calculate_deploy_transaction_hash(
-            version.clone(),
+            version,
             &contract_address,
             &constructor_calldata,
             chain_id,
@@ -113,7 +113,7 @@ impl Deploy {
             &contract_address_salt,
             &class_hash,
             &constructor_calldata,
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
         )?);
 
         Ok(Deploy {
@@ -193,7 +193,7 @@ impl Deploy {
         let class_hash: ClassHash = self.contract_hash;
         let call_info = CallInfo::empty_constructor_call(
             self.contract_address.clone(),
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
             Some(class_hash),
         );
 
@@ -233,8 +233,8 @@ impl Deploy {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
-            Address(Felt252::zero()),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+            Address(Felt252::ZERO),
             EntryPointType::Constructor,
             None,
             None,
@@ -242,13 +242,13 @@ impl Deploy {
         );
 
         let mut tx_execution_context = TransactionExecutionContext::new(
-            Address(Felt252::zero()),
-            self.hash_value.clone(),
+            Address(Felt252::ZERO),
+            self.hash_value,
             Vec::new(),
             0,
-            Felt252::zero(),
+            Felt252::ZERO,
             block_context.invoke_tx_max_n_steps,
-            self.version.clone(),
+            self.version,
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();
