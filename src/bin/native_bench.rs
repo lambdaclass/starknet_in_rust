@@ -94,7 +94,7 @@ fn bench_fibo(executions: usize, bench_type: BenchType) {
 
     let (contract_class, constructor_selector) = match bench_type {
         BenchType::VM => {
-            let casm_data = include_bytes!("../starknet_programs/cairo2/fibonacci.casm");
+            let casm_data = include_bytes!("../../starknet_programs/cairo2/fibonacci.casm");
             let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
 
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
@@ -106,7 +106,7 @@ fn bench_fibo(executions: usize, bench_type: BenchType) {
             )
         }
         _ => {
-            let sierra_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
+            let sierra_data = include_bytes!("../../starknet_programs/cairo2/fibonacci.sierra");
             let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
                 serde_json::from_slice(sierra_data).unwrap();
 
@@ -174,7 +174,7 @@ fn bench_fact(executions: usize, bench_type: BenchType) {
 
     let (contract_class, constructor_selector) = match bench_type {
         BenchType::VM => {
-            let casm_data = include_bytes!("../starknet_programs/cairo2/factorial_tr.casm");
+            let casm_data = include_bytes!("../../starknet_programs/cairo2/factorial_tr.casm");
             let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
 
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
@@ -186,7 +186,7 @@ fn bench_fact(executions: usize, bench_type: BenchType) {
             )
         }
         _ => {
-            let sierra_data = include_bytes!("../starknet_programs/cairo2/factorial_tr.sierra");
+            let sierra_data = include_bytes!("../../starknet_programs/cairo2/factorial_tr.sierra");
             let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
                 serde_json::from_slice(sierra_data).unwrap();
 
@@ -291,7 +291,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
     ) = match bench_type {
         BenchType::VM => {
             // read the ERC20 contract class
-            let erc20_casm_class = include_bytes!("../starknet_programs/cairo2/erc20.casm");
+            let erc20_casm_class = include_bytes!("../../starknet_programs/cairo2/erc20.casm");
             let casm_contract_class: CasmContractClass =
                 serde_json::from_slice(erc20_casm_class).unwrap();
             let erc20_contract_class = CompiledClass::Casm(Arc::new(casm_contract_class));
@@ -299,7 +299,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
             // we also need to read the contract class of the deployERC20 contract.
             // this contract is used as a deployer of the erc20.
             let erc20_deployer_code =
-                include_bytes!("../starknet_programs/cairo2/deploy_erc20.casm");
+                include_bytes!("../../starknet_programs/cairo2/deploy_erc20.casm");
             let erc20_deployer_class: CasmContractClass =
                 serde_json::from_slice(erc20_deployer_code).unwrap();
             let entrypoints = erc20_deployer_class.clone().entry_points_by_type;
@@ -370,7 +370,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
             (Address(erc20_address), state)
         }
         _ => {
-            let erc20_sierra_class = include_bytes!("../starknet_programs/cairo2/erc20.sierra");
+            let erc20_sierra_class = include_bytes!("../../starknet_programs/cairo2/erc20.sierra");
             let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
                 serde_json::from_slice(erc20_sierra_class).unwrap();
             let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
@@ -381,7 +381,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
             // we also need to read the contract class of the deployERC20 contract.
             // this contract is used as a deployer of the erc20.
             let erc20_deployer_code =
-                include_bytes!("../starknet_programs/cairo2/deploy_erc20.casm");
+                include_bytes!("../../starknet_programs/cairo2/deploy_erc20.casm");
             let erc20_deployer_class: CasmContractClass =
                 serde_json::from_slice(erc20_deployer_code).unwrap();
             let entrypoints = erc20_deployer_class.clone().entry_points_by_type;
@@ -458,7 +458,8 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
     //    Further executions (transfers) will be executed with Native.
     //    (or the VM, depending on configuration)
     // 2a. setup for first account:
-    let account_casm_file = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");
+    let account_casm_file =
+        include_bytes!("../../starknet_programs/cairo2/hello_world_account.casm");
     let account_contract_class: CasmContractClass =
         serde_json::from_slice(account_casm_file).unwrap();
 
