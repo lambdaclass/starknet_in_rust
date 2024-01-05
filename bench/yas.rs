@@ -34,8 +34,8 @@ use {
     std::{cell::RefCell, rc::Rc},
 };
 
-const WARMUP_TIME: Duration = Duration::from_secs(3);
-const BENCHMARK_TIME: Duration = Duration::from_secs(5);
+const WARMUP_TIME: Duration = Duration::from_secs(0);
+const BENCHMARK_TIME: Duration = Duration::from_secs(1);
 
 lazy_static! {
     static ref ACCOUNT_ADDRESS: Felt252 = 4321.into();
