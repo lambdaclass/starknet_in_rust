@@ -48,6 +48,7 @@ use std::sync::Arc;
 use {
     crate::state::StateDiff,
     cairo_native::cache::{JitProgramCache, ProgramCache},
+    cairo_native::OptLevel,
     std::{cell::RefCell, rc::Rc},
     tracing::debug,
 };
@@ -716,27 +717,37 @@ impl ExecutionEntryPoint {
         .iter()
         .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
         .unwrap();
-
+        dbg!("Native execute");
         let native_executor: NativeExecutor = {
             let mut cache = program_cache.borrow_mut();
             let cache = &mut *cache;
             match cache {
                 ProgramCache::Aot(cache) => {
+                    dbg!("Compile Aot");
                     NativeExecutor::Aot(if let Some(executor) = cache.get(class_hash) {
+                        dbg!("Compile Aot");
                         executor
                     } else {
-                        cache.compile_and_insert(*class_hash, sierra_program)
+                        dbg!("Compile Aot");
+                        let e = cache.compile_and_insert(
+                            *class_hash,
+                            sierra_program,
+                            OptLevel::Default,
+                        );
+                        dbg!("Compile Aot");
+                        e
                     })
                 }
                 ProgramCache::Jit(cache) => {
                     NativeExecutor::Jit(if let Some(executor) = cache.get(class_hash) {
                         executor
                     } else {
-                        cache.compile_and_insert(*class_hash, sierra_program)
+                        cache.compile_and_insert(*class_hash, sierra_program, OptLevel::Default)
                     })
                 }
             }
         };
+        dbg!("Native execute");
 
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
