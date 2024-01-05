@@ -258,6 +258,8 @@ fn compare_yas_bench() -> Result<(), Box<dyn std::error::Error>> {
             (4_295_128_740, 0, false),
         )?;
 
+        // Check the token balances for each run
+
         let tyas0_jit = balance_of(
             &mut state_jit,
             program_cache_jit.clone(),
@@ -286,6 +288,9 @@ fn compare_yas_bench() -> Result<(), Box<dyn std::error::Error>> {
 
         assert_eq!(tyas0_jit, tyas0_vm);
         assert_eq!(tyas1_jit, tyas1_vm);
+
+        // Check the state of each run
+        assert_eq!(state_jit.cache(), state_vm.cache());
     }
 
     Ok(())
