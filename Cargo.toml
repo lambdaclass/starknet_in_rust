@@ -92,7 +92,6 @@ required-features = ["cairo-native"]
 path = "bench/yas.rs"
 name = "yas"
 harness = false
-required-features = ["cairo-native"]
 
 [profile.release]
 codegen-units = 1
