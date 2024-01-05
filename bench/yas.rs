@@ -269,7 +269,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let delta_t = (delta_t - WARMUP_TIME).as_secs_f64();
     println!(
-        "({}) Executed {num_runs} swaps taking {delta_t} seconds ({} #/s, or {} s/#)",
+        "[{}] Executed {num_runs} swaps taking {delta_t} seconds ({} #/s, or {} s/#)",
         if jit_run { "JIT" } else { "AOT" },
         f64::from(num_runs) / delta_t,
         delta_t / f64::from(num_runs),
