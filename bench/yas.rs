@@ -1,3 +1,12 @@
+/*
+Usage:
+    * Running the bench by itself will default to JIT mode
+    * You can choose to run either in JIT (Just in time) or AOT (Ahead of time) mode
+    by passing either "jit" or "aot" as an argument when running the bench
+Example:
+    `cargo bench --features cairo-native --bench yas aot`
+*/
+
 #![deny(clippy::pedantic)]
 #![deny(warnings)]
 
