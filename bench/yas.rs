@@ -32,9 +32,24 @@ lazy_static! {
 
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Change this variable to switch to AOT mode
-    // FIXME: Should we move this bench to a binary target so we can choose from the command line (like native_bench)?
-    let jit_run = true;
+    let mut jit_run: bool = true;
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        info!("No mode selected, running in JIT mode");
+    } else {
+        match &*args[1] {
+            "jit" => {
+                info!("Running in JIT mode");
+            }
+            "aot" => {
+                info!("Running in AOT mode");
+                jit_run = false;
+            }
+            arg => {
+                info!("Invalid mode {}, running in JIT mode", arg);
+            }
+        }
+    }
 
     tracing::subscriber::set_global_default(
         FmtSubscriber::builder()
@@ -245,9 +260,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let delta_t = (delta_t - WARMUP_TIME).as_secs_f64();
     eprintln!(
-        "Executed {num_runs} swaps taking {delta_t} seconds ({} #/s, or {} s/#)",
+        "[{}] Executed {num_runs} swaps taking {delta_t} seconds ({} #/s, or {} s/#)",
         f64::from(num_runs) / delta_t,
         delta_t / f64::from(num_runs),
+        if jit_run { "JIT" } else { "AOT" },
     );
 
     debug!(

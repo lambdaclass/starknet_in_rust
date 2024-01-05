@@ -725,11 +725,7 @@ impl ExecutionEntryPoint {
                     NativeExecutor::Aot(if let Some(executor) = cache.get(class_hash) {
                         executor
                     } else {
-                        cache.compile_and_insert(
-                            *class_hash,
-                            sierra_program,
-                            OptLevel::Default,
-                        )
+                        cache.compile_and_insert(*class_hash, sierra_program, OptLevel::Default)
                     })
                 }
                 ProgramCache::Jit(cache) => {
