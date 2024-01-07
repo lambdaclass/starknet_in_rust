@@ -56,7 +56,7 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 fn main() {
     #[cfg(feature = "cairo-native")]
     {
-        let program_cache = Rc::new(RefCell::new(ProgramCache::from(JitProgramCache::new(
+        let program_cache = Rc::new(RefCell::new(ProgramCache::Jit(JitProgramCache::new(
             starknet_in_rust::utils::get_native_context(),
         ))));
 

@@ -348,14 +348,7 @@ fn integration_test_erc20() {
         4 initial_supply
         5 symbol
     */
-    let calldata = [
-        caller_address.0.clone(),
-        2.into(),
-        3.into(),
-        4.into(),
-        5.into(),
-    ]
-    .to_vec();
+    let calldata = [caller_address.0, 2.into(), 3.into(), 4.into(), 5.into()].to_vec();
 
     let vm_result = execute(
         &mut state_vm,
@@ -536,7 +529,7 @@ fn integration_test_erc20() {
         8,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone()],
+        &[caller_address.0],
         &caller_address,
         "get balance of caller",
     );
@@ -549,7 +542,7 @@ fn integration_test_erc20() {
         3,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone(), 1.into()],
+        &[caller_address.0, 1.into()],
         &caller_address,
         "get allowance of address 1",
     );
@@ -576,7 +569,7 @@ fn integration_test_erc20() {
         3,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone(), 1.into()],
+        &[caller_address.0, 1.into()],
         &caller_address,
         "allowance of address 1 part 2",
     );
@@ -615,7 +608,7 @@ fn integration_test_erc20() {
         8,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone()],
+        &[caller_address.0],
         &caller_address,
         "GET BALANCE OF CALLER",
     );
@@ -667,7 +660,7 @@ fn integration_test_erc20() {
         8,
         &native_entrypoints,
         &casm_entrypoints,
-        &[caller_address.0.clone()],
+        &[caller_address.0],
         &caller_address,
         "GET BALANCE OF CALLER last",
     );
@@ -1189,7 +1182,7 @@ fn replace_class_contract_call() {
         .insert(address.clone(), class_hash_a);
     state_reader
         .address_to_nonce_mut()
-        .insert(address.clone(), nonce.clone());
+        .insert(address.clone(), nonce);
 
     let mut native_state_reader = InMemoryStateReader::default();
     native_state_reader
@@ -1429,7 +1422,7 @@ fn execute(
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1534,7 +1527,7 @@ fn library_call() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1623,7 +1616,7 @@ fn execute_deploy(
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1919,7 +1912,7 @@ fn get_execution_info_test() {
         0,
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -1940,10 +1933,10 @@ fn get_execution_info_test() {
         .unwrap();
 
     let expected_ret_data = vec![
-        block_context.block_info().sequencer_address.0.clone(),
+        block_context.block_info().sequencer_address.0,
         0.into(),
         0.into(),
-        address.0.clone(),
+        address.0,
     ];
 
     let expected_gas_consumed = 22980;

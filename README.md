@@ -123,6 +123,16 @@ Starknet in Rust can be integrated with [Cairo Native](https://github.com/lambda
 
 Afterwards, compiling with the feature flag `cairo-native` will enable native execution. You can check out some example test code that uses it under `tests/cairo_native.rs`.
 
+#### Using ahead of time compilation with Native.
+
+Currently cairo-native with AOT needs a runtime library in a known place. For this you need to compile the [cairo-native-runtime](https://github.com/lambdaclass/cairo_native/tree/main/runtime) crate and point the following environment variable to a folder containing the dynamic library. The path **must** be an absolute path.
+
+```bash
+CAIRO_NATIVE_RUNTIME_LIBDIR=/absolute/path/to/cairo-native/target/release
+```
+
+If you don't do this you will get a linker error when using AOT.
+
 ## 🚀 Usage
 
 ### Running simple contracts
