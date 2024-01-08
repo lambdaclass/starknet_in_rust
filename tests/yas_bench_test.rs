@@ -1,3 +1,7 @@
+/* This test replicates the code in bench/yas.rs
+It runs the benchmark logic using both the VM and the cairo native compiler (in jit mode),
+comparing the account balances and the state after each swap in order to verify that the execution is correct and the benchmark is valid
+ */
 #![deny(warnings)]
 #![cfg(feature = "cairo-native")]
 
