@@ -67,7 +67,7 @@ pub struct InvokeFunction {
     skip_fee_transfer: bool,
     skip_nonce_check: bool,
 }
-
+// Ducks are cool
 impl InvokeFunction {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
