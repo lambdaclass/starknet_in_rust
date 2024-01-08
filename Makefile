@@ -210,9 +210,6 @@ test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-
 test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --test cairo_native --features=cairo-native
 
-test-yas-bench: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --test yas_bench_test --features=cairo-native
-
 test-doctests:
 	cargo test --workspace --doc
 
