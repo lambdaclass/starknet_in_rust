@@ -684,7 +684,7 @@ fn convert_invoke_v1(
 mod tests {
     use super::*;
     use crate::{
-        definitions::constants::QUERY_VERSION_1,
+        definitions::constants::{QUERY_VERSION_1, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
@@ -1209,15 +1209,12 @@ mod tests {
         let max_fee = 5;
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_hex(
-                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-            )
-            .unwrap(),
+            entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             entry_point_type: EntryPointType::External,
-            calldata: vec![1.into(), 1.into(), 10.into()],
+            calldata: vec![1.into()],
             tx_type: TransactionType::InvokeFunction,
             version: 0.into(),
-            validate_entry_point_selector: 0.into(),
+            validate_entry_point_selector: *VALIDATE_ENTRY_POINT_SELECTOR,
             hash_value: 0.into(),
             signature: Vec::new(),
             max_fee,
@@ -1232,7 +1229,8 @@ mod tests {
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::ZERO;
@@ -1268,7 +1266,7 @@ mod tests {
                 None,
             )
             .unwrap();
-        let expected_actual_fee = 2483;
+        let expected_actual_fee = 1258;
         let expected_tx_info = tx_info.clone().to_revert_error(
             format!(
                 "Calculated fee ({}) exceeds max fee ({})",
@@ -1284,15 +1282,12 @@ mod tests {
     fn test_execute_invoke_twice_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_hex(
-                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-            )
-            .unwrap(),
+            entry_point_selector: *VALIDATE_ENTRY_POINT_SELECTOR,
             entry_point_type: EntryPointType::External,
-            calldata: vec![1.into(), 1.into(), 10.into()],
+            calldata: vec![1.into(), 1.into(), 1.into(), 1.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 0.into(),
-            validate_entry_point_selector: 0.into(),
+            version: 1.into(),
+            validate_entry_point_selector: *VALIDATE_ENTRY_POINT_SELECTOR,
             hash_value: 0.into(),
             signature: Vec::new(),
             max_fee: 0,
@@ -1307,7 +1302,8 @@ mod tests {
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::ZERO;

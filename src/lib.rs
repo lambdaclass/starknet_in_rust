@@ -260,8 +260,7 @@ mod test {
         estimate_fee, estimate_message_fee,
         hash_utils::calculate_contract_address,
         services::api::contract_classes::{
-            compiled_class::CompiledClass,
-            deprecated_contract_class::{ContractClass, EntryPointType},
+            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
         simulate_transaction,
         state::{
@@ -277,8 +276,8 @@ mod test {
         utils::{
             felt_to_hash,
             test_utils::{
-                create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
-                TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
+                create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS,
+                TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
             },
             Address, ClassHash,
         },
@@ -315,18 +314,13 @@ mod test {
 
     #[test]
     fn estimate_fee_test() {
-        let contract_class: ContractClass = ContractClass::from_path(TEST_CONTRACT_PATH).unwrap();
-
-        let entrypoints = contract_class.entry_points_by_type;
-        let entrypoint_selector = entrypoints.get(&EntryPointType::External).unwrap()[0].selector();
-
         let (block_context, state) = create_account_tx_test_state().unwrap();
 
         // Fibonacci
-        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let calldata = [1.into(), 1.into(), 10.into(), 1.into()].to_vec();
         let invoke_function = InvokeFunction::new(
-            TEST_CONTRACT_ADDRESS.clone(),
-            *entrypoint_selector,
+            TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            *VALIDATE_ENTRY_POINT_SELECTOR,
             0, // should be ignored.
             1.into(),
             calldata,
