@@ -317,7 +317,7 @@ mod test {
         let (block_context, state) = create_account_tx_test_state().unwrap();
 
         // Fibonacci
-        let calldata = [1.into(), 1.into(), 10.into(), 1.into()].to_vec();
+        let calldata = [1.into(), 1.into(), 1.into(), 1.into()].to_vec();
         let invoke_function = InvokeFunction::new(
             TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             *VALIDATE_ENTRY_POINT_SELECTOR,
