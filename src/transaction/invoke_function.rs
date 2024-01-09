@@ -183,9 +183,6 @@ impl InvokeFunction {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
-            return Ok(None);
-        }
         if self.version.is_zero() || self.skip_validation {
             return Ok(None);
         }
