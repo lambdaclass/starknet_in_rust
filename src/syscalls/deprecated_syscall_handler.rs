@@ -1238,7 +1238,7 @@ mod tests {
             vec![10.into()],
             Vec::new(),
             0.into(),
-            Some(0.into()),
+            None,
         )
         .unwrap();
 
