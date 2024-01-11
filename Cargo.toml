@@ -88,11 +88,6 @@ path = "src/bin/native_bench.rs"
 name = "cairo_native"
 required-features = ["cairo-native"]
 
-[[bench]]
-path = "bench/yas.rs"
-name = "yas"
-harness = false
-
 [profile.release]
 codegen-units = 1
 lto = "fat"
