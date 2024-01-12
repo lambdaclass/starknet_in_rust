@@ -203,7 +203,7 @@ Run the following command:
 ```bash
 $ make test
 ```
-Take into account that some tests use the [RPC State Reader](#rpc-state-reader) so you need a full-node instance or an RPC provider that supports Starknet API version 0.5.0.
+Take into account that some tests use the [RPC State Reader](#rpc-state-reader) so you need a full-node instance or an RPC provider that supports Starknet API version 0.6.0.
 
 ### RPC State Reader
 

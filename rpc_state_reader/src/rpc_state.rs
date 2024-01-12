@@ -225,15 +225,11 @@ where
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
 
     // Parse n_memory_holes
-    let n_memory_holes: usize = serde_json::from_value(
-        value
-            .get("memory_holes")
-            .ok_or(serde::de::Error::custom(
-                RpcStateError::MissingRpcResponseField("memory_holes".to_string()),
-            ))?
-            .clone(),
-    )
-    .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+    let n_memory_holes: usize = if let Some(memory_holes) = value.get("memory_holes"){
+        serde_json::from_value(memory_holes.clone()).map_err(|e| serde::de::Error::custom(e.to_string()))?
+    } else {
+        0
+    };
     // Parse builtin instance counter
     const BUILTIN_NAMES: [&str; 8] = [
         OUTPUT_BUILTIN_NAME,
@@ -398,7 +394,7 @@ impl RpcState {
     fn deserialize_call<T: for<'a> Deserialize<'a>>(
         response: serde_json::Value,
     ) -> Result<T, RpcStateError> {
-        Ok(serde_json::from_value(dbg!(response)).unwrap())
+        serde_json::from_value(response).map_err(|err| RpcStateError::RpcCall(err.to_string()))
     }
 
     /// Requests the transaction trace to the Feeder Gateway API.
