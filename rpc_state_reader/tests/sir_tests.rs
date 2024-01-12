@@ -169,12 +169,12 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     );
 
     // check actual fee calculation
-    if receipt.actual_fee != actual_fee {
-        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+    if receipt.actual_fee.amount != actual_fee {
+        let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
         if diff >= 5 {
             assert_eq!(
-                actual_fee, receipt.actual_fee,
+                actual_fee, receipt.actual_fee.amount,
                 "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }
@@ -250,11 +250,12 @@ fn starknet_in_rust_test_case_reverted_tx(hash: &str, block_number: u64, chain: 
         trace.execute_invocation.unwrap().revert_reason.is_some()
     );
 
-    let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee) / receipt.actual_fee;
+    let diff =
+        100 * receipt.actual_fee.amount.abs_diff(tx_info.actual_fee) / receipt.actual_fee.amount;
 
     if diff >= 5 {
         assert_eq!(
-            tx_info.actual_fee, receipt.actual_fee,
+            tx_info.actual_fee, receipt.actual_fee.amount,
             "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
         );
     }
@@ -270,7 +271,7 @@ fn test_validate_fee(hash: &str, block_number: u64, chain: RpcChain) {
     let (tx_info_without_fee, _trace, _receipt) =
         execute_tx_without_validate(hash, chain, BlockNumber(block_number)).unwrap();
 
-    assert_eq!(tx_info.actual_fee, receipt.actual_fee);
+    assert_eq!(tx_info.actual_fee, receipt.actual_fee.amount);
     assert!(tx_info_without_fee.actual_fee < tx_info.actual_fee);
 }
 
@@ -297,12 +298,12 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
     assert!(call_info.is_none());
 
     let actual_fee = actual_fee;
-    if receipt.actual_fee != actual_fee {
-        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+    if receipt.actual_fee.amount != actual_fee {
+        let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
         if diff >= 5 {
             assert_eq!(
-                actual_fee, receipt.actual_fee,
+                actual_fee, receipt.actual_fee.amount,
                 "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }
@@ -349,12 +350,12 @@ fn starknet_in_rust_test_case_tx_skip_nonce_check(hash: &str, block_number: u64,
     );
 
     // check actual fee calculation
-    if receipt.actual_fee != actual_fee {
-        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+    if receipt.actual_fee.amount != actual_fee {
+        let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
         if diff >= 5 {
             assert_eq!(
-                actual_fee, receipt.actual_fee,
+                actual_fee, receipt.actual_fee.amount,
                 "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }
@@ -377,12 +378,12 @@ fn starknet_in_rust_check_fee_and_retdata(hash: &str, block_number: u64, chain: 
     let CallInfo { retdata, .. } = call_info.unwrap();
 
     // check actual fee calculation
-    if receipt.actual_fee != actual_fee {
-        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+    if receipt.actual_fee.amount != actual_fee {
+        let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
         if diff >= 5 {
             assert_eq!(
-                actual_fee, receipt.actual_fee,
+                actual_fee, receipt.actual_fee.amount,
                 "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }

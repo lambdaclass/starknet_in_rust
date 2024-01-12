@@ -266,7 +266,7 @@ fn blockifier_test_recent_tx() {
         ..
     } = execute_call_info.unwrap();
 
-    assert_eq!(actual_fee.0, receipt.actual_fee);
+    assert_eq!(actual_fee.0, receipt.actual_fee.amount);
     assert_eq!(
         vm_resources.n_memory_holes,
         receipt.execution_resources.n_memory_holes
@@ -385,12 +385,12 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     } = execute_call_info.unwrap();
 
     let actual_fee = actual_fee.0;
-    if receipt.actual_fee != actual_fee {
-        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+    if receipt.actual_fee.amount != actual_fee {
+        let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
         if diff >= 5 {
             assert_eq!(
-                actual_fee, receipt.actual_fee,
+                actual_fee, receipt.actual_fee.amount,
                 "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }
@@ -436,11 +436,12 @@ fn blockifier_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcCha
         trace.execute_invocation.unwrap().revert_reason.is_some()
     );
 
-    let diff = 100 * receipt.actual_fee.abs_diff(tx_info.actual_fee.0) / receipt.actual_fee;
+    let diff =
+        100 * receipt.actual_fee.amount.abs_diff(tx_info.actual_fee.0) / receipt.actual_fee.amount;
 
     if diff >= 5 {
         assert_eq!(
-            tx_info.actual_fee.0, receipt.actual_fee,
+            tx_info.actual_fee.0, receipt.actual_fee.amount,
             "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
         );
     }
@@ -469,12 +470,12 @@ fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChai
     assert!(execute_call_info.is_none());
 
     let actual_fee = actual_fee.0;
-    if receipt.actual_fee != actual_fee {
-        let diff = 100 * receipt.actual_fee.abs_diff(actual_fee) / receipt.actual_fee;
+    if receipt.actual_fee.amount != actual_fee {
+        let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
         if diff >= 5 {
             assert_eq!(
-                actual_fee, receipt.actual_fee,
+                actual_fee, receipt.actual_fee.amount,
                 "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
             );
         }
