@@ -291,7 +291,10 @@ fn show_execution_data(tx_hash: String, chain: &str, block_number: u64, silent: 
         if let Some(revert_error) = revert_error {
             println!("[SIR] Revert error: {}", revert_error);
         }
-        println!("[RPC] Actual fee: {} {}", actual_fee.amount, actual_fee.unit);
+        println!(
+            "[RPC] Actual fee: {} {}",
+            actual_fee.amount, actual_fee.unit
+        );
         println!("[SIR] Actual fee: {} wei", sir_actual_fee);
     }
 }

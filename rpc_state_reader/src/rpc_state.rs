@@ -225,8 +225,9 @@ where
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
 
     // Parse n_memory_holes
-    let n_memory_holes: usize = if let Some(memory_holes) = value.get("memory_holes"){
-        serde_json::from_value(memory_holes.clone()).map_err(|e| serde::de::Error::custom(e.to_string()))?
+    let n_memory_holes: usize = if let Some(memory_holes) = value.get("memory_holes") {
+        serde_json::from_value(memory_holes.clone())
+            .map_err(|e| serde::de::Error::custom(e.to_string()))?
     } else {
         0
     };
