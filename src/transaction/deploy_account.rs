@@ -595,7 +595,11 @@ impl DeployAccount {
         let max_fee = match value {
             starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
             // TODO: check this
-            starknet_api::transaction::DeployAccountTransaction::V3(_) => Fee(0),
+            starknet_api::transaction::DeployAccountTransaction::V3(_) => {
+                return Err(SyscallHandlerError::CustomError(
+                    "V3 Transactions Not Supported Yet".to_string(),
+                ))
+            }
         };
         let version = Felt252::from_bytes_be_slice(value.version().0.bytes());
         let nonce = Felt252::from_bytes_be_slice(value.nonce().0.bytes());
