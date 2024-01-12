@@ -406,6 +406,7 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
             assert_eq!(
                 actual_fee, receipt.actual_fee.amount,
                 "actual_fee mismatch differs from the baseline by more than 35% ({diff}%)",
+
             );
         }
     }
