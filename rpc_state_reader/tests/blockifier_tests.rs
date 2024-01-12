@@ -487,7 +487,7 @@ fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChai
     if receipt.actual_fee.amount != actual_fee {
         let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
-        if diff >=35 {
+        if diff >= 35 {
             assert_eq!(
                 actual_fee, receipt.actual_fee.amount,
                 "actual_fee mismatch differs from the baseline by more than 35% ({diff}%)",

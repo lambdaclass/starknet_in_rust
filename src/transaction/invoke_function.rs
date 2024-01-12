@@ -148,7 +148,7 @@ impl InvokeFunction {
             starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, tx_hash),
             starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, tx_hash),
             starknet_api::transaction::InvokeTransaction::V3(_) => {
-                return Err(TransactionError::UnsuportedV3Transaction)
+                Err(TransactionError::UnsuportedV3Transaction)
             }
         }
     }
