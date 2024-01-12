@@ -594,7 +594,6 @@ impl DeployAccount {
     ) -> Result<Self, SyscallHandlerError> {
         let max_fee = match value {
             starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
-            // TODO: check this
             starknet_api::transaction::DeployAccountTransaction::V3(_) => {
                 return Err(SyscallHandlerError::CustomError(
                     "V3 Transactions Not Supported Yet".to_string(),
