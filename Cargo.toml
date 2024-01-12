@@ -24,15 +24,15 @@ members = [
 ]
 
 [workspace.dependencies]
-cairo-lang-casm = "2.3.1"
-cairo-lang-runner = "2.3.1"
-cairo-lang-sierra = "2.3.1"
-cairo-lang-starknet = "2.3.1"
-cairo-lang-utils = "2.3.1"
+cairo-lang-casm = "2.4.2"
+cairo-lang-runner = "2.4.2"
+cairo-lang-sierra = "2.4.2"
+cairo-lang-starknet = "2.4.2"
+cairo-lang-utils = "2.4.2"
 cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "7af00641014f295d820cbc6417714d6470823440", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
 starknet = "0.5.0"
-starknet_api = "0.4.1"
+starknet_api = "0.6.0"
 thiserror = "1.0.32"
 
 [dependencies]
@@ -43,7 +43,7 @@ cairo-lang-runner = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "16b36c8fb609c5a16ca646b9784fac291994f80f", optional = true }
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "5e003699e53003c03b848e3001f1d4ec0d7007ed", optional = true }
 
 
 cairo-vm = { workspace = true }
