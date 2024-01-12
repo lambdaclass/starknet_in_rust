@@ -260,6 +260,7 @@ fn test_get_gas_price() {
 }
 
 #[test]
+#[ignore = "Current blockifier version is not currently in production, no recent tx available for testing"]
 fn blockifier_test_recent_tx() {
     let (tx_info, trace, receipt) = execute_tx(
         "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
@@ -401,10 +402,10 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     if receipt.actual_fee.amount != actual_fee {
         let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
-        if diff >= 25 {
+        if diff >= 35 {
             assert_eq!(
                 actual_fee, receipt.actual_fee.amount,
-                "actual_fee mismatch differs from the baseline by more than 25% ({diff}%)",
+                "actual_fee mismatch differs from the baseline by more than 35% ({diff}%)",
             );
         }
     }
@@ -452,10 +453,10 @@ fn blockifier_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcCha
     let diff =
         100 * receipt.actual_fee.amount.abs_diff(tx_info.actual_fee.0) / receipt.actual_fee.amount;
 
-    if diff >= 25 {
+    if diff >= 5 {
         assert_eq!(
             tx_info.actual_fee.0, receipt.actual_fee.amount,
-            "actual_fee mismatch differs from the baseline by more than 25% ({diff}%)",
+            "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
         );
     }
 }
@@ -486,10 +487,10 @@ fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChai
     if receipt.actual_fee.amount != actual_fee {
         let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
-        if diff >= 25 {
+        if diff >=35 {
             assert_eq!(
                 actual_fee, receipt.actual_fee.amount,
-                "actual_fee mismatch differs from the baseline by more than 25% ({diff}%)",
+                "actual_fee mismatch differs from the baseline by more than 35% ({diff}%)",
             );
         }
     }

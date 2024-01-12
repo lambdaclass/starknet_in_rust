@@ -82,9 +82,8 @@ pub fn deserialize_transaction_json(
                 "unimplemented invoke version: {x}"
             ))),
         },
-        "DEPLOY_ACCOUNT" => Ok(Transaction::DeployAccount(DeployAccountTransaction::V1(dbg!(serde_json::from_value(
-            transaction),
-        )?))),
+        "DEPLOY_ACCOUNT" => Ok(Transaction::DeployAccount(DeployAccountTransaction::V1(serde_json::from_value(
+            transaction)?))),
         "DECLARE" => match tx_version.as_str() {
             "0x0" => Ok(Transaction::Declare(DeclareTransaction::V0(
                 serde_json::from_value(transaction)?,
