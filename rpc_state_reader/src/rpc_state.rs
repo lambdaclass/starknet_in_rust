@@ -182,8 +182,7 @@ pub struct RpcCallInfo {
 #[allow(unused)]
 #[derive(Debug, Deserialize)]
 pub struct RpcTransactionReceipt {
-    #[serde(deserialize_with = "actual_fee_deser")]
-    pub actual_fee: u128,
+    pub actual_fee: FeePayment,
     pub block_hash: StarkHash,
     pub block_number: u64,
     pub execution_status: String,
@@ -193,7 +192,15 @@ pub struct RpcTransactionReceipt {
     pub execution_resources: VmExecutionResources,
 }
 
-fn actual_fee_deser<'de, D>(deserializer: D) -> Result<u128, D::Error>
+#[allow(unused)]
+#[derive(Debug, Deserialize)]
+pub struct FeePayment {
+    #[serde(deserialize_with = "fee_amount_deser")]
+    pub amount: u128,
+    pub unit: String,
+}
+
+fn fee_amount_deser<'de, D>(deserializer: D) -> Result<u128, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -207,7 +214,7 @@ where
 {
     let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
     // Parse n_steps
-    let n_steps_str: String = serde_json::from_value(
+    let n_steps: usize = serde_json::from_value(
         value
             .get("steps")
             .ok_or(serde::de::Error::custom(
@@ -216,21 +223,14 @@ where
             .clone(),
     )
     .map_err(|e| serde::de::Error::custom(e.to_string()))?;
-    let n_steps = usize::from_str_radix(n_steps_str.trim_start_matches("0x"), 16)
-        .map_err(|e| serde::de::Error::custom(e.to_string()))?;
 
     // Parse n_memory_holes
-    let n_memory_holes_str: String = serde_json::from_value(
-        value
-            .get("memory_holes")
-            .ok_or(serde::de::Error::custom(
-                RpcStateError::MissingRpcResponseField("memory_holes".to_string()),
-            ))?
-            .clone(),
-    )
-    .map_err(|e| serde::de::Error::custom(e.to_string()))?;
-    let n_memory_holes = usize::from_str_radix(n_memory_holes_str.trim_start_matches("0x"), 16)
-        .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+    let n_memory_holes: usize = if let Some(memory_holes) = value.get("memory_holes") {
+        serde_json::from_value(memory_holes.clone())
+            .map_err(|e| serde::de::Error::custom(e.to_string()))?
+    } else {
+        0
+    };
     // Parse builtin instance counter
     const BUILTIN_NAMES: [&str; 8] = [
         OUTPUT_BUILTIN_NAME,
@@ -244,12 +244,10 @@ where
     ];
     let mut builtin_instance_counter = HashMap::new();
     for name in BUILTIN_NAMES {
-        let builtin_counter_str: Option<String> = value
+        let builtin_counter: Option<usize> = value
             .get(format!("{}_applications", name))
             .and_then(|a| serde_json::from_value(a.clone()).ok());
-        if let Some(builtin_counter) = builtin_counter_str
-            .and_then(|s| usize::from_str_radix(s.trim_start_matches("0x"), 16).ok())
-        {
+        if let Some(builtin_counter) = builtin_counter {
             if builtin_counter > 0 {
                 builtin_instance_counter.insert(name.to_string(), builtin_counter);
             }
