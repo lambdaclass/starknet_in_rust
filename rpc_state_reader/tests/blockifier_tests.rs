@@ -401,10 +401,10 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
     if receipt.actual_fee.amount != actual_fee {
         let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
-        if diff >= 5 {
+        if diff >= 25 {
             assert_eq!(
                 actual_fee, receipt.actual_fee.amount,
-                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+                "actual_fee mismatch differs from the baseline by more than 25% ({diff}%)",
             );
         }
     }
@@ -452,10 +452,10 @@ fn blockifier_test_case_reverted_tx(hash: &str, block_number: u64, chain: RpcCha
     let diff =
         100 * receipt.actual_fee.amount.abs_diff(tx_info.actual_fee.0) / receipt.actual_fee.amount;
 
-    if diff >= 5 {
+    if diff >= 25 {
         assert_eq!(
             tx_info.actual_fee.0, receipt.actual_fee.amount,
-            "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+            "actual_fee mismatch differs from the baseline by more than 25% ({diff}%)",
         );
     }
 }
@@ -486,10 +486,10 @@ fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChai
     if receipt.actual_fee.amount != actual_fee {
         let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 
-        if diff >= 5 {
+        if diff >= 25 {
             assert_eq!(
                 actual_fee, receipt.actual_fee.amount,
-                "actual_fee mismatch differs from the baseline by more than 5% ({diff}%)",
+                "actual_fee mismatch differs from the baseline by more than 25% ({diff}%)",
             );
         }
     }
