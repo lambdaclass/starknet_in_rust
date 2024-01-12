@@ -433,8 +433,8 @@ fn blockifier_test_case_tx(hash: &str, block_number: u64, chain: RpcChain) {
 #[test_case(
     "0x00b6d59c19d5178886b4c939656167db0660fe325345138025a3cc4175b21897",
     200303, // real block     200304
-    RpcChain::MainNet
-)]
+    RpcChain::MainNet => ignore["Doesn't revert in newest blockifier version"]
+    )]
 #[test_case(
     "0x02b28b4846a756e0cec6385d6d13f811e745a88c7e75a3ebc5fead5b4af152a3",
     200302, // real block     200304
