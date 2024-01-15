@@ -72,8 +72,13 @@ fn storage_write_read() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -220,8 +225,13 @@ fn library_call() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -245,7 +255,10 @@ fn library_call() {
 
     contract_class_cache.set_contract_class(
         lib_class_hash,
-        CompiledClass::Casm(Arc::new(lib_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(lib_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -383,8 +396,13 @@ fn call_contract_storage_write_read() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -417,7 +435,10 @@ fn call_contract_storage_write_read() {
 
     contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
-        CompiledClass::Casm(Arc::new(simple_wallet_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(simple_wallet_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -581,8 +602,13 @@ fn emit_event() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -694,11 +720,19 @@ fn deploy_cairo1_from_cairo1() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     contract_class_cache.set_contract_class(
         test_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(test_contract_class.clone()),
+            sierra: None,
+        },
     );
 
     let mut state_reader = InMemoryStateReader::default();
@@ -766,9 +800,8 @@ fn deploy_cairo1_from_cairo1() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => class.as_ref().clone(),
+        CompiledClass::Casm { casm: class, .. } => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -801,8 +834,13 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Deprecated(Arc::new(test_contract_class.clone())),
@@ -874,8 +912,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
-        CompiledClass::Sierra(_) => unreachable!(),
-        CompiledClass::Casm(_) => unreachable!(),
+        CompiledClass::Casm { .. } => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -907,8 +944,13 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let nonce = Felt252::ZERO;
 
     // simulate contract declare
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Deprecated(Arc::new(test_contract_class.clone())),
@@ -980,8 +1022,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
-        CompiledClass::Casm(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
+        CompiledClass::Casm { .. } => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1014,8 +1055,13 @@ fn deploy_cairo0_and_invoke() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     contract_class_cache.set_contract_class(
         test_class_hash,
         CompiledClass::Deprecated(Arc::new(test_contract_class.clone())),
@@ -1088,8 +1134,7 @@ fn deploy_cairo0_and_invoke() {
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
         CompiledClass::Deprecated(class) => class.as_ref().clone(),
-        CompiledClass::Casm(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
+        CompiledClass::Casm { .. } => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1150,8 +1195,13 @@ fn test_send_message_to_l1_syscall() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1257,8 +1307,13 @@ fn test_get_execution_info() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -1367,7 +1422,10 @@ fn replace_class_internal() {
 
     contract_class_cache.set_contract_class(
         class_hash_a,
-        CompiledClass::Casm(Arc::new(contract_class_a)),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_a),
+            sierra: None,
+        },
     );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1388,7 +1446,10 @@ fn replace_class_internal() {
 
     contract_class_cache.set_contract_class(
         class_hash_b,
-        CompiledClass::Casm(Arc::new(contract_class_b.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_b.clone()),
+            sierra: None,
+        },
     );
 
     // Create state from the state_reader and contract cache.
@@ -1441,7 +1502,10 @@ fn replace_class_internal() {
     // Check that the class_hash_b leads to contract_class_b for soundness
     assert_eq!(
         state.get_contract_class(&class_hash_b).unwrap(),
-        CompiledClass::Casm(Arc::new(contract_class_b))
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_b),
+            sierra: None
+        }
     );
 }
 
@@ -1471,7 +1535,10 @@ fn replace_class_contract_call() {
 
     contract_class_cache.set_contract_class(
         class_hash_a,
-        CompiledClass::Casm(Arc::new(contract_class_a)),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_a),
+            sierra: None,
+        },
     );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1495,7 +1562,10 @@ fn replace_class_contract_call() {
 
     contract_class_cache.set_contract_class(
         class_hash_b,
-        CompiledClass::Casm(Arc::new(contract_class_b)),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_b),
+            sierra: None,
+        },
     );
 
     // SET GET_NUMBER_WRAPPER
@@ -1515,7 +1585,10 @@ fn replace_class_contract_call() {
 
     contract_class_cache.set_contract_class(
         wrapper_class_hash,
-        CompiledClass::Casm(Arc::new(wrapper_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(wrapper_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -1654,7 +1727,10 @@ fn replace_class_contract_call_same_transaction() {
 
     contract_class_cache.set_contract_class(
         class_hash_a,
-        CompiledClass::Casm(Arc::new(contract_class_a)),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_a),
+            sierra: None,
+        },
     );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1678,7 +1754,10 @@ fn replace_class_contract_call_same_transaction() {
 
     contract_class_cache.set_contract_class(
         class_hash_b,
-        CompiledClass::Casm(Arc::new(contract_class_b)),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_b),
+            sierra: None,
+        },
     );
 
     // SET GET_NUMBER_WRAPPER
@@ -1697,7 +1776,10 @@ fn replace_class_contract_call_same_transaction() {
 
     contract_class_cache.set_contract_class(
         wrapper_class_hash,
-        CompiledClass::Casm(Arc::new(wrapper_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(wrapper_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -1803,7 +1885,10 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
 
     contract_class_cache.set_contract_class(
         class_hash_b,
-        CompiledClass::Casm(Arc::new(contract_class_b)),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_b),
+            sierra: None,
+        },
     );
 
     // SET GET_NUMBER_WRAPPER
@@ -1822,7 +1907,10 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
 
     contract_class_cache.set_contract_class(
         wrapper_class_hash,
-        CompiledClass::Casm(Arc::new(wrapper_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(wrapper_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -1919,7 +2007,10 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
 
     contract_class_cache.set_contract_class(
         class_hash_b,
-        CompiledClass::Casm(Arc::new(contract_class_b)),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class_b),
+            sierra: None,
+        },
     );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -1945,7 +2036,10 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
 
     contract_class_cache.set_contract_class(
         wrapper_class_hash,
-        CompiledClass::Casm(Arc::new(wrapper_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(wrapper_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -2064,7 +2158,10 @@ fn call_contract_replace_class_cairo_0() {
 
     contract_class_cache.set_contract_class(
         wrapper_class_hash,
-        CompiledClass::Casm(Arc::new(wrapper_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(wrapper_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -2142,8 +2239,13 @@ fn test_out_of_gas_failure() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2222,8 +2324,13 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2301,8 +2408,13 @@ fn deploy_syscall_failure_in_constructor() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2320,7 +2432,10 @@ fn deploy_syscall_failure_in_constructor() {
     let f_c_class_hash = Felt252::ONE;
     contract_class_cache.set_contract_class(
         ClassHash::from(f_c_class_hash),
-        CompiledClass::Casm(Arc::new(f_c_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(f_c_contract_class),
+            sierra: None,
+        },
     );
 
     // Create state from the state_reader and contract cache.
@@ -2394,8 +2509,13 @@ fn storage_read_no_value() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2468,8 +2588,13 @@ fn storage_read_unavailable_address_domain() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2545,8 +2670,13 @@ fn storage_write_unavailable_address_domain() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2620,8 +2750,13 @@ fn library_call_failure() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2644,7 +2779,10 @@ fn library_call_failure() {
 
     contract_class_cache.set_contract_class(
         lib_class_hash,
-        CompiledClass::Casm(Arc::new(lib_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(lib_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -2735,8 +2873,13 @@ fn send_messages_to_l1_different_contract_calls() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -2759,7 +2902,10 @@ fn send_messages_to_l1_different_contract_calls() {
 
     contract_class_cache.set_contract_class(
         send_msg_class_hash,
-        CompiledClass::Casm(Arc::new(send_msg_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(send_msg_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -2861,8 +3007,13 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3005,7 +3156,10 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
 
     contract_class_cache.set_contract_class(
         send_msg_class_hash,
-        CompiledClass::Casm(Arc::new(send_msg_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(send_msg_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -3101,8 +3255,13 @@ fn keccak_syscall() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3177,8 +3336,13 @@ fn library_call_recursive_50_calls() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3202,7 +3366,10 @@ fn library_call_recursive_50_calls() {
 
     contract_class_cache.set_contract_class(
         lib_class_hash,
-        CompiledClass::Casm(Arc::new(lib_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(lib_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -3319,8 +3486,13 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3353,7 +3525,10 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 
     contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
-        CompiledClass::Casm(Arc::new(simple_wallet_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(simple_wallet_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()
@@ -3526,8 +3701,13 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -3560,7 +3740,10 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 
     contract_class_cache.set_contract_class(
         simple_wallet_class_hash,
-        CompiledClass::Casm(Arc::new(simple_wallet_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(simple_wallet_contract_class),
+            sierra: None,
+        },
     );
     state_reader
         .address_to_class_hash_mut()

@@ -1,6 +1,11 @@
 use blockifier::{
     block_context::{BlockContext, FeeTokenAddresses, GasPrices},
-    execution::{call_info::CallInfo, contract_class::ContractClass},
+    execution::{
+        call_info::CallInfo,
+        contract_class::{
+            ContractClass as BlockifierContractClass, ContractClassV0, ContractClassV0Inner,
+        },
+    },
     state::{
         cached_state::{CachedState, GlobalContractCache},
         errors::StateError,
@@ -10,16 +15,10 @@ use blockifier::{
         account_transaction::AccountTransaction,
         objects::TransactionExecutionInfo,
         transactions::{
-            DeclareTransaction, DeployAccountTransaction, ExecutableTransaction,
+            DeclareTransaction, DeployAccountTransaction, ExecutableTransaction, InvokeTransaction,
             L1HandlerTransaction,
         },
     },
-};
-use blockifier::{
-    execution::contract_class::{
-        ContractClass as BlockifierContractClass, ContractClassV0, ContractClassV0Inner,
-    },
-    transaction::transactions::InvokeTransaction,
 };
 use cairo_lang_starknet::{
     casm_contract_class::CasmContractClass, contract_class::ContractClass as SierraContractClass,
@@ -41,9 +40,8 @@ use starknet_api::{
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
-use test_case::test_case;
-
 use std::{collections::HashMap, sync::Arc};
+use test_case::test_case;
 
 pub struct RpcStateReader(RpcState);
 
@@ -68,7 +66,7 @@ impl StateReader for RpcStateReader {
     fn get_compiled_contract_class(
         &mut self,
         class_hash: &ClassHash,
-    ) -> StateResult<ContractClass> {
+    ) -> StateResult<BlockifierContractClass> {
         Ok(match self.0.get_contract_class(class_hash) {
             Some(SNContractClass::Legacy(compressed_legacy_cc)) => {
                 let as_str = utils::decode_reader(compressed_legacy_cc.program).unwrap();

@@ -143,6 +143,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
         actual_fee,
         ..
     } = tx_info;
+    #[cfg_attr(feature = "cairo-native", allow(unused_variables))]
     let CallInfo {
         execution_resources,
         internal_calls,
@@ -150,6 +151,7 @@ fn starknet_in_rust_test_case_tx(hash: &str, block_number: u64, chain: RpcChain)
     } = call_info.unwrap();
 
     // check Cairo VM execution resources
+    #[cfg(not(feature = "cairo-native"))]
     assert_eq_sorted!(
         execution_resources.as_ref(),
         Some(&receipt.execution_resources),
@@ -297,7 +299,6 @@ fn starknet_in_rust_test_case_declare_tx(hash: &str, block_number: u64, chain: R
 
     assert!(call_info.is_none());
 
-    let actual_fee = actual_fee;
     if receipt.actual_fee.amount != actual_fee {
         let diff = 100 * receipt.actual_fee.amount.abs_diff(actual_fee) / receipt.actual_fee.amount;
 

@@ -508,8 +508,7 @@ pub fn parse_felt_array(felt_strings: &[Value]) -> Vec<Felt252> {
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
-    #![allow(unused_imports)]
-
+    use super::felt_to_hash;
     use crate::{
         definitions::{
             block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
@@ -525,10 +524,7 @@ pub mod test_utils {
         utils::Address,
     };
     use cairo_vm::Felt252;
-    use num_traits::Zero;
     use std::{collections::HashMap, sync::Arc};
-
-    use super::{felt_to_hash, ClassHash};
 
     #[macro_export]
     macro_rules! any_box {
@@ -536,7 +532,6 @@ pub mod test_utils {
             Box::new($val) as Box<dyn Any>
         };
     }
-
     pub(crate) use any_box;
 
     macro_rules! references {
@@ -556,7 +551,6 @@ pub mod test_utils {
             references
         }};
     }
-
     pub(crate) use references;
 
     macro_rules! ids_data {
@@ -617,7 +611,6 @@ pub mod test_utils {
             $vm.insert_value(k, v).unwrap();
         };
     }
-    pub(crate) use allocate_values;
 
     #[macro_export]
     macro_rules! allocate_selector {
@@ -627,7 +620,6 @@ pub mod test_utils {
             $vm.insert_value(k, v).unwrap();
         };
     }
-    pub(crate) use allocate_selector;
 
     #[macro_export]
     macro_rules! relocatable_value {
@@ -638,7 +630,6 @@ pub mod test_utils {
             }
         };
     }
-    pub(crate) use relocatable_value;
 
     #[macro_export]
     macro_rules! exec_scopes_ref {
@@ -713,7 +704,6 @@ pub mod test_utils {
             )
         }};
     }
-    pub(crate) use run_syscall_hint;
 
     pub(crate) const ACCOUNT_CONTRACT_PATH: &str =
         "starknet_programs/account_without_validation.json";
