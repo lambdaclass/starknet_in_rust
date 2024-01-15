@@ -158,4 +158,6 @@ pub enum TransactionError {
     MaxFeeTooLow(u128, u128),
     #[error("Max fee ({0}) exceeds balance (Uint256({1}, {2})).")]
     MaxFeeExceedsBalance(u128, Felt252, Felt252),
+    #[error("V3 Transactions not Supported Yet")]
+    UnsuportedV3Transaction,
 }

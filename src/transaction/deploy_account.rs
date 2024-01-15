@@ -43,6 +43,7 @@ use crate::{
 use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_api::transaction::Fee;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -598,21 +599,28 @@ impl DeployAccount {
         value: starknet_api::transaction::DeployAccountTransaction,
         tx_hash: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
-        let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be_slice(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
-        let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
+        let max_fee = match value {
+            starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
+            starknet_api::transaction::DeployAccountTransaction::V3(_) => {
+                return Err(SyscallHandlerError::CustomError(
+                    "V3 Transactions Not Supported Yet".to_string(),
+                ))
+            }
+        };
+        let version = Felt252::from_bytes_be_slice(value.version().0.bytes());
+        let nonce = Felt252::from_bytes_be_slice(value.nonce().0.bytes());
+        let class_hash: ClassHash = ClassHash(value.class_hash().0.bytes().try_into().unwrap());
         let contract_address_salt =
-            Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
+            Felt252::from_bytes_be_slice(value.contract_address_salt().0.bytes());
 
         let signature = value
-            .signature
+            .signature()
             .0
             .iter()
             .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
             .collect();
         let constructor_calldata = value
-            .constructor_calldata
+            .constructor_calldata()
             .0
             .as_ref()
             .iter()
@@ -621,7 +629,7 @@ impl DeployAccount {
 
         DeployAccount::new_with_tx_hash(
             class_hash,
-            max_fee,
+            max_fee.0,
             version,
             nonce,
             constructor_calldata,
@@ -642,21 +650,25 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
     fn try_from(
         value: starknet_api::transaction::DeployAccountTransaction,
     ) -> Result<Self, SyscallHandlerError> {
-        let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be_slice(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
-        let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
+        let max_fee = match value {
+            starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
+            // TODO: check this
+            starknet_api::transaction::DeployAccountTransaction::V3(_) => Fee(0),
+        };
+        let version = Felt252::from_bytes_be_slice(value.version().0.bytes());
+        let nonce = Felt252::from_bytes_be_slice(value.nonce().0.bytes());
+        let class_hash: ClassHash = ClassHash(value.class_hash().0.bytes().try_into().unwrap());
         let contract_address_salt =
-            Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
+            Felt252::from_bytes_be_slice(value.contract_address_salt().0.bytes());
 
         let signature = value
-            .signature
+            .signature()
             .0
             .iter()
             .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
             .collect();
         let constructor_calldata = value
-            .constructor_calldata
+            .constructor_calldata()
             .0
             .as_ref()
             .iter()
@@ -667,7 +679,7 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
 
         DeployAccount::new(
             class_hash,
-            max_fee,
+            max_fee.0,
             version,
             nonce,
             constructor_calldata,
