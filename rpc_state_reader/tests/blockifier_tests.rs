@@ -1,6 +1,11 @@
 use blockifier::{
     block_context::{BlockContext, FeeTokenAddresses, GasPrices},
-    execution::{call_info::CallInfo, contract_class::ContractClass},
+    execution::{
+        call_info::CallInfo,
+        contract_class::{
+            ContractClass as BlockifierContractClass, ContractClassV0, ContractClassV0Inner,
+        },
+    },
     state::{
         cached_state::{CachedState, GlobalContractCache},
         errors::StateError,
