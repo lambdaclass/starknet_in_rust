@@ -464,7 +464,7 @@ where
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
-        Felt252::ONE,
+        Felt252::ZERO,
         vec![
             *erc20_class_hash,
             nonce,
@@ -477,7 +477,7 @@ where
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(nonce),
+        None,
     )?
     .execute(
         state,
@@ -513,7 +513,7 @@ where
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
-        Felt252::ONE,
+        Felt252::ZERO,
         vec![
             *yas_factory_class_hash,
             nonce,
@@ -523,7 +523,7 @@ where
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(nonce),
+        None,
     )?
     .execute(
         state,
@@ -557,11 +557,11 @@ where
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
-        Felt252::ONE,
+        Felt252::ZERO,
         vec![*yas_router_class_hash, nonce, Felt252::ZERO],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(nonce),
+        None,
     )?
     .execute(
         state,
@@ -601,7 +601,7 @@ where
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
         0,
-        Felt252::ONE,
+        Felt252::ZERO,
         vec![
             *yas_pool_class_hash,
             nonce,
@@ -615,7 +615,7 @@ where
         ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
-        Some(nonce),
+        None,
     )?
     .execute(
         state,
