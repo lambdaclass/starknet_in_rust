@@ -8,6 +8,7 @@ comparing the account balances and the state after each swap in order to verify 
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use starknet::core::utils::get_selector_from_name;
+use starknet_in_rust::definitions::constants::EXECUTE_ENTRY_POINT_SELECTOR;
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::block_context::{BlockContext, StarknetChainId},
@@ -645,7 +646,8 @@ where
     C: ContractClassCache,
 {
     let contract_address = *yas_pool_address;
-    let contract_entrypoint = Felt252::from_bytes_be(&get_selector_from_name("initialize").unwrap().to_bytes_be());
+    let contract_entrypoint =
+        Felt252::from_bytes_be(&get_selector_from_name("initialize").unwrap().to_bytes_be());
     let nonce = state.get_nonce_at(&Address(*ACCOUNT_ADDRESS)).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
@@ -857,7 +859,8 @@ where
     C: ContractClassCache,
 {
     let contract_address = *token_address;
-    let contract_entrypoint = Felt252::from_bytes_be(&get_selector_from_name("balanceOf").unwrap().to_bytes_be());
+    let contract_entrypoint =
+        Felt252::from_bytes_be(&get_selector_from_name("balanceOf").unwrap().to_bytes_be());
     let nonce = state.get_nonce_at(&Address(*ACCOUNT_ADDRESS)).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
@@ -865,7 +868,13 @@ where
         *EXECUTE_ENTRY_POINT_SELECTOR,
         0,
         Felt252::ONE,
-        vec![Felt252::ONE, contract_address, contract_entrypoint, Felt252::ONE, wallet_address],
+        vec![
+            Felt252::ONE,
+            contract_address,
+            contract_entrypoint,
+            Felt252::ONE,
+            wallet_address,
+        ],
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
