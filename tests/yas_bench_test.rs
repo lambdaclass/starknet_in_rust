@@ -644,15 +644,20 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let contract_address = Address(*yas_pool_address);
-    let nonce = state.get_nonce_at(&contract_address).unwrap();
+    let contract_address = *yas_pool_address;
+    let contract_entrypoint = Felt252::from_bytes_be(&get_selector_from_name("initialize").unwrap().to_bytes_be());
+    let nonce = state.get_nonce_at(&Address(*ACCOUNT_ADDRESS)).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
-        contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("initialize").unwrap().to_bytes_be()),
+        Address(*ACCOUNT_ADDRESS),
+        *EXECUTE_ENTRY_POINT_SELECTOR,
         0,
         Felt252::ONE,
         vec![
+            Felt252::ONE,
+            contract_address,
+            contract_entrypoint,
+            Felt252::THREE,
             price_sqrt.0.into(),
             price_sqrt.1.into(),
             u32::from(sign).into(),
@@ -851,15 +856,16 @@ where
     S: StateReader,
     C: ContractClassCache,
 {
-    let contract_address = Address(*token_address);
-    let nonce = state.get_nonce_at(&contract_address).unwrap();
+    let contract_address = *token_address;
+    let contract_entrypoint = Felt252::from_bytes_be(&get_selector_from_name("balanceOf").unwrap().to_bytes_be());
+    let nonce = state.get_nonce_at(&Address(*ACCOUNT_ADDRESS)).unwrap();
 
     let tx_execution_info = InvokeFunction::new(
-        contract_address,
-        Felt252::from_bytes_be(&get_selector_from_name("balanceOf").unwrap().to_bytes_be()),
+        Address(*ACCOUNT_ADDRESS),
+        *EXECUTE_ENTRY_POINT_SELECTOR,
         0,
         Felt252::ONE,
-        vec![wallet_address],
+        vec![Felt252::ONE, contract_address, contract_entrypoint, Felt252::ONE, wallet_address],
         vec![],
         StarknetChainId::TestNet.to_felt(),
         Some(nonce),
