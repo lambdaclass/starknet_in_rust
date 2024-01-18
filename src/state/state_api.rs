@@ -64,12 +64,6 @@ pub trait State {
         compiled_class_hash: &Felt252,
     ) -> Result<(), StateError>;
 
-    fn set_sierra_program(
-        &mut self,
-        compiled_class_hash: &Felt252,
-        sierra_program: Vec<BigUintAsHex>,
-    ) -> Result<(), StateError>;
-
     fn apply_state_update(&mut self, sate_updates: &StateDiff) -> Result<(), StateError>;
 
     /// Counts the amount of state changes

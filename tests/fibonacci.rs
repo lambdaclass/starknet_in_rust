@@ -162,8 +162,13 @@ fn integration_test_cairo1() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()

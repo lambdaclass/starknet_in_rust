@@ -43,6 +43,7 @@ use crate::{
 use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_api::transaction::Fee;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -279,15 +280,16 @@ impl DeployAccount {
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
-        match contract_class {
-            CompiledClass::Deprecated(class) => Ok(class
+        Ok(match contract_class {
+            CompiledClass::Deprecated(class) => class
                 .entry_points_by_type
                 .get(&EntryPointType::Constructor)
                 .ok_or(ContractClassError::NoneEntryPointType)?
-                .is_empty()),
-            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => todo!(),
-        }
+                .is_empty(),
+            CompiledClass::Casm { casm: class, .. } => {
+                class.entry_points_by_type.constructor.is_empty()
+            }
+        })
     }
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
@@ -319,8 +321,8 @@ impl DeployAccount {
         } else {
             self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
             )?
@@ -502,8 +504,8 @@ impl DeployAccount {
     pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
@@ -545,7 +547,13 @@ impl DeployAccount {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
-        if let CompiledClass::Sierra(_) = contract_class {
+        if matches!(
+            contract_class,
+            CompiledClass::Casm {
+                sierra: Some(_),
+                ..
+            }
+        ) {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
             if !call_info
@@ -591,21 +599,28 @@ impl DeployAccount {
         value: starknet_api::transaction::DeployAccountTransaction,
         tx_hash: Felt252,
     ) -> Result<Self, SyscallHandlerError> {
-        let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be_slice(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
-        let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
+        let max_fee = match value {
+            starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
+            starknet_api::transaction::DeployAccountTransaction::V3(_) => {
+                return Err(SyscallHandlerError::CustomError(
+                    "V3 Transactions Not Supported Yet".to_string(),
+                ))
+            }
+        };
+        let version = Felt252::from_bytes_be_slice(value.version().0.bytes());
+        let nonce = Felt252::from_bytes_be_slice(value.nonce().0.bytes());
+        let class_hash: ClassHash = ClassHash(value.class_hash().0.bytes().try_into().unwrap());
         let contract_address_salt =
-            Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
+            Felt252::from_bytes_be_slice(value.contract_address_salt().0.bytes());
 
         let signature = value
-            .signature
+            .signature()
             .0
             .iter()
             .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
             .collect();
         let constructor_calldata = value
-            .constructor_calldata
+            .constructor_calldata()
             .0
             .as_ref()
             .iter()
@@ -614,7 +629,7 @@ impl DeployAccount {
 
         DeployAccount::new_with_tx_hash(
             class_hash,
-            max_fee,
+            max_fee.0,
             version,
             nonce,
             constructor_calldata,
@@ -635,21 +650,25 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
     fn try_from(
         value: starknet_api::transaction::DeployAccountTransaction,
     ) -> Result<Self, SyscallHandlerError> {
-        let max_fee = value.max_fee.0;
-        let version = Felt252::from_bytes_be_slice(value.version.0.bytes());
-        let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
-        let class_hash: ClassHash = ClassHash(value.class_hash.0.bytes().try_into().unwrap());
+        let max_fee = match value {
+            starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
+            // TODO: check this
+            starknet_api::transaction::DeployAccountTransaction::V3(_) => Fee(0),
+        };
+        let version = Felt252::from_bytes_be_slice(value.version().0.bytes());
+        let nonce = Felt252::from_bytes_be_slice(value.nonce().0.bytes());
+        let class_hash: ClassHash = ClassHash(value.class_hash().0.bytes().try_into().unwrap());
         let contract_address_salt =
-            Felt252::from_bytes_be_slice(value.contract_address_salt.0.bytes());
+            Felt252::from_bytes_be_slice(value.contract_address_salt().0.bytes());
 
         let signature = value
-            .signature
+            .signature()
             .0
             .iter()
             .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
             .collect();
         let constructor_calldata = value
-            .constructor_calldata
+            .constructor_calldata()
             .0
             .as_ref()
             .iter()
@@ -660,7 +679,7 @@ impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAcco
 
         DeployAccount::new(
             class_hash,
-            max_fee,
+            max_fee.0,
             version,
             nonce,
             constructor_calldata,

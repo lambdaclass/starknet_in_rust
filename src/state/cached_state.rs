@@ -12,7 +12,6 @@ use crate::{
         to_cache_state_storage_mapping, Address, ClassHash,
     },
 };
-use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};
 
@@ -24,7 +23,7 @@ use std::{
 pub const UNINITIALIZED_CLASS_HASH: &ClassHash = &ClassHash([0u8; 32]);
 
 /// Represents a cached state of contract classes with optional caches.
-#[derive(Default, Debug, Getters, MutGetters)]
+#[derive(Clone, Default, Debug, Getters, MutGetters)]
 pub struct CachedState<T: StateReader, C: ContractClassCache> {
     pub state_reader: Arc<T>,
     #[getset(get = "pub", get_mut = "pub")]
@@ -516,50 +515,20 @@ impl<T: StateReader, C: ContractClassCache> State for CachedState<T, C> {
             }
         }
 
-        // if let Some(sierra_compiled_class) = self
-        //     .sierra_programs
-        //     .as_ref()
-        //     .and_then(|x| x.get(class_hash))
-        // {
-        //     return Ok(CompiledClass::Sierra(Arc::new(
-        //         sierra_compiled_class.clone(),
-        //     )));
-        // }
         // II: FETCHING FROM STATE_READER
         let contract = self.state_reader.get_contract_class(class_hash)?;
-        match contract {
-            CompiledClass::Casm(ref casm_class) => {
+        match &contract {
+            contract @ CompiledClass::Deprecated(_) => {
+                self.set_contract_class(class_hash, contract)?;
+            }
+            contract @ CompiledClass::Casm { .. } => {
                 // We call this method instead of state_reader's in order to update the cache's class_hash_initial_values map
                 let compiled_class_hash = self.get_compiled_class_hash(class_hash)?;
-                self.set_contract_class(
-                    &compiled_class_hash,
-                    &CompiledClass::Casm(casm_class.clone()),
-                )?;
+                self.set_contract_class(&compiled_class_hash, contract)?;
             }
-            CompiledClass::Deprecated(ref contract) => {
-                self.set_contract_class(class_hash, &CompiledClass::Deprecated(contract.clone()))?
-            }
-            CompiledClass::Sierra(ref sierra_compiled_class) => self.set_contract_class(
-                class_hash,
-                &CompiledClass::Sierra(sierra_compiled_class.clone()),
-            )?,
         }
+
         Ok(contract)
-    }
-
-    fn set_sierra_program(
-        &mut self,
-        compiled_class_hash: &Felt252,
-        _sierra_program: Vec<BigUintAsHex>,
-    ) -> Result<(), StateError> {
-        let _compiled_class_hash = compiled_class_hash.to_bytes_be();
-
-        // TODO implement
-        // self.sierra_programs
-        //     .as_mut()
-        //     .ok_or(StateError::MissingSierraProgramsCache)?
-        //     .insert(compiled_class_hash, sierra_program);
-        Ok(())
     }
 
     fn get_sierra_program(
