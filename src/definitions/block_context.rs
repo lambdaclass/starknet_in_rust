@@ -80,7 +80,7 @@ pub struct StarknetOsConfig {
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct GasPrices {
     pub eth_l1_gas_price: u128,  // (Wei)
-    pub strk_l1_gas_price: u128, // (STRK)
+    pub strk_l1_gas_price: u128, // (Fri)
 }
 
 impl GasPrices {
