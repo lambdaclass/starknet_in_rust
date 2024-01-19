@@ -1,6 +1,6 @@
 use crate::{
     definitions::block_context::BlockContext,
-    definitions::constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    definitions::{constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2}, block_context::FeeType},
     execution::TransactionExecutionInfo,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
@@ -250,6 +250,20 @@ impl AccountTransactionContext {
     pub fn only_query(&self) -> bool {
         match self {
             AccountTransactionContext::Deprecated(datc) => datc.common_fields.only_query,
+        }
+    }
+
+    pub fn fee_type(&self) -> FeeType {
+        if self.version() < Felt252::THREE {
+            FeeType::Eth
+        } else {
+            FeeType::Strk
+        }
+    }
+
+    pub fn max_fee(&self) -> u128 {
+        match self {
+            AccountTransactionContext::Deprecated(datc) => datc.max_fee,
         }
     }
 }
