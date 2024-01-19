@@ -236,14 +236,8 @@ impl DeployAccount {
         }
         let mut tx_exec_info = tx_exec_info?;
 
-        let actual_fee = calculate_tx_fee(
-            &tx_exec_info.actual_resources,
-            block_context
-                .starknet_os_config
-                .gas_price
-                .get_by_fee_type(&FeeType::Eth),
-            block_context,
-        )?;
+        let actual_fee =
+            calculate_tx_fee(&tx_exec_info.actual_resources, block_context, &FeeType::Eth)?;
 
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
@@ -284,15 +278,16 @@ impl DeployAccount {
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
-        match contract_class {
-            CompiledClass::Deprecated(class) => Ok(class
+        Ok(match contract_class {
+            CompiledClass::Deprecated(class) => class
                 .entry_points_by_type
                 .get(&EntryPointType::Constructor)
                 .ok_or(ContractClassError::NoneEntryPointType)?
-                .is_empty()),
-            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => todo!(),
-        }
+                .is_empty(),
+            CompiledClass::Casm { casm: class, .. } => {
+                class.entry_points_by_type.constructor.is_empty()
+            }
+        })
     }
 
     /// Execute a call to the cairo-vm using the accounts_validation.cairo contract to validate
@@ -324,8 +319,8 @@ impl DeployAccount {
         } else {
             self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
             )?
@@ -449,14 +444,7 @@ impl DeployAccount {
             ),
             ("n_steps".to_string(), n_estimated_steps),
         ]);
-        calculate_tx_fee(
-            &resources,
-            block_context
-                .starknet_os_config
-                .gas_price
-                .get_by_fee_type(&FeeType::Eth),
-            block_context,
-        )
+        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     pub fn run_constructor_entrypoint<S: StateReader, C: ContractClassCache>(
@@ -514,8 +502,8 @@ impl DeployAccount {
     pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
@@ -557,7 +545,13 @@ impl DeployAccount {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
-        if let CompiledClass::Sierra(_) = contract_class {
+        if matches!(
+            contract_class,
+            CompiledClass::Casm {
+                sierra: Some(_),
+                ..
+            }
+        ) {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
             if !call_info

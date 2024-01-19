@@ -92,16 +92,19 @@ fn bench_fibo(executions: usize, bench_type: BenchType) {
     let contract_class_cache = PermanentContractClassCache::default();
     static CASM_CLASS_HASH: ClassHash = ClassHash([2; 32]);
 
+    let casm_data = include_bytes!("../../starknet_programs/cairo2/fibonacci.casm");
+    let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
+
     let (contract_class, constructor_selector) = match bench_type {
         BenchType::VM => {
-            let casm_data = include_bytes!("../../starknet_programs/cairo2/fibonacci.casm");
-            let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
-
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
             (
-                CompiledClass::Casm(Arc::new(casm_contract_class)),
+                CompiledClass::Casm {
+                    casm: Arc::new(casm_contract_class),
+                    sierra: None,
+                },
                 constructor_selector,
             )
         }
@@ -115,7 +118,10 @@ fn bench_fibo(executions: usize, bench_type: BenchType) {
             let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
             let entrypoints = sierra_contract_class.entry_points_by_type;
             (
-                CompiledClass::Sierra(Arc::new((sierra_program, entrypoints))),
+                CompiledClass::Casm {
+                    casm: Arc::new(casm_contract_class),
+                    sierra: Some(Arc::new((sierra_program, entrypoints))),
+                },
                 constructor_selector,
             )
         }
@@ -172,16 +178,19 @@ fn bench_fact(executions: usize, bench_type: BenchType) {
     let contract_class_cache = PermanentContractClassCache::default();
     static CASM_CLASS_HASH: ClassHash = ClassHash([2; 32]);
 
+    let casm_data = include_bytes!("../../starknet_programs/cairo2/factorial_tr.casm");
+    let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
+
     let (contract_class, constructor_selector) = match bench_type {
         BenchType::VM => {
-            let casm_data = include_bytes!("../../starknet_programs/cairo2/factorial_tr.casm");
-            let casm_contract_class: CasmContractClass = serde_json::from_slice(casm_data).unwrap();
-
             let entrypoints = casm_contract_class.clone().entry_points_by_type;
             let constructor_selector = entrypoints.external.get(0).unwrap().selector.clone();
 
             (
-                CompiledClass::Casm(Arc::new(casm_contract_class)),
+                CompiledClass::Casm {
+                    casm: Arc::new(casm_contract_class),
+                    sierra: None,
+                },
                 constructor_selector,
             )
         }
@@ -195,7 +204,10 @@ fn bench_fact(executions: usize, bench_type: BenchType) {
             let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
             let entrypoints = sierra_contract_class.entry_points_by_type;
             (
-                CompiledClass::Sierra(Arc::new((sierra_program, entrypoints))),
+                CompiledClass::Casm {
+                    casm: Arc::new(casm_contract_class),
+                    sierra: Some(Arc::new((sierra_program, entrypoints))),
+                },
                 constructor_selector,
             )
         }
@@ -285,30 +297,37 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
         BenchType::Jit => ProgramCache::Jit(JitProgramCache::new(get_native_context())),
         BenchType::VM => ProgramCache::Jit(JitProgramCache::new(get_native_context())),
     }));
+
+    // read the ERC20 contract class
+    let erc20_casm_class = include_bytes!("../../starknet_programs/cairo2/erc20.casm");
+    let casm_contract_class: CasmContractClass = serde_json::from_slice(erc20_casm_class).unwrap();
+
+    // we also need to read the contract class of the deployERC20 contract.
+    // this contract is used as a deployer of the erc20.
+    let erc20_deployer_code = include_bytes!("../../starknet_programs/cairo2/deploy_erc20.casm");
+    let erc20_deployer_class: CasmContractClass =
+        serde_json::from_slice(erc20_deployer_code).unwrap();
+
     let (erc20_address, mut state): (
         Address,
         CachedState<InMemoryStateReader, PermanentContractClassCache>,
     ) = match bench_type {
         BenchType::VM => {
-            // read the ERC20 contract class
-            let erc20_casm_class = include_bytes!("../../starknet_programs/cairo2/erc20.casm");
-            let casm_contract_class: CasmContractClass =
-                serde_json::from_slice(erc20_casm_class).unwrap();
-            let erc20_contract_class = CompiledClass::Casm(Arc::new(casm_contract_class));
+            let erc20_contract_class = CompiledClass::Casm {
+                casm: Arc::new(casm_contract_class),
+                sierra: None,
+            };
 
-            // we also need to read the contract class of the deployERC20 contract.
-            // this contract is used as a deployer of the erc20.
-            let erc20_deployer_code =
-                include_bytes!("../../starknet_programs/cairo2/deploy_erc20.casm");
-            let erc20_deployer_class: CasmContractClass =
-                serde_json::from_slice(erc20_deployer_code).unwrap();
             let entrypoints = erc20_deployer_class.clone().entry_points_by_type;
             let deploy_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
             // insert deployer and erc20 classes into the cache.
             contract_class_cache.set_contract_class(
                 *DEPLOYER_CLASS_HASH,
-                CompiledClass::Casm(Arc::new(erc20_deployer_class)),
+                CompiledClass::Casm {
+                    casm: Arc::new(erc20_deployer_class),
+                    sierra: None,
+                },
             );
             contract_class_cache.set_contract_class(*ERC20_CLASS_HASH, erc20_contract_class);
 
@@ -375,22 +394,21 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
                 serde_json::from_slice(erc20_sierra_class).unwrap();
             let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
             let entrypoints = sierra_contract_class.entry_points_by_type;
-            let erc20_contract_class =
-                CompiledClass::Sierra(Arc::new((sierra_program, entrypoints)));
+            let erc20_contract_class = CompiledClass::Casm {
+                casm: Arc::new(casm_contract_class),
+                sierra: Some(Arc::new((sierra_program, entrypoints))),
+            };
 
-            // we also need to read the contract class of the deployERC20 contract.
-            // this contract is used as a deployer of the erc20.
-            let erc20_deployer_code =
-                include_bytes!("../../starknet_programs/cairo2/deploy_erc20.casm");
-            let erc20_deployer_class: CasmContractClass =
-                serde_json::from_slice(erc20_deployer_code).unwrap();
             let entrypoints = erc20_deployer_class.clone().entry_points_by_type;
             let deploy_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
 
             // insert deployer and erc20 classes into the cache.
             contract_class_cache.set_contract_class(
                 *DEPLOYER_CLASS_HASH,
-                CompiledClass::Casm(Arc::new(erc20_deployer_class)),
+                CompiledClass::Casm {
+                    casm: Arc::new(erc20_deployer_class),
+                    sierra: None,
+                },
             );
             contract_class_cache.set_contract_class(*ERC20_CLASS_HASH, erc20_contract_class);
 
@@ -466,7 +484,10 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
     state
         .set_contract_class(
             &ACCOUNT1_CLASS_HASH,
-            &CompiledClass::Casm(Arc::new(account_contract_class)),
+            &CompiledClass::Casm {
+                casm: Arc::new(account_contract_class),
+                sierra: None,
+            },
         )
         .unwrap();
     state

@@ -1,48 +1,43 @@
-#![allow(clippy::absurd_extreme_comparisons)]
-
-use std::collections::HashMap;
-use std::ops::Add;
-
-use super::syscall_handler_errors::SyscallHandlerError;
-use super::syscall_request::{
-    EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, KeccakRequest,
-    StorageReadRequest, StorageWriteRequest,
-};
-use super::syscall_response::{
-    DeployResponse, GetBlockHashResponse, GetBlockTimestampResponse, KeccakResponse,
-    SyscallResponse,
-};
 use super::{
+    syscall_handler_errors::SyscallHandlerError,
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
-        CallContractRequest, DeployRequest, LibraryCallRequest, ReplaceClassRequest,
-        SendMessageToL1Request, SyscallRequest,
+        CallContractRequest, DeployRequest, EmitEventRequest, FromPtr, GetBlockHashRequest,
+        GetBlockTimestampRequest, KeccakRequest, LibraryCallRequest, ReplaceClassRequest,
+        SendMessageToL1Request, StorageReadRequest, StorageWriteRequest, SyscallRequest,
     },
-    syscall_response::{CallContractResponse, FailureReason, ResponseBody},
+    syscall_response::{
+        CallContractResponse, DeployResponse, FailureReason, GetBlockHashResponse,
+        GetBlockTimestampResponse, KeccakResponse, ResponseBody, SyscallResponse,
+    },
 };
-use crate::definitions::block_context::BlockContext;
-use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::state::cached_state::CachedState;
-use crate::state::BlockInfo;
-use crate::transaction::error::TransactionError;
-use crate::utils::calculate_sn_keccak;
 use crate::{
     core::errors::state_errors::StateError,
-    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+    definitions::{
+        block_context::BlockContext,
+        constants::{BLOCK_HASH_CONTRACT_ADDRESS, CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType, OrderedEvent,
-        OrderedL2ToL1Message, TransactionExecutionContext,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
+        TransactionExecutionContext,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_class_errors::ContractClassError,
-    state::ExecutionResourcesManager,
+    services::api::{
+        contract_class_errors::ContractClassError,
+        contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+        },
+    },
     state::{
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
+        BlockInfo, ExecutionResourcesManager,
     },
-    utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
+    transaction::error::TransactionError,
+    utils::{calculate_sn_keccak, felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
 use cairo_vm::Felt252;
 use cairo_vm::{
@@ -53,10 +48,8 @@ use cairo_vm::{
     vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
 };
 use lazy_static::lazy_static;
-
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::contract_class_cache::ContractClassCache;
 use num_traits::{One, ToPrimitive, Zero};
+use std::{collections::HashMap, ops::Add};
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -353,17 +346,16 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
-        match contract_class {
-            CompiledClass::Deprecated(class) => Ok(class
+        Ok(match contract_class {
+            CompiledClass::Deprecated(class) => class
                 .entry_points_by_type
                 .get(&EntryPointType::Constructor)
                 .ok_or(ContractClassError::NoneEntryPointType)?
-                .is_empty()),
-            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(class_and_entrypoints) => {
-                Ok(class_and_entrypoints.1.constructor.is_empty())
+                .is_empty(),
+            CompiledClass::Casm { casm: class, .. } => {
+                class.entry_points_by_type.constructor.is_empty()
             }
-        }
+        })
     }
 
     /// Execute a constructor entry point
@@ -590,6 +582,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
 
         // FIXME: Update this after release.
         const V_0_12_0_FIRST_BLOCK: u64 = 0;
+        #[allow(clippy::absurd_extreme_comparisons)]
         let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
             Felt252::ZERO
         } else {

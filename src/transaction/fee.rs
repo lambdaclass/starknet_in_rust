@@ -88,8 +88,8 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
-    gas_price: u128,
     block_context: &BlockContext,
+    fee_type: &FeeType,
 ) -> Result<u128, TransactionError> {
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
@@ -99,7 +99,11 @@ pub fn calculate_tx_fee(
     let l1_gas_by_cairo_usage = calculate_l1_gas_by_cairo_usage(block_context, resources)?;
     let total_l1_gas_usage = gas_usage.to_f64().unwrap() + l1_gas_by_cairo_usage;
 
-    Ok(total_l1_gas_usage.ceil() as u128 * gas_price)
+    Ok(total_l1_gas_usage.ceil() as u128
+        * block_context
+            .starknet_os_config()
+            .gas_price()
+            .get_by_fee_type(fee_type))
 }
 
 /// Calculates the L1 gas consumed when submitting the underlying Cairo program to SHARP.
@@ -163,14 +167,7 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
         return Ok((None, 0));
     }
 
-    let actual_fee = calculate_tx_fee(
-        resources,
-        block_context
-            .starknet_os_config
-            .gas_price
-            .get_by_fee_type(&FeeType::Eth),
-        block_context,
-    )?;
+    let actual_fee = calculate_tx_fee(resources, block_context, &FeeType::Eth)?;
 
     let actual_fee = {
         let version_0 = tx_execution_context.version.is_zero();

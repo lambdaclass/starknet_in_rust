@@ -151,7 +151,10 @@ fn internal_deploy_account_cairo1() {
     state
         .set_contract_class(
             &ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_bytes_be()),
-            &CompiledClass::Casm(Arc::new(contract_class)),
+            &CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
         )
         .unwrap();
     state

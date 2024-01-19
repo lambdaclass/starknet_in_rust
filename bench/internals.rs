@@ -54,6 +54,8 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
+    // TODO: If this test won't run unless `cairo-native` is active, why not gate the entire bench
+    //   behind `#[cfg(feature = "cairo-native")]`?
     #[cfg(feature = "cairo-native")]
     {
         let program_cache = Rc::new(RefCell::new(ProgramCache::Jit(JitProgramCache::new(

@@ -167,14 +167,8 @@ impl L1Handler {
             // L1 handler fee is enforced, and paid_fee_on_l1 is None; If this is the case,
             // the transaction is an old transaction.
             if let Some(paid_fee) = self.paid_fee_on_l1 {
-                let required_fee = calculate_tx_fee(
-                    &actual_resources,
-                    block_context
-                        .starknet_os_config
-                        .gas_price
-                        .get_by_fee_type(&FeeType::Eth),
-                    block_context,
-                )?;
+                let required_fee =
+                    calculate_tx_fee(&actual_resources, block_context, &FeeType::Eth)?;
                 // For now, assert only that any amount of fee was paid.
                 if paid_fee.is_zero() {
                     return Err(TransactionError::FeeError(format!(

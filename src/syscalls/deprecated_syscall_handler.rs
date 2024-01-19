@@ -275,10 +275,7 @@ mod tests {
     use crate::utils::ClassHash;
     use crate::{
         add_segments, allocate_selector, any_box,
-        definitions::{
-            block_context::BlockContext, constants::TRANSACTION_VERSION,
-            transaction_type::TransactionType,
-        },
+        definitions::{block_context::BlockContext, transaction_type::TransactionType},
         execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
         memory_insert,
         services::api::contract_classes::deprecated_contract_class::ContractClass,
@@ -1237,11 +1234,11 @@ mod tests {
             Felt252::from_hex("0x283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c")
                 .unwrap(),
             0,
-            *TRANSACTION_VERSION,
+            Felt252::ZERO,
             vec![10.into()],
             Vec::new(),
             0.into(),
-            Some(0.into()),
+            None,
         )
         .unwrap();
 

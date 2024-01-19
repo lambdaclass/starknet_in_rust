@@ -340,14 +340,7 @@ impl DeclareV2 {
             ),
             ("n_steps".to_string(), n_estimated_steps),
         ]);
-        calculate_tx_fee(
-            &resources,
-            block_context
-                .starknet_os_config
-                .gas_price
-                .get_by_fee_type(&FeeType::Eth),
-            block_context,
-        )
+        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     /// Execute the validation of the contract in the cairo-vm. Returns a TransactionExecutionInfo if succesful.
@@ -384,22 +377,20 @@ impl DeclareV2 {
         }
 
         self.handle_nonce(state)?;
-        let initial_gas = INITIAL_GAS_COST;
 
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let (execution_result, _remaining_gas) = if self.skip_validate {
-            (ExecutionResult::default(), 0)
+        let execution_result = if self.skip_validate {
+            ExecutionResult::default()
         } else {
-            let (info, gas) = self.run_validate_entrypoint(
-                initial_gas,
+            self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
+                INITIAL_GAS_COST,
                 #[cfg(feature = "cairo-native")]
                 program_cache.clone(),
-            )?;
-            (info, gas)
+            )?
         };
         self.compile_and_store_casm_class(state)?;
 
@@ -473,7 +464,23 @@ impl DeclareV2 {
         let compiled_contract_class = ClassHash::from(self.compiled_class_hash);
         state.set_contract_class(
             &compiled_contract_class,
-            &CompiledClass::Casm(Arc::new(casm_class)),
+            &CompiledClass::Casm {
+                casm: Arc::new(casm_class),
+                sierra: self
+                    .sierra_contract_class
+                    .as_ref()
+                    .map(|contract_class| {
+                        Result::<_, TransactionError>::Ok(Arc::new((
+                            contract_class.extract_sierra_program().map_err(|e| {
+                                TransactionError::CustomError(format!(
+                                    "Sierra program extraction failed: {e}"
+                                ))
+                            })?,
+                            contract_class.entry_points_by_type.clone(),
+                        )))
+                    })
+                    .transpose()?,
+            },
         )?;
 
         Ok(())
@@ -481,14 +488,14 @@ impl DeclareV2 {
 
     fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        mut remaining_gas: u128,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
+        remaining_gas: u128,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
-    ) -> Result<(ExecutionResult, u128), TransactionError> {
+    ) -> Result<ExecutionResult, TransactionError> {
         let calldata = [self.compiled_class_hash].to_vec();
 
         let entry_point = ExecutionEntryPoint {
@@ -526,7 +533,13 @@ impl DeclareV2 {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
-        if let CompiledClass::Sierra(_) = contract_class {
+        if matches!(
+            contract_class,
+            CompiledClass::Casm {
+                sierra: Some(_),
+                ..
+            }
+        ) {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
             if !execution_result
@@ -541,10 +554,9 @@ impl DeclareV2 {
 
         if execution_result.call_info.is_some() {
             verify_no_calls_to_other_contracts(&execution_result.call_info)?;
-            remaining_gas -= execution_result.call_info.clone().unwrap().gas_consumed;
         }
 
-        Ok((execution_result, remaining_gas))
+        Ok(execution_result)
     }
 
     // ---------------
@@ -660,7 +672,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -730,7 +742,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -802,7 +814,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -872,7 +884,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 

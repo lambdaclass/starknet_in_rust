@@ -202,8 +202,8 @@ impl Declare {
         } else {
             self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
             )?
@@ -255,8 +255,8 @@ impl Declare {
     pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
@@ -360,14 +360,7 @@ impl Declare {
             ),
             ("n_steps".to_string(), n_estimated_steps),
         ]);
-        calculate_tx_fee(
-            &resources,
-            block_context
-                .starknet_os_config
-                .gas_price
-                .get_by_fee_type(&FeeType::Eth),
-            block_context,
-        )
+        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     /// Calculates actual fee used by the transaction using the execution

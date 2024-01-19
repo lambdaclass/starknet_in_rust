@@ -179,7 +179,6 @@ pub struct RpcCallInfo {
     pub revert_reason: Option<String>,
 }
 
-#[allow(unused)]
 #[derive(Debug, Deserialize)]
 pub struct RpcTransactionReceipt {
     pub actual_fee: FeePayment,
