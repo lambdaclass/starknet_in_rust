@@ -25,6 +25,7 @@ pub mod invoke_function;
 pub mod l1_handler;
 
 use cairo_vm::Felt252;
+use num_traits::Zero;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -184,5 +185,71 @@ fn get_tx_version(version: Felt252) -> Felt252 {
         version if version == *QUERY_VERSION_1 => Felt252::ONE,
         version if version == *QUERY_VERSION_2 => 2.into(),
         version => version,
+    }
+}
+
+/// Contains the account information of the transaction (outermost call).
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AccountTransactionContext {
+    //Current(CurrentAccountTransactionContext),
+    Deprecated(DeprecatedAccountTransactionContext),
+}
+
+// #[derive(Clone, Debug, Eq, PartialEq)]
+// pub struct CurrentAccountTransactionContext {
+//     pub common_fields: CommonAccountFields,
+//     pub resource_bounds: ResourceBoundsMapping,
+//     pub tip: Tip,
+//     pub nonce_data_availability_mode: DataAvailabilityMode,
+//     pub fee_data_availability_mode: DataAvailabilityMode,
+//     pub paymaster_data: PaymasterData,
+//     pub account_deployment_data: AccountDeploymentData,
+// }
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct DeprecatedAccountTransactionContext {
+    pub common_fields: CommonAccountFields,
+    pub max_fee: u128,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CommonAccountFields {
+    pub transaction_hash: Felt252,
+    pub version: Felt252,
+    pub signature: Vec<Felt252>,
+    pub nonce: Felt252,
+    pub sender_address: Address,
+    pub only_query: bool,
+}
+
+impl AccountTransactionContext {
+    pub fn signature(&self) -> &Vec<Felt252> {
+        match self {
+            AccountTransactionContext::Deprecated(datc) => &datc.common_fields.signature,
+        }
+    }
+
+    pub fn enforce_fee(&self) -> Result<bool, TransactionError> {
+        match self {
+            AccountTransactionContext::Deprecated(datc) => Ok(datc.max_fee.is_zero()),
+        }
+    }
+
+    pub fn version(&self) -> Felt252 {
+        match self {
+            AccountTransactionContext::Deprecated(datc) => datc.common_fields.version,
+        }
+    }
+
+    pub fn nonce(&self) -> Felt252 {
+        match self {
+            AccountTransactionContext::Deprecated(datc) => datc.common_fields.nonce,
+        }
+    }
+
+    pub fn only_query(&self) -> bool {
+        match self {
+            AccountTransactionContext::Deprecated(datc) => datc.common_fields.only_query,
+        }
     }
 }

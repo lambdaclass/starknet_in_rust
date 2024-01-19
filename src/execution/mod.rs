@@ -358,6 +358,7 @@ impl Event {
 
 #[derive(Clone, Debug, Default, Getters)]
 pub struct TransactionExecutionContext {
+    // TODO: Replace fields with AccountTransactionExecutionContext? They do overlap a lot
     pub(crate) n_emitted_events: u64,
     pub(crate) version: Felt252,
     pub(crate) account_contract_address: Address,
