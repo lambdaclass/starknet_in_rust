@@ -1,7 +1,7 @@
 use super::error::TransactionError;
 use crate::{
     definitions::{
-        block_context::BlockContext,
+        block_context::{BlockContext, FeeType},
         constants::{FEE_FACTOR, INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
     },
     execution::{
@@ -56,7 +56,7 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
     .to_vec();
 
     let fee_transfer_call = ExecutionEntryPoint::new(
-        fee_token_address,
+        fee_token_address.get_by_fee_type(&FeeType::Eth),
         calldata,
         *TRANSFER_ENTRY_POINT_SELECTOR,
         tx_execution_context.account_contract_address.clone(),
@@ -165,7 +165,10 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
 
     let actual_fee = calculate_tx_fee(
         resources,
-        block_context.starknet_os_config.gas_price,
+        block_context
+            .starknet_os_config
+            .gas_price
+            .get_by_fee_type(&FeeType::Eth),
         block_context,
     )?;
 
@@ -201,7 +204,7 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::block_context::BlockContext,
+        definitions::block_context::{BlockContext, GasPrices},
         execution::TransactionExecutionContext,
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
@@ -221,7 +224,7 @@ mod tests {
         );
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
         let resources = HashMap::from([
             ("l1_gas_usage".to_string(), 200_usize),
             ("pedersen_builtin".to_string(), 10000_usize),
@@ -257,7 +260,7 @@ mod tests {
             ..Default::default()
         };
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
         let resources = HashMap::from([
             ("l1_gas_usage".to_string(), 200_usize),
             ("pedersen_builtin".to_string(), 10000_usize),

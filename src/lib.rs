@@ -18,6 +18,7 @@ use crate::{
     utils::Address,
 };
 pub use cairo_vm::Felt252;
+use definitions::block_context::FeeType;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -217,7 +218,10 @@ where
     )?;
     let tx_fee = calculate_tx_fee(
         &transaction_result.actual_resources,
-        block_context.starknet_os_config.gas_price,
+        block_context
+            .starknet_os_config
+            .gas_price
+            .get_by_fee_type(&FeeType::Eth),
         block_context,
     )?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
@@ -251,7 +255,7 @@ mod test {
         call_contract,
         core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash},
         definitions::{
-            block_context::{BlockContext, StarknetChainId},
+            block_context::{BlockContext, GasPrices, StarknetChainId},
             constants::{
                 EXECUTE_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST,
                 VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -439,7 +443,7 @@ mod test {
         );
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
 
         let estimated_fee = estimate_message_fee(
             &l1_handler,
@@ -1061,7 +1065,7 @@ mod test {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
 
         simulate_transaction(
             &[&l1_handler_tx],
@@ -1261,7 +1265,7 @@ mod test {
         declare.hash_value = Felt252::from_dec_str("2718").unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config_mut().gas_price = 12;
+        block_context.starknet_os_config_mut().gas_price = GasPrices::new(12, 0);
 
         let declare_tx = Transaction::Declare(declare);
 

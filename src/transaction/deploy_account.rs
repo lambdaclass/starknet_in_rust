@@ -1,6 +1,7 @@
 use super::fee::{calculate_tx_fee, charge_fee};
 use super::get_tx_version;
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
+use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::execution::gas_usage::get_onchain_data_segment_length;
@@ -203,7 +204,7 @@ impl DeployAccount {
         }
 
         if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context)?;
+            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
         }
 
         self.handle_nonce(state)?;
@@ -237,7 +238,10 @@ impl DeployAccount {
 
         let actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
-            block_context.starknet_os_config.gas_price,
+            block_context
+                .starknet_os_config
+                .gas_price
+                .get_by_fee_type(&FeeType::Eth),
             block_context,
         )?;
 
@@ -332,7 +336,10 @@ impl DeployAccount {
             &[Some(constructor_call_info.clone()), validate_info.clone()],
             TransactionType::DeployAccount,
             state.count_actual_state_changes(Some((
-                &block_context.starknet_os_config.fee_token_address,
+                &block_context
+                    .starknet_os_config
+                    .fee_token_address
+                    .get_by_fee_type(&FeeType::Eth),
                 &self.contract_address,
             )))?,
             None,
@@ -403,6 +410,7 @@ impl DeployAccount {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
         if self.max_fee.is_zero() {
             return Ok(());
@@ -414,7 +422,7 @@ impl DeployAccount {
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, self.contract_address())?;
+            state.get_fee_token_balance(block_context, self.contract_address(), fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
         if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
             return Err(TransactionError::MaxFeeExceedsBalance(
@@ -443,7 +451,10 @@ impl DeployAccount {
         ]);
         calculate_tx_fee(
             &resources,
-            block_context.starknet_os_config.gas_price,
+            block_context
+                .starknet_os_config
+                .gas_price
+                .get_by_fee_type(&FeeType::Eth),
             block_context,
         )
     }

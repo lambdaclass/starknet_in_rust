@@ -4,6 +4,7 @@ use self::{
 };
 use crate::{
     core::errors::state_errors::StateError,
+    definitions::block_context::GasPrices,
     transaction::error::TransactionError,
     utils::{
         get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, Address,
@@ -28,21 +29,9 @@ pub struct BlockInfo {
     /// Timestamp of the beginning of the last block creation attempt.
     pub block_timestamp: u64,
     /// L1 gas price measured at the beginning of the last block creation attempt.
-    pub gas_price: u128,
+    pub gas_price: GasPrices,
     /// The sequencer address of this block.
     pub sequencer_address: Address,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GasPrices {
-    pub eth_l1_gas_price: u128, // (Wei)
-    pub strk_l1_gas_price: u128, // (STRK)
-}
-
-#[derive(Clone, Debug)]
-pub struct FeeTokenAddresses {
-    pub strk_fee_token_address: Address,
-    pub eth_fee_token_address: Address,
 }
 
 impl BlockInfo {
@@ -51,7 +40,10 @@ impl BlockInfo {
         BlockInfo {
             block_number: 0, // To do: In cairo-lang, this value is set to -1
             block_timestamp: 0,
-            gas_price: 0,
+            gas_price: GasPrices {
+                strk_l1_gas_price: 0,
+                eth_l1_gas_price: 0,
+            },
             sequencer_address,
         }
     }
@@ -79,7 +71,7 @@ impl Default for BlockInfo {
         Self {
             block_number: 0,
             block_timestamp: 0,
-            gas_price: 0,
+            gas_price: Default::default(),
             sequencer_address: Address(0.into()),
         }
     }

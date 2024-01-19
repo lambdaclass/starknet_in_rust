@@ -2,7 +2,8 @@ use super::Transaction;
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        block_context::BlockContext, constants::L1_HANDLER_VERSION,
+        block_context::{BlockContext, FeeType},
+        constants::L1_HANDLER_VERSION,
         transaction_type::TransactionType,
     },
     execution::{
@@ -168,7 +169,10 @@ impl L1Handler {
             if let Some(paid_fee) = self.paid_fee_on_l1 {
                 let required_fee = calculate_tx_fee(
                     &actual_resources,
-                    block_context.starknet_os_config.gas_price,
+                    block_context
+                        .starknet_os_config
+                        .gas_price
+                        .get_by_fee_type(&FeeType::Eth),
                     block_context,
                 )?;
                 // For now, assert only that any amount of fee was paid.
@@ -250,7 +254,10 @@ impl L1Handler {
 #[cfg(test)]
 mod test {
     use crate::{
-        definitions::{block_context::BlockContext, transaction_type::TransactionType},
+        definitions::{
+            block_context::{BlockContext, GasPrices},
+            transaction_type::TransactionType,
+        },
         execution::{CallInfo, TransactionExecutionInfo},
         services::api::contract_classes::{
             compiled_class::CompiledClass,
@@ -317,7 +324,7 @@ mod test {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
 
         let tx_exec = l1_handler
             .execute(
