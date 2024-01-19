@@ -27,10 +27,22 @@ pub struct BlockInfo {
     pub block_number: u64,
     /// Timestamp of the beginning of the last block creation attempt.
     pub block_timestamp: u64,
-    /// L1 gas price (in Wei) measured at the beginning of the last block creation attempt.
+    /// L1 gas price measured at the beginning of the last block creation attempt.
     pub gas_price: u128,
     /// The sequencer address of this block.
     pub sequencer_address: Address,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GasPrices {
+    pub eth_l1_gas_price: u128, // (Wei)
+    pub strk_l1_gas_price: u128, // (STRK)
+}
+
+#[derive(Clone, Debug)]
+pub struct FeeTokenAddresses {
+    pub strk_fee_token_address: Address,
+    pub eth_fee_token_address: Address,
 }
 
 impl BlockInfo {
