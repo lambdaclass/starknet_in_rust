@@ -111,7 +111,7 @@ pub fn get_native_context() -> &'static cairo_native::context::NativeContext {
 //*      Address
 //* -------------------
 
-#[derive(Clone, Copy, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
 pub struct Address(pub Felt252);
 
 impl fmt::Display for Address {

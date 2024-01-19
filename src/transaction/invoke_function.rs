@@ -327,10 +327,10 @@ impl InvokeFunction {
             )?
         };
         let changes = state.count_actual_state_changes(Some((
-            &block_context
+            (block_context
                 .starknet_os_config
                 .fee_token_address
-                .get_by_fee_type(&FeeType::Eth),
+                .get_by_fee_type(&FeeType::Eth)),
             &self.contract_address,
         )))?;
         let actual_resources = calculate_tx_resources(

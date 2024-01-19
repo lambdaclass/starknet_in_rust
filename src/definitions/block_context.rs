@@ -113,10 +113,10 @@ impl FeeTokenAddresses {
         }
     }
 
-    pub fn get_by_fee_type(&self, fee_type: &FeeType) -> Address {
+    pub fn get_by_fee_type(&self, fee_type: &FeeType) -> &Address {
         match fee_type {
-            FeeType::Strk => self.strk_fee_token_address,
-            FeeType::Eth => self.eth_fee_token_address,
+            FeeType::Strk => &self.strk_fee_token_address,
+            FeeType::Eth => &self.eth_fee_token_address,
         }
     }
 }

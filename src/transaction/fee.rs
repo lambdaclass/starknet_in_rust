@@ -56,7 +56,7 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
     .to_vec();
 
     let fee_transfer_call = ExecutionEntryPoint::new(
-        fee_token_address.get_by_fee_type(&FeeType::Eth),
+        fee_token_address.get_by_fee_type(&FeeType::Eth).clone(),
         calldata,
         *TRANSFER_ENTRY_POINT_SELECTOR,
         tx_execution_context.account_contract_address.clone(),
