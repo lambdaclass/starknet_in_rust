@@ -1,6 +1,9 @@
 use crate::{
     definitions::block_context::BlockContext,
-    definitions::{constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2}, block_context::FeeType},
+    definitions::{
+        block_context::FeeType,
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    },
     execution::TransactionExecutionInfo,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
