@@ -49,7 +49,7 @@ lazy_static! {
     pub static ref DEFAULT_STARKNET_OS_CONFIG: StarknetOsConfig = StarknetOsConfig {
         chain_id: StarknetChainId::TestNet.to_felt(),
         fee_token_address: crate::definitions::block_context::FeeTokenAddresses {
-            // TODO: Replace with strk token contract address one deployed
+            // TODO: Replace with STRK token contract address when deployed
             strk_fee_token_address: Address(Felt252::ZERO),
             eth_fee_token_address: Address(Felt252::from_hex(
                 "0x4c07059285c2607d528a4c5220ef1f64d8f01273c23cfd9dec68759f61b544"
