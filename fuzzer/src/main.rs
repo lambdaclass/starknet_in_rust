@@ -5,6 +5,7 @@ extern crate honggfuzz;
 
 use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use starknet_in_rust::execution::execution_entry_point::ExecutionResult;
+use starknet_in_rust::transaction::{CommonAccountFields, DeprecatedAccountTransactionContext};
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -152,14 +153,16 @@ fn main() {
             //* ---------------------
             let block_context = BlockContext::default();
             let mut tx_execution_context = TransactionExecutionContext::new(
-                Address(0.into()),
-                Felt252::ZERO,
-                Vec::new(),
-                0,
-                10.into(),
+                AccountTransactionContext::Deprecated(DeprecatedAccountTransactionContext {
+                    common_fields: CommonAccountFields {
+                        version: *TRANSACTION_VERSION,
+                        nonce: 10.into(),
+                        ..Default::default()
+                    }
+                    max_fee: 0,
+                }),
                 block_context.invoke_tx_max_n_steps(),
-                *TRANSACTION_VERSION,
-            );
+            )
             let mut resources_manager = ExecutionResourcesManager::default();
 
             let expected_key_bytes = calculate_sn_keccak("_counter".as_bytes());

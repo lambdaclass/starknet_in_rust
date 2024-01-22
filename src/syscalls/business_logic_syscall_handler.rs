@@ -740,24 +740,30 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         // Allocate signature
         let signature: Vec<MaybeRelocatable> = self
             .tx_execution_context
-            .signature
+            .account_tx_context
+            .signature()
             .iter()
             .map(MaybeRelocatable::from)
             .collect();
         let signature_start_ptr = self.allocate_segment(vm, signature)?;
-        let signature_end_ptr = (signature_start_ptr + self.tx_execution_context.signature.len())?;
+        let signature_end_ptr = (signature_start_ptr
+            + self
+                .tx_execution_context
+                .account_tx_context
+                .signature()
+                .len())?;
 
         // Allocate tx info
         let tx_info = &self.tx_execution_context;
         let tx_info_data = vec![
-            MaybeRelocatable::from(&tx_info.version),
-            MaybeRelocatable::from(&tx_info.account_contract_address.0),
-            MaybeRelocatable::from(Felt252::from(tx_info.max_fee)),
+            MaybeRelocatable::from(&tx_info.account_tx_context.version()),
+            MaybeRelocatable::from(&tx_info.account_tx_context.sender_address().0),
+            MaybeRelocatable::from(Felt252::from(tx_info.account_tx_context.max_fee())),
             signature_start_ptr.into(),
             signature_end_ptr.into(),
-            MaybeRelocatable::from(&tx_info.transaction_hash),
+            MaybeRelocatable::from(&tx_info.account_tx_context.transaction_hash()),
             MaybeRelocatable::from(&self.block_context.starknet_os_config.chain_id),
-            MaybeRelocatable::from(&tx_info.nonce),
+            MaybeRelocatable::from(&tx_info.account_tx_context.nonce()),
         ];
         let tx_info_ptr = self.allocate_segment(vm, tx_info_data)?;
 

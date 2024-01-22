@@ -20,6 +20,9 @@ use crate::{
 pub use cairo_vm::Felt252;
 use definitions::block_context::FeeType;
 use std::sync::Arc;
+use transaction::{
+    AccountTransactionContext, CommonAccountFields, DeprecatedAccountTransactionContext,
+};
 
 #[cfg(test)]
 #[macro_use]
@@ -150,11 +153,8 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
     let nonce = state.get_nonce_at(&contract_address)?;
 
     // TODO: Revisit these parameters
-    let transaction_hash = 0.into();
-    let signature = vec![];
     let max_fee = 1000000000;
     let initial_gas = 1000000000;
-    let version = 0;
 
     let execution_entrypoint = ExecutionEntryPoint::new(
         contract_address.clone(),
@@ -168,13 +168,16 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
     );
 
     let mut tx_execution_context = TransactionExecutionContext::new(
-        contract_address,
-        transaction_hash,
-        signature,
-        max_fee,
-        nonce,
+        AccountTransactionContext::Deprecated(DeprecatedAccountTransactionContext {
+            common_fields: CommonAccountFields {
+                nonce,
+                sender_address: contract_address,
+
+                ..Default::default()
+            },
+            max_fee,
+        }),
         block_context.invoke_tx_max_n_steps(),
-        version.into(),
     );
 
     let ExecutionResult { call_info, .. } = execution_entrypoint.execute(

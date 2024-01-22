@@ -363,16 +363,16 @@ impl Event {
 pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     #[get = "pub"]
-    pub(crate) account_transaction_context: AccountTransactionContext,
+    pub(crate) account_tx_context: AccountTransactionContext,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
 }
 
 impl TransactionExecutionContext {
-    pub fn new(account_transaction_context: AccountTransactionContext, n_steps: u64) -> Self {
+    pub fn new(account_tx_context: AccountTransactionContext, n_steps: u64) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
-            account_transaction_context,
+            account_tx_context,
             n_sent_messages: 0,
             _n_steps: n_steps,
         }
@@ -386,7 +386,7 @@ impl TransactionExecutionContext {
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
-            account_transaction_context: AccountTransactionContext::Deprecated(
+            account_tx_context: AccountTransactionContext::Deprecated(
                 DeprecatedAccountTransactionContext {
                     common_fields: CommonAccountFields {
                         version,
@@ -422,14 +422,14 @@ impl TxInfoStruct {
         chain_id: Felt252,
     ) -> TxInfoStruct {
         TxInfoStruct {
-            version: tx.account_transaction_context.version(),
-            account_contract_address: tx.account_transaction_context.sender_address(),
-            max_fee: tx.account_transaction_context.max_fee(),
-            signature_len: tx.account_transaction_context.signature().len(),
+            version: tx.account_tx_context.version(),
+            account_contract_address: tx.account_tx_context.sender_address(),
+            max_fee: tx.account_tx_context.max_fee(),
+            signature_len: tx.account_tx_context.signature().len(),
             signature,
-            transaction_hash: tx.account_transaction_context.transaction_hash(),
+            transaction_hash: tx.account_tx_context.transaction_hash(),
             chain_id,
-            nonce: tx.account_transaction_context.nonce(),
+            nonce: tx.account_tx_context.nonce(),
         }
     }
 

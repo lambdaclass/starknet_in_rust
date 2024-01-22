@@ -272,6 +272,9 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::state::StateDiff;
+    use crate::transaction::{
+        AccountTransactionContext, CommonAccountFields, DeprecatedAccountTransactionContext,
+    };
     use crate::utils::ClassHash;
     use crate::{
         add_segments, allocate_selector, any_box,
@@ -544,15 +547,23 @@ mod tests {
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
-            version: 51.into(),
-            account_contract_address: Address(260.into()),
-            max_fee: 261,
-            transaction_hash: 262.into(),
-            signature: vec![300.into(), 301.into()],
-            nonce: 263.into(),
+            account_tx_context: AccountTransactionContext::Deprecated(
+                DeprecatedAccountTransactionContext {
+                    max_fee: 261,
+                    common_fields: CommonAccountFields {
+                        transaction_hash: 262.into(),
+                        version: 51.into(),
+                        signature: vec![300.into(), 301.into()],
+                        nonce: 263.into(),
+                        sender_address: Address(260.into()),
+                        ..Default::default()
+                    },
+                },
+            ),
             n_sent_messages: 52,
-            _n_steps: 100000,
+            _n_steps: 10000,
         };
+
         syscall_handler_hint_processor
             .syscall_handler
             .tx_execution_context = tx_execution_context.clone();
@@ -571,29 +582,29 @@ mod tests {
         // TransactionExecutionContext.signature
         assert_eq!(
             vm.get_integer(relocatable!(3, 0)).unwrap().into_owned(),
-            tx_execution_context.signature[0]
+            tx_execution_context.account_tx_context.signature()[0]
         );
         assert_eq!(
             vm.get_integer(relocatable!(3, 1)).unwrap().into_owned(),
-            tx_execution_context.signature[1]
+            tx_execution_context.account_tx_context.signature()[1]
         );
 
         // TxInfoStruct
         assert_matches!(
             get_big_int(&vm, relocatable!(4, 0)),
-            Ok(field) if field == tx_execution_context.version
+            Ok(field) if field == tx_execution_context.account_tx_context.version()
         );
         assert_matches!(
             get_big_int(&vm, relocatable!(4, 1)),
-            Ok(field) if field == tx_execution_context.account_contract_address.0
+            Ok(field) if field == tx_execution_context.account_tx_context.sender_address().0
         );
         assert_matches!(
             get_integer(&vm, relocatable!(4, 2)),
-            Ok(field) if field == tx_execution_context.max_fee as usize
+            Ok(field) if field == tx_execution_context.account_tx_context.max_fee() as usize
         );
         assert_matches!(
             get_integer(&vm, relocatable!(4, 3)),
-            Ok(field) if field == tx_execution_context.signature.len()
+            Ok(field) if field == tx_execution_context.account_tx_context.signature().len()
         );
         assert_matches!(
             get_relocatable(&vm, relocatable!(4, 4)),
@@ -601,7 +612,7 @@ mod tests {
         );
         assert_matches!(
             get_big_int(&vm, relocatable!(4, 5)),
-            Ok(field) if field == tx_execution_context.transaction_hash
+            Ok(field) if field == tx_execution_context.account_tx_context.transaction_hash()
         );
         assert_matches!(
             get_big_int(&vm, relocatable!(4, 6)),
@@ -613,7 +624,7 @@ mod tests {
 
         assert_matches!(
             get_big_int(&vm, relocatable!(4, 7)),
-            Ok(field) if field == tx_execution_context.nonce
+            Ok(field) if field == tx_execution_context.account_tx_context.nonce()
         );
 
         // DeprecatedGetTxInfoResponse
@@ -877,15 +888,23 @@ mod tests {
 
         let tx_execution_context = TransactionExecutionContext {
             n_emitted_events: 50,
-            version: 51.into(),
-            account_contract_address: Address(260.into()),
-            max_fee: 261,
-            transaction_hash: 262.into(),
-            signature: vec![300.into(), 301.into()],
-            nonce: 263.into(),
+            account_tx_context: AccountTransactionContext::Deprecated(
+                DeprecatedAccountTransactionContext {
+                    max_fee: 261,
+                    common_fields: CommonAccountFields {
+                        transaction_hash: 262.into(),
+                        version: 51.into(),
+                        signature: vec![300.into(), 301.into()],
+                        nonce: 263.into(),
+                        sender_address: Address(260.into()),
+                        ..Default::default()
+                    },
+                },
+            ),
             n_sent_messages: 52,
             _n_steps: 10000,
         };
+
         syscall_handler_hint_processor
             .syscall_handler
             .tx_execution_context = tx_execution_context.clone();
@@ -900,7 +919,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             get_integer(&vm, relocatable!(2, 1)).unwrap(),
-            tx_execution_context.signature.len()
+            tx_execution_context.account_tx_context.signature().len()
         );
         assert_eq!(
             vm.get_relocatable(relocatable!(2, 2)).unwrap(),

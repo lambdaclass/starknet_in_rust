@@ -624,8 +624,12 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         }
         let tx = self.tx_execution_context.clone();
 
-        let signature_data: Vec<MaybeRelocatable> =
-            tx.signature.iter().map(|num| num.into()).collect();
+        let signature_data: Vec<MaybeRelocatable> = tx
+            .account_tx_context
+            .signature()
+            .iter()
+            .map(|num| num.into())
+            .collect();
         let signature = self.allocate_segment(vm, signature_data)?;
 
         let tx_info = TxInfoStruct::new(

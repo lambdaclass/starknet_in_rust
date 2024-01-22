@@ -17,9 +17,6 @@ use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use starknet_in_rust::definitions::constants::{
-    DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
-};
 use starknet_in_rust::execution::execution_entry_point::ExecutionEntryPoint;
 use starknet_in_rust::execution::TransactionExecutionContext;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
@@ -41,6 +38,10 @@ use starknet_in_rust::{
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     definitions::block_context::{FeeTokenAddresses, FeeType, GasPrices},
+};
+use starknet_in_rust::{
+    definitions::constants::{DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR},
+    transaction::{CommonAccountFields, DeprecatedAccountTransactionContext},
 };
 use starknet_in_rust::{
     definitions::{
@@ -2535,14 +2536,17 @@ fn test_library_call_with_declare_v2() {
 
     // Execute the entrypoint
     let block_context = BlockContext::default();
+
     let mut tx_execution_context = TransactionExecutionContext::new(
-        Address(0.into()),
-        Felt252::ZERO,
-        Vec::new(),
-        100000000,
-        10.into(),
+        AccountTransactionContext::Deprecated(DeprecatedAccountTransactionContext {
+            common_fields: CommonAccountFields {
+                nonce: 10.into(),
+                version: *TRANSACTION_VERSION,
+                ..Default::default()
+            },
+            max_fee: 100000000,
+        }),
         block_context.invoke_tx_max_n_steps(),
-        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 

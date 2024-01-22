@@ -257,9 +257,7 @@ impl DeclareV2 {
         )
     }
 
-    fn get_account_transaction_execution_context(
-        &self,
-    ) -> Result<AccountTransactionContext, TransactionError> {
+    fn get_account_tx_context(&self) -> Result<AccountTransactionContext, TransactionError> {
         if self.version < Felt252::THREE {
             todo!()
         } else {

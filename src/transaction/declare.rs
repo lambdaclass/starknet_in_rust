@@ -179,7 +179,7 @@ impl Declare {
         Ok(internal_declare)
     }
 
-    fn get_account_transaction_execution_context(&self) -> AccountTransactionContext {
+    fn get_account_tx_context(&self) -> AccountTransactionContext {
         AccountTransactionContext::Deprecated(super::DeprecatedAccountTransactionContext {
             common_fields: super::CommonAccountFields {
                 transaction_hash: self.hash_value,
