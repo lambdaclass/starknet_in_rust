@@ -203,7 +203,8 @@ impl VersionSpecificAccountTxFields {
     pub fn new_deprecated(max_fee: u128) -> Self {
         Self::Deprecated(max_fee)
     }
-    pub fn max_fee(&self) -> u128 {
+    // TODO[0.13]: This method should be removed after completing V3 Tx related changes
+    pub(crate) fn max_fee(&self) -> u128 {
         match self {
             Self::Deprecated(max_fee) => *max_fee,
         }

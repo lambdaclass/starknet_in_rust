@@ -1234,7 +1234,7 @@ mod tests {
             Address(deployed_address),
             Felt252::from_hex("0x283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c")
                 .unwrap(),
-            0,
+            VersionSpecificAccountTxFields::new_deprecated(0),
             Felt252::ZERO,
             vec![10.into()],
             Vec::new(),

@@ -274,6 +274,7 @@ mod test {
         },
         transaction::{
             Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
+            VersionSpecificAccountTxFields,
         },
         utils::{
             felt_to_hash,
@@ -323,7 +324,7 @@ mod test {
         let invoke_function = InvokeFunction::new(
             TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             *VALIDATE_ENTRY_POINT_SELECTOR,
-            0, // should be ignored.
+            VersionSpecificAccountTxFields::new_deprecated(0), // should be ignored.
             1.into(),
             calldata,
             vec![],
@@ -492,7 +493,7 @@ mod test {
         let invoke = InvokeFunction::new(
             address,
             entrypoint_selector,
-            1000000,
+            VersionSpecificAccountTxFields::new_deprecated(1000000),
             Felt252::ZERO,
             calldata,
             vec![],
@@ -592,7 +593,7 @@ mod test {
             InvokeFunction::new(
                 address.clone(),
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata.clone(),
                 vec![],
@@ -606,7 +607,7 @@ mod test {
             InvokeFunction::new(
                 address.clone(),
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata.clone(),
                 vec![],
@@ -620,7 +621,7 @@ mod test {
             InvokeFunction::new(
                 address,
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata,
                 vec![],
@@ -728,7 +729,7 @@ mod test {
             InvokeFunction::new(
                 address,
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata,
                 vec![],
@@ -900,7 +901,7 @@ mod test {
             InvokeFunction::new(
                 CONTRACT_ADDRESS.clone(),
                 selector,
-                0,
+                VersionSpecificAccountTxFields::new_deprecated(0),
                 *TRANSACTION_VERSION,
                 calldata,
                 SIGNATURE.clone(),
@@ -1126,7 +1127,7 @@ mod test {
             InvokeFunction::new(
                 CONTRACT_ADDRESS.clone(),
                 selector,
-                0,
+                VersionSpecificAccountTxFields::new_deprecated(0),
                 *TRANSACTION_VERSION,
                 calldata,
                 SIGNATURE.clone(),

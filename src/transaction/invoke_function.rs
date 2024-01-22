@@ -1,6 +1,6 @@
 use super::{
     fee::{calculate_tx_fee, charge_fee},
-    get_tx_version, Transaction,
+    get_tx_version, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
@@ -60,7 +60,7 @@ pub struct InvokeFunction {
     hash_value: Felt252,
     #[getset(get = "pub")]
     signature: Vec<Felt252>,
-    max_fee: u128,
+    account_tx_fields: VersionSpecificAccountTxFields,
     nonce: Option<Felt252>,
     skip_validation: bool,
     skip_execute: bool,
@@ -73,7 +73,7 @@ impl InvokeFunction {
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt252,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
@@ -88,7 +88,7 @@ impl InvokeFunction {
             &contract_address,
             entry_point_selector_field,
             &calldata,
-            max_fee,
+            account_tx_fields.max_fee(),
             chain_id,
             &additional_data,
         )?;
@@ -96,7 +96,7 @@ impl InvokeFunction {
         InvokeFunction::new_with_tx_hash(
             contract_address,
             entry_point_selector,
-            max_fee,
+            account_tx_fields,
             version,
             calldata,
             signature,
@@ -109,7 +109,7 @@ impl InvokeFunction {
     pub fn new_with_tx_hash(
         contract_address: Address,
         entry_point_selector: Felt252,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
@@ -127,7 +127,7 @@ impl InvokeFunction {
             calldata,
             tx_type: TransactionType::InvokeFunction,
             version,
-            max_fee,
+            account_tx_fields,
             signature,
             validate_entry_point_selector,
             nonce,
@@ -161,7 +161,7 @@ impl InvokeFunction {
             self.contract_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            self.max_fee,
+            self.account_tx_fields,
             if self.version.is_zero() {
                 Felt252::ZERO
             } else {
@@ -423,12 +423,13 @@ impl InvokeFunction {
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if actual_fee > self.max_fee {
+        } else if actual_fee > self.account_tx_fields.max_fee() {
             // max_fee exceeded
             tx_exec_info = tx_exec_info.to_revert_error(
                 format!(
                     "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee, self.max_fee
+                    actual_fee,
+                    self.account_tx_fields.max_fee()
                 )
                 .as_str(),
             );
@@ -459,7 +460,7 @@ impl InvokeFunction {
             state,
             &tx_exec_info.actual_resources,
             block_context,
-            self.max_fee,
+            self.account_tx_fields.max_fee(),
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -503,21 +504,24 @@ impl InvokeFunction {
         block_context: &BlockContext,
         fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
-        if self.max_fee.is_zero() {
+        if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
         let minimal_fee = self.estimate_minimal_fee(block_context)?;
         // Check max fee is at least the estimated constant overhead.
-        if self.max_fee < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        if self.account_tx_fields.max_fee() < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(
+                self.account_tx_fields.max_fee(),
+                minimal_fee,
+            ));
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
             state.get_fee_token_balance(block_context, self.contract_address(), fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+        if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(
-                self.max_fee,
+                self.account_tx_fields.max_fee(),
                 balance_low,
                 balance_high,
             ));
@@ -558,10 +562,12 @@ impl InvokeFunction {
             skip_execute,
             skip_fee_transfer,
             skip_nonce_check,
-            max_fee: if ignore_max_fee {
-                u128::MAX
+            // TODO[0.13]: Handle ignore_max_fee for V3 txs
+            account_tx_fields: if ignore_max_fee {
+                // max_fee = 0
+                Default::default()
             } else {
-                self.max_fee
+                self.account_tx_fields
             },
             ..self.clone()
         };
@@ -649,7 +655,7 @@ fn convert_invoke_v0(
     InvokeFunction::new_with_tx_hash(
         contract_address,
         entry_point_selector,
-        max_fee,
+        VersionSpecificAccountTxFields::Deprecated(max_fee),
         Felt252::from(0),
         calldata,
         signature,
@@ -686,7 +692,8 @@ fn convert_invoke_v1(
     InvokeFunction::new_with_tx_hash(
         contract_address,
         entry_point_selector,
-        max_fee,
+        // TODO[0.13] Properly convert between V3 tx fields
+        VersionSpecificAccountTxFields::Deprecated(max_fee),
         Felt252::ONE,
         calldata,
         signature,
@@ -798,7 +805,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -880,7 +887,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -954,7 +961,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -1021,7 +1028,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: None,
             skip_validation: false,
             skip_execute: false,
@@ -1100,7 +1107,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: None,
             skip_validation: false,
             skip_execute: false,
@@ -1184,7 +1191,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 1000,
+            account_tx_fields: VersionSpecificAccountTxFields::new_deprecated(1000),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -1233,7 +1240,7 @@ mod tests {
             validate_entry_point_selector: *VALIDATE_ENTRY_POINT_SELECTOR,
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee,
+            account_tx_fields: VersionSpecificAccountTxFields::new_deprecated(max_fee),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -1306,7 +1313,7 @@ mod tests {
             validate_entry_point_selector: *VALIDATE_ENTRY_POINT_SELECTOR,
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -1383,7 +1390,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: None,
             skip_validation: false,
             skip_execute: false,
@@ -1520,7 +1527,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: true,
             skip_execute: false,
@@ -1606,7 +1613,7 @@ mod tests {
         let internal_declare = InvokeFunction::new(
             Address(Felt252::ONE),
             Felt252::ONE,
-            9000,
+            VersionSpecificAccountTxFields::new_deprecated(9000),
             2.into(),
             vec![],
             vec![],
