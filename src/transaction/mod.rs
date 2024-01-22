@@ -204,10 +204,33 @@ fn check_account_tx_fields_version(
 }
 
 #[derive(Clone, Debug)]
+pub enum DataAvailabilityMode {
+    L1,
+    L2,
+}
+
+#[derive(Clone, Debug)]
+pub struct ResourceBounds {
+    pub max_amount: u64,
+    pub max_price_per_unit: u128,
+}
+
+#[derive(Clone, Debug)]
+pub struct CurrentAccountTxFields {
+    pub l1_resource_bounds: Option<ResourceBounds>,
+    pub l2_resource_bounds: Option<ResourceBounds>,
+    pub tip: u64,
+    pub nonce_data_availability_mode: DataAvailabilityMode,
+    pub fee_data_availability_mode: DataAvailabilityMode,
+    pub paymaster_data: Vec<Felt252>,
+    pub account_deployment_data: Vec<Felt252>,
+}
+
+#[derive(Clone, Debug)]
 pub enum VersionSpecificAccountTxFields {
     // Deprecated fields only consist of max_fee
     Deprecated(u128),
-    Current(bool),
+    Current(CurrentAccountTxFields),
 }
 
 impl Default for VersionSpecificAccountTxFields {
@@ -224,7 +247,11 @@ impl VersionSpecificAccountTxFields {
     pub(crate) fn max_fee(&self) -> u128 {
         match self {
             Self::Deprecated(max_fee) => *max_fee,
-            Self::Current(_) => 0,
+            Self::Current(current) => current
+                .l1_resource_bounds
+                .as_ref()
+                .map(|rb| rb.max_amount as u128 * rb.max_price_per_unit)
+                .unwrap_or_default(),
         }
     }
 }
