@@ -363,7 +363,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
                 Address(0.into()),
                 Felt252::ZERO,
                 Vec::new(),
-                0,
+                Default::default(),
                 10.into(),
                 block_context.invoke_tx_max_n_steps(),
                 1.into(),
@@ -444,7 +444,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
                 Address(0.into()),
                 Felt252::ZERO,
                 Vec::new(),
-                0,
+                Default::default(),
                 10.into(),
                 block_context.invoke_tx_max_n_steps(),
                 1.into(),
@@ -505,7 +505,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
     // create a transaction for deploying the first account
     let account1_deploy_tx = DeployAccount::new(
         *ACCOUNT1_CLASS_HASH, // class hash
-        0,                    // max fee
+        Default::default(),   // max fee
         1.into(),             // tx version
         Felt252::ZERO,        // nonce
         vec![2.into()],       // constructor calldata
@@ -537,7 +537,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
     // now we need to deploy account2
     let account2_deploy_tx = DeployAccount::new(
         *ACCOUNT1_CLASS_HASH, // class hash
-        0,                    // max fee
+        Default::default(),   // max fee
         1.into(),             // tx version
         Felt252::ZERO,        // nonce
         vec![3.into()],       // constructor calldata
@@ -615,7 +615,7 @@ fn execute(
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,
