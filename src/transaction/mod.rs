@@ -186,3 +186,22 @@ fn get_tx_version(version: Felt252) -> Felt252 {
         version => version,
     }
 }
+
+pub enum VersionSpecificAccountTxFields {
+    // Deprecated fields only consist of max_fee
+    Deprecated(u128)
+}
+
+impl Default for VersionSpecificAccountTxFields {
+    fn default() -> Self {
+        Self::Deprecated(0)
+    }
+}
+
+impl VersionSpecificAccountTxFields {
+    fn max_fee(&self) -> u128 {
+        match self {
+            Self::Deprecated(max_fee) => *max_fee
+        }
+    }
+}
