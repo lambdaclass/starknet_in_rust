@@ -1,4 +1,5 @@
 use super::{
+    check_account_tx_fields_version,
     fee::{calculate_tx_fee, charge_fee},
     get_tx_version, Transaction, VersionSpecificAccountTxFields,
 };
@@ -117,6 +118,7 @@ impl InvokeFunction {
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
+        check_account_tx_fields_version(account_tx_fields, version)?;
 
         let validate_entry_point_selector = *VALIDATE_ENTRY_POINT_SELECTOR;
 

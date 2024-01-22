@@ -187,10 +187,27 @@ fn get_tx_version(version: Felt252) -> Felt252 {
     }
 }
 
+// Check that account_tx_fields is compatible with the tx's version
+fn check_account_tx_fields_version(
+    account_tx_fields: VersionSpecificAccountTxFields,
+    version: Felt252,
+) -> Result<(), TransactionError> {
+    match (account_tx_fields, version) {
+        (VersionSpecificAccountTxFields::Deprecated(_), v) if v == Felt252::THREE => {
+            Err(TransactionError::DeprecatedAccountTxFieldsVInV3TX)
+        }
+        (VersionSpecificAccountTxFields::Current(_), v) if v < Felt252::THREE => {
+            Err(TransactionError::CurrentAccountTxFieldsInNonV3TX)
+        }
+        _ => Ok(()),
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum VersionSpecificAccountTxFields {
     // Deprecated fields only consist of max_fee
     Deprecated(u128),
+    Current(bool),
 }
 
 impl Default for VersionSpecificAccountTxFields {
@@ -207,6 +224,7 @@ impl VersionSpecificAccountTxFields {
     pub(crate) fn max_fee(&self) -> u128 {
         match self {
             Self::Deprecated(max_fee) => *max_fee,
+            Self::Current(_) => 10,
         }
     }
 }
