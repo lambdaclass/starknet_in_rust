@@ -1,5 +1,7 @@
 use super::fee::{calculate_tx_fee, charge_fee};
-use super::{get_tx_version, Transaction};
+use super::{
+    check_account_tx_fields_version, get_tx_version, Transaction, VersionSpecificAccountTxFields,
+};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
@@ -52,7 +54,7 @@ pub struct DeclareV2 {
     pub sender_address: Address,
     pub validate_entry_point_selector: Felt252,
     pub version: Felt252,
-    pub max_fee: u128,
+    pub account_tx_fields: VersionSpecificAccountTxFields,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
     // maybe change this for ClassHash
@@ -87,7 +89,7 @@ impl DeclareV2 {
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
@@ -99,7 +101,7 @@ impl DeclareV2 {
             compiled_class_hash,
             chain_id,
             &sender_address,
-            max_fee,
+            account_tx_fields.max_fee(),
             version,
             nonce,
         )?;
@@ -110,7 +112,7 @@ impl DeclareV2 {
             casm_contract_class,
             compiled_class_hash,
             sender_address,
-            max_fee,
+            account_tx_fields,
             version,
             signature,
             nonce,
@@ -139,13 +141,14 @@ impl DeclareV2 {
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
+        check_account_tx_fields_version(account_tx_fields, version)?;
         let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = DeclareV2 {
@@ -154,7 +157,7 @@ impl DeclareV2 {
             sender_address,
             validate_entry_point_selector,
             version,
-            max_fee,
+            account_tx_fields,
             signature,
             nonce,
             compiled_class_hash,
@@ -186,7 +189,7 @@ impl DeclareV2 {
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
@@ -200,7 +203,7 @@ impl DeclareV2 {
             casm_contract_class,
             compiled_class_hash,
             sender_address,
-            max_fee,
+            account_tx_fields,
             version,
             signature,
             nonce,
@@ -228,7 +231,7 @@ impl DeclareV2 {
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
@@ -238,7 +241,7 @@ impl DeclareV2 {
             compiled_class_hash,
             chain_id,
             &sender_address,
-            max_fee,
+            account_tx_fields.max_fee(),
             version,
             nonce,
         )?;
@@ -249,7 +252,7 @@ impl DeclareV2 {
             casm_contract_class,
             compiled_class_hash,
             sender_address,
-            max_fee,
+            account_tx_fields,
             version,
             signature,
             nonce,
@@ -269,7 +272,7 @@ impl DeclareV2 {
             self.sender_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            self.max_fee,
+            self.account_tx_fields,
             self.nonce,
             n_steps,
             self.version,
@@ -303,21 +306,24 @@ impl DeclareV2 {
         block_context: &BlockContext,
         fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
-        if self.max_fee.is_zero() {
+        if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
         let minimal_fee = self.estimate_minimal_fee(block_context)?;
         // Check max fee is at least the estimated constant overhead.
-        if self.max_fee < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        if self.account_tx_fields.max_fee() < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(
+                self.account_tx_fields.max_fee(),
+                minimal_fee,
+            ));
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
             state.get_fee_token_balance(block_context, &self.sender_address, fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+        if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(
-                self.max_fee,
+                self.account_tx_fields.max_fee(),
                 balance_low,
                 balance_high,
             ));
@@ -417,7 +423,7 @@ impl DeclareV2 {
             state,
             &actual_resources,
             block_context,
-            self.max_fee,
+            self.account_tx_fields.max_fee(),
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -574,10 +580,11 @@ impl DeclareV2 {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            max_fee: if ignore_max_fee {
-                u128::MAX
+            // TODO[0.13]: Handle ignore_max_fee for V3 txs
+            account_tx_fields: if ignore_max_fee {
+                Default::default()
             } else {
-                self.max_fee
+                self.account_tx_fields
             },
             skip_nonce_check,
             ..self.clone()
@@ -642,7 +649,7 @@ mod tests {
             None,
             casm_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             [1.into()].to_vec(),
             Felt252::ZERO,
@@ -712,7 +719,7 @@ mod tests {
             Some(casm_class),
             casm_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             [1.into()].to_vec(),
             Felt252::ZERO,
@@ -784,7 +791,7 @@ mod tests {
             Some(casm_class),
             casm_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             vec![],
             Felt252::ZERO,
@@ -854,7 +861,7 @@ mod tests {
             None,
             casm_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             [1.into()].to_vec(),
             Felt252::ZERO,
@@ -925,7 +932,7 @@ mod tests {
             None,
             sended_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             [1.into()].to_vec(),
             Felt252::ZERO,
@@ -978,7 +985,7 @@ mod tests {
             Felt252::ONE,
             chain_id,
             Address(Felt252::ONE),
-            0,
+            Default::default(),
             1.into(),
             Vec::new(),
             Felt252::ZERO,
