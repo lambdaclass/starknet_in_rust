@@ -588,7 +588,7 @@ impl DeployAccount {
             // TODO[0.13]: Handle ignore_max_fee for V3 txs
             account_tx_fields: if ignore_max_fee {
                 // max_fee = 0
-                Default::default()
+                VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
             } else {
                 self.account_tx_fields.clone()
             },
