@@ -2,6 +2,7 @@ pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::transaction::VersionSpecificAccountTxFields;
 use crate::utils::parse_felt_array;
 use crate::{
     definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
@@ -361,7 +362,7 @@ pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: Felt252,
     pub(crate) account_contract_address: Address,
-    pub(crate) max_fee: u128,
+    pub(crate) account_tx_fields: VersionSpecificAccountTxFields,
     pub(crate) transaction_hash: Felt252,
     pub(crate) signature: Vec<Felt252>,
     #[get = "pub"]
@@ -376,7 +377,7 @@ impl TransactionExecutionContext {
         account_contract_address: Address,
         transaction_hash: Felt252,
         signature: Vec<Felt252>,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         nonce: Felt252,
         n_steps: u64,
         version: Felt252,
@@ -390,7 +391,7 @@ impl TransactionExecutionContext {
         TransactionExecutionContext {
             n_emitted_events: 0,
             account_contract_address,
-            max_fee,
+            account_tx_fields,
             nonce,
             signature,
             transaction_hash,
@@ -402,21 +403,15 @@ impl TransactionExecutionContext {
 
     pub fn create_for_testing(
         account_contract_address: Address,
-        _max_fee: u128,
         nonce: Felt252,
         n_steps: u64,
         version: Felt252,
     ) -> Self {
         TransactionExecutionContext {
-            n_emitted_events: 0,
             version,
             account_contract_address,
-            max_fee: 0,
-            transaction_hash: Felt252::ZERO,
-            signature: Vec::new(),
             nonce,
-            n_sent_messages: 0,
-            _n_steps: n_steps,
+            ..Default::default()
         }
     }
 }
@@ -442,7 +437,7 @@ impl TxInfoStruct {
         TxInfoStruct {
             version: tx.version,
             account_contract_address: tx.account_contract_address,
-            max_fee: tx.max_fee,
+            max_fee: tx.account_tx_fields.max_fee(),
             signature_len: tx.signature.len(),
             signature,
             transaction_hash: tx.transaction_hash,

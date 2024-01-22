@@ -20,6 +20,7 @@ use crate::{
 pub use cairo_vm::Felt252;
 use definitions::block_context::FeeType;
 use std::sync::Arc;
+use transaction::VersionSpecificAccountTxFields;
 
 #[cfg(test)]
 #[macro_use]
@@ -171,7 +172,7 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
         contract_address,
         transaction_hash,
         signature,
-        max_fee,
+        VersionSpecificAccountTxFields::new_deprecated(max_fee),
         nonce,
         block_context.invoke_tx_max_n_steps(),
         version.into(),
