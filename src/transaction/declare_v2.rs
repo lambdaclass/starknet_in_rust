@@ -148,7 +148,7 @@ impl DeclareV2 {
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
-        check_account_tx_fields_version(account_tx_fields, version)?;
+        check_account_tx_fields_version(&account_tx_fields, version)?;
         let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = DeclareV2 {
@@ -272,7 +272,7 @@ impl DeclareV2 {
             self.sender_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            self.account_tx_fields,
+            self.account_tx_fields.clone(),
             self.nonce,
             n_steps,
             self.version,
@@ -584,7 +584,7 @@ impl DeclareV2 {
             account_tx_fields: if ignore_max_fee {
                 Default::default()
             } else {
-                self.account_tx_fields
+                self.account_tx_fields.clone()
             },
             skip_nonce_check,
             ..self.clone()

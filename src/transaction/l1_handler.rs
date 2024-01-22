@@ -203,7 +203,7 @@ impl L1Handler {
             self.contract_address.clone(),
             self.hash_value,
             [].to_vec(),
-            0,
+            super::VersionSpecificAccountTxFields::new_deprecated(0),
             self.nonce.ok_or(TransactionError::MissingNonce)?,
             n_steps,
             L1_HANDLER_VERSION.into(),

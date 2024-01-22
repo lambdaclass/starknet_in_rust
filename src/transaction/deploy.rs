@@ -1,4 +1,4 @@
-use super::Transaction;
+use super::{Transaction, VersionSpecificAccountTxFields};
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
@@ -245,7 +245,7 @@ impl Deploy {
             Address(Felt252::ZERO),
             self.hash_value,
             Vec::new(),
-            0,
+            VersionSpecificAccountTxFields::new_deprecated(0),
             Felt252::ZERO,
             block_context.invoke_tx_max_n_steps,
             self.version,
