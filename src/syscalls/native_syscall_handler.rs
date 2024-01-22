@@ -121,7 +121,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             tx_info: TxInfo {
                 version: self.tx_execution_context.version,
                 account_contract_address: self.tx_execution_context.account_contract_address.0,
-                max_fee: self.tx_execution_context.max_fee,
+                max_fee: self.tx_execution_context.account_tx_fields.max_fee(),
                 signature: self.tx_execution_context.signature.clone(),
                 transaction_hash: self.tx_execution_context.transaction_hash,
                 chain_id: self.block_context.starknet_os_config.chain_id,

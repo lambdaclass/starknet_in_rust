@@ -496,7 +496,7 @@ impl DeployAccount {
             self.contract_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            self.account_tx_fields,
+            self.account_tx_fields.clone(),
             self.nonce,
             n_steps,
             self.version,
@@ -590,7 +590,7 @@ impl DeployAccount {
                 // max_fee = 0
                 Default::default()
             } else {
-                self.account_tx_fields
+                self.account_tx_fields.clone()
             },
             skip_nonce_check,
             ..self.clone()

@@ -224,7 +224,7 @@ impl VersionSpecificAccountTxFields {
     pub(crate) fn max_fee(&self) -> u128 {
         match self {
             Self::Deprecated(max_fee) => *max_fee,
-            Self::Current(_) => 10,
+            Self::Current(_) => 0,
         }
     }
 }

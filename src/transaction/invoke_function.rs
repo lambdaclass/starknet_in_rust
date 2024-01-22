@@ -163,7 +163,7 @@ impl InvokeFunction {
             self.contract_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            self.account_tx_fields,
+            self.account_tx_fields.clone(),
             if self.version.is_zero() {
                 Felt252::ZERO
             } else {
@@ -569,7 +569,7 @@ impl InvokeFunction {
                 // max_fee = 0
                 Default::default()
             } else {
-                self.account_tx_fields
+                self.account_tx_fields.clone()
             },
             ..self.clone()
         };

@@ -949,7 +949,7 @@ mod test {
         let deploy_account_tx = Transaction::DeployAccount(
             DeployAccount::new(
                 CLASS_HASH.to_owned(),
-                0,
+                Default::default(),
                 1.into(),
                 Felt252::ZERO,
                 vec![],
@@ -988,7 +988,7 @@ mod test {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             version: 2.into(),
-            max_fee: 2900,
+            account_tx_fields: VersionSpecificAccountTxFields::Deprecated(2900),
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),

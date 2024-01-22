@@ -379,7 +379,7 @@ impl TransactionExecutionContext {
         signature: Vec<Felt252>,
         account_tx_fields: VersionSpecificAccountTxFields,
         nonce: Felt252,
-        n_steps: u64,
+        _n_steps: u64,
         version: Felt252,
     ) -> Self {
         let nonce = if version == 0.into() {
@@ -397,20 +397,21 @@ impl TransactionExecutionContext {
             transaction_hash,
             version,
             n_sent_messages: 0,
-            _n_steps: n_steps,
+            _n_steps,
         }
     }
 
     pub fn create_for_testing(
         account_contract_address: Address,
         nonce: Felt252,
-        n_steps: u64,
+        _n_steps: u64,
         version: Felt252,
     ) -> Self {
         TransactionExecutionContext {
             version,
             account_contract_address,
             nonce,
+            _n_steps,
             ..Default::default()
         }
     }
