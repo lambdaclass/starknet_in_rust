@@ -2,6 +2,9 @@ pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::transaction::{
+    AccountTransactionContext, CommonAccountFields, DeprecatedAccountTransactionContext,
+};
 use crate::utils::parse_felt_array;
 use crate::{
     definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
@@ -358,44 +361,18 @@ impl Event {
 
 #[derive(Clone, Debug, Default, Getters)]
 pub struct TransactionExecutionContext {
-    // TODO: Replace fields with AccountTransactionExecutionContext? They do overlap a lot
     pub(crate) n_emitted_events: u64,
-    pub(crate) version: Felt252,
-    pub(crate) account_contract_address: Address,
-    pub(crate) max_fee: u128,
-    pub(crate) transaction_hash: Felt252,
-    pub(crate) signature: Vec<Felt252>,
     #[get = "pub"]
-    pub(crate) nonce: Felt252,
+    pub(crate) account_transaction_context: AccountTransactionContext,
     pub(crate) n_sent_messages: usize,
     pub(crate) _n_steps: u64,
-    // pub(crate) use_cairo_native: bool,
 }
 
 impl TransactionExecutionContext {
-    pub fn new(
-        account_contract_address: Address,
-        transaction_hash: Felt252,
-        signature: Vec<Felt252>,
-        max_fee: u128,
-        nonce: Felt252,
-        n_steps: u64,
-        version: Felt252,
-    ) -> Self {
-        let nonce = if version == 0.into() {
-            Felt252::ZERO
-        } else {
-            nonce
-        };
-
+    pub fn new(account_transaction_context: AccountTransactionContext, n_steps: u64) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
-            account_contract_address,
-            max_fee,
-            nonce,
-            signature,
-            transaction_hash,
-            version,
+            account_transaction_context,
             n_sent_messages: 0,
             _n_steps: n_steps,
         }
@@ -403,19 +380,23 @@ impl TransactionExecutionContext {
 
     pub fn create_for_testing(
         account_contract_address: Address,
-        _max_fee: u128,
         nonce: Felt252,
         n_steps: u64,
         version: Felt252,
     ) -> Self {
         TransactionExecutionContext {
             n_emitted_events: 0,
-            version,
-            account_contract_address,
-            max_fee: 0,
-            transaction_hash: Felt252::ZERO,
-            signature: Vec::new(),
-            nonce,
+            account_transaction_context: AccountTransactionContext::Deprecated(
+                DeprecatedAccountTransactionContext {
+                    common_fields: CommonAccountFields {
+                        version,
+                        nonce,
+                        sender_address: account_contract_address,
+                        ..Default::default()
+                    },
+                    max_fee: 0,
+                },
+            ),
             n_sent_messages: 0,
             _n_steps: n_steps,
         }
@@ -441,14 +422,14 @@ impl TxInfoStruct {
         chain_id: Felt252,
     ) -> TxInfoStruct {
         TxInfoStruct {
-            version: tx.version,
-            account_contract_address: tx.account_contract_address,
-            max_fee: tx.max_fee,
-            signature_len: tx.signature.len(),
+            version: tx.account_transaction_context.version(),
+            account_contract_address: tx.account_transaction_context.sender_address(),
+            max_fee: tx.account_transaction_context.max_fee(),
+            signature_len: tx.account_transaction_context.signature().len(),
             signature,
-            transaction_hash: tx.transaction_hash,
+            transaction_hash: tx.account_transaction_context.transaction_hash(),
             chain_id,
-            nonce: tx.nonce,
+            nonce: tx.account_transaction_context.nonce(),
         }
     }
 

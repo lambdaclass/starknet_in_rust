@@ -198,6 +198,12 @@ pub enum AccountTransactionContext {
     Deprecated(DeprecatedAccountTransactionContext),
 }
 
+impl Default for AccountTransactionContext {
+    fn default() -> Self {
+        Self::Deprecated(Default::default())
+    }
+}
+
 // #[derive(Clone, Debug, Eq, PartialEq)]
 // pub struct CurrentAccountTransactionContext {
 //     pub common_fields: CommonAccountFields,
@@ -267,6 +273,18 @@ impl AccountTransactionContext {
     pub fn max_fee(&self) -> u128 {
         match self {
             AccountTransactionContext::Deprecated(datc) => datc.max_fee,
+        }
+    }
+
+    pub fn sender_address(&self) -> Address {
+        match self {
+            AccountTransactionContext::Deprecated(datc) => datc.common_fields.sender_address,
+        }
+    }
+
+    pub fn transaction_hash(&self) -> Felt252 {
+        match self {
+            AccountTransactionContext::Deprecated(datc) => datc.common_fields.transaction_hash,
         }
     }
 }
