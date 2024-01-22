@@ -1,7 +1,7 @@
 use super::{
     check_account_tx_fields_version,
     fee::{calculate_tx_fee, charge_fee},
-    get_tx_version, Transaction, VersionSpecificAccountTxFields,
+    get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
@@ -564,10 +564,17 @@ impl InvokeFunction {
             skip_execute,
             skip_fee_transfer,
             skip_nonce_check,
-            // TODO[0.13]: Handle ignore_max_fee for V3 txs
             account_tx_fields: if ignore_max_fee {
-                // max_fee = 0
-                VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
+                if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
+                    let mut current_fields = current.clone();
+                    current_fields.l1_resource_bounds = Some(ResourceBounds {
+                        max_amount: u64::MAX,
+                        max_price_per_unit: u128::MAX,
+                    });
+                    VersionSpecificAccountTxFields::Current(current_fields)
+                } else {
+                    VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
+                }
             } else {
                 self.account_tx_fields.clone()
             },

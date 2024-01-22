@@ -1,5 +1,7 @@
 use super::fee::{calculate_tx_fee, charge_fee};
-use super::{check_account_tx_fields_version, get_tx_version, VersionSpecificAccountTxFields};
+use super::{
+    check_account_tx_fields_version, get_tx_version, ResourceBounds, VersionSpecificAccountTxFields,
+};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
@@ -585,10 +587,17 @@ impl DeployAccount {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            // TODO[0.13]: Handle ignore_max_fee for V3 txs
             account_tx_fields: if ignore_max_fee {
-                // max_fee = 0
-                VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
+                if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
+                    let mut current_fields = current.clone();
+                    current_fields.l1_resource_bounds = Some(ResourceBounds {
+                        max_amount: u64::MAX,
+                        max_price_per_unit: u128::MAX,
+                    });
+                    VersionSpecificAccountTxFields::Current(current_fields)
+                } else {
+                    VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
+                }
             } else {
                 self.account_tx_fields.clone()
             },
