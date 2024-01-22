@@ -189,7 +189,7 @@ fn get_tx_version(version: Felt252) -> Felt252 {
 
 // Check that account_tx_fields is compatible with the tx's version
 fn check_account_tx_fields_version(
-    account_tx_fields: VersionSpecificAccountTxFields,
+    account_tx_fields: &VersionSpecificAccountTxFields,
     version: Felt252,
 ) -> Result<(), TransactionError> {
     match (account_tx_fields, version) {

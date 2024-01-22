@@ -118,7 +118,7 @@ impl InvokeFunction {
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
-        check_account_tx_fields_version(account_tx_fields, version)?;
+        check_account_tx_fields_version(&account_tx_fields, version)?;
 
         let validate_entry_point_selector = *VALIDATE_ENTRY_POINT_SELECTOR;
 
