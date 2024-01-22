@@ -1,5 +1,5 @@
 use super::fee::{calculate_tx_fee, charge_fee};
-use super::get_tx_version;
+use super::{get_tx_version, AccountTransactionContext};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
@@ -175,6 +175,28 @@ impl DeployAccount {
         StateSelector {
             contract_addresses: vec![self.contract_address.clone()],
             class_hashes: vec![self.class_hash],
+        }
+    }
+
+    fn get_account_transaction_execution_context(
+        &self,
+    ) -> Result<AccountTransactionContext, TransactionError> {
+        if self.version < Felt252::THREE {
+            todo!()
+        } else {
+            Ok(AccountTransactionContext::Deprecated(
+                super::DeprecatedAccountTransactionContext {
+                    common_fields: super::CommonAccountFields {
+                        transaction_hash: self.hash_value,
+                        version: self.version,
+                        signature: self.signature.clone(),
+                        nonce: self.nonce,
+                        sender_address: self.contract_address.clone(),
+                        only_query: self.skip_validate,
+                    },
+                    max_fee: self.max_fee,
+                },
+            ))
         }
     }
 

@@ -1,5 +1,5 @@
 use super::fee::{calculate_tx_fee, charge_fee};
-use super::{get_tx_version, Transaction};
+use super::{get_tx_version, AccountTransactionContext, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
 use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
@@ -255,6 +255,28 @@ impl DeclareV2 {
             nonce,
             hash_value,
         )
+    }
+
+    fn get_account_transaction_execution_context(
+        &self,
+    ) -> Result<AccountTransactionContext, TransactionError> {
+        if self.version < Felt252::THREE {
+            todo!()
+        } else {
+            Ok(AccountTransactionContext::Deprecated(
+                super::DeprecatedAccountTransactionContext {
+                    common_fields: super::CommonAccountFields {
+                        transaction_hash: self.hash_value,
+                        version: self.version,
+                        signature: self.signature.clone(),
+                        nonce: self.nonce,
+                        sender_address: self.sender_address.clone(),
+                        only_query: self.skip_validate,
+                    },
+                    max_fee: self.max_fee,
+                },
+            ))
+        }
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -29,7 +29,7 @@ use cairo_vm::Felt252;
 use num_traits::Zero;
 
 use super::fee::{calculate_tx_fee, charge_fee};
-use super::{get_tx_version, Transaction};
+use super::{get_tx_version, AccountTransactionContext, Transaction};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -177,6 +177,20 @@ impl Declare {
         };
 
         Ok(internal_declare)
+    }
+
+    fn get_account_transaction_execution_context(&self) -> AccountTransactionContext {
+        AccountTransactionContext::Deprecated(super::DeprecatedAccountTransactionContext {
+            common_fields: super::CommonAccountFields {
+                transaction_hash: self.hash_value,
+                version: self.version,
+                signature: self.signature.clone(),
+                nonce: self.nonce,
+                sender_address: self.sender_address.clone(),
+                only_query: self.skip_validate,
+            },
+            max_fee: self.max_fee,
+        })
     }
 
     /// Returns the calldata.

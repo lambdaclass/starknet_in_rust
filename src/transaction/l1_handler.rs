@@ -1,4 +1,4 @@
-use super::Transaction;
+use super::{AccountTransactionContext, Transaction};
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
@@ -101,6 +101,24 @@ impl L1Handler {
             skip_execute: false,
             skip_validate: false,
         })
+    }
+
+    fn get_account_transaction_execution_context(
+        &self,
+    ) -> Result<AccountTransactionContext, TransactionError> {
+        Ok(AccountTransactionContext::Deprecated(
+            super::DeprecatedAccountTransactionContext {
+                common_fields: super::CommonAccountFields {
+                    transaction_hash: self.hash_value,
+                    version: Felt252::ZERO,
+                    signature: vec![],
+                    nonce: self.nonce.ok_or(TransactionError::MissingNonce)?,
+                    sender_address: self.contract_address.clone(),
+                    only_query: self.skip_validate,
+                },
+                max_fee: 0,
+            },
+        ))
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.

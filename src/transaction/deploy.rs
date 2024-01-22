@@ -1,4 +1,4 @@
-use super::Transaction;
+use super::{AccountTransactionContext, Transaction};
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
@@ -127,6 +127,20 @@ impl Deploy {
             skip_validate: false,
             skip_execute: false,
             skip_fee_transfer: false,
+        })
+    }
+
+    fn get_account_transaction_execution_context(&self) -> AccountTransactionContext {
+        AccountTransactionContext::Deprecated(super::DeprecatedAccountTransactionContext {
+            common_fields: super::CommonAccountFields {
+                transaction_hash: self.hash_value,
+                version: self.version,
+                signature: vec![],
+                nonce: Felt252::ZERO,
+                sender_address: self.contract_address.clone(),
+                only_query: self.skip_validate,
+            },
+            max_fee: 0,
         })
     }
 
