@@ -115,7 +115,7 @@ fn test_contract(
 
     let internal_deploy = DeployAccount::new_with_tx_hash(
         account_contract_class_hash,
-        0,
+        Default::default(),
         1.into(),
         0.into(),
         // Values hardcoded to pass signature validation
@@ -164,7 +164,7 @@ fn test_contract(
         Some(casm_class),
         compiled_class_hash,
         account_contract_address.clone(),
-        0, // max fee
+        Default::default(), // max fee
         2.into(),
         signature.clone(),
         1.into(), // nonce
@@ -189,7 +189,7 @@ fn test_contract(
     let deploy = InvokeFunction::new(
         deployer_contract_address,
         Felt252::from_bytes_be(&calculate_sn_keccak("deploy_contract".as_bytes())),
-        0,
+        Default::default(),
         0.into(),
         vec![compiled_class_hash, 3.into(), 0.into()], // call data
         signature.clone(),
@@ -237,7 +237,7 @@ fn test_contract(
     let invoke_tx = InvokeFunction::new_with_tx_hash(
         account_contract_address,
         Felt252::from_bytes_be(&calculate_sn_keccak("__execute__".as_bytes())),
-        0,
+        Default::default(),
         1.into(),
         account_execute_calldata,
         signature,

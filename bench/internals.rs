@@ -102,7 +102,7 @@ pub fn deploy_account(
             // new consumes more execution time than raw struct instantiation
             let internal_deploy_account = DeployAccount::new(
                 class_hash,
-                0,
+                Default::default(),
                 1.into(),
                 Felt252::ZERO,
                 vec![],
@@ -268,7 +268,7 @@ pub fn invoke(
             let internal_invoke = InvokeFunction::new(
                 address,
                 selector,
-                0,
+                Default::default(),
                 *TRANSACTION_VERSION,
                 calldata,
                 signature,

@@ -193,7 +193,7 @@ fn invoke_parser(
     let internal_invoke = InvokeFunction::new_with_tx_hash(
         contract_address.clone(),
         *entrypoint_selector,
-        0,
+        Default::default(),
         *TRANSACTION_VERSION,
         calldata.clone(),
         vec![],

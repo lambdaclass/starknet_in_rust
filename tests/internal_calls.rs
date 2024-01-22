@@ -29,7 +29,6 @@ fn test_internal_calls() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::create_for_testing(
         Address(0.into()),
-        10,
         0.into(),
         block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,

@@ -1,3 +1,4 @@
+use crate::VersionSpecificAccountTxFields;
 use crate::{
     core::errors::state_errors::StateError,
     definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
@@ -577,7 +578,13 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     }
 
     fn set_max_fee(&mut self, max_fee: u128) {
-        self.tx_execution_context.max_fee = max_fee;
+        if matches!(
+            self.tx_execution_context.account_tx_fields,
+            VersionSpecificAccountTxFields::Deprecated(_)
+        ) {
+            self.tx_execution_context.account_tx_fields =
+                VersionSpecificAccountTxFields::new_deprecated(max_fee)
+        };
     }
 
     fn set_nonce(&mut self, nonce: Felt252) {
