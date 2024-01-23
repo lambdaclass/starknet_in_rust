@@ -1,4 +1,4 @@
-use super::fee::{calculate_tx_fee, charge_fee};
+use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds};
 use super::{
     check_account_tx_fields_version, get_tx_version, ResourceBounds, VersionSpecificAccountTxFields,
 };
@@ -6,12 +6,8 @@ use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
-use crate::execution::gas_usage::get_onchain_data_segment_length;
-use crate::execution::os_usage::ESTIMATED_DEPLOY_ACCOUNT_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
-use crate::state::state_api::StateChangesCount;
 use crate::state::StateDiff;
 use crate::{
     core::{
@@ -45,7 +41,6 @@ use crate::{
 use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 #[cfg(feature = "cairo-native")]
@@ -206,7 +201,7 @@ impl DeployAccount {
         }
 
         if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
+            self.check_fee_balance(state, block_context)?;
         }
 
         self.handle_nonce(state)?;
@@ -408,22 +403,22 @@ impl DeployAccount {
         &self,
         state: &mut S,
         block_context: &BlockContext,
-        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
         if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
-        let minimal_fee = self.estimate_minimal_fee(block_context)?;
         // Check max fee is at least the estimated constant overhead.
-        if self.account_tx_fields.max_fee() < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(
-                self.account_tx_fields.max_fee(),
-                minimal_fee,
-            ));
-        }
+        check_fee_bounds(
+            &self.account_tx_fields,
+            block_context,
+            super::fee::AccountTxType::DeployAccount,
+        )?;
         // Check that the current balance is high enough to cover the max_fee
-        let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, self.contract_address(), fee_type)?;
+        let (balance_low, balance_high) = state.get_fee_token_balance(
+            block_context,
+            self.contract_address(),
+            &self.account_tx_fields.fee_type(),
+        )?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
         if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(
@@ -433,24 +428,6 @@ impl DeployAccount {
             ));
         }
         Ok(())
-    }
-
-    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
-        let n_estimated_steps = ESTIMATED_DEPLOY_ACCOUNT_STEPS;
-        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
-            n_storage_updates: 1,
-            n_class_hash_updates: 1,
-            n_compiled_class_hash_updates: 0,
-            n_modified_contracts: 1,
-        });
-        let resources = HashMap::from([
-            (
-                "l1_gas_usage".to_string(),
-                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
-            ),
-            ("n_steps".to_string(), n_estimated_steps),
-        ]);
-        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     pub fn run_constructor_entrypoint<S: StateReader, C: ContractClassCache>(
