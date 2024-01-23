@@ -203,19 +203,20 @@ fn check_account_tx_fields_version(
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub enum DataAvailabilityMode {
+    #[default]
     L1,
     L2,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ResourceBounds {
     pub max_amount: u64,
     pub max_price_per_unit: u128,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CurrentAccountTxFields {
     pub l1_resource_bounds: Option<ResourceBounds>,
     pub l2_resource_bounds: Option<ResourceBounds>,

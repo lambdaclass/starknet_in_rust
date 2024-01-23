@@ -1,4 +1,4 @@
-use super::error::TransactionError;
+use super::{error::TransactionError, VersionSpecificAccountTxFields};
 use crate::{
     definitions::{
         block_context::{BlockContext, FeeType},
@@ -219,6 +219,29 @@ pub(crate) enum AccountTxType {
     Declare,
     Invoke,
     DeployAccount,
+}
+
+pub(crate) fn check_fee_bounds(
+    account_tx_fields: &VersionSpecificAccountTxFields,
+    block_context: &BlockContext,
+    tx_type: AccountTxType,
+) -> Result<(), TransactionError> {
+    let minimal_l1_gas_amount = estimate_minimal_l1_gas(block_context, tx_type)?;
+    match account_tx_fields {
+        VersionSpecificAccountTxFields::Deprecated(max_fee) => {
+            let minimal_fee = minimal_l1_gas_amount
+                * block_context
+                    .starknet_os_config()
+                    .gas_price()
+                    .get_by_fee_type(&FeeType::Eth);
+            // Check max fee is at least the estimated constant overhead.
+            if *max_fee < minimal_fee {
+                return Err(TransactionError::MaxFeeTooLow(*max_fee, minimal_fee));
+            }
+        }
+        VersionSpecificAccountTxFields::Current(_) => todo!(),
+    }
+    Ok(())
 }
 
 pub(crate) fn estimate_minimal_l1_gas(
