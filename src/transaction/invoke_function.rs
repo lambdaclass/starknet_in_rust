@@ -380,7 +380,7 @@ impl InvokeFunction {
         }
 
         if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
+            self.check_fee_balance(state, block_context)?;
         }
 
         self.handle_nonce(state)?;
@@ -499,7 +499,6 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         block_context: &BlockContext,
-        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
         if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
@@ -511,8 +510,11 @@ impl InvokeFunction {
             super::fee::AccountTxType::Invoke,
         )?;
         // Check that the current balance is high enough to cover the max_fee
-        let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, self.contract_address(), fee_type)?;
+        let (balance_low, balance_high) = state.get_fee_token_balance(
+            block_context,
+            self.contract_address(),
+            &self.account_tx_fields.fee_type(),
+        )?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
         if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(

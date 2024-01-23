@@ -1,6 +1,9 @@
 use crate::{
     definitions::block_context::BlockContext,
-    definitions::constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    definitions::{
+        block_context::FeeType,
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    },
     execution::TransactionExecutionInfo,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
@@ -245,13 +248,20 @@ impl VersionSpecificAccountTxFields {
         Self::Deprecated(max_fee)
     }
 
-    pub(crate) fn max_fee(&self) -> u128 {
+    pub fn max_fee(&self) -> u128 {
         match self {
             Self::Deprecated(max_fee) => *max_fee,
             Self::Current(current) => {
                 current.l1_resource_bounds.max_amount as u128
                     * current.l1_resource_bounds.max_price_per_unit
             }
+        }
+    }
+
+    pub fn fee_type(&self) -> FeeType {
+        match self {
+            Self::Deprecated(_) => FeeType::Eth,
+            Self::Current(_) => FeeType::Strk,
         }
     }
 }
