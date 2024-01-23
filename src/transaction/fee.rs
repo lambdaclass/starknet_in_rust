@@ -247,7 +247,7 @@ pub(crate) fn check_fee_bounds(
             // Check l1_gas price
             let actual_gas_price =
                 block_context.get_gas_price_by_fee_type(&account_tx_fields.fee_type());
-            if (fields.l1_resource_bounds.max_price_per_unit as u128) < actual_gas_price {
+            if fields.l1_resource_bounds.max_price_per_unit < actual_gas_price {
                 return Err(TransactionError::MaxL1GasPriceTooLow(
                     fields.l1_resource_bounds.max_price_per_unit,
                     actual_gas_price,
