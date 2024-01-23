@@ -97,11 +97,7 @@ pub fn calculate_tx_fee(
     fee_type: &FeeType,
 ) -> Result<u128, TransactionError> {
     let l1_gas_usage = calculate_tx_l1_gas_usage(resources, block_context)?;
-    Ok(l1_gas_usage
-        * block_context
-            .starknet_os_config()
-            .gas_price()
-            .get_by_fee_type(fee_type))
+    Ok(l1_gas_usage * block_context.get_gas_price_by_fee_type(fee_type))
 }
 
 /// Computes and returns the total L1 gas consumption.
