@@ -277,4 +277,18 @@ mod test {
             76439
         )
     }
+
+    #[test]
+    fn test_get_onchain_data_cost() {
+        // Input values and expected output taken from blockifier test `test_onchain_data_discount`
+        let state_changes = StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 7,
+        };
+
+        let onchain_data_cost = get_onchain_data_cost(&state_changes);
+        assert_eq!(onchain_data_cost, 6392)
+    }
 }

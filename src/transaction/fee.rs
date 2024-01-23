@@ -295,10 +295,10 @@ pub(crate) fn estimate_minimal_l1_gas(
 mod tests {
     use crate::{
         definitions::block_context::{BlockContext, GasPrices},
-        execution::{gas_usage::get_onchain_data_cost, TransactionExecutionContext},
+        execution::TransactionExecutionContext,
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
-            in_memory_state_reader::InMemoryStateReader, state_api::StateChangesCount,
+            in_memory_state_reader::InMemoryStateReader,
         },
         transaction::fee::charge_fee,
     };
@@ -371,19 +371,5 @@ mod tests {
         .unwrap();
 
         assert_eq!(result.1, max_fee);
-    }
-
-    #[test]
-    fn test_get_onchain_data_cost() {
-        // Input values and expected output taken from blockifier test `test_onchain_data_discount`
-        let state_changes = StateChangesCount {
-            n_storage_updates: 1,
-            n_class_hash_updates: 0,
-            n_compiled_class_hash_updates: 0,
-            n_modified_contracts: 7,
-        };
-
-        let onchain_data_cost = get_onchain_data_cost(&state_changes);
-        assert_eq!(onchain_data_cost, 6392)
     }
 }
