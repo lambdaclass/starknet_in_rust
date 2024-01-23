@@ -244,15 +244,14 @@ impl VersionSpecificAccountTxFields {
     pub fn new_deprecated(max_fee: u128) -> Self {
         Self::Deprecated(max_fee)
     }
-    // TODO[0.13]: This method should be removed after completing V3 Tx related changes
+
     pub(crate) fn max_fee(&self) -> u128 {
         match self {
             Self::Deprecated(max_fee) => *max_fee,
-            Self::Current(current) => current
-                .l1_resource_bounds
-                .as_ref()
-                .map(|rb| rb.max_amount as u128 * rb.max_price_per_unit)
-                .unwrap_or_default(),
+            Self::Current(current) => {
+                current.l1_resource_bounds.max_amount as u128
+                    * current.l1_resource_bounds.max_price_per_unit
+            }
         }
     }
 }

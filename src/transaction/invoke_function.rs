@@ -1,6 +1,6 @@
 use super::{
     check_account_tx_fields_version,
-    fee::{calculate_tx_fee, charge_fee},
+    fee::{calculate_tx_fee, charge_fee, check_fee_bounds},
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
@@ -14,20 +14,15 @@ use crate::{
     },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
-        gas_usage::get_onchain_data_segment_length,
-        os_usage::ESTIMATED_INVOKE_FUNCTION_STEPS,
         CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
     },
-    services::{
-        api::contract_classes::{
-            compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
-        },
-        eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD,
+    services::api::contract_classes::{
+        compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
     },
     state::{
         cached_state::CachedState,
         contract_class_cache::ContractClassCache,
-        state_api::{State, StateChangesCount, StateReader},
+        state_api::{State, StateReader},
         ExecutionResourcesManager, StateDiff,
     },
     transaction::error::TransactionError,
@@ -36,7 +31,7 @@ use crate::{
 use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -509,14 +504,12 @@ impl InvokeFunction {
         if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
-        let minimal_fee = self.estimate_minimal_fee(block_context)?;
         // Check max fee is at least the estimated constant overhead.
-        if self.account_tx_fields.max_fee() < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(
-                self.account_tx_fields.max_fee(),
-                minimal_fee,
-            ));
-        }
+        check_fee_bounds(
+            &self.account_tx_fields,
+            block_context,
+            super::fee::AccountTxType::Invoke,
+        )?;
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
             state.get_fee_token_balance(block_context, self.contract_address(), fee_type)?;
@@ -529,24 +522,6 @@ impl InvokeFunction {
             ));
         }
         Ok(())
-    }
-
-    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
-        let n_estimated_steps = ESTIMATED_INVOKE_FUNCTION_STEPS;
-        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
-            n_storage_updates: 1,
-            n_class_hash_updates: 0,
-            n_compiled_class_hash_updates: 0,
-            n_modified_contracts: 1,
-        });
-        let resources = HashMap::from([
-            (
-                "l1_gas_usage".to_string(),
-                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
-            ),
-            ("n_steps".to_string(), n_estimated_steps),
-        ]);
-        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     // Simulation function
@@ -567,10 +542,10 @@ impl InvokeFunction {
             account_tx_fields: if ignore_max_fee {
                 if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
                     let mut current_fields = current.clone();
-                    current_fields.l1_resource_bounds = Some(ResourceBounds {
+                    current_fields.l1_resource_bounds = ResourceBounds {
                         max_amount: u64::MAX,
                         max_price_per_unit: u128::MAX,
-                    });
+                    };
                     VersionSpecificAccountTxFields::Current(current_fields)
                 } else {
                     VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
