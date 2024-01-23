@@ -584,10 +584,10 @@ impl DeclareV2 {
             account_tx_fields: if ignore_max_fee {
                 if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
                     let mut current_fields = current.clone();
-                    current_fields.l1_resource_bounds = Some(ResourceBounds {
+                    current_fields.l1_resource_bounds = ResourceBounds {
                         max_amount: u64::MAX,
                         max_price_per_unit: u128::MAX,
-                    });
+                    };
                     VersionSpecificAccountTxFields::Current(current_fields)
                 } else {
                     VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
