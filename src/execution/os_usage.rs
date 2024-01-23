@@ -4,11 +4,12 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 
 use crate::{definitions::transaction_type::TransactionType, transaction::error::TransactionError};
 
-pub(crate) const ESTIMATED_INVOKE_FUNCTION_STEPS: usize = 3363;
-pub(crate) const ESTIMATED_DECLARE_STEPS: usize = 2703;
+// Values compatible with blockifier version 0.4.0
+pub(crate) const ESTIMATED_INVOKE_FUNCTION_STEPS: usize = 3382;
+pub(crate) const ESTIMATED_DECLARE_STEPS: usize = 2711;
 pub(crate) const ESTIMATED_DEPLOY_STEPS: usize = 0;
-pub(crate) const ESTIMATED_DEPLOY_ACCOUNT_STEPS: usize = 3612;
-pub(crate) const ESTIMATED_L1_HANDLER_STEPS: usize = 1068;
+pub(crate) const ESTIMATED_DEPLOY_ACCOUNT_STEPS: usize = 3628;
+pub(crate) const ESTIMATED_L1_HANDLER_STEPS: usize = 1069;
 
 /// Represents the operating system resources associated with syscalls and transactions.
 #[derive(Debug, Clone)]
@@ -17,6 +18,7 @@ pub struct OsResources {
     execute_txs_inner: HashMap<TransactionType, ExecutionResources>,
 }
 
+// Values compatible with blockifier version 0.4.0
 impl Default for OsResources {
     /// Provide default values for `OsResources`.
     fn default() -> Self {
@@ -79,7 +81,7 @@ impl Default for OsResources {
             (
                 "call_contract".to_string(),
                 ExecutionResources {
-                    n_steps: 690,
+                    n_steps: 691,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([(
                         "range_check_builtin".to_string(),
@@ -90,7 +92,7 @@ impl Default for OsResources {
             (
                 "delegate_call".to_string(),
                 ExecutionResources {
-                    n_steps: 712,
+                    n_steps: 713,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([(
                         "range_check_builtin".to_string(),
@@ -101,7 +103,7 @@ impl Default for OsResources {
             (
                 "delegate_l1_handler".to_string(),
                 ExecutionResources {
-                    n_steps: 691,
+                    n_steps: 692,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([(
                         "range_check_builtin".to_string(),
@@ -112,7 +114,7 @@ impl Default for OsResources {
             (
                 "deploy".to_string(),
                 ExecutionResources {
-                    n_steps: 936,
+                    n_steps: 944,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([
                         ("range_check_builtin".to_string(), 18),
@@ -123,7 +125,7 @@ impl Default for OsResources {
             (
                 "library_call".to_string(),
                 ExecutionResources {
-                    n_steps: 679,
+                    n_steps: 680,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([(
                         "range_check_builtin".to_string(),
@@ -142,9 +144,12 @@ impl Default for OsResources {
             (
                 "get_block_hash".to_string(),
                 ExecutionResources {
-                    n_steps: 44,
+                    n_steps: 74,
                     n_memory_holes: 0,
-                    builtin_instance_counter: HashMap::new(),
+                    builtin_instance_counter: HashMap::from([(
+                        "range_check_builtin".to_string(),
+                        2,
+                    )]),
                 },
             ),
             (
@@ -214,7 +219,7 @@ impl Default for OsResources {
             (
                 "library_call_l1_handler".to_string(),
                 ExecutionResources {
-                    n_steps: 658,
+                    n_steps: 659,
                     n_memory_holes: 0,
                     builtin_instance_counter: HashMap::from([(
                         "range_check_builtin".to_string(),
