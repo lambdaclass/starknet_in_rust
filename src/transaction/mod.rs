@@ -1,6 +1,6 @@
 use crate::{
     definitions::block_context::BlockContext,
-    definitions::constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    definitions::constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2, QUERY_VERSION_3},
     execution::TransactionExecutionInfo,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
@@ -182,7 +182,8 @@ fn get_tx_version(version: Felt252) -> Felt252 {
     match version {
         version if version == *QUERY_VERSION_0 => Felt252::ZERO,
         version if version == *QUERY_VERSION_1 => Felt252::ONE,
-        version if version == *QUERY_VERSION_2 => 2.into(),
+        version if version == *QUERY_VERSION_2 => Felt252::TWO,
+        version if version == *QUERY_VERSION_3 => Felt252::THREE,
         version => version,
     }
 }

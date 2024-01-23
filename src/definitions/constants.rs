@@ -108,4 +108,5 @@ lazy_static! {
     pub(crate) static ref QUERY_VERSION_0: Felt252 = Into::<Felt252>::into(0) + *QUERY_VERSION_BASE;
     pub(crate) static ref QUERY_VERSION_1: Felt252 = Into::<Felt252>::into(1) + *QUERY_VERSION_BASE;
     pub(crate) static ref QUERY_VERSION_2: Felt252 = Into::<Felt252>::into(2) + *QUERY_VERSION_BASE;
+    pub(crate) static ref QUERY_VERSION_3: Felt252 = Into::<Felt252>::into(3) + *QUERY_VERSION_BASE;
 }
