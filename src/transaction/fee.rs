@@ -6,12 +6,19 @@ use crate::{
     },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        gas_usage::get_onchain_data_segment_length,
+        os_usage::{
+            ESTIMATED_DECLARE_STEPS, ESTIMATED_DEPLOY_ACCOUNT_STEPS,
+            ESTIMATED_INVOKE_FUNCTION_STEPS,
+        },
         CallInfo, CallType, TransactionExecutionContext,
     },
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
-        cached_state::CachedState, contract_class_cache::ContractClassCache,
-        state_api::StateReader, ExecutionResourcesManager,
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
+        state_api::{StateChangesCount, StateReader},
+        ExecutionResourcesManager,
     },
 };
 use cairo_vm::Felt252;
@@ -205,6 +212,50 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     };
 
     Ok((fee_transfer_info, actual_fee))
+}
+// Minimal Fee estimation
+
+pub(crate) enum AccountTxType {
+    Declare,
+    Invoke,
+    DeployAccount,
+}
+
+pub(crate) fn estimate_minimal_l1_gas(
+    block_context: &BlockContext,
+    tx_type: AccountTxType,
+) -> Result<u128, TransactionError> {
+    let n_estimated_steps = match tx_type {
+        AccountTxType::Declare => ESTIMATED_DECLARE_STEPS,
+        AccountTxType::Invoke => ESTIMATED_INVOKE_FUNCTION_STEPS,
+        AccountTxType::DeployAccount => ESTIMATED_DEPLOY_ACCOUNT_STEPS,
+    };
+    let state_changes = match tx_type {
+        AccountTxType::Declare => StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        },
+        AccountTxType::Invoke => StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        },
+        AccountTxType::DeployAccount => StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 1,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        },
+    };
+    let gas_cost = get_onchain_data_segment_length(&state_changes);
+    let resources = HashMap::from([
+        ("l1_gas_usage".to_string(), gas_cost),
+        ("n_steps".to_string(), n_estimated_steps),
+    ]);
+    calculate_tx_l1_gas_usage(&resources, block_context)
 }
 
 #[cfg(test)]
