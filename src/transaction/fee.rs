@@ -229,17 +229,30 @@ pub(crate) fn check_fee_bounds(
     let minimal_l1_gas_amount = estimate_minimal_l1_gas(block_context, tx_type)?;
     match account_tx_fields {
         VersionSpecificAccountTxFields::Deprecated(max_fee) => {
-            let minimal_fee = minimal_l1_gas_amount
-                * block_context
-                    .starknet_os_config()
-                    .gas_price()
-                    .get_by_fee_type(&FeeType::Eth);
+            let minimal_fee =
+                minimal_l1_gas_amount * block_context.get_gas_price_by_fee_type(&FeeType::Eth);
             // Check max fee is at least the estimated constant overhead.
             if *max_fee < minimal_fee {
                 return Err(TransactionError::MaxFeeTooLow(*max_fee, minimal_fee));
             }
         }
-        VersionSpecificAccountTxFields::Current(_) => todo!(),
+        VersionSpecificAccountTxFields::Current(fields) => {
+            // Check l1_gas amount
+            if (fields.l1_resource_bounds.max_amount as u128) < minimal_l1_gas_amount {
+                return Err(TransactionError::MaxL1GasAmountTooLow(
+                    fields.l1_resource_bounds.max_amount,
+                    minimal_l1_gas_amount,
+                ))?;
+            }
+            // Check l1_gas price
+            let actual_gas_price = block_context.get_gas_price_by_fee_type(&FeeType::Strk);
+            if (fields.l1_resource_bounds.max_price_per_unit as u128) < actual_gas_price {
+                return Err(TransactionError::MaxL1GasPriceTooLow(
+                    fields.l1_resource_bounds.max_price_per_unit,
+                    actual_gas_price,
+                ))?;
+            }
+        }
     }
     Ok(())
 }

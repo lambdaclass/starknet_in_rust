@@ -218,7 +218,7 @@ pub struct ResourceBounds {
 
 #[derive(Clone, Debug, Default)]
 pub struct CurrentAccountTxFields {
-    pub l1_resource_bounds: Option<ResourceBounds>,
+    pub l1_resource_bounds: ResourceBounds,
     pub l2_resource_bounds: Option<ResourceBounds>,
     pub tip: u64,
     pub nonce_data_availability_mode: DataAvailabilityMode,
