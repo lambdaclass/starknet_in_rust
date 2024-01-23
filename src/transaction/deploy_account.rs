@@ -194,7 +194,7 @@ impl DeployAccount {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::ONE {
+        if !(self.version == Felt252::ONE || self.version == Felt252::THREE) {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeployAccount".to_string(),
                 self.version,
