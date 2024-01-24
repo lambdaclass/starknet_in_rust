@@ -390,9 +390,9 @@ impl Declare {
             self.max_fee,
             &mut tx_execution_context,
             self.skip_fee_transfer,
+            &FeeType::Eth,
             #[cfg(feature = "cairo-native")]
             program_cache,
-            &FeeType::Eth,
         )?;
 
         state.set_contract_class(

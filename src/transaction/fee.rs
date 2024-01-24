@@ -94,6 +94,52 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
     call_info.ok_or(TransactionError::CallInfoIsNone)
 }
 
+/// Transfers the amount actual_fee from the caller account to the sequencer.
+/// Returns the resulting CallInfo of the transfer call.
+pub(crate) fn execute_fee_transfer_updated<S: StateReader, C: ContractClassCache>(
+    state: &mut CachedState<S, C>,
+    block_context: &BlockContext,
+    tx_execution_context: &mut TransactionExecutionContext,
+    actual_fee: u128,
+    #[cfg(feature = "cairo-native")] program_cache: Option<
+        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+    >,
+) -> Result<CallInfo, TransactionError> {
+    let fee_token_address = block_context
+        .get_fee_token_address_by_fee_type(&tx_execution_context.account_tx_fields.fee_type())
+        .clone();
+
+    let fee_transfer_call = ExecutionEntryPoint::new(
+        fee_token_address,
+        vec![
+            block_context.block_info.sequencer_address.0, // Recipient
+            Felt252::from(actual_fee),                    // Fee.low  (U256)
+            0.into(),                                     // Fee.high (U256)
+        ],
+        *TRANSFER_ENTRY_POINT_SELECTOR,
+        tx_execution_context.account_contract_address.clone(),
+        EntryPointType::External,
+        Some(CallType::Call),
+        None,
+        INITIAL_GAS_COST,
+    );
+
+    let ExecutionResult { call_info, .. } = fee_transfer_call
+        .execute(
+            state,
+            block_context,
+            &mut ExecutionResourcesManager::default(),
+            tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps,
+            #[cfg(feature = "cairo-native")]
+            program_cache,
+        )
+        .map_err(|e| TransactionError::FeeTransferError(Box::new(e)))?;
+
+    call_info.ok_or(TransactionError::CallInfoIsNone)
+}
+
 /// Calculates the fee that should be charged, given execution resources.
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
@@ -443,9 +489,9 @@ mod tests {
             max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
+            &FeeType::Eth,
             #[cfg(feature = "cairo-native")]
             None,
-            &FeeType::Eth,
         )
         .unwrap();
 

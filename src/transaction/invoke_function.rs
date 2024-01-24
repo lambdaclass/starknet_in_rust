@@ -1,6 +1,10 @@
 use super::{
     check_account_tx_fields_version,
-    fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks},
+    error::FeeCheckError,
+    fee::{
+        calculate_tx_fee, check_fee_bounds, execute_fee_transfer_updated,
+        run_post_execution_fee_checks,
+    },
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
@@ -414,7 +418,7 @@ impl InvokeFunction {
         }
         let mut tx_exec_info = tx_exec_info?;
 
-        let actual_fee = calculate_tx_fee(
+        let mut actual_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
             block_context,
             &self.account_tx_fields.fee_type(),
@@ -431,7 +435,7 @@ impl InvokeFunction {
                 actual_fee,
                 &tx_exec_info.actual_resources,
                 self.contract_address(),
-                self.skip_fee_transfer,
+                self.skip_fee_transfer || self.account_tx_fields.max_fee().is_zero(),
             ) {
                 Ok(_) => {
                     state.apply_state_update(&StateDiff::from_cached_state(
@@ -439,6 +443,13 @@ impl InvokeFunction {
                     )?)?;
                 }
                 Err(TransactionError::FeeCheck(error)) => {
+                    if matches!(
+                        error,
+                        FeeCheckError::FeeExceedsMax(_, _)
+                            | FeeCheckError::L1GasAmountExceedsMax(_, _)
+                    ) {
+                        actual_fee = self.account_tx_fields.max_fee();
+                    }
                     tx_exec_info = tx_exec_info.to_revert_error(&error.to_string());
                 }
                 error => error?,
@@ -447,17 +458,21 @@ impl InvokeFunction {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
-        let (fee_transfer_info, actual_fee) = charge_fee(
-            state,
-            &tx_exec_info.actual_resources,
-            block_context,
-            self.account_tx_fields.max_fee(),
-            &mut tx_execution_context,
-            self.skip_fee_transfer,
-            #[cfg(feature = "cairo-native")]
-            program_cache,
-            &FeeType::Eth,
-        )?;
+        let fee_transfer_info = if !self.skip_fee_transfer
+            && !actual_fee.is_zero()
+            && !self.account_tx_fields.max_fee().is_zero()
+        {
+            Some(execute_fee_transfer_updated(
+                state,
+                block_context,
+                &mut tx_execution_context,
+                actual_fee,
+                #[cfg(feature = "cairo-native")]
+                program_cache.clone(),
+            )?)
+        } else {
+            None
+        };
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 

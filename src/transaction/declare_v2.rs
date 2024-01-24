@@ -404,9 +404,9 @@ impl DeclareV2 {
             self.account_tx_fields.max_fee(),
             &mut tx_execution_context,
             self.skip_fee_transfer,
+            &self.account_tx_fields.fee_type(),
             #[cfg(feature = "cairo-native")]
             program_cache,
-            &self.account_tx_fields.fee_type(),
         )?;
 
         run_post_execution_fee_checks(
