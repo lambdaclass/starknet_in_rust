@@ -259,7 +259,7 @@ pub(crate) fn check_fee_bounds(
 }
 
 pub(crate) fn run_post_execution_fee_checks<S: StateReader, C: ContractClassCache>(
-    state: &mut CachedState<S, C>,
+    state: &CachedState<S, C>,
     account_tx_fields: &VersionSpecificAccountTxFields,
     block_context: &BlockContext,
     actual_fee: u128,
@@ -312,7 +312,7 @@ pub fn check_actual_cost_within_bounds(
 
 pub fn check_can_pay_fee<S: StateReader, C: ContractClassCache>(
     block_context: &BlockContext,
-    state: &mut CachedState<S, C>,
+    state: &CachedState<S, C>,
     sender_address: &Address,
     actual_fee: u128,
     fee_type: &FeeType,
