@@ -221,7 +221,7 @@ impl BlockContext {
         self.starknet_os_config.gas_price.get_by_fee_type(fee_type)
     }
 
-    pub fn get_fee_token_address_by_fee_type(&self, fee_type: &FeeType) -> Address {
+    pub fn get_fee_token_address_by_fee_type(&self, fee_type: &FeeType) -> &Address {
         self.starknet_os_config
             .fee_token_address
             .get_by_fee_type(fee_type)
