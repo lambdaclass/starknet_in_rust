@@ -218,19 +218,22 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     state: &mut CachedState<S, C>,
     resources: &HashMap<String, usize>,
     block_context: &BlockContext,
-    max_fee: u128,
     tx_execution_context: &mut TransactionExecutionContext,
     skip_fee_transfer: bool,
-    fee_type: &FeeType,
     #[cfg(feature = "cairo-native")] program_cache: Option<
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
 ) -> Result<FeeInfo, TransactionError> {
+    let max_fee = tx_execution_context.account_tx_fields.max_fee();
     if max_fee.is_zero() {
         return Ok((None, 0));
     }
 
-    let actual_fee = calculate_tx_fee(resources, block_context, &fee_type)?;
+    let actual_fee = calculate_tx_fee(
+        resources,
+        block_context,
+        &tx_execution_context.account_tx_fields.fee_type(),
+    )?;
 
     let actual_fee = {
         let version_0 = tx_execution_context.version.is_zero();
@@ -417,13 +420,13 @@ pub(crate) fn estimate_minimal_l1_gas(
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::block_context::{BlockContext, FeeType, GasPrices},
+        definitions::block_context::{BlockContext, GasPrices},
         execution::TransactionExecutionContext,
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
         },
-        transaction::fee::charge_fee,
+        transaction::{fee::charge_fee, VersionSpecificAccountTxFields},
     };
     use std::{collections::HashMap, sync::Arc};
 
@@ -442,17 +445,15 @@ mod tests {
             ("l1_gas_usage".to_string(), 200_usize),
             ("pedersen_builtin".to_string(), 10000_usize),
         ]);
-        let max_fee = 100;
+        tx_execution_context.account_tx_fields = VersionSpecificAccountTxFields::Deprecated(100);
         let skip_fee_transfer = true;
 
         let result = charge_fee(
             &mut state,
             &resources,
             &block_context,
-            max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
-            &FeeType::Eth,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -479,22 +480,20 @@ mod tests {
             ("l1_gas_usage".to_string(), 200_usize),
             ("pedersen_builtin".to_string(), 10000_usize),
         ]);
-        let max_fee = 100;
+        tx_execution_context.account_tx_fields = VersionSpecificAccountTxFields::Deprecated(100);
         let skip_fee_transfer = true;
 
         let result = charge_fee(
             &mut state,
             &resources,
             &block_context,
-            max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
-            &FeeType::Eth,
             #[cfg(feature = "cairo-native")]
             None,
         )
         .unwrap();
 
-        assert_eq!(result.1, max_fee);
+        assert_eq!(result.1, 100);
     }
 }
