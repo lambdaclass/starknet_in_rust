@@ -5,7 +5,7 @@ use super::{
 use crate::{
     definitions::{
         block_context::{BlockContext, FeeType},
-        constants::{FEE_FACTOR, INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
+        constants::{INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
     },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
@@ -42,61 +42,6 @@ pub type FeeInfo = (Option<CallInfo>, u128);
 /// Transfers the amount actual_fee from the caller account to the sequencer.
 /// Returns the resulting CallInfo of the transfer call.
 pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
-    state: &mut CachedState<S, C>,
-    block_context: &BlockContext,
-    tx_execution_context: &mut TransactionExecutionContext,
-    actual_fee: u128,
-    #[cfg(feature = "cairo-native")] program_cache: Option<
-        Rc<RefCell<ProgramCache<'_, ClassHash>>>,
-    >,
-) -> Result<CallInfo, TransactionError> {
-    if actual_fee > tx_execution_context.account_tx_fields.max_fee() {
-        return Err(TransactionError::ActualFeeExceedsMaxFee(
-            actual_fee,
-            tx_execution_context.account_tx_fields.max_fee(),
-        ));
-    }
-
-    let fee_token_address = block_context.starknet_os_config.fee_token_address.clone();
-
-    let calldata = [
-        block_context.block_info.sequencer_address.0,
-        Felt252::from(actual_fee), // U256.low
-        0.into(),                  // U256.high
-    ]
-    .to_vec();
-
-    let fee_transfer_call = ExecutionEntryPoint::new(
-        fee_token_address.get_by_fee_type(&FeeType::Eth).clone(),
-        calldata,
-        *TRANSFER_ENTRY_POINT_SELECTOR,
-        tx_execution_context.account_contract_address.clone(),
-        EntryPointType::External,
-        Some(CallType::Call),
-        None,
-        INITIAL_GAS_COST,
-    );
-
-    let mut resources_manager = ExecutionResourcesManager::default();
-    let ExecutionResult { call_info, .. } = fee_transfer_call
-        .execute(
-            state,
-            block_context,
-            &mut resources_manager,
-            tx_execution_context,
-            false,
-            block_context.invoke_tx_max_n_steps,
-            #[cfg(feature = "cairo-native")]
-            program_cache,
-        )
-        .map_err(|e| TransactionError::FeeTransferError(Box::new(e)))?;
-
-    call_info.ok_or(TransactionError::CallInfoIsNone)
-}
-
-/// Transfers the amount actual_fee from the caller account to the sequencer.
-/// Returns the resulting CallInfo of the transfer call.
-pub(crate) fn execute_fee_transfer_updated<S: StateReader, C: ContractClassCache>(
     state: &mut CachedState<S, C>,
     block_context: &BlockContext,
     tx_execution_context: &mut TransactionExecutionContext,
@@ -235,18 +180,7 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
         &tx_execution_context.account_tx_fields.fee_type(),
     )?;
 
-    let actual_fee = {
-        let version_0 = tx_execution_context.version.is_zero();
-        let fee_exceeded_max = actual_fee > max_fee;
-
-        if version_0 && fee_exceeded_max {
-            0
-        } else if version_0 && !fee_exceeded_max {
-            actual_fee
-        } else {
-            actual_fee.min(max_fee) * FEE_FACTOR
-        }
-    };
+    let actual_fee = actual_fee.min(max_fee);
 
     let fee_transfer_info = if skip_fee_transfer {
         None

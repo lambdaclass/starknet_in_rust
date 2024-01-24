@@ -2,8 +2,7 @@ use super::{
     check_account_tx_fields_version,
     error::FeeCheckError,
     fee::{
-        calculate_tx_fee, check_fee_bounds, execute_fee_transfer_updated,
-        run_post_execution_fee_checks,
+        calculate_tx_fee, check_fee_bounds, execute_fee_transfer, run_post_execution_fee_checks,
     },
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
@@ -462,7 +461,7 @@ impl InvokeFunction {
             && !actual_fee.is_zero()
             && !self.account_tx_fields.max_fee().is_zero()
         {
-            Some(execute_fee_transfer_updated(
+            Some(execute_fee_transfer(
                 state,
                 block_context,
                 &mut tx_execution_context,
