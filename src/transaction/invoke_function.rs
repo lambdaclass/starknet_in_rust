@@ -454,6 +454,8 @@ impl InvokeFunction {
             block_context,
             &mut tx_execution_context,
             self.skip_fee_transfer,
+            #[cfg(feature = "cairo-native")]
+            program_cache.clone(),
         )?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
