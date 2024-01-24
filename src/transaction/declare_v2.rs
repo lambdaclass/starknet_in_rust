@@ -394,6 +394,7 @@ impl DeclareV2 {
             None,
             execution_result.n_reverted_steps,
         )?;
+
         let calculated_fee = calculate_tx_fee(
             &actual_resources,
             &block_context,

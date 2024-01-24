@@ -25,7 +25,9 @@ use crate::{
 use cairo_vm::Felt252;
 use num_traits::Zero;
 
-use super::fee::{calculate_tx_fee, charge_fee, estimate_minimal_l1_gas};
+use super::fee::{
+    calculate_tx_fee, charge_fee, estimate_minimal_l1_gas, run_post_execution_fee_checks,
+};
 use super::{get_tx_version, Transaction};
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -388,6 +390,16 @@ impl Declare {
             &tx_exec_info.actual_resources,
             &block_context,
             &tx_execution_context.account_tx_fields.fee_type(),
+        )?;
+
+        run_post_execution_fee_checks(
+            state,
+            &tx_execution_context.account_tx_fields,
+            block_context,
+            calculated_fee,
+            &tx_exec_info.actual_resources,
+            &self.sender_address,
+            self.skip_fee_transfer,
         )?;
 
         let (fee_transfer_info, actual_fee) = charge_fee(
