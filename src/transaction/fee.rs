@@ -161,7 +161,7 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 /// The [FeeInfo] with the given actual fee.
 pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     state: &mut CachedState<S, C>,
-    resources: &HashMap<String, usize>,
+    calculated_fee: u128,
     block_context: &BlockContext,
     tx_execution_context: &mut TransactionExecutionContext,
     skip_fee_transfer: bool,
@@ -174,13 +174,11 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
         return Ok((None, 0));
     }
 
-    let actual_fee = calculate_tx_fee(
-        resources,
-        block_context,
-        &tx_execution_context.account_tx_fields.fee_type(),
-    )?;
-
-    let actual_fee = actual_fee.min(max_fee);
+    let actual_fee = if tx_execution_context.version.is_zero() && calculated_fee > max_fee {
+        0
+    } else {
+        calculated_fee.min(max_fee)
+    };
 
     let fee_transfer_info = if skip_fee_transfer {
         None
@@ -360,7 +358,10 @@ mod tests {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
         },
-        transaction::{fee::charge_fee, VersionSpecificAccountTxFields},
+        transaction::{
+            fee::{calculate_tx_fee, charge_fee},
+            VersionSpecificAccountTxFields,
+        },
     };
     use std::{collections::HashMap, sync::Arc};
 
@@ -382,9 +383,16 @@ mod tests {
         tx_execution_context.account_tx_fields = VersionSpecificAccountTxFields::Deprecated(100);
         let skip_fee_transfer = true;
 
+        let calculated_fee = calculate_tx_fee(
+            &resources,
+            &block_context,
+            &tx_execution_context.account_tx_fields.fee_type(),
+        )
+        .unwrap();
+
         let result = charge_fee(
             &mut state,
-            &resources,
+            calculated_fee,
             &block_context,
             &mut tx_execution_context,
             skip_fee_transfer,
@@ -417,9 +425,16 @@ mod tests {
         tx_execution_context.account_tx_fields = VersionSpecificAccountTxFields::Deprecated(100);
         let skip_fee_transfer = true;
 
+        let calculated_fee = calculate_tx_fee(
+            &resources,
+            &block_context,
+            &tx_execution_context.account_tx_fields.fee_type(),
+        )
+        .unwrap();
+
         let result = charge_fee(
             &mut state,
-            &resources,
+            calculated_fee,
             &block_context,
             &mut tx_execution_context,
             skip_fee_transfer,
