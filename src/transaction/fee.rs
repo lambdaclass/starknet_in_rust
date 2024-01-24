@@ -20,9 +20,10 @@ use crate::{
     state::{
         cached_state::CachedState,
         contract_class_cache::ContractClassCache,
-        state_api::{StateChangesCount, StateReader},
+        state_api::{State, StateChangesCount, StateReader},
         ExecutionResourcesManager,
     },
+    utils::Address,
 };
 use cairo_vm::Felt252;
 use num_traits::{ToPrimitive, Zero};
@@ -257,33 +258,76 @@ pub(crate) fn check_fee_bounds(
     Ok(())
 }
 
+pub(crate) fn run_post_execution_fee_checks<S: StateReader, C: ContractClassCache>(
+    state: &mut CachedState<S, C>,
+    account_tx_fields: &VersionSpecificAccountTxFields,
+    block_context: &BlockContext,
+    actual_fee: u128,
+    actual_resources: &HashMap<String, usize>,
+    sender_address: &Address,
+    skip_fee_transfer: bool,
+) -> Result<(), TransactionError> {
+    check_actual_cost_within_bounds(
+        block_context,
+        account_tx_fields,
+        actual_fee,
+        actual_resources,
+    )?;
+    check_can_pay_fee(
+        block_context,
+        state,
+        sender_address,
+        actual_fee,
+        &account_tx_fields.fee_type(),
+        skip_fee_transfer,
+    )
+}
+
 // Checks that the cost of the transaction (Measured l1_gas in V3 Txs, and by fee in lower Tx versions) is within the bounds of the transaction
-pub(crate) fn check_actual_cost_within_bounds(
+pub fn check_actual_cost_within_bounds(
     block_context: &BlockContext,
     account_tx_fields: &VersionSpecificAccountTxFields,
     actual_fee: u128,
     actual_resources: &HashMap<String, usize>,
-) -> Result<(), FeeCheckError> {
+) -> Result<(), TransactionError> {
     match account_tx_fields {
         VersionSpecificAccountTxFields::Current(fields) => {
-            // This same function is used to calculate the actual_fee before the function is called
-            // So we can asume that it won't fail if the actual_fee corresponds to the actual_resources
-            let actual_used_l1_gas =
-                calculate_tx_l1_gas_usage(actual_resources, block_context).unwrap_or_default();
+            let actual_used_l1_gas = calculate_tx_l1_gas_usage(actual_resources, block_context)?;
             if actual_used_l1_gas > fields.l1_resource_bounds.max_amount as u128 {
                 return Err(FeeCheckError::L1GasAmountExceedsMax(
                     actual_used_l1_gas,
                     fields.l1_resource_bounds.max_amount,
-                ));
+                )
+                .into());
             }
         }
         VersionSpecificAccountTxFields::Deprecated(max_fee) => {
             if actual_fee > *max_fee {
-                return Err(FeeCheckError::FeeExceedsMax(actual_fee, *max_fee));
+                return Err(FeeCheckError::FeeExceedsMax(actual_fee, *max_fee).into());
             }
         }
     }
     Ok(())
+}
+
+pub fn check_can_pay_fee<S: StateReader, C: ContractClassCache>(
+    block_context: &BlockContext,
+    state: &mut CachedState<S, C>,
+    sender_address: &Address,
+    actual_fee: u128,
+    fee_type: &FeeType,
+    skip_fee_transfer: bool,
+) -> Result<(), TransactionError> {
+    // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
+    // If so, revert the transaction.
+    let (balance_low, balance_high) =
+        state.get_fee_token_balance(block_context, sender_address, &fee_type)?;
+    // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+    if balance_high.is_zero() && balance_low < Felt252::from(actual_fee) && !skip_fee_transfer {
+        Err(FeeCheckError::InsufficientFeeTokenBalance.into())
+    } else {
+        Ok(())
+    }
 }
 
 pub(crate) fn estimate_minimal_l1_gas(
