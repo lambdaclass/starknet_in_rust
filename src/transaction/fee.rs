@@ -1,4 +1,7 @@
-use super::{error::TransactionError, VersionSpecificAccountTxFields};
+use super::{
+    error::{FeeCheckError, TransactionError},
+    VersionSpecificAccountTxFields,
+};
 use crate::{
     definitions::{
         block_context::{BlockContext, FeeType},
@@ -255,13 +258,12 @@ pub(crate) fn check_fee_bounds(
 }
 
 // Checks that the cost of the transaction (Measured l1_gas in V3 Txs, and by fee in lower Tx versions) is within the bounds of the transaction
-// Returns the revert error as a string if these bounds are exceeded
-pub(crate) fn revert_if_actual_cost_exceeds_bounds(
+pub(crate) fn check_actual_cost_within_bounds(
     block_context: &BlockContext,
     account_tx_fields: &VersionSpecificAccountTxFields,
     actual_fee: u128,
     actual_resources: &HashMap<String, usize>,
-) -> Option<String> {
+) -> Result<(), FeeCheckError> {
     match account_tx_fields {
         VersionSpecificAccountTxFields::Current(fields) => {
             // This same function is used to calculate the actual_fee before the function is called
@@ -269,26 +271,19 @@ pub(crate) fn revert_if_actual_cost_exceeds_bounds(
             let actual_used_l1_gas =
                 calculate_tx_l1_gas_usage(actual_resources, block_context).unwrap_or_default();
             if actual_used_l1_gas > fields.l1_resource_bounds.max_amount as u128 {
-                Some(format!(
-                    "Calculated l1 gas amount ({}) exceeds max l1 gas amount ({})",
-                    actual_used_l1_gas, fields.l1_resource_bounds.max_amount
-                ))
-            } else {
-                None
+                return Err(FeeCheckError::L1GasAmountExceedsMax(
+                    actual_used_l1_gas,
+                    fields.l1_resource_bounds.max_amount,
+                ));
             }
         }
         VersionSpecificAccountTxFields::Deprecated(max_fee) => {
             if actual_fee > *max_fee {
-                // max_fee exceeded
-                Some(format!(
-                    "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee, *max_fee
-                ))
-            } else {
-                None
+                return Err(FeeCheckError::FeeExceedsMax(actual_fee, *max_fee));
             }
         }
     }
+    Ok(())
 }
 
 pub(crate) fn estimate_minimal_l1_gas(

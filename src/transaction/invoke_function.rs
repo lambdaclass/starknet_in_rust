@@ -1,6 +1,6 @@
 use super::{
     check_account_tx_fields_version,
-    fee::{calculate_tx_fee, charge_fee, check_fee_bounds, revert_if_actual_cost_exceeds_bounds},
+    fee::{calculate_tx_fee, charge_fee, check_actual_cost_within_bounds, check_fee_bounds},
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
@@ -423,20 +423,20 @@ impl InvokeFunction {
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if let Some(revert_msg) = revert_if_actual_cost_exceeds_bounds(
+        } else if let Err(revert_err) = check_actual_cost_within_bounds(
             block_context,
             &self.account_tx_fields,
             actual_fee,
             &tx_exec_info.actual_resources,
         ) {
-            tx_exec_info = tx_exec_info.to_revert_error(&revert_msg);
+            tx_exec_info = tx_exec_info.to_revert_error(&revert_err.to_string());
         } else {
             // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
             // If so, revert the transaction.
             let (balance_low, balance_high) = transactional_state.get_fee_token_balance(
                 block_context,
                 self.contract_address(),
-                &FeeType::Eth,
+                &self.account_tx_fields.fee_type(),
             )?;
             // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
             if balance_high.is_zero()
