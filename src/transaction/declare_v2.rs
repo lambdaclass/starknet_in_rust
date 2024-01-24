@@ -1,4 +1,4 @@
-use super::fee::{charge_fee, check_fee_bounds};
+use super::fee::{charge_fee, check_fee_bounds, run_post_execution_fee_checks};
 use super::{
     check_account_tx_fields_version, get_tx_version, ResourceBounds, Transaction,
     VersionSpecificAccountTxFields,
@@ -406,6 +406,16 @@ impl DeclareV2 {
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
             program_cache,
+        )?;
+
+        run_post_execution_fee_checks(
+            state,
+            &self.account_tx_fields,
+            block_context,
+            actual_fee,
+            &actual_resources,
+            &self.sender_address,
+            self.skip_fee_transfer,
         )?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
