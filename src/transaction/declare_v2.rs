@@ -406,6 +406,7 @@ impl DeclareV2 {
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            &self.account_tx_fields.fee_type(),
         )?;
 
         run_post_execution_fee_checks(

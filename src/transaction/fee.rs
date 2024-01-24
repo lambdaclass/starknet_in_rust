@@ -175,6 +175,7 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     max_fee: u128,
     tx_execution_context: &mut TransactionExecutionContext,
     skip_fee_transfer: bool,
+    fee_type: &FeeType,
     #[cfg(feature = "cairo-native")] program_cache: Option<
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
@@ -183,7 +184,7 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
         return Ok((None, 0));
     }
 
-    let actual_fee = calculate_tx_fee(resources, block_context, &FeeType::Eth)?;
+    let actual_fee = calculate_tx_fee(resources, block_context, &fee_type)?;
 
     let actual_fee = {
         let version_0 = tx_execution_context.version.is_zero();
@@ -370,7 +371,7 @@ pub(crate) fn estimate_minimal_l1_gas(
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::block_context::{BlockContext, GasPrices},
+        definitions::block_context::{BlockContext, FeeType, GasPrices},
         execution::TransactionExecutionContext,
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
@@ -405,6 +406,7 @@ mod tests {
             max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
+            &FeeType::Eth,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -443,6 +445,7 @@ mod tests {
             skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
             None,
+            &FeeType::Eth,
         )
         .unwrap();
 

@@ -392,6 +392,7 @@ impl Declare {
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            &FeeType::Eth,
         )?;
 
         state.set_contract_class(
