@@ -431,7 +431,7 @@ impl InvokeFunction {
                 actual_fee,
                 &tx_exec_info.actual_resources,
                 self.contract_address(),
-                self.skip_fee_transfer || self.account_tx_fields.max_fee().is_zero(),
+                self.skip_fee_transfer,
             ) {
                 Ok(_) => {
                     state.apply_state_update(&StateDiff::from_cached_state(
