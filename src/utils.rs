@@ -511,7 +511,9 @@ pub mod test_utils {
     use super::felt_to_hash;
     use crate::{
         definitions::{
-            block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+            block_context::{
+                BlockContext, FeeTokenAddresses, GasPrices, StarknetChainId, StarknetOsConfig,
+            },
             constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
         },
         services::api::contract_classes::{
@@ -718,6 +720,9 @@ pub mod test_utils {
         Address(Felt252::from_dec_str("4096").unwrap());
         pub(crate) static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
         Address(Felt252::from_dec_str("4097").unwrap());
+        pub(crate) static ref TEST_STRK_CONTRACT_ADDRESS: Address =
+        Address(Felt252::from_dec_str("4097").unwrap());
+        pub(crate) static ref TEST_FEE_TOKEN_ADDRESSES : FeeTokenAddresses = FeeTokenAddresses::new(TEST_ERC20_CONTRACT_ADDRESS.clone(), TEST_STRK_CONTRACT_ADDRESS.clone());
 
 
         // Class hashes.
@@ -749,8 +754,8 @@ pub mod test_utils {
         BlockContext::new(
             StarknetOsConfig::new(
                 StarknetChainId::TestNet.to_felt(),
-                TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                1,
+                TEST_FEE_TOKEN_ADDRESSES.clone(),
+                GasPrices::new(1, 1),
             ),
             0,
             0,
@@ -796,6 +801,7 @@ pub mod test_utils {
         let test_erc20_address = block_context
             .starknet_os_config()
             .fee_token_address()
+            .eth_fee_token_address
             .clone();
         let address_to_class_hash = HashMap::from([
             (test_contract_address, test_contract_class_hash),

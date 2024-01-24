@@ -5,7 +5,7 @@ use super::{
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        block_context::BlockContext,
+        block_context::{BlockContext, FeeType},
         constants::{
             EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
@@ -327,7 +327,10 @@ impl InvokeFunction {
             )?
         };
         let changes = state.count_actual_state_changes(Some((
-            &block_context.starknet_os_config.fee_token_address,
+            (block_context
+                .starknet_os_config
+                .fee_token_address
+                .get_by_fee_type(&FeeType::Eth)),
             &self.contract_address,
         )))?;
         let actual_resources = calculate_tx_resources(
@@ -380,7 +383,7 @@ impl InvokeFunction {
         }
 
         if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context)?;
+            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
         }
 
         self.handle_nonce(state)?;
@@ -414,11 +417,8 @@ impl InvokeFunction {
         }
         let mut tx_exec_info = tx_exec_info?;
 
-        let actual_fee = calculate_tx_fee(
-            &tx_exec_info.actual_resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )?;
+        let actual_fee =
+            calculate_tx_fee(&tx_exec_info.actual_resources, block_context, &FeeType::Eth)?;
 
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
@@ -435,8 +435,11 @@ impl InvokeFunction {
         } else {
             // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
             // If so, revert the transaction.
-            let (balance_low, balance_high) = transactional_state
-                .get_fee_token_balance(block_context, self.contract_address())?;
+            let (balance_low, balance_high) = transactional_state.get_fee_token_balance(
+                block_context,
+                self.contract_address(),
+                &FeeType::Eth,
+            )?;
             // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
             if balance_high.is_zero()
                 && balance_low < Felt252::from(actual_fee)
@@ -498,6 +501,7 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
         if self.max_fee.is_zero() {
             return Ok(());
@@ -509,7 +513,7 @@ impl InvokeFunction {
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, self.contract_address())?;
+            state.get_fee_token_balance(block_context, self.contract_address(), fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
         if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
             return Err(TransactionError::MaxFeeExceedsBalance(
@@ -536,11 +540,7 @@ impl InvokeFunction {
             ),
             ("n_steps".to_string(), n_estimated_steps),
         ]);
-        calculate_tx_fee(
-            &resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )
+        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     // Simulation function
@@ -699,6 +699,7 @@ fn convert_invoke_v1(
 mod tests {
     use super::*;
     use crate::{
+        definitions::block_context::GasPrices,
         definitions::constants::{QUERY_VERSION_1, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
@@ -1270,7 +1271,7 @@ mod tests {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
 
         let tx_info = internal_invoke_function
             .execute(
