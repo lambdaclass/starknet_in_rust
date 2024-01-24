@@ -425,7 +425,7 @@ impl InvokeFunction {
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
         } else {
             match run_post_execution_fee_checks(
-                &transactional_state,
+                &mut transactional_state,
                 &self.account_tx_fields,
                 block_context,
                 actual_fee,
