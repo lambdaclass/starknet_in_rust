@@ -1,6 +1,6 @@
 use super::{
     check_account_tx_fields_version,
-    fee::{calculate_tx_fee, charge_fee, check_fee_bounds},
+    fee::{calculate_tx_fee, charge_fee, check_fee_bounds, revert_if_actual_cost_exceeds_bounds},
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
@@ -414,22 +414,22 @@ impl InvokeFunction {
         }
         let mut tx_exec_info = tx_exec_info?;
 
-        let actual_fee =
-            calculate_tx_fee(&tx_exec_info.actual_resources, block_context, &FeeType::Eth)?;
+        let actual_fee = calculate_tx_fee(
+            &tx_exec_info.actual_resources,
+            block_context,
+            &self.account_tx_fields.fee_type(),
+        )?;
 
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if actual_fee > self.account_tx_fields.max_fee() {
-            // max_fee exceeded
-            tx_exec_info = tx_exec_info.to_revert_error(
-                format!(
-                    "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee,
-                    self.account_tx_fields.max_fee()
-                )
-                .as_str(),
-            );
+        } else if let Some(revert_msg) = revert_if_actual_cost_exceeds_bounds(
+            block_context,
+            &self.account_tx_fields,
+            actual_fee,
+            &tx_exec_info.actual_resources,
+        ) {
+            tx_exec_info = tx_exec_info.to_revert_error(&revert_msg);
         } else {
             // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
             // If so, revert the transaction.

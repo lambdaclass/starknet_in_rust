@@ -254,6 +254,43 @@ pub(crate) fn check_fee_bounds(
     Ok(())
 }
 
+// Checks that the cost of the transaction (Measured l1_gas in V3 Txs, and by fee in lower Tx versions) is within the bounds of the transaction
+// Returns the revert error as a string if these bounds are exceeded
+pub(crate) fn revert_if_actual_cost_exceeds_bounds(
+    block_context: &BlockContext,
+    account_tx_fields: &VersionSpecificAccountTxFields,
+    actual_fee: u128,
+    actual_resources: &HashMap<String, usize>,
+) -> Option<String> {
+    match account_tx_fields {
+        VersionSpecificAccountTxFields::Current(fields) => {
+            // This same function is used to calculate the actual_fee before the function is called
+            // So we can asume that it won't fail if the actual_fee corresponds to the actual_resources
+            let actual_used_l1_gas =
+                calculate_tx_l1_gas_usage(actual_resources, block_context).unwrap_or_default();
+            if actual_used_l1_gas > fields.l1_resource_bounds.max_amount as u128 {
+                Some(format!(
+                    "Calculated l1 gas amount ({}) exceeds max l1 gas amount ({})",
+                    actual_used_l1_gas, fields.l1_resource_bounds.max_amount
+                ))
+            } else {
+                None
+            }
+        }
+        VersionSpecificAccountTxFields::Deprecated(max_fee) => {
+            if actual_fee > *max_fee {
+                // max_fee exceeded
+                Some(format!(
+                    "Calculated fee ({}) exceeds max fee ({})",
+                    actual_fee, *max_fee
+                ))
+            } else {
+                None
+            }
+        }
+    }
+}
+
 pub(crate) fn estimate_minimal_l1_gas(
     block_context: &BlockContext,
     tx_type: AccountTxType,
