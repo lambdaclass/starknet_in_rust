@@ -1,6 +1,6 @@
 use crate::core::contract_address::compute_deprecated_class_hash;
 use crate::core::transaction_hash::calculate_declare_transaction_hash;
-use crate::definitions::block_context::BlockContext;
+use crate::definitions::block_context::{BlockContext, FeeType};
 use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 use crate::definitions::transaction_type::TransactionType;
 use crate::execution::gas_usage::get_onchain_data_segment_length;
@@ -209,7 +209,10 @@ impl Declare {
             )?
         };
         let changes = state.count_actual_state_changes(Some((
-            &block_context.starknet_os_config.fee_token_address,
+            (block_context
+                .starknet_os_config
+                .fee_token_address
+                .get_by_fee_type(&FeeType::Eth)),
             &self.sender_address,
         )))?;
         let actual_resources = calculate_tx_resources(
@@ -318,6 +321,7 @@ impl Declare {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
         if self.max_fee.is_zero() {
             return Ok(());
@@ -329,7 +333,7 @@ impl Declare {
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, &self.sender_address)?;
+            state.get_fee_token_balance(block_context, &self.sender_address, fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
         if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
             return Err(TransactionError::MaxFeeExceedsBalance(
@@ -356,11 +360,7 @@ impl Declare {
             ),
             ("n_steps".to_string(), n_estimated_steps),
         ]);
-        calculate_tx_fee(
-            &resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )
+        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     /// Calculates actual fee used by the transaction using the execution
@@ -392,7 +392,7 @@ impl Declare {
             ));
         }
         if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context)?;
+            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
         }
 
         self.handle_nonce(state)?;
@@ -463,7 +463,7 @@ mod tests {
     use super::*;
     use crate::{
         definitions::{
-            block_context::{BlockContext, StarknetChainId},
+            block_context::{BlockContext, GasPrices, StarknetChainId},
             constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             transaction_type::TransactionType,
         },
@@ -971,7 +971,7 @@ mod tests {
         // ---------------------
         let mut state_copy = state.clone_for_testing();
         let mut bock_context = BlockContext::default();
-        bock_context.starknet_os_config.gas_price = 12;
+        bock_context.starknet_os_config.gas_price = GasPrices::new(12, 0);
         assert!(
             declare
                 .execute(

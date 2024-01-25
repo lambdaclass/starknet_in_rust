@@ -177,8 +177,8 @@ pub fn execute_tx(
         vm_resource_fee_cost,
         // TODO: Add strk l1 gas price when updated
         gas_prices: GasPrices {
-            eth_l1_gas_price: gas_price,
-            strk_l1_gas_price: gas_price,
+            eth_l1_gas_price: gas_price.eth_l1_gas_price,
+            strk_l1_gas_price: gas_price.strk_l1_gas_price,
         },
         invoke_tx_max_n_steps: 1_000_000,
         validate_max_n_steps: 1_000_000,
@@ -254,7 +254,7 @@ fn test_get_gas_price() {
     let rpc_state = RpcState::new_rpc(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
-    assert_eq!(price, 22804578690);
+    assert_eq!(price.eth_l1_gas_price, 22804578690);
 }
 
 #[test]

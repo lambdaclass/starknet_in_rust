@@ -1,6 +1,7 @@
 use super::fee::{calculate_tx_fee, charge_fee};
 use super::{get_tx_version, Transaction};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
+use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::execution::gas_usage::get_onchain_data_segment_length;
@@ -300,6 +301,7 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
         if self.max_fee.is_zero() {
             return Ok(());
@@ -311,7 +313,7 @@ impl DeclareV2 {
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, &self.sender_address)?;
+            state.get_fee_token_balance(block_context, &self.sender_address, fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
         if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
             return Err(TransactionError::MaxFeeExceedsBalance(
@@ -338,11 +340,7 @@ impl DeclareV2 {
             ),
             ("n_steps".to_string(), n_estimated_steps),
         ]);
-        calculate_tx_fee(
-            &resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )
+        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     /// Execute the validation of the contract in the cairo-vm. Returns a TransactionExecutionInfo if succesful.
@@ -375,7 +373,7 @@ impl DeclareV2 {
         }
 
         if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context)?;
+            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
         }
 
         self.handle_nonce(state)?;
@@ -397,7 +395,10 @@ impl DeclareV2 {
         self.compile_and_store_casm_class(state)?;
 
         let storage_changes = state.count_actual_state_changes(Some((
-            &block_context.starknet_os_config.fee_token_address,
+            (block_context
+                .starknet_os_config
+                .fee_token_address
+                .get_by_fee_type(&FeeType::Eth)),
             &self.sender_address,
         )))?;
 

@@ -43,7 +43,7 @@ fn test_get_gas_price() {
     let rpc_state = RpcState::new_rpc(RpcChain::MainNet, block).unwrap();
 
     let price = rpc_state.get_gas_price(169928).unwrap();
-    assert_eq!(price, 22804578690);
+    assert_eq!(price.eth_l1_gas_price, 22804578690);
 }
 
 #[test_case(

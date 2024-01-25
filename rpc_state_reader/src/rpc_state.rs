@@ -18,7 +18,7 @@ use starknet_api::{
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash},
 };
-use starknet_in_rust::definitions::block_context::StarknetChainId;
+use starknet_in_rust::definitions::block_context::{GasPrices, StarknetChainId};
 use std::{collections::HashMap, env, fmt::Display};
 
 use crate::{rpc_state_errors::RpcStateError, utils};
@@ -429,7 +429,7 @@ impl RpcState {
     }
 
     /// Gets the gas price of a given block.
-    pub fn get_gas_price(&self, block_number: u64) -> Result<u128, RpcStateError> {
+    pub fn get_gas_price(&self, block_number: u64) -> Result<GasPrices, RpcStateError> {
         let res = self
             .rpc_call::<serde_json::Value>(
                 "starknet_getBlockWithTxHashes",
@@ -438,16 +438,32 @@ impl RpcState {
             .get("result")
             .ok_or(RpcStateError::MissingRpcResponseField("result".into()))?
             .clone();
-        let gas_price_hex = res
-            .get("l1_gas_price")
-            .and_then(|gp| gp.get("price_in_wei"))
-            .and_then(|gp| gp.as_str())
-            .ok_or(RpcStateError::MissingRpcResponseField(
-                "gas_price".to_string(),
-            ))?;
-        let gas_price = u128::from_str_radix(gas_price_hex.trim_start_matches("0x"), 16)
-            .map_err(|_| RpcStateError::RpcResponseWrongType("gas_price".to_string()))?;
-        Ok(gas_price)
+
+        let gas_price_eth = u128::from_str_radix(
+            res.get("l1_gas_price")
+                .and_then(|gp| gp.get("price_in_wei"))
+                .and_then(|gp| gp.as_str())
+                .ok_or(RpcStateError::MissingRpcResponseField(
+                    "gas_price.price_in_wei".to_string(),
+                ))?
+                .trim_start_matches("0x"),
+            16,
+        )
+        .map_err(|_| RpcStateError::RpcResponseWrongType("gas_price".to_string()))?;
+
+        let gas_price_strk = u128::from_str_radix(
+            res.get("l1_gas_price")
+                .and_then(|gp| gp.get("price_in_fri"))
+                .and_then(|gp| gp.as_str())
+                .ok_or(RpcStateError::MissingRpcResponseField(
+                    "gas_price.price_in_fri".to_string(),
+                ))?
+                .trim_start_matches("0x"),
+            16,
+        )
+        .map_err(|_| RpcStateError::RpcResponseWrongType("gas_price".to_string()))?;
+
+        Ok(GasPrices::new(gas_price_eth, gas_price_strk))
     }
 
     pub fn get_chain_name(&self) -> ChainId {

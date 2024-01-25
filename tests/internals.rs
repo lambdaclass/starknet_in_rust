@@ -17,7 +17,6 @@ use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use starknet_in_rust::core::errors::state_errors::StateError;
 use starknet_in_rust::definitions::constants::{
     DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
 };
@@ -38,6 +37,10 @@ use starknet_in_rust::{
         TRANSFER_ENTRY_POINT_SELECTOR, TRANSFER_EVENT_SELECTOR,
         VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_DEPLOY_ENTRY_POINT_SELECTOR,
     },
+};
+use starknet_in_rust::{
+    core::errors::state_errors::StateError,
+    definitions::block_context::{FeeTokenAddresses, FeeType, GasPrices},
 };
 use starknet_in_rust::{
     definitions::{
@@ -77,6 +80,10 @@ lazy_static! {
     Address(Felt252::from_dec_str("4096").unwrap());
     pub static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
     Address(Felt252::from_dec_str("4097").unwrap());
+    pub(crate) static ref TEST_STRK_CONTRACT_ADDRESS: Address =
+    Address(Felt252::from_dec_str("4097").unwrap());
+    pub(crate) static ref TEST_FEE_TOKEN_ADDRESSES : FeeTokenAddresses = FeeTokenAddresses::new(TEST_ERC20_CONTRACT_ADDRESS.clone(), TEST_STRK_CONTRACT_ADDRESS.clone());
+
 
 
     // Class hashes.
@@ -103,15 +110,15 @@ lazy_static! {
 
     // Others.
     static ref INITIAL_BALANCE: Felt252 = Felt252::from(u128::MAX);
-    static ref GAS_PRICE: u128 = 1;
+    static ref GAS_PRICES: GasPrices = GasPrices::new(1, 1);
 }
 
 pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet.to_felt(),
-            TEST_ERC20_CONTRACT_ADDRESS.clone(),
-            *GAS_PRICE,
+            TEST_FEE_TOKEN_ADDRESSES.clone(),
+            GAS_PRICES.clone(),
         ),
         0,
         0,
@@ -156,6 +163,7 @@ fn create_account_tx_test_state() -> Result<
     let test_erc20_address = block_context
         .starknet_os_config()
         .fee_token_address()
+        .eth_fee_token_address
         .clone();
     let address_to_class_hash = HashMap::from([
         (test_contract_address, test_contract_class_hash),
@@ -244,6 +252,7 @@ fn create_account_tx_test_state_revert_test() -> Result<
     let test_erc20_address = block_context
         .starknet_os_config()
         .fee_token_address()
+        .eth_fee_token_address
         .clone();
     let address_to_class_hash = HashMap::from([
         (test_contract_address, test_contract_class_hash),
@@ -521,6 +530,7 @@ fn expected_fee_transfer_call_info(
         contract_address: block_context
             .starknet_os_config()
             .fee_token_address()
+            .eth_fee_token_address
             .clone(),
         caller_address: account_address.clone(),
         retdata: vec![Felt252::ONE],
@@ -591,6 +601,7 @@ fn validate_final_balances<S>(
             block_context
                 .starknet_os_config()
                 .fee_token_address()
+                .eth_fee_token_address
                 .clone(),
             erc20_account_balance_storage_key.0,
         ))
@@ -602,7 +613,8 @@ fn validate_final_balances<S>(
             block_context
                 .starknet_os_config()
                 .fee_token_address()
-                .clone(),
+                .clone()
+                .eth_fee_token_address,
             TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_bytes_be(),
         ))
         .unwrap();
@@ -662,6 +674,7 @@ fn test_create_account_tx_test_state() {
             block_context
                 .starknet_os_config()
                 .fee_token_address()
+                .eth_fee_token_address
                 .clone(),
             TEST_ERC20_ACCOUNT_BALANCE_KEY.clone().to_bytes_be(),
         ))
@@ -1054,7 +1067,7 @@ fn test_declare_tx() {
         ("pedersen_builtin".to_string(), 15),
         ("l1_gas_usage".to_string(), 2448),
     ]);
-    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+    let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
 
     let expected_execution_info = TransactionExecutionInfo::new(
         Some(CallInfo {
@@ -1153,7 +1166,7 @@ fn test_declarev2_tx() {
         ("pedersen_builtin".to_string(), 15),
         ("l1_gas_usage".to_string(), 3672),
     ]);
-    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+    let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
 
     let contract_hash;
     #[cfg(not(feature = "cairo_1_tests"))]
@@ -1365,7 +1378,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
         ("l1_gas_usage".to_string(), 2448),
         ("range_check_builtin".to_string(), 101),
     ]);
-    let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
+    let fee = calculate_tx_fee(&resources, block_context, &FeeType::Eth).unwrap();
     TransactionExecutionInfo::new(
         Some(expected_validate_call_info_2()),
         Some(expected_execute_call_info()),
@@ -1395,7 +1408,7 @@ fn expected_fib_transaction_execution_info(
         ("pedersen_builtin".to_string(), 16),
         ("range_check_builtin".to_string(), 104),
     ]);
-    let fee = calculate_tx_fee(&resources, *GAS_PRICE, block_context).unwrap();
+    let fee = calculate_tx_fee(&resources, block_context, &FeeType::Eth).unwrap();
     TransactionExecutionInfo::new(
         Some(expected_fib_validate_call_info_2()),
         Some(expected_fib_execute_call_info()),
@@ -1475,6 +1488,7 @@ fn test_invoke_tx_exceeded_max_fee() {
     let test_erc20_address = block_context
         .starknet_os_config()
         .fee_token_address()
+        .eth_fee_token_address
         .clone();
     let test_erc20_account_balance_key = *TEST_ERC20_ACCOUNT_BALANCE_KEY;
 
@@ -1690,6 +1704,7 @@ fn test_deploy_account() {
             block_context
                 .starknet_os_config()
                 .fee_token_address()
+                .eth_fee_token_address
                 .clone(),
             TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
                 .clone()
@@ -1759,7 +1774,7 @@ fn test_deploy_account() {
         ("l1_gas_usage".to_string(), 3060),
     ]);
 
-    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+    let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
 
     assert_eq!(fee, expected_fee);
 
@@ -1815,6 +1830,7 @@ fn test_deploy_account_revert() {
             block_context
                 .starknet_os_config()
                 .fee_token_address()
+                .eth_fee_token_address
                 .clone(),
             TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
                 .clone()
@@ -1916,7 +1932,7 @@ fn test_deploy_account_revert() {
         ("l1_gas_usage".to_string(), 3060),
     ]);
 
-    let fee = calculate_tx_fee(&resources, *GAS_PRICE, &block_context).unwrap();
+    let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
 
     assert_eq!(fee, actual_fee);
 

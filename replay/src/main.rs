@@ -19,6 +19,7 @@ use starknet_api::{
 use starknet_in_rust::execution::TransactionExecutionInfo;
 #[cfg(feature = "benchmark")]
 use starknet_in_rust::{
+    definitions::block_context::GasPrices,
     state::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
     },
@@ -137,7 +138,7 @@ fn main() {
             >::new();
             let mut block_timestamps = HashMap::<BlockNumber, u64>::new();
             let mut sequencer_addresses = HashMap::<BlockNumber, Address>::new();
-            let mut gas_prices = HashMap::<BlockNumber, u128>::new();
+            let mut gas_prices = HashMap::<BlockNumber, GasPrices>::new();
             for block_number in block_start..=block_end {
                 // For each block:
                 let block_number = BlockNumber(block_number);
@@ -158,7 +159,7 @@ fn main() {
                 sequencer_addresses.insert(block_number, sequencer_address.clone());
                 // Fetch gas price
                 let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();
-                gas_prices.insert(block_number, gas_price);
+                gas_prices.insert(block_number, gas_price.clone());
 
                 // Fetch txs for the block
                 let transaction_hashes = get_transaction_hashes(block_number, network)
@@ -177,7 +178,7 @@ fn main() {
                         BlockInfo {
                             block_number: block_number.0,
                             block_timestamp: block_timestamp.0,
-                            gas_price,
+                            gas_price: gas_price.clone(),
                             sequencer_address: sequencer_address.clone(),
                         },
                         false,
@@ -213,7 +214,7 @@ fn main() {
                     // Fetch sequencer address
                     let sequencer_address = sequencer_addresses.get(&block_number).unwrap();
                     // Fetch gas price
-                    let gas_price = *gas_prices.get(&block_number).unwrap();
+                    let gas_price = gas_prices.get(&block_number).unwrap();
                     // Run txs
                     for (tx_hash, tx) in block_txs {
                         let _ = execute_tx_configurable_with_state(
@@ -223,7 +224,7 @@ fn main() {
                             BlockInfo {
                                 block_number: block_number.0,
                                 block_timestamp,
-                                gas_price,
+                                gas_price: gas_price.clone(),
                                 sequencer_address: sequencer_address.clone(),
                             },
                             false,
