@@ -1609,8 +1609,8 @@ fn test_deploy_account() {
     )
     .unwrap();
 
-    state.set_storage_at(
-        &(
+    state.cache_mut().storage_initial_values_mut().insert(
+        (
             block_context
                 .starknet_os_config()
                 .fee_token_address()
