@@ -304,9 +304,7 @@ impl DeployAccount {
             TransactionType::DeployAccount,
             state.count_actual_state_changes(Some((
                 (block_context
-                    .starknet_os_config
-                    .fee_token_address
-                    .get_by_fee_type(&FeeType::Eth)),
+                    .get_fee_token_address_by_fee_type(&self.account_tx_fields.fee_type())),
                 &self.contract_address,
             )))?,
             None,

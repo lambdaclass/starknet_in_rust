@@ -379,10 +379,7 @@ impl DeclareV2 {
         self.compile_and_store_casm_class(state)?;
 
         let storage_changes = state.count_actual_state_changes(Some((
-            (block_context
-                .starknet_os_config
-                .fee_token_address
-                .get_by_fee_type(&FeeType::Eth)),
+            (block_context.get_fee_token_address_by_fee_type(&self.account_tx_fields.fee_type())),
             &self.sender_address,
         )))?;
 

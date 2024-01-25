@@ -250,7 +250,7 @@ pub(crate) fn run_post_execution_fee_checks<S: StateReader, C: ContractClassCach
     skip_fee_transfer: bool,
 ) -> Result<(), TransactionError> {
     if account_tx_fields.max_fee().is_zero() {
-        return Ok(())
+        return Ok(());
     }
     check_actual_cost_within_bounds(
         block_context,
