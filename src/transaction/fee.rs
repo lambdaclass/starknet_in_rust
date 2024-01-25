@@ -305,7 +305,6 @@ fn check_can_pay_fee<S: StateReader, C: ContractClassCache>(
     skip_fee_transfer: bool,
 ) -> Result<(), TransactionError> {
     // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
-    // If so, revert the transaction.
     let (balance_low, balance_high) =
         state.get_fee_token_balance(block_context, sender_address, fee_type)?;
     // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
