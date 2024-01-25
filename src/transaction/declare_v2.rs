@@ -4,7 +4,6 @@ use super::{
     VersionSpecificAccountTxFields,
 };
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
-use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;

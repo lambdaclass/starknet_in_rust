@@ -6,7 +6,7 @@ use super::{
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        block_context::{BlockContext, FeeType},
+        block_context::BlockContext,
         constants::{
             EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },

@@ -3,7 +3,6 @@ use super::{
     check_account_tx_fields_version, get_tx_version, ResourceBounds, VersionSpecificAccountTxFields,
 };
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
