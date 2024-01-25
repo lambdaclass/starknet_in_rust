@@ -1763,15 +1763,18 @@ fn expected_deploy_account_states() -> (
         )),
         Arc::new(PermanentContractClassCache::default()),
     );
-    state_before.set_storage_at(
-        &(
-            Address(0x1001.into()),
-            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
-                .clone()
-                .to_bytes_be(),
-        ),
-        *INITIAL_BALANCE,
-    );
+    state_before
+        .cache_mut()
+        .storage_initial_values_mut()
+        .insert(
+            (
+                Address(0x1001.into()),
+                TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
+                    .clone()
+                    .to_bytes_be(),
+            ),
+            *INITIAL_BALANCE,
+        );
 
     let mut state_after = state_before.clone_for_testing();
 
