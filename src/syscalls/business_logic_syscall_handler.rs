@@ -49,7 +49,10 @@ use cairo_vm::{
 };
 use lazy_static::lazy_static;
 use num_traits::{One, ToPrimitive, Zero};
-use std::{collections::HashMap, ops::Add};
+use std::{
+    collections::HashMap,
+    ops::{Add, Sub},
+};
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -749,16 +752,20 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
 
         // Allocate tx info
         let tx_info = &self.tx_execution_context;
-        let tx_info_data = vec![
+        let mut tx_info_data = vec![
             MaybeRelocatable::from(&tx_info.version),
             MaybeRelocatable::from(&tx_info.account_contract_address.0),
-            MaybeRelocatable::from(Felt252::from(tx_info.account_tx_fields.max_fee_for_execution_info())),
+            MaybeRelocatable::from(Felt252::from(
+                tx_info.account_tx_fields.max_fee_for_execution_info(),
+            )),
             signature_start_ptr.into(),
             signature_end_ptr.into(),
             MaybeRelocatable::from(&tx_info.transaction_hash),
             MaybeRelocatable::from(&self.block_context.starknet_os_config.chain_id),
             MaybeRelocatable::from(&tx_info.nonce),
         ];
+        self.allocate_version_specific_tx_info(vm, &mut tx_info_data)?;
+
         let tx_info_ptr = self.allocate_segment(vm, tx_info_data)?;
 
         // Allocate execution_info
@@ -773,6 +780,74 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
 
         self.execution_info_ptr = Some(execution_info_ptr);
         Ok(execution_info_ptr)
+    }
+
+    fn allocate_version_specific_tx_info(
+        &mut self,
+        vm: &mut VirtualMachine,
+        tx_info_data: &mut Vec<MaybeRelocatable>,
+    ) -> Result<(), SyscallHandlerError> {
+        match self.tx_execution_context.account_tx_fields.clone() {
+            crate::transaction::VersionSpecificAccountTxFields::Deprecated(_) => {
+                tx_info_data.extend_from_slice(&[
+                    Felt252::ZERO.into(), // Resource Bounds (start ptr).
+                    Felt252::ZERO.into(), // Resource Bounds (end ptr).
+                    Felt252::ZERO.into(), // Tip.
+                    Felt252::ZERO.into(), // Paymaster Data (start ptr).
+                    Felt252::ZERO.into(), // Paymaster Data (end ptr).
+                    Felt252::ZERO.into(), // Nonce DA mode.
+                    Felt252::ZERO.into(), // Fee DA mode.
+                    Felt252::ZERO.into(), // Account deployment Data (start ptr).
+                    Felt252::ZERO.into(), // Account deployment Data (end ptr).
+                ])
+            }
+            crate::transaction::VersionSpecificAccountTxFields::Current(fields) => {
+                // Allocate resource bounds
+                lazy_static! {
+                    static ref L1_GAS: Felt252 = Felt252::from_hex(
+                        "0x00000000000000000000000000000000000000000000000000004c315f474153"
+                    )
+                    .unwrap();
+                    static ref L2_GAS: Felt252 = Felt252::from_hex(
+                        "0x00000000000000000000000000000000000000000000000000004c325f474153"
+                    )
+                    .unwrap();
+                };
+                let mut resource_bounds_data = vec![
+                    *L1_GAS,
+                    fields.l1_resource_bounds.max_amount.into(),
+                    fields.l1_resource_bounds.max_price_per_unit.into(),
+                ];
+                if let Some(ref resource_bounds) = fields.l2_resource_bounds {
+                    resource_bounds_data.extend_from_slice(&[
+                        *L2_GAS,
+                        resource_bounds.max_amount.into(),
+                        resource_bounds.max_price_per_unit.into(),
+                    ])
+                }
+                let (resource_bounds_start_ptr, resource_bounds_end_ptr) =
+                    self.allocate_felt_segment(vm, &resource_bounds_data)?;
+                // Allocate paymaster data
+                let (paymaster_data_start_ptr, paymaster_data_end_ptr) =
+                    self.allocate_felt_segment(vm, &fields.paymaster_data)?;
+                // Allocate account deployment data
+                let (account_deployment_start_ptr, account_deployment_end_ptr) =
+                    self.allocate_felt_segment(vm, &fields.account_deployment_data)?;
+                // Extend tx_info_data with version specific data
+                tx_info_data.extend_from_slice(&[
+                    resource_bounds_start_ptr.into(), // Resource Bounds (start ptr).
+                    resource_bounds_end_ptr.into(),   // Resource Bounds (end ptr).
+                    Felt252::from(fields.tip).into(), // Tip.
+                    paymaster_data_start_ptr.into(),  // Paymaster Data (start ptr).
+                    paymaster_data_end_ptr.into(),    // Paymaster Data (end ptr).
+                    Into::<Felt252>::into(fields.nonce_data_availability_mode).into(), // Nonce DA mode.
+                    Into::<Felt252>::into(fields.fee_data_availability_mode).into(), // Fee DA mode.
+                    account_deployment_start_ptr.into(), // Account deployment Data (start ptr).
+                    account_deployment_end_ptr.into(),   // Account deployment Data (end ptr).
+                ])
+            }
+        }
+        Ok(())
     }
 
     fn get_execution_info(
@@ -995,12 +1070,28 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         data: Vec<MaybeRelocatable>,
     ) -> Result<Relocatable, SyscallHandlerError> {
         let segment_start = vm.add_memory_segment();
-        let segment_end = vm.write_arg(segment_start, &data)?;
-        let sub = segment_end.sub(&segment_start.to_owned().into())?;
-        let segment = (segment_start.to_owned(), sub);
+        let segment_end = vm.load_data(segment_start, &data)?;
+        let sub = segment_end.sub(segment_start)?;
+        let segment = (segment_start.to_owned(), sub.into());
         self.read_only_segments.push(segment);
 
         Ok(segment_start)
+    }
+
+    /// Allocate a segment in memory.
+    /// Returns start and end ptrs for the segment
+    pub(crate) fn allocate_felt_segment(
+        &mut self,
+        vm: &mut VirtualMachine,
+        data: &Vec<Felt252>,
+    ) -> Result<(Relocatable, Relocatable), SyscallHandlerError> {
+        let segment_start = vm.add_memory_segment();
+        let segment_end = vm.load_data(segment_start, &data.iter().map(|f| f.into()).collect())?;
+        let sub = segment_end.sub(segment_start)?;
+        let segment = (segment_start.to_owned(), sub.into());
+        self.read_only_segments.push(segment);
+
+        Ok((segment_start, segment_end))
     }
 
     /// Sends a message from L2 to L1, including the destination address and payload.

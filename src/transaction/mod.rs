@@ -213,6 +213,15 @@ pub enum DataAvailabilityMode {
     L2,
 }
 
+impl Into<Felt252> for DataAvailabilityMode {
+    fn into(self) -> Felt252 {
+        match self {
+            Self::L1 => Felt252::ZERO,
+            Self::L2 => Felt252::ONE,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct ResourceBounds {
     pub max_amount: u64,
