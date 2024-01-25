@@ -258,6 +258,13 @@ impl VersionSpecificAccountTxFields {
         }
     }
 
+    pub fn max_fee_for_execution_info(&self) -> u128 {
+        match self {
+            Self::Deprecated(max_fee) => *max_fee,
+            Self::Current(_) => 0,
+        }
+    }
+
     pub fn fee_type(&self) -> FeeType {
         match self {
             Self::Deprecated(_) => FeeType::Eth,

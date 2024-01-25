@@ -752,7 +752,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let tx_info_data = vec![
             MaybeRelocatable::from(&tx_info.version),
             MaybeRelocatable::from(&tx_info.account_contract_address.0),
-            MaybeRelocatable::from(Felt252::from(tx_info.account_tx_fields.max_fee())),
+            MaybeRelocatable::from(Felt252::from(tx_info.account_tx_fields.max_fee_for_execution_info())),
             signature_start_ptr.into(),
             signature_end_ptr.into(),
             MaybeRelocatable::from(&tx_info.transaction_hash),
