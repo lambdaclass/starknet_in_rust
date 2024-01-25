@@ -132,8 +132,8 @@ pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet.to_felt(),
-            Address(Felt252::ZERO),
-            0,
+            Default::default(),
+            Default::default(),
         ),
         0,
         0,

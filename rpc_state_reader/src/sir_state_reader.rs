@@ -11,7 +11,7 @@ use starknet_api::{
 use starknet_in_rust::{
     core::{contract_address::compute_casm_class_hash, errors::state_errors::StateError},
     definitions::{
-        block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+        block_context::{BlockContext, FeeTokenAddresses, StarknetChainId, StarknetOsConfig},
         constants::{
             DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
             DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_INVOKE_TX_MAX_N_STEPS,
@@ -166,9 +166,12 @@ pub fn execute_tx_configurable_with_state(
     skip_nonce_check: bool,
     state: &mut CachedState<RpcStateReader, PermanentContractClassCache>,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    let fee_token_address = Address(
-        Felt252::from_hex("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
-            .unwrap(),
+    let fee_token_address = FeeTokenAddresses::new(
+        Address(
+            Felt252::from_hex("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
+                .unwrap(),
+        ),
+        Address::default(),
     );
 
     // Get values for block context before giving ownership of the reader
@@ -177,8 +180,11 @@ pub fn execute_tx_configurable_with_state(
         RpcChain::TestNet => StarknetChainId::TestNet,
         RpcChain::TestNet2 => StarknetChainId::TestNet2,
     };
-    let starknet_os_config =
-        StarknetOsConfig::new(chain_id.to_felt(), fee_token_address, block_info.gas_price);
+    let starknet_os_config = StarknetOsConfig::new(
+        chain_id.to_felt(),
+        fee_token_address,
+        block_info.gas_price.clone(),
+    );
 
     // Get transaction before giving ownership of the reader
     let tx = match tx {
