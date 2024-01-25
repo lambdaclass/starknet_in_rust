@@ -375,7 +375,7 @@ where
         casm_class_hash,
         StarknetChainId::TestNet.to_felt(),
         sender_address,
-        0,
+        Default::default(),
         2.into(),
         vec![],
         nonce,
@@ -416,7 +416,7 @@ where
         casm_class_hash,
         StarknetChainId::TestNet.to_felt(),
         sender_address,
-        0,
+        Default::default(),
         2.into(),
         vec![],
         nonce,
@@ -457,7 +457,7 @@ where
         casm_class_hash,
         StarknetChainId::TestNet.to_felt(),
         sender_address,
-        0,
+        Default::default(),
         2.into(),
         vec![],
         nonce,
@@ -498,7 +498,7 @@ where
         casm_class_hash,
         StarknetChainId::TestNet.to_felt(),
         sender_address,
-        0,
+        Default::default(),
         2.into(),
         vec![],
         nonce,
@@ -538,7 +538,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
-        0,
+        Default::default(),
         Felt252::ZERO,
         vec![
             *erc20_class_hash,
@@ -588,7 +588,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
-        0,
+        Default::default(),
         Felt252::ZERO,
         vec![
             *yas_factory_class_hash,
@@ -633,7 +633,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
-        0,
+        Default::default(),
         Felt252::ZERO,
         vec![*yas_router_class_hash, nonce, Felt252::ZERO],
         vec![],
@@ -678,7 +678,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         contract_address,
         Felt252::from_bytes_be(&get_selector_from_name("deploy")?.to_bytes_be()),
-        0,
+        Default::default(),
         Felt252::ZERO,
         vec![
             *yas_pool_class_hash,
@@ -731,7 +731,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         Address(*ACCOUNT_ADDRESS),
         *EXECUTE_ENTRY_POINT_SELECTOR,
-        0,
+        Default::default(),
         Felt252::ONE,
         vec![
             Felt252::ONE,
@@ -780,7 +780,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         account_address,
         Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
-        0,
+        Default::default(),
         Felt252::ONE,
         vec![
             1.into(),
@@ -834,7 +834,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         account_address,
         Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
-        0,
+        Default::default(),
         Felt252::ONE,
         vec![
             1.into(),
@@ -892,7 +892,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         account_address,
         Felt252::from_bytes_be(&get_selector_from_name("__execute__").unwrap().to_bytes_be()),
-        0,
+        Default::default(),
         Felt252::ONE,
         vec![
             1.into(),
@@ -948,7 +948,7 @@ where
     let tx_execution_info = InvokeFunction::new(
         Address(*ACCOUNT_ADDRESS),
         *EXECUTE_ENTRY_POINT_SELECTOR,
-        0,
+        Default::default(),
         Felt252::ONE,
         vec![
             Felt252::ONE,
