@@ -1839,6 +1839,20 @@ fn expected_deploy_account_states() -> (
         ),
         felt_to_hash(&0x111.into()),
     );
+    // Also set the previous value as initial_value for the class hash written by the deploy
+    // This will be added by update_initial_values_of_write_only_accesses when counting storage changes
+    state_after
+        .cache_mut()
+        .class_hash_initial_values_mut()
+        .insert(
+            Address(
+                Felt252::from_dec_str(
+                    "386181506763903095743576862849245034886954647214831045800703908858571591162",
+                )
+                .unwrap(),
+            ),
+            Felt252::ZERO.into(),
+        );
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),
