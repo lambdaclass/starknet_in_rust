@@ -216,7 +216,7 @@ impl DeployAccount {
 
         let calculated_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
-            &block_context,
+            block_context,
             &tx_execution_context.account_tx_fields.fee_type(),
         )?;
 

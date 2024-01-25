@@ -393,7 +393,7 @@ impl DeclareV2 {
 
         let calculated_fee = calculate_tx_fee(
             &actual_resources,
-            &block_context,
+            block_context,
             &self.account_tx_fields.fee_type(),
         )?;
 
