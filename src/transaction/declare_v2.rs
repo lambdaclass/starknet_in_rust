@@ -379,11 +379,11 @@ impl DeclareV2 {
             ));
         }
 
+        self.handle_nonce(state)?;
+
         if !self.skip_fee_transfer {
             self.check_fee_balance(state, block_context, &FeeType::Eth)?;
         }
-
-        self.handle_nonce(state)?;
 
         let mut resources_manager = ExecutionResourcesManager::default();
 
