@@ -39,10 +39,10 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
 ) -> Result<CallInfo, TransactionError> {
-    if actual_fee > tx_execution_context.max_fee {
+    if actual_fee > tx_execution_context.account_tx_fields.max_fee() {
         return Err(TransactionError::ActualFeeExceedsMaxFee(
             actual_fee,
-            tx_execution_context.max_fee,
+            tx_execution_context.account_tx_fields.max_fee(),
         ));
     }
 

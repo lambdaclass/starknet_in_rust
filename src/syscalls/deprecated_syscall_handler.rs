@@ -272,6 +272,7 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
     use crate::state::StateDiff;
+    use crate::transaction::VersionSpecificAccountTxFields;
     use crate::utils::ClassHash;
     use crate::{
         add_segments, allocate_selector, any_box,
@@ -546,7 +547,7 @@ mod tests {
             n_emitted_events: 50,
             version: 51.into(),
             account_contract_address: Address(260.into()),
-            max_fee: 261,
+            account_tx_fields: VersionSpecificAccountTxFields::new_deprecated(261),
             transaction_hash: 262.into(),
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
@@ -589,7 +590,7 @@ mod tests {
         );
         assert_matches!(
             get_integer(&vm, relocatable!(4, 2)),
-            Ok(field) if field == tx_execution_context.max_fee as usize
+            Ok(field) if field == tx_execution_context.account_tx_fields.max_fee() as usize
         );
         assert_matches!(
             get_integer(&vm, relocatable!(4, 3)),
@@ -879,7 +880,7 @@ mod tests {
             n_emitted_events: 50,
             version: 51.into(),
             account_contract_address: Address(260.into()),
-            max_fee: 261,
+            account_tx_fields: VersionSpecificAccountTxFields::new_deprecated(261),
             transaction_hash: 262.into(),
             signature: vec![300.into(), 301.into()],
             nonce: 263.into(),
@@ -1233,7 +1234,7 @@ mod tests {
             Address(deployed_address),
             Felt252::from_hex("0x283e8c15029ea364bfb37203d91b698bc75838eaddc4f375f1ff83c2d67395c")
                 .unwrap(),
-            0,
+            VersionSpecificAccountTxFields::new_deprecated(0),
             Felt252::ZERO,
             vec![10.into()],
             Vec::new(),

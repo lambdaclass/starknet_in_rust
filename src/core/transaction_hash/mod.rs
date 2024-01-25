@@ -34,6 +34,7 @@ impl TransactionHashPrefix {
     }
 }
 
+// TODO[0.13] Investigate how transaction hashes are calculated for V3 Txs (aka without max_fee)
 /// Calculates the transaction hash in the StarkNet network - a unique identifier of the
 /// transaction.
 /// The transaction hash is a hash chain of the following information:
@@ -96,6 +97,7 @@ pub fn calculate_deploy_transaction_hash(
     )
 }
 
+// TODO[0.13] Investigate how transaction hashes are calculated for V3 Txs (aka without max_fee)
 /// Calculate the hash for deploying an account transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn calculate_deploy_account_transaction_hash(
@@ -157,6 +159,7 @@ pub fn calculate_declare_transaction_hash(
 //      V2 Hash Functions
 // ----------------------------
 
+// TODO[0.13] Investigate how transaction hashes are calculated for V3 Txs (aka without max_fee)
 pub fn calculate_declare_v2_transaction_hash(
     sierra_class_hash: Felt252,
     compiled_class_hash: Felt252,

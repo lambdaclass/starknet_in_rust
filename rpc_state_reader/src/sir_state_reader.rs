@@ -29,6 +29,7 @@ use starknet_in_rust::{
     },
     transaction::{
         error::TransactionError, Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler,
+        VersionSpecificAccountTxFields,
     },
     utils::{Address, ClassHash},
 };
@@ -270,14 +271,15 @@ pub fn execute_tx_configurable_with_state(
                     Address(Felt252::from_bytes_be_slice(
                         tx.sender_address().0.key().bytes(),
                     )),
-                    match tx {
+                    // TODO[0.13] Properly convert between V3 tx fields
+                    VersionSpecificAccountTxFields::new_deprecated(match tx {
                         starknet_api::transaction::DeclareTransaction::V0(ref tx) => tx.max_fee.0,
                         starknet_api::transaction::DeclareTransaction::V1(ref tx) => tx.max_fee.0,
                         starknet_api::transaction::DeclareTransaction::V2(ref tx) => tx.max_fee.0,
                         starknet_api::transaction::DeclareTransaction::V3(_) => {
                             return Err(TransactionError::UnsuportedV3Transaction)
                         }
-                    },
+                    }),
                     Felt252::from_bytes_be_slice(tx.version().0.bytes()),
                     tx.signature()
                         .0

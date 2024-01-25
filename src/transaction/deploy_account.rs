@@ -1,5 +1,7 @@
 use super::fee::{calculate_tx_fee, charge_fee};
-use super::get_tx_version;
+use super::{
+    check_account_tx_fields_version, get_tx_version, ResourceBounds, VersionSpecificAccountTxFields,
+};
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
@@ -37,14 +39,12 @@ use crate::{
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
-    syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address, ClassHash},
 };
 use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
-use starknet_api::transaction::Fee;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
@@ -74,7 +74,7 @@ pub struct DeployAccount {
     constructor_calldata: Vec<Felt252>,
     version: Felt252,
     nonce: Felt252,
-    max_fee: u128,
+    account_tx_fields: VersionSpecificAccountTxFields,
     #[getset(get = "pub")]
     hash_value: Felt252,
     #[getset(get = "pub")]
@@ -90,15 +90,16 @@ impl DeployAccount {
     /// Constructor create a new DeployAccount.
     pub fn new(
         class_hash: ClassHash,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         nonce: Felt252,
         constructor_calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         contract_address_salt: Felt252,
         chain_id: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
+        check_account_tx_fields_version(&account_tx_fields, version)?;
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash.0),
@@ -111,7 +112,7 @@ impl DeployAccount {
             &contract_address,
             Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
-            max_fee,
+            account_tx_fields.max_fee(),
             nonce,
             contract_address_salt,
             chain_id,
@@ -124,7 +125,7 @@ impl DeployAccount {
             constructor_calldata,
             version,
             nonce,
-            max_fee,
+            account_tx_fields,
             hash_value,
             signature,
             skip_execute: false,
@@ -138,15 +139,16 @@ impl DeployAccount {
     /// Creates a new L1Handler instance with a specified transaction hash.
     pub fn new_with_tx_hash(
         class_hash: ClassHash,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         nonce: Felt252,
         constructor_calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         contract_address_salt: Felt252,
         hash_value: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
+        check_account_tx_fields_version(&account_tx_fields, version)?;
         let contract_address = Address(calculate_contract_address(
             &contract_address_salt,
             &Felt252::from_bytes_be(&class_hash.0),
@@ -161,7 +163,7 @@ impl DeployAccount {
             constructor_calldata,
             version,
             nonce,
-            max_fee,
+            account_tx_fields,
             hash_value,
             signature,
             skip_execute: false,
@@ -242,12 +244,13 @@ impl DeployAccount {
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if actual_fee > self.max_fee {
+        } else if actual_fee > self.account_tx_fields.max_fee() {
             // max_fee exceeded
             tx_exec_info = tx_exec_info.to_revert_error(
                 format!(
                     "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee, self.max_fee
+                    actual_fee,
+                    self.account_tx_fields.max_fee()
                 )
                 .as_str(),
             );
@@ -262,7 +265,7 @@ impl DeployAccount {
             state,
             &tx_exec_info.actual_resources,
             block_context,
-            self.max_fee,
+            self.account_tx_fields.max_fee(),
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -407,21 +410,24 @@ impl DeployAccount {
         block_context: &BlockContext,
         fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
-        if self.max_fee.is_zero() {
+        if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
         let minimal_fee = self.estimate_minimal_fee(block_context)?;
         // Check max fee is at least the estimated constant overhead.
-        if self.max_fee < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        if self.account_tx_fields.max_fee() < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(
+                self.account_tx_fields.max_fee(),
+                minimal_fee,
+            ));
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
             state.get_fee_token_balance(block_context, self.contract_address(), fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+        if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(
-                self.max_fee,
+                self.account_tx_fields.max_fee(),
                 balance_low,
                 balance_high,
             ));
@@ -492,7 +498,7 @@ impl DeployAccount {
             self.contract_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            self.max_fee,
+            self.account_tx_fields.clone(),
             self.nonce,
             n_steps,
             self.version,
@@ -581,10 +587,19 @@ impl DeployAccount {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            max_fee: if ignore_max_fee {
-                u128::MAX
+            account_tx_fields: if ignore_max_fee {
+                if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
+                    let mut current_fields = current.clone();
+                    current_fields.l1_resource_bounds = Some(ResourceBounds {
+                        max_amount: u64::MAX,
+                        max_price_per_unit: u128::MAX,
+                    });
+                    VersionSpecificAccountTxFields::Current(current_fields)
+                } else {
+                    VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
+                }
             } else {
-                self.max_fee
+                self.account_tx_fields.clone()
             },
             skip_nonce_check,
             ..self.clone()
@@ -596,13 +611,11 @@ impl DeployAccount {
     pub fn from_sn_api_transaction(
         value: starknet_api::transaction::DeployAccountTransaction,
         tx_hash: Felt252,
-    ) -> Result<Self, SyscallHandlerError> {
+    ) -> Result<Self, TransactionError> {
         let max_fee = match value {
             starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
             starknet_api::transaction::DeployAccountTransaction::V3(_) => {
-                return Err(SyscallHandlerError::CustomError(
-                    "V3 Transactions Not Supported Yet".to_string(),
-                ))
+                return Err(TransactionError::UnsuportedV3Transaction)
             }
         };
         let version = Felt252::from_bytes_be_slice(value.version().0.bytes());
@@ -627,63 +640,14 @@ impl DeployAccount {
 
         DeployAccount::new_with_tx_hash(
             class_hash,
-            max_fee.0,
+            // TODO[0.13] Properly convert between V3 tx fields
+            VersionSpecificAccountTxFields::Deprecated(max_fee.0),
             version,
             nonce,
             constructor_calldata,
             signature,
             contract_address_salt,
             tx_hash,
-        )
-    }
-}
-
-// ----------------------------------
-//      Try from starknet api
-// ----------------------------------
-
-impl TryFrom<starknet_api::transaction::DeployAccountTransaction> for DeployAccount {
-    type Error = SyscallHandlerError;
-
-    fn try_from(
-        value: starknet_api::transaction::DeployAccountTransaction,
-    ) -> Result<Self, SyscallHandlerError> {
-        let max_fee = match value {
-            starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
-            // TODO: check this
-            starknet_api::transaction::DeployAccountTransaction::V3(_) => Fee(0),
-        };
-        let version = Felt252::from_bytes_be_slice(value.version().0.bytes());
-        let nonce = Felt252::from_bytes_be_slice(value.nonce().0.bytes());
-        let class_hash: ClassHash = ClassHash(value.class_hash().0.bytes().try_into().unwrap());
-        let contract_address_salt =
-            Felt252::from_bytes_be_slice(value.contract_address_salt().0.bytes());
-
-        let signature = value
-            .signature()
-            .0
-            .iter()
-            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-            .collect();
-        let constructor_calldata = value
-            .constructor_calldata()
-            .0
-            .as_ref()
-            .iter()
-            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-            .collect();
-
-        let chain_id = Felt252::ZERO;
-
-        DeployAccount::new(
-            class_hash,
-            max_fee.0,
-            version,
-            nonce,
-            constructor_calldata,
-            signature,
-            contract_address_salt,
-            chain_id,
         )
     }
 }
@@ -717,7 +681,7 @@ mod tests {
 
         let internal_deploy = DeployAccount::new(
             class_hash,
-            0,
+            Default::default(),
             0.into(),
             0.into(),
             vec![10.into()],
@@ -752,7 +716,7 @@ mod tests {
 
         let internal_deploy = DeployAccount::new(
             class_hash,
-            0,
+            Default::default(),
             1.into(),
             0.into(),
             vec![],
@@ -764,7 +728,7 @@ mod tests {
 
         let internal_deploy_error = DeployAccount::new(
             class_hash,
-            0,
+            Default::default(),
             1.into(),
             1.into(),
             vec![],
@@ -817,7 +781,7 @@ mod tests {
 
         let internal_deploy = DeployAccount::new(
             class_hash,
-            0,
+            Default::default(),
             0.into(),
             0.into(),
             Vec::new(),
@@ -848,7 +812,7 @@ mod tests {
         // declare tx
         let internal_declare = DeployAccount::new(
             ClassHash([2; 32]),
-            9000,
+            VersionSpecificAccountTxFields::new_deprecated(9000),
             2.into(),
             Felt252::ZERO,
             vec![],

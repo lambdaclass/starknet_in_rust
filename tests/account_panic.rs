@@ -102,7 +102,7 @@ fn account_panic() {
     let invoke = InvokeFunction::new(
         account_address,
         selector,
-        0,
+        Default::default(),
         *TRANSACTION_VERSION,
         calldata,
         vec![],

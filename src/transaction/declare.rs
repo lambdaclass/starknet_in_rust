@@ -244,7 +244,7 @@ impl Declare {
             self.sender_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            self.max_fee,
+            super::VersionSpecificAccountTxFields::new_deprecated(self.max_fee),
             self.nonce,
             n_steps,
             self.version,
