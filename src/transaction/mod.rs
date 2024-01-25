@@ -267,7 +267,7 @@ impl VersionSpecificAccountTxFields {
         }
     }
 
-    pub fn max_fee_for_execution_info(&self) -> u128 {
+    pub(crate) fn max_fee_for_execution_info(&self) -> u128 {
         match self {
             Self::Deprecated(max_fee) => *max_fee,
             Self::Current(_) => 0,
