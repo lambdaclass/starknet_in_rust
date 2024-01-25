@@ -268,8 +268,8 @@ pub(crate) fn run_post_execution_fee_checks<S: StateReader, C: ContractClassCach
     )
 }
 
-// Checks that the cost of the transaction (Measured l1_gas in V3 Txs, and by fee in lower Tx versions) is within the bounds of the transaction
-pub fn check_actual_cost_within_bounds(
+// Checks that the cost of the transaction (Measured by l1_gas in V3 Txs, and by fee in lower Tx versions) is within the bounds of the transaction
+fn check_actual_cost_within_bounds(
     block_context: &BlockContext,
     account_tx_fields: &VersionSpecificAccountTxFields,
     actual_fee: u128,
@@ -295,7 +295,8 @@ pub fn check_actual_cost_within_bounds(
     Ok(())
 }
 
-pub fn check_can_pay_fee<S: StateReader, C: ContractClassCache>(
+// Checks that the account's fee token balance is high enough to cover the actual_fee
+fn check_can_pay_fee<S: StateReader, C: ContractClassCache>(
     block_context: &BlockContext,
     state: &mut CachedState<S, C>,
     sender_address: &Address,
