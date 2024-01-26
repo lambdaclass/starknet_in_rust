@@ -201,7 +201,7 @@ impl DeployAccount {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeployAccount".to_string(),
                 self.version,
-                vec![1],
+                vec![1, 3],
             ));
         }
 

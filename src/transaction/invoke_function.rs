@@ -383,7 +383,7 @@ impl InvokeFunction {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Invoke".to_string(),
                 self.version,
-                vec![0, 1],
+                vec![0, 1, 3],
             ));
         }
 
