@@ -37,10 +37,19 @@ fn test_erc20_cairo2() {
     let nonce = Felt252::ZERO;
 
     contract_class_cache.extend([
-        (class_hash, CompiledClass::Casm(Arc::new(contract_class))),
+        (
+            class_hash,
+            CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        ),
         (
             erc20_class_hash,
-            CompiledClass::Casm(Arc::new(test_contract_class)),
+            CompiledClass::Casm {
+                casm: Arc::new(test_contract_class),
+                sierra: None,
+            },
         ),
     ]);
 
@@ -96,7 +105,7 @@ fn test_erc20_cairo2() {
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         1.into(),
@@ -125,8 +134,11 @@ fn test_erc20_cairo2() {
 
     state
         .set_contract_class(
-            &ClassHash::from(Felt252::from_dec_str("1").unwrap()),
-            &CompiledClass::Casm(Arc::new(contract_class_account)),
+            &ClassHash::from(Felt252::ONE),
+            &CompiledClass::Casm {
+                casm: Arc::new(contract_class_account),
+                sierra: None,
+            },
         )
         .unwrap();
     state
@@ -143,7 +155,7 @@ fn test_erc20_cairo2() {
 
     let internal_deploy_account = DeployAccount::new(
         ClassHash::from(Felt252::from_dec_str("1").unwrap()),
-        0,
+        Default::default(),
         1.into(),
         Felt252::ZERO,
         vec![2.into()],
@@ -182,8 +194,11 @@ fn test_erc20_cairo2() {
 
     state
         .set_contract_class(
-            &ClassHash::from(Felt252::from_dec_str("1").unwrap()),
-            &CompiledClass::Casm(Arc::new(contract_class_account)),
+            &ClassHash::from(Felt252::ONE),
+            &CompiledClass::Casm {
+                casm: Arc::new(contract_class_account),
+                sierra: None,
+            },
         )
         .unwrap();
     state
@@ -197,7 +212,7 @@ fn test_erc20_cairo2() {
 
     let internal_deploy_account = DeployAccount::new(
         ClassHash::from(Felt252::from_dec_str("1").unwrap()),
-        0,
+        Default::default(),
         1.into(),
         Felt252::ZERO,
         vec![2.into()],

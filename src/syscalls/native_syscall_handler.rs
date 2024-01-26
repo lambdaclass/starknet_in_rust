@@ -1,39 +1,36 @@
-use crate::ContractClassCache;
-use std::{cell::RefCell, rc::Rc};
-
+use crate::VersionSpecificAccountTxFields;
+use crate::{
+    core::errors::state_errors::StateError,
+    definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    execution::{
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
+        TransactionExecutionContext,
+    },
+    hash_utils::calculate_contract_address,
+    services::api::{
+        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+    },
+    state::{
+        contract_storage_state::ContractStorageState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
+    syscalls::{
+        business_logic_syscall_handler::{KECCAK_ROUND_COST, SYSCALL_BASE, SYSCALL_GAS_COST},
+        syscall_handler_errors::SyscallHandlerError,
+    },
+    transaction::error::TransactionError,
+    utils::{felt_to_hash, Address, ClassHash},
+    ContractClassCache, EntryPointType,
+};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
 };
 use cairo_vm::Felt252;
 use starknet::core::utils::cairo_short_string_to_felt;
-
-use crate::definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR;
-use crate::execution::CallResult;
-use crate::hash_utils::calculate_contract_address;
-use crate::services::api::contract_class_errors::ContractClassError;
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::state::state_api::State;
-use crate::syscalls::business_logic_syscall_handler::KECCAK_ROUND_COST;
-use crate::utils::felt_to_hash;
-use crate::utils::ClassHash;
-use crate::{
-    core::errors::state_errors::StateError,
-    definitions::block_context::BlockContext,
-    execution::{
-        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
-        CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
-    },
-    state::{
-        contract_storage_state::ContractStorageState, state_api::StateReader,
-        ExecutionResourcesManager,
-    },
-    syscalls::business_logic_syscall_handler::{SYSCALL_BASE, SYSCALL_GAS_COST},
-    syscalls::syscall_handler_errors::SyscallHandlerError,
-    transaction::error::TransactionError,
-    utils::Address,
-    EntryPointType,
-};
+use std::{cell::RefCell, rc::Rc};
 
 #[derive(Debug)]
 pub struct NativeSyscallHandler<'a, 'cache, S, C>
@@ -125,7 +122,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             tx_info: TxInfo {
                 version: self.tx_execution_context.version,
                 account_contract_address: self.tx_execution_context.account_contract_address.0,
-                max_fee: self.tx_execution_context.max_fee,
+                max_fee: self.tx_execution_context.account_tx_fields.max_fee(),
                 signature: self.tx_execution_context.signature.clone(),
                 transaction_hash: self.tx_execution_context.transaction_hash,
                 chain_id: self.block_context.starknet_os_config.chain_id,
@@ -303,7 +300,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             address,
             calldata.to_vec(),
             entrypoint_selector,
-            self.caller_address.clone(),
+            self.contract_address.clone(),
             EntryPointType::External,
             Some(CallType::Call),
             None,
@@ -356,8 +353,9 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             Err(_) => Ok(Felt252::ZERO),
         };
 
-        tracing::debug!(" = {value:?}` from Cairo Native");
-
+        tracing::debug!(
+            "Called `storage_read({address_domain}, {address}) = {value:?}` from Cairo Native"
+        );
         value
     }
 
@@ -580,7 +578,13 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     }
 
     fn set_max_fee(&mut self, max_fee: u128) {
-        self.tx_execution_context.max_fee = max_fee;
+        if matches!(
+            self.tx_execution_context.account_tx_fields,
+            VersionSpecificAccountTxFields::Deprecated(_)
+        ) {
+            self.tx_execution_context.account_tx_fields =
+                VersionSpecificAccountTxFields::new_deprecated(max_fee)
+        };
     }
 
     fn set_nonce(&mut self, nonce: Felt252) {
@@ -679,17 +683,16 @@ where
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
-        match contract_class {
-            CompiledClass::Deprecated(class) => Ok(class
+        Ok(match contract_class {
+            CompiledClass::Deprecated(class) => class
                 .entry_points_by_type
                 .get(&EntryPointType::Constructor)
                 .ok_or(ContractClassError::NoneEntryPointType)?
-                .is_empty()),
-            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(sierra_program_and_entrypoints) => {
-                Ok(sierra_program_and_entrypoints.1.constructor.is_empty())
+                .is_empty(),
+            CompiledClass::Casm { casm: class, .. } => {
+                class.entry_points_by_type.constructor.is_empty()
             }
-        }
+        })
     }
 }
 

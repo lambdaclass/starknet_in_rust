@@ -32,7 +32,6 @@ pub(crate) trait HintProcessorPostRun {
     ) -> Result<(), TransactionError>;
 }
 
-#[allow(unused)]
 pub(crate) struct SyscallHintProcessor<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
     pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S, C>,

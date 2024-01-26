@@ -30,6 +30,7 @@ use starknet_in_rust::{
         state_api::State,
         ExecutionResourcesManager,
     },
+    transaction::VersionSpecificAccountTxFields,
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
     EntryPointType,
 };
@@ -72,7 +73,6 @@ fn test_contract<'a>(
     let mut tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
-            10,
             0.into(),
             block_context.invoke_tx_max_n_steps(),
             *TRANSACTION_VERSION,
@@ -515,7 +515,7 @@ fn get_tx_info_syscall() {
                 account_contract_address.clone(),
                 transaction_hash,
                 signature.clone(),
-                max_fee,
+                VersionSpecificAccountTxFields::new_deprecated(max_fee),
                 3.into(),
                 n_steps,
                 version,
@@ -647,7 +647,7 @@ fn get_tx_signature_syscall() {
                 Address::default(),
                 0.into(),
                 signature.clone(),
-                12,
+                VersionSpecificAccountTxFields::new_deprecated(12),
                 3.into(),
                 n_steps,
                 0.into(),
@@ -1150,7 +1150,10 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
     // simulate contract declare
     contract_class_cache.set_contract_class(
         test_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(test_contract_class.clone()),
+            sierra: None,
+        },
     );
     contract_class_cache.set_contract_class(
         class_hash,
@@ -1193,7 +1196,7 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,
@@ -1222,9 +1225,8 @@ fn deploy_cairo1_from_cairo0_with_constructor() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => class.as_ref().clone(),
+        CompiledClass::Casm { casm: class, .. } => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1258,7 +1260,10 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
     // simulate contract declare
     contract_class_cache.set_contract_class(
         test_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(test_contract_class.clone()),
+            sierra: None,
+        },
     );
     contract_class_cache.set_contract_class(
         class_hash,
@@ -1301,7 +1306,7 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,
@@ -1332,9 +1337,8 @@ fn deploy_cairo1_from_cairo0_without_constructor() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => class.as_ref().clone(),
+        CompiledClass::Casm { casm: class, .. } => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1368,7 +1372,10 @@ fn deploy_cairo1_and_invoke() {
     // simulate contract declare
     contract_class_cache.set_contract_class(
         test_class_hash,
-        CompiledClass::Casm(Arc::new(test_contract_class.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(test_contract_class.clone()),
+            sierra: None,
+        },
     );
     contract_class_cache.set_contract_class(
         class_hash,
@@ -1411,7 +1418,7 @@ fn deploy_cairo1_and_invoke() {
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,
@@ -1440,9 +1447,8 @@ fn deploy_cairo1_and_invoke() {
 
     let ret_class_hash = state.get_class_hash_at(&ret_address).unwrap();
     let ret_casm_class = match state.get_contract_class(&ret_class_hash).unwrap() {
-        CompiledClass::Casm(class) => class.as_ref().clone(),
+        CompiledClass::Casm { casm: class, .. } => class.as_ref().clone(),
         CompiledClass::Deprecated(_) => unreachable!(),
-        CompiledClass::Sierra(_) => unreachable!(),
     };
 
     assert_eq!(ret_casm_class, test_contract_class);
@@ -1556,7 +1562,7 @@ fn send_messages_to_l1_different_contract_calls() {
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,

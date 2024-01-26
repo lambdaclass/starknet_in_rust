@@ -56,7 +56,7 @@ fn internal_deploy_account() {
 
     let internal_deploy_account = DeployAccount::new(
         class_hash,
-        0,
+        Default::default(),
         1.into(),
         Felt252::ZERO,
         vec![],
@@ -151,7 +151,10 @@ fn internal_deploy_account_cairo1() {
     state
         .set_contract_class(
             &ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_bytes_be()),
-            &CompiledClass::Casm(Arc::new(contract_class)),
+            &CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
         )
         .unwrap();
     state
@@ -168,7 +171,7 @@ fn internal_deploy_account_cairo1() {
 
     let internal_deploy_account = DeployAccount::new(
         ClassHash(TEST_ACCOUNT_COMPILED_CONTRACT_CLASS_HASH.to_bytes_be()),
-        0,
+        Default::default(),
         1.into(),
         Felt252::ZERO,
         vec![2.into()],

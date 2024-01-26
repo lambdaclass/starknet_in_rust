@@ -13,7 +13,7 @@ use starknet_in_rust::{
     state::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
     },
-    transaction::InvokeFunction,
+    transaction::{InvokeFunction, VersionSpecificAccountTxFields},
     utils::{Address, ClassHash},
 };
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
@@ -57,7 +57,7 @@ fn main() {
         InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
             *INCREASE_BALANCE_SELECTOR,
-            2,
+            VersionSpecificAccountTxFields::new_deprecated(2),
             *TRANSACTION_VERSION,
             vec![1000.into()],
             vec![],
@@ -77,7 +77,7 @@ fn main() {
         let tx_exec_info = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
             *GET_BALANCE_SELECTOR,
-            2,
+            VersionSpecificAccountTxFields::new_deprecated(2),
             *TRANSACTION_VERSION,
             vec![],
             vec![],
@@ -132,8 +132,8 @@ pub fn new_starknet_block_context_for_testing() -> BlockContext {
     BlockContext::new(
         StarknetOsConfig::new(
             StarknetChainId::TestNet.to_felt(),
-            Address(Felt252::ZERO),
-            0,
+            Default::default(),
+            Default::default(),
         ),
         0,
         0,

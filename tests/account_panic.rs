@@ -41,11 +41,17 @@ fn account_panic() {
 
     contract_class_cache.set_contract_class(
         account_class_hash,
-        CompiledClass::Casm(Arc::new(account_contract_class)),
+        CompiledClass::Casm {
+            casm: Arc::new(account_contract_class),
+            sierra: None,
+        },
     );
     contract_class_cache.set_contract_class(
         contract_class_hash,
-        CompiledClass::Casm(Arc::new(contract_class.clone())),
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class.clone()),
+            sierra: None,
+        },
     );
 
     let mut state_reader = InMemoryStateReader::default();
@@ -96,7 +102,7 @@ fn account_panic() {
     let invoke = InvokeFunction::new(
         account_address,
         selector,
-        0,
+        Default::default(),
         *TRANSACTION_VERSION,
         calldata,
         vec![],

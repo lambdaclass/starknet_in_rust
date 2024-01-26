@@ -5,14 +5,13 @@ use starknet_api::{
     block::BlockNumber,
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
     hash::{StarkFelt, StarkHash},
-    stark_felt,
     state::StorageKey,
     transaction::{Transaction as SNTransaction, TransactionHash, TransactionVersion},
 };
 use starknet_in_rust::{
     core::{contract_address::compute_casm_class_hash, errors::state_errors::StateError},
     definitions::{
-        block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+        block_context::{BlockContext, FeeTokenAddresses, StarknetChainId, StarknetOsConfig},
         constants::{
             DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, DEFAULT_CONTRACT_STORAGE_COMMITMENT_TREE_HEIGHT,
             DEFAULT_GLOBAL_STATE_COMMITMENT_TREE_HEIGHT, DEFAULT_INVOKE_TX_MAX_N_STEPS,
@@ -30,6 +29,7 @@ use starknet_in_rust::{
     },
     transaction::{
         error::TransactionError, Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler,
+        VersionSpecificAccountTxFields,
     },
     utils::{Address, ClassHash},
 };
@@ -118,7 +118,8 @@ pub fn execute_tx_configurable(
     let rpc_reader = RpcStateReader(RpcState::new_rpc(network, block_number.into()).unwrap());
     let class_cache = PermanentContractClassCache::default();
     let mut state = CachedState::new(Arc::new(rpc_reader), Arc::new(class_cache));
-    let tx_hash = TransactionHash(stark_felt!(tx_hash.strip_prefix("0x").unwrap()));
+    let tx_hash =
+        TransactionHash(StarkFelt::try_from(tx_hash.strip_prefix("0x").unwrap()).unwrap());
     let tx = state.state_reader.0.get_transaction(&tx_hash).unwrap();
     let gas_price = state.state_reader.0.get_gas_price(block_number.0).unwrap();
     let RpcBlockInfo {
@@ -166,9 +167,12 @@ pub fn execute_tx_configurable_with_state(
     skip_nonce_check: bool,
     state: &mut CachedState<RpcStateReader, PermanentContractClassCache>,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
-    let fee_token_address = Address(
-        Felt252::from_hex("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
-            .unwrap(),
+    let fee_token_address = FeeTokenAddresses::new(
+        Address(
+            Felt252::from_hex("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")
+                .unwrap(),
+        ),
+        Address::default(),
     );
 
     // Get values for block context before giving ownership of the reader
@@ -177,8 +181,11 @@ pub fn execute_tx_configurable_with_state(
         RpcChain::TestNet => StarknetChainId::TestNet,
         RpcChain::TestNet2 => StarknetChainId::TestNet2,
     };
-    let starknet_os_config =
-        StarknetOsConfig::new(chain_id.to_felt(), fee_token_address, block_info.gas_price);
+    let starknet_os_config = StarknetOsConfig::new(
+        chain_id.to_felt(),
+        fee_token_address,
+        block_info.gas_price.clone(),
+    );
 
     // Get transaction before giving ownership of the reader
     let tx = match tx {
@@ -228,7 +235,14 @@ pub fn execute_tx_configurable_with_state(
                     Address(Felt252::from_bytes_be_slice(
                         tx.sender_address().0.key().bytes(),
                     )),
-                    tx.max_fee().0,
+                    match tx {
+                        starknet_api::transaction::DeclareTransaction::V0(ref tx) => tx.max_fee.0,
+                        starknet_api::transaction::DeclareTransaction::V1(ref tx) => tx.max_fee.0,
+                        starknet_api::transaction::DeclareTransaction::V2(ref tx) => tx.max_fee.0,
+                        starknet_api::transaction::DeclareTransaction::V3(_) => {
+                            return Err(TransactionError::UnsuportedV3Transaction)
+                        }
+                    },
                     Felt252::from_bytes_be_slice(tx.version().0.bytes()),
                     tx.signature()
                         .0
@@ -243,7 +257,7 @@ pub fn execute_tx_configurable_with_state(
                 declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
             } else {
                 let contract_class = match contract_class {
-                    CompiledClass::Casm(cc) => cc.as_ref().clone(),
+                    CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
                     _ => unreachable!(),
                 };
 
@@ -257,7 +271,15 @@ pub fn execute_tx_configurable_with_state(
                     Address(Felt252::from_bytes_be_slice(
                         tx.sender_address().0.key().bytes(),
                     )),
-                    tx.max_fee().0,
+                    // TODO[0.13] Properly convert between V3 tx fields
+                    VersionSpecificAccountTxFields::new_deprecated(match tx {
+                        starknet_api::transaction::DeclareTransaction::V0(ref tx) => tx.max_fee.0,
+                        starknet_api::transaction::DeclareTransaction::V1(ref tx) => tx.max_fee.0,
+                        starknet_api::transaction::DeclareTransaction::V2(ref tx) => tx.max_fee.0,
+                        starknet_api::transaction::DeclareTransaction::V3(_) => {
+                            return Err(TransactionError::UnsuportedV3Transaction)
+                        }
+                    }),
                     Felt252::from_bytes_be_slice(tx.version().0.bytes()),
                     tx.signature()
                         .0

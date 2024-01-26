@@ -54,9 +54,11 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
+    // TODO: If this test won't run unless `cairo-native` is active, why not gate the entire bench
+    //   behind `#[cfg(feature = "cairo-native")]`?
     #[cfg(feature = "cairo-native")]
     {
-        let program_cache = Rc::new(RefCell::new(ProgramCache::from(JitProgramCache::new(
+        let program_cache = Rc::new(RefCell::new(ProgramCache::Jit(JitProgramCache::new(
             starknet_in_rust::utils::get_native_context(),
         ))));
 
@@ -100,7 +102,7 @@ pub fn deploy_account(
             // new consumes more execution time than raw struct instantiation
             let internal_deploy_account = DeployAccount::new(
                 class_hash,
-                0,
+                Default::default(),
                 1.into(),
                 Felt252::ZERO,
                 vec![],
@@ -266,7 +268,7 @@ pub fn invoke(
             let internal_invoke = InvokeFunction::new(
                 address,
                 selector,
-                0,
+                Default::default(),
                 *TRANSACTION_VERSION,
                 calldata,
                 signature,

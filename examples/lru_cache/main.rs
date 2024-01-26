@@ -97,7 +97,7 @@ fn run_contract(
     let invoke_tx = InvokeFunction::new(
         deploy_tx.contract_address.clone(),
         entry_point_selector,
-        0,
+        Default::default(),
         *TRANSACTION_VERSION,
         calldata.into(),
         signature,

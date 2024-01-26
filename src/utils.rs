@@ -18,7 +18,7 @@ use core::fmt;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sha3::{Digest, Keccak256};
+use sha3::{Digest, Keccak256, Keccak256Core};
 use starknet::core::types::FromByteArrayError;
 use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
 use starknet_crypto::{pedersen_hash, FieldElement};
@@ -453,7 +453,7 @@ pub(crate) fn verify_no_calls_to_other_contracts(
     Ok(())
 }
 pub fn calculate_sn_keccak(data: &[u8]) -> [u8; 32] {
-    let mut hasher = Keccak256::default();
+    let mut hasher = Keccak256::from_core(Keccak256Core::default());
     hasher.update(data);
     let mut result: [u8; 32] = hasher.finalize().into();
     // Only the first 250 bits from the hash are used.
@@ -508,11 +508,12 @@ pub fn parse_felt_array(felt_strings: &[Value]) -> Vec<Felt252> {
 #[cfg(test)]
 #[macro_use]
 pub mod test_utils {
-    #![allow(unused_imports)]
-
+    use super::felt_to_hash;
     use crate::{
         definitions::{
-            block_context::{BlockContext, StarknetChainId, StarknetOsConfig},
+            block_context::{
+                BlockContext, FeeTokenAddresses, GasPrices, StarknetChainId, StarknetOsConfig,
+            },
             constants::DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS,
         },
         services::api::contract_classes::{
@@ -525,10 +526,7 @@ pub mod test_utils {
         utils::Address,
     };
     use cairo_vm::Felt252;
-    use num_traits::Zero;
     use std::{collections::HashMap, sync::Arc};
-
-    use super::{felt_to_hash, ClassHash};
 
     #[macro_export]
     macro_rules! any_box {
@@ -536,7 +534,6 @@ pub mod test_utils {
             Box::new($val) as Box<dyn Any>
         };
     }
-
     pub(crate) use any_box;
 
     macro_rules! references {
@@ -556,7 +553,6 @@ pub mod test_utils {
             references
         }};
     }
-
     pub(crate) use references;
 
     macro_rules! ids_data {
@@ -617,7 +613,6 @@ pub mod test_utils {
             $vm.insert_value(k, v).unwrap();
         };
     }
-    pub(crate) use allocate_values;
 
     #[macro_export]
     macro_rules! allocate_selector {
@@ -627,7 +622,6 @@ pub mod test_utils {
             $vm.insert_value(k, v).unwrap();
         };
     }
-    pub(crate) use allocate_selector;
 
     #[macro_export]
     macro_rules! relocatable_value {
@@ -638,7 +632,6 @@ pub mod test_utils {
             }
         };
     }
-    pub(crate) use relocatable_value;
 
     #[macro_export]
     macro_rules! exec_scopes_ref {
@@ -713,7 +706,6 @@ pub mod test_utils {
             )
         }};
     }
-    pub(crate) use run_syscall_hint;
 
     pub(crate) const ACCOUNT_CONTRACT_PATH: &str =
         "starknet_programs/account_without_validation.json";
@@ -728,6 +720,9 @@ pub mod test_utils {
         Address(Felt252::from_dec_str("4096").unwrap());
         pub(crate) static ref TEST_ERC20_CONTRACT_ADDRESS: Address =
         Address(Felt252::from_dec_str("4097").unwrap());
+        pub(crate) static ref TEST_STRK_CONTRACT_ADDRESS: Address =
+        Address(Felt252::from_dec_str("4097").unwrap());
+        pub(crate) static ref TEST_FEE_TOKEN_ADDRESSES : FeeTokenAddresses = FeeTokenAddresses::new(TEST_ERC20_CONTRACT_ADDRESS.clone(), TEST_STRK_CONTRACT_ADDRESS.clone());
 
 
         // Class hashes.
@@ -759,8 +754,8 @@ pub mod test_utils {
         BlockContext::new(
             StarknetOsConfig::new(
                 StarknetChainId::TestNet.to_felt(),
-                TEST_ERC20_CONTRACT_ADDRESS.clone(),
-                1,
+                TEST_FEE_TOKEN_ADDRESSES.clone(),
+                GasPrices::new(1, 1),
             ),
             0,
             0,
@@ -806,6 +801,7 @@ pub mod test_utils {
         let test_erc20_address = block_context
             .starknet_os_config()
             .fee_token_address()
+            .eth_fee_token_address
             .clone();
         let address_to_class_hash = HashMap::from([
             (test_contract_address, test_contract_class_hash),

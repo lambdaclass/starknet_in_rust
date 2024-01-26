@@ -122,7 +122,7 @@ pub fn execute_entry_point(
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         call_config.block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,

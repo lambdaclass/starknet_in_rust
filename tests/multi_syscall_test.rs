@@ -32,8 +32,13 @@ fn test_multiple_syscall() {
     let class_hash: ClassHash = ClassHash([1; 32]);
     let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -239,7 +244,7 @@ fn test_syscall(
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,

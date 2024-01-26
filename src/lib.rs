@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 #![forbid(unsafe_code)]
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
@@ -18,7 +18,9 @@ use crate::{
     utils::Address,
 };
 pub use cairo_vm::Felt252;
+use definitions::block_context::FeeType;
 use std::sync::Arc;
+use transaction::VersionSpecificAccountTxFields;
 
 #[cfg(test)]
 #[macro_use]
@@ -170,7 +172,7 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
         contract_address,
         transaction_hash,
         signature,
-        max_fee,
+        VersionSpecificAccountTxFields::new_deprecated(max_fee),
         nonce,
         block_context.invoke_tx_max_n_steps(),
         version.into(),
@@ -217,8 +219,8 @@ where
     )?;
     let tx_fee = calculate_tx_fee(
         &transaction_result.actual_resources,
-        block_context.starknet_os_config.gas_price,
         block_context,
+        &FeeType::Eth,
     )?;
     if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
         Ok((tx_fee, *gas_usage))
@@ -251,7 +253,7 @@ mod test {
         call_contract,
         core::contract_address::{compute_deprecated_class_hash, compute_sierra_class_hash},
         definitions::{
-            block_context::{BlockContext, StarknetChainId},
+            block_context::{BlockContext, GasPrices, StarknetChainId},
             constants::{
                 EXECUTE_ENTRY_POINT_SELECTOR, INITIAL_GAS_COST,
                 VALIDATE_DECLARE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR,
@@ -260,8 +262,7 @@ mod test {
         estimate_fee, estimate_message_fee,
         hash_utils::calculate_contract_address,
         services::api::contract_classes::{
-            compiled_class::CompiledClass,
-            deprecated_contract_class::{ContractClass, EntryPointType},
+            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
         simulate_transaction,
         state::{
@@ -273,12 +274,13 @@ mod test {
         },
         transaction::{
             Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
+            VersionSpecificAccountTxFields,
         },
         utils::{
             felt_to_hash,
             test_utils::{
-                create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS, TEST_CONTRACT_ADDRESS,
-                TEST_CONTRACT_PATH, TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
+                create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS,
+                TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
             },
             Address, ClassHash,
         },
@@ -315,19 +317,14 @@ mod test {
 
     #[test]
     fn estimate_fee_test() {
-        let contract_class: ContractClass = ContractClass::from_path(TEST_CONTRACT_PATH).unwrap();
-
-        let entrypoints = contract_class.entry_points_by_type;
-        let entrypoint_selector = entrypoints.get(&EntryPointType::External).unwrap()[0].selector();
-
         let (block_context, state) = create_account_tx_test_state().unwrap();
 
         // Fibonacci
-        let calldata = [1.into(), 1.into(), 10.into()].to_vec();
+        let calldata = [1.into(), 1.into(), 1.into(), 1.into()].to_vec();
         let invoke_function = InvokeFunction::new(
-            TEST_CONTRACT_ADDRESS.clone(),
-            *entrypoint_selector,
-            0, // should be ignored.
+            TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
+            *VALIDATE_ENTRY_POINT_SELECTOR,
+            VersionSpecificAccountTxFields::new_deprecated(0), // should be ignored.
             1.into(),
             calldata,
             vec![],
@@ -366,8 +363,13 @@ mod test {
         let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::ZERO;
 
-        contract_class_cache
-            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        contract_class_cache.set_contract_class(
+            class_hash,
+            CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        );
         let mut state_reader = InMemoryStateReader::default();
         state_reader
             .address_to_class_hash_mut()
@@ -439,7 +441,7 @@ mod test {
         );
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
 
         let estimated_fee = estimate_message_fee(
             &l1_handler,
@@ -469,8 +471,13 @@ mod test {
         let class_hash: ClassHash = ClassHash([1; 32]);
         let nonce = Felt252::ZERO;
 
-        contract_class_cache
-            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        contract_class_cache.set_contract_class(
+            class_hash,
+            CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        );
 
         let mut state_reader = InMemoryStateReader::default();
         state_reader
@@ -486,7 +493,7 @@ mod test {
         let invoke = InvokeFunction::new(
             address,
             entrypoint_selector,
-            1000000,
+            VersionSpecificAccountTxFields::new_deprecated(1000000),
             Felt252::ZERO,
             calldata,
             vec![],
@@ -505,8 +512,9 @@ mod test {
         let call_info = simul_invoke
             .run_validate_entrypoint(
                 &mut state,
-                &mut ExecutionResourcesManager::default(),
                 &block_context,
+                &mut ExecutionResourcesManager::default(),
+                1000000,
                 #[cfg(feature = "cairo-native")]
                 None,
             )
@@ -565,7 +573,10 @@ mod test {
             .insert(fib_address, class_hash);
         state_reader.class_hash_to_compiled_class.insert(
             fib_address,
-            CompiledClass::Casm(Arc::new(casm_contract_class)),
+            CompiledClass::Casm {
+                casm: Arc::new(casm_contract_class),
+                sierra: None,
+            },
         );
 
         let calldata = [
@@ -582,7 +593,7 @@ mod test {
             InvokeFunction::new(
                 address.clone(),
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata.clone(),
                 vec![],
@@ -596,7 +607,7 @@ mod test {
             InvokeFunction::new(
                 address.clone(),
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata.clone(),
                 vec![],
@@ -610,7 +621,7 @@ mod test {
             InvokeFunction::new(
                 address,
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata,
                 vec![],
@@ -698,7 +709,10 @@ mod test {
             .insert(fib_address, class_hash);
         state_reader.class_hash_to_compiled_class.insert(
             fib_address,
-            CompiledClass::Casm(Arc::new(casm_contract_class)),
+            CompiledClass::Casm {
+                casm: Arc::new(casm_contract_class),
+                sierra: None,
+            },
         );
 
         let calldata = [
@@ -715,7 +729,7 @@ mod test {
             InvokeFunction::new(
                 address,
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata,
                 vec![],
@@ -887,7 +901,7 @@ mod test {
             InvokeFunction::new(
                 CONTRACT_ADDRESS.clone(),
                 selector,
-                0,
+                VersionSpecificAccountTxFields::new_deprecated(0),
                 *TRANSACTION_VERSION,
                 calldata,
                 SIGNATURE.clone(),
@@ -935,7 +949,7 @@ mod test {
         let deploy_account_tx = Transaction::DeployAccount(
             DeployAccount::new(
                 CLASS_HASH.to_owned(),
-                0,
+                Default::default(),
                 1.into(),
                 Felt252::ZERO,
                 vec![],
@@ -974,7 +988,7 @@ mod test {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             version: 2.into(),
-            max_fee: 2900,
+            account_tx_fields: VersionSpecificAccountTxFields::Deprecated(2900),
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),
@@ -1061,7 +1075,7 @@ mod test {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
 
         simulate_transaction(
             &[&l1_handler_tx],
@@ -1113,7 +1127,7 @@ mod test {
             InvokeFunction::new(
                 CONTRACT_ADDRESS.clone(),
                 selector,
-                0,
+                VersionSpecificAccountTxFields::new_deprecated(0),
                 *TRANSACTION_VERSION,
                 calldata,
                 SIGNATURE.clone(),
@@ -1261,7 +1275,7 @@ mod test {
         declare.hash_value = Felt252::from_dec_str("2718").unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config_mut().gas_price = 12;
+        block_context.starknet_os_config_mut().gas_price = GasPrices::new(12, 0);
 
         let declare_tx = Transaction::Declare(declare);
 
