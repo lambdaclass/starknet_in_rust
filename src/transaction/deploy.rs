@@ -1,4 +1,4 @@
-use super::Transaction;
+use super::{Transaction, VersionSpecificAccountTxFields};
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
@@ -30,8 +30,8 @@ use crate::{
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use cairo_vm::Felt252;
+
 use std::sync::Arc;
 
 use std::fmt::Debug;
@@ -74,11 +74,11 @@ impl Deploy {
             &contract_address_salt,
             &class_hash,
             &constructor_calldata,
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
         )?);
 
         let hash_value = calculate_deploy_transaction_hash(
-            version.clone(),
+            version,
             &contract_address,
             &constructor_calldata,
             chain_id,
@@ -113,7 +113,7 @@ impl Deploy {
             &contract_address_salt,
             &class_hash,
             &constructor_calldata,
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
         )?);
 
         Ok(Deploy {
@@ -139,16 +139,18 @@ impl Deploy {
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
-        match contract_class {
-            CompiledClass::Deprecated(class) => Ok(class
+        Ok(match contract_class {
+            CompiledClass::Deprecated(class) => class
                 .entry_points_by_type
                 .get(&EntryPointType::Constructor)
                 .ok_or(ContractClassError::NoneEntryPointType)?
-                .is_empty()),
-            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(_) => todo!(),
-        }
+                .is_empty(),
+            CompiledClass::Casm { casm: class, .. } => {
+                class.entry_points_by_type.constructor.is_empty()
+            }
+        })
     }
+
     /// Deploys the contract in the starknet network and calls its constructor if it has one.
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
@@ -161,13 +163,7 @@ impl Deploy {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        match self.contract_class {
-            CompiledClass::Sierra(_) => todo!(),
-            _ => {
-                state.set_contract_class(&self.contract_hash, &self.contract_class)?;
-            }
-        }
-
+        state.set_contract_class(&self.contract_hash, &self.contract_class)?;
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
 
         if self.constructor_entry_points_empty(self.contract_class.clone())? {
@@ -197,7 +193,7 @@ impl Deploy {
         let class_hash: ClassHash = self.contract_hash;
         let call_info = CallInfo::empty_constructor_call(
             self.contract_address.clone(),
-            Address(Felt252::zero()),
+            Address(Felt252::ZERO),
             Some(class_hash),
         );
 
@@ -237,8 +233,8 @@ impl Deploy {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.constructor_calldata.clone(),
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
-            Address(Felt252::zero()),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+            Address(Felt252::ZERO),
             EntryPointType::Constructor,
             None,
             None,
@@ -246,13 +242,13 @@ impl Deploy {
         );
 
         let mut tx_execution_context = TransactionExecutionContext::new(
-            Address(Felt252::zero()),
-            self.hash_value.clone(),
+            Address(Felt252::ZERO),
+            self.hash_value,
             Vec::new(),
-            0,
-            Felt252::zero(),
+            VersionSpecificAccountTxFields::new_deprecated(0),
+            Felt252::ZERO,
             block_context.invoke_tx_max_n_steps,
-            self.version.clone(),
+            self.version,
         );
 
         let mut resources_manager = ExecutionResourcesManager::default();

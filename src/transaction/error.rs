@@ -9,7 +9,6 @@ use crate::{
     utils::ClassHash,
 };
 use cairo_vm::{
-    felt::Felt252,
     types::{
         errors::{math_errors::MathError, program_errors::ProgramError},
         relocatable::Relocatable,
@@ -18,6 +17,7 @@ use cairo_vm::{
         cairo_run_errors::CairoRunError, memory_errors::MemoryError, runner_errors::RunnerError,
         trace_errors::TraceError, vm_errors::VirtualMachineError,
     },
+    Felt252,
 };
 use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
@@ -158,4 +158,10 @@ pub enum TransactionError {
     MaxFeeTooLow(u128, u128),
     #[error("Max fee ({0}) exceeds balance (Uint256({1}, {2})).")]
     MaxFeeExceedsBalance(u128, Felt252, Felt252),
+    #[error("V3 Transactions not Supported Yet")]
+    UnsuportedV3Transaction,
+    #[error("V3 Transactions can't be created with deprecated account tx fields")]
+    DeprecatedAccountTxFieldsVInV3TX,
+    #[error("Non V3 Transactions can't be created with non deprecated account tx fields")]
+    CurrentAccountTxFieldsInNonV3TX,
 }

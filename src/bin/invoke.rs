@@ -1,6 +1,6 @@
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::{
@@ -34,9 +34,9 @@ lazy_static! {
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
-    static ref INCREASE_BALANCE_SELECTOR: Felt252 = felt_str!("1530486729947006463063166157847785599120665941190480211966374137237989315360");
+    static ref INCREASE_BALANCE_SELECTOR: Felt252 = Felt252::from_dec_str("1530486729947006463063166157847785599120665941190480211966374137237989315360").unwrap();
 
-    static ref GET_BALANCE_SELECTOR: Felt252 = felt_str!("1636223440827086009537493065587328807418413867743950350615962740049133672085");
+    static ref GET_BALANCE_SELECTOR: Felt252 = Felt252::from_dec_str("1636223440827086009537493065587328807418413867743950350615962740049133672085").unwrap();
 }
 
 fn main() {
@@ -53,7 +53,7 @@ fn main() {
 
             state_reader
                 .address_to_nonce_mut()
-                .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+                .insert(CONTRACT_ADDRESS.clone(), Felt252::ZERO);
             state_reader.class_hash_to_compiled_class_mut().insert(
                 *CONTRACT_CLASS_HASH,
                 CompiledClass::Deprecated(Arc::new(CONTRACT_CLASS.clone())),
@@ -61,28 +61,28 @@ fn main() {
 
             state_reader
                 .address_to_storage_mut()
-                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::zero());
+                .insert((CONTRACT_ADDRESS.clone(), [0; 32]), Felt252::ZERO);
             Arc::new(state_reader)
         },
         Arc::new(PermanentContractClassCache::default()),
     );
-    let chain_id = block_context.starknet_os_config().chain_id().clone();
+    let chain_id = *block_context.starknet_os_config().chain_id();
     let signature = Vec::new();
 
     state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(CONTRACT_ADDRESS.clone(), Felt252::zero());
+        .insert(CONTRACT_ADDRESS.clone(), Felt252::ZERO);
 
     for i in 0..RUNS {
         let invoke_first = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
-            INCREASE_BALANCE_SELECTOR.clone(),
-            0,
-            TRANSACTION_VERSION.clone(),
+            *INCREASE_BALANCE_SELECTOR,
+            Default::default(),
+            *TRANSACTION_VERSION,
             vec![1000.into()],
             signature.clone(),
-            chain_id.clone(),
+            chain_id,
             Some(Felt252::from(i * 2)),
         )
         .unwrap();
@@ -99,12 +99,12 @@ fn main() {
 
         let invoke_second = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
-            GET_BALANCE_SELECTOR.clone(),
-            0,
-            TRANSACTION_VERSION.clone(),
+            *GET_BALANCE_SELECTOR,
+            Default::default(),
+            *TRANSACTION_VERSION,
             vec![],
             signature.clone(),
-            chain_id.clone(),
+            chain_id,
             Some(Felt252::from((i * 2) + 1)),
         )
         .unwrap();

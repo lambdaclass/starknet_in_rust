@@ -1,50 +1,45 @@
-#![allow(clippy::absurd_extreme_comparisons)]
-
-use std::collections::HashMap;
-use std::ops::Add;
-
-use super::syscall_handler_errors::SyscallHandlerError;
-use super::syscall_request::{
-    EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, KeccakRequest,
-    StorageReadRequest, StorageWriteRequest,
-};
-use super::syscall_response::{
-    DeployResponse, GetBlockHashResponse, GetBlockTimestampResponse, KeccakResponse,
-    SyscallResponse,
-};
 use super::{
+    syscall_handler_errors::SyscallHandlerError,
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
-        CallContractRequest, DeployRequest, LibraryCallRequest, ReplaceClassRequest,
-        SendMessageToL1Request, SyscallRequest,
+        CallContractRequest, DeployRequest, EmitEventRequest, FromPtr, GetBlockHashRequest,
+        GetBlockTimestampRequest, KeccakRequest, LibraryCallRequest, ReplaceClassRequest,
+        SendMessageToL1Request, StorageReadRequest, StorageWriteRequest, SyscallRequest,
     },
-    syscall_response::{CallContractResponse, FailureReason, ResponseBody},
+    syscall_response::{
+        CallContractResponse, DeployResponse, FailureReason, GetBlockHashResponse,
+        GetBlockTimestampResponse, KeccakResponse, ResponseBody, SyscallResponse,
+    },
 };
-use crate::definitions::block_context::BlockContext;
-use crate::definitions::constants::BLOCK_HASH_CONTRACT_ADDRESS;
-use crate::execution::execution_entry_point::ExecutionResult;
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::state::cached_state::CachedState;
-use crate::state::BlockInfo;
-use crate::transaction::error::TransactionError;
-use crate::utils::calculate_sn_keccak;
 use crate::{
     core::errors::state_errors::StateError,
-    definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
+    definitions::{
+        block_context::BlockContext,
+        constants::{BLOCK_HASH_CONTRACT_ADDRESS, CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    },
     execution::{
-        execution_entry_point::ExecutionEntryPoint, CallInfo, CallResult, CallType, OrderedEvent,
-        OrderedL2ToL1Message, TransactionExecutionContext,
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
+        TransactionExecutionContext,
     },
     hash_utils::calculate_contract_address,
-    services::api::contract_class_errors::ContractClassError,
-    state::ExecutionResourcesManager,
+    services::api::{
+        contract_class_errors::ContractClassError,
+        contract_classes::{
+            compiled_class::CompiledClass, deprecated_contract_class::EntryPointType,
+        },
+    },
     state::{
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
+        BlockInfo, ExecutionResourcesManager,
     },
-    utils::{felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
+    transaction::error::TransactionError,
+    utils::{calculate_sn_keccak, felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::{
         errors::math_errors::MathError,
@@ -53,10 +48,8 @@ use cairo_vm::{
     vm::{errors::memory_errors::MemoryError, vm_core::VirtualMachine},
 };
 use lazy_static::lazy_static;
-
-use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-use crate::state::contract_class_cache::ContractClassCache;
 use num_traits::{One, ToPrimitive, Zero};
+use std::{collections::HashMap, ops::Add};
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -91,7 +84,7 @@ lazy_static! {
             map.insert(25828017502874050592466629733_u128.into(), "storage_write");
             map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_timestamp".as_bytes())), "get_block_timestamp");
             map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes())), "get_block_number");
-            map.insert(Felt252::from_bytes_be("Keccak".as_bytes()), "keccak");
+            map.insert(Felt252::from_bytes_be_slice("Keccak".as_bytes()), "keccak");
 
             map
     };
@@ -314,7 +307,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             .retdata
             .clone()
             .into_iter()
-            .map(|item| MaybeRelocatable::from(Felt252::new(item)))
+            .map(MaybeRelocatable::from)
             .collect::<Vec<MaybeRelocatable>>();
 
         let retdata_start = self.allocate_segment(vm, retdata_maybe_reloc)?;
@@ -353,17 +346,16 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
-        match contract_class {
-            CompiledClass::Deprecated(class) => Ok(class
+        Ok(match contract_class {
+            CompiledClass::Deprecated(class) => class
                 .entry_points_by_type
                 .get(&EntryPointType::Constructor)
                 .ok_or(ContractClassError::NoneEntryPointType)?
-                .is_empty()),
-            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(class_and_entrypoints) => {
-                Ok(class_and_entrypoints.1.constructor.is_empty())
+                .is_empty(),
+            CompiledClass::Casm { casm: class, .. } => {
+                class.entry_points_by_type.constructor.is_empty()
             }
-        }
+        })
     }
 
     /// Execute a constructor entry point
@@ -387,7 +379,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             return Ok(CallResult {
                 gas_consumed: 0,
                 is_success: false,
-                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+                retdata: vec![Felt252::from_bytes_be_slice(b"CLASS_HASH_NOT_FOUND").into()],
             });
         };
 
@@ -409,7 +401,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let call = ExecutionEntryPoint::new(
             contract_address.clone(),
             constructor_calldata,
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
             self.contract_address.clone(),
             EntryPointType::Constructor,
             Some(CallType::Call),
@@ -482,7 +474,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             ))?;
 
         let response = if initial_gas < required_gas {
-            let out_of_gas_felt = Felt252::from_bytes_be("Out of gas".as_bytes());
+            let out_of_gas_felt = Felt252::from_bytes_be_slice("Out of gas".as_bytes());
             let retdata_start =
                 self.allocate_segment(vm, vec![MaybeRelocatable::from(out_of_gas_felt)])?;
             let response_body = ResponseBody::Failure(FailureReason {
@@ -573,7 +565,8 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let current_block_number = self.block_context.block_info.block_number;
 
         if current_block_number < 10 || block_number > current_block_number - 10 {
-            let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
+            let out_of_range_felt =
+                Felt252::from_bytes_be_slice("Block number out of range".as_bytes());
             let retdata_start =
                 self.allocate_segment(vm, vec![MaybeRelocatable::from(out_of_range_felt)])?;
             let failure = FailureReason {
@@ -589,12 +582,13 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
 
         // FIXME: Update this after release.
         const V_0_12_0_FIRST_BLOCK: u64 = 0;
+        #[allow(clippy::absurd_extreme_comparisons)]
         let block_hash = if block_number < V_0_12_0_FIRST_BLOCK {
-            Felt252::zero()
+            Felt252::ZERO
         } else {
             self.starknet_storage_state.state.get_storage_at(&(
                 BLOCK_HASH_CONTRACT_ADDRESS.clone(),
-                Felt252::new(block_number).to_be_bytes(),
+                Felt252::from(block_number).to_bytes_be(),
             ))?
         };
 
@@ -689,7 +683,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         {
             Ok(value) => Ok(value),
             Err(e @ StateError::Io(_)) => Err(e),
-            Err(_) => Ok(Felt252::zero()),
+            Err(_) => Ok(Felt252::ZERO),
         }
     }
 
@@ -703,7 +697,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         if request.reserved != 0.into() {
             let retdata_start = self.allocate_segment(
                 vm,
-                vec![Felt252::from_bytes_be(b"Unsupported address domain").into()],
+                vec![Felt252::from_bytes_be_slice(b"Unsupported address domain").into()],
             )?;
             let retdata_end = retdata_start.add(1)?;
 
@@ -758,7 +752,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let tx_info_data = vec![
             MaybeRelocatable::from(&tx_info.version),
             MaybeRelocatable::from(&tx_info.account_contract_address.0),
-            MaybeRelocatable::from(Felt252::from(tx_info.max_fee)),
+            MaybeRelocatable::from(Felt252::from(tx_info.account_tx_fields.max_fee())),
             signature_start_ptr.into(),
             signature_end_ptr.into(),
             MaybeRelocatable::from(&tx_info.transaction_hash),
@@ -831,10 +825,10 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         request: StorageReadRequest,
         remaining_gas: u128,
     ) -> Result<SyscallResponse, SyscallHandlerError> {
-        if request.reserved != Felt252::zero() {
+        if request.reserved != Felt252::ZERO {
             let retdata_start = self.allocate_segment(
                 vm,
-                vec![Felt252::from_bytes_be(b"Unsupported address domain").into()],
+                vec![Felt252::from_bytes_be_slice(b"Unsupported address domain").into()],
             )?;
             let retdata_end = retdata_start.add(1)?;
 
@@ -903,7 +897,9 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
                 (CallResult {
                     gas_consumed: 0,
                     is_success: false,
-                    retdata: vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE").into()],
+                    retdata: vec![
+                        Felt252::from_bytes_be_slice(b"CONTRACT_ADDRESS_UNAVAILABLE").into(),
+                    ],
                 }),
             ));
         }
@@ -1146,8 +1142,10 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             }
             keccak::f1600(&mut state)
         }
-        let hash_low = (Felt252::from(state[1]) << 64u32) + Felt252::from(state[0]);
-        let hash_high = (Felt252::from(state[3]) << 64u32) + Felt252::from(state[2]);
+        let shift = Felt252::TWO.pow(64u32);
+        let hash_low = (Felt252::from(state[1]) * shift) + Felt252::from(state[0]);
+        let hash_high = (Felt252::from(state[3]) * shift) + Felt252::from(state[2]);
+
         Ok(SyscallResponse {
             gas,
             body: Some(ResponseBody::Keccak(KeccakResponse {
@@ -1164,7 +1162,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         vm: &mut VirtualMachine,
         error_msg: &[u8],
     ) -> Result<ResponseBody, SyscallHandlerError> {
-        let felt_encoded_msg = Felt252::from_bytes_be(error_msg);
+        let felt_encoded_msg = Felt252::from_bytes_be_slice(error_msg);
         let retdata_start =
             self.allocate_segment(vm, vec![MaybeRelocatable::from(felt_encoded_msg)])?;
         Ok(ResponseBody::Failure(FailureReason {

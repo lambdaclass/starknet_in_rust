@@ -15,8 +15,8 @@ use cairo_lang_starknet::contract_class::{
     ContractClass as SierraContractClass, ContractEntryPoints,
 };
 use cairo_lang_utils::bigint::BigUintAsHex;
-use cairo_vm::felt::Felt252;
 use cairo_vm::types::program::Program;
+use cairo_vm::Felt252;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::ContractClass as StarknetRsContractClass;
 use starknet::core::types::ContractClass::{Legacy, Sierra};
@@ -24,15 +24,18 @@ use starknet::core::types::ContractClass::{Legacy, Sierra};
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CompiledClass {
     Deprecated(Arc<ContractClass>),
-    Casm(Arc<CasmContractClass>),
-    Sierra(Arc<(SierraProgram, ContractEntryPoints)>),
+    Casm {
+        casm: Arc<CasmContractClass>,
+        sierra: Option<Arc<(SierraProgram, ContractEntryPoints)>>,
+    },
 }
 
 impl TryInto<CasmContractClass> for CompiledClass {
     type Error = ContractClassError;
+
     fn try_into(self) -> Result<CasmContractClass, ContractClassError> {
         match self {
-            CompiledClass::Casm(arc) => Ok((*arc).clone()),
+            CompiledClass::Casm { casm, .. } => Ok((*casm).clone()),
             _ => Err(ContractClassError::NotACasmContractClass),
         }
     }
@@ -40,6 +43,7 @@ impl TryInto<CasmContractClass> for CompiledClass {
 
 impl TryInto<ContractClass> for CompiledClass {
     type Error = ContractClassError;
+
     fn try_into(self) -> Result<ContractClass, ContractClassError> {
         match self {
             CompiledClass::Deprecated(arc) => Ok((*arc).clone()),
@@ -60,6 +64,7 @@ struct MiddleSierraContractClass {
     #[allow(dead_code)]
     abi: serde_json::Value,
 }
+
 impl From<StarknetRsContractClass> for CompiledClass {
     fn from(starknet_rs_contract_class: StarknetRsContractClass) -> Self {
         match starknet_rs_contract_class {
@@ -78,9 +83,16 @@ impl From<StarknetRsContractClass> for CompiledClass {
                     abi,
                 };
 
+                let sierra_arc = Arc::new((
+                    sierra_cc.extract_sierra_program().unwrap(),
+                    sierra_cc.entry_points_by_type.clone(),
+                ));
                 let casm_cc = CasmContractClass::from_contract_class(sierra_cc, true).unwrap();
 
-                CompiledClass::Casm(Arc::new(casm_cc))
+                CompiledClass::Casm {
+                    casm: Arc::new(casm_cc),
+                    sierra: Some(sierra_arc),
+                }
             }
             Legacy(_deprecated_contract_class) => {
                 let as_str = decode_reader(_deprecated_contract_class.program).unwrap();

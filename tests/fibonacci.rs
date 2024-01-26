@@ -1,12 +1,13 @@
 #![cfg(not(feature = "cairo_1_tests"))]
-#![deny(warnings)]
+// #![deny(warnings)]
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    felt::Felt252,
+    utils::biguint_to_felt,
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
+    Felt252,
 };
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -36,13 +37,12 @@ fn integration_test() {
     let contract_class = ContractClass::from_path(path).unwrap();
     let entry_points_by_type = contract_class.entry_points_by_type().clone();
 
-    let fib_entrypoint_selector = entry_points_by_type
+    let fib_entrypoint_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
         .get(0)
         .unwrap()
-        .selector()
-        .clone();
+        .selector();
 
     //* --------------------------------------------
     //*    Create state reader with class hash data
@@ -54,7 +54,7 @@ fn integration_test() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
     contract_class_cache.set_contract_class(
         class_hash,
@@ -85,7 +85,7 @@ fn integration_test() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        fib_entrypoint_selector.clone(),
+        fib_entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -99,12 +99,12 @@ fn integration_test() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -160,10 +160,15 @@ fn integration_test_cairo1() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -183,7 +188,7 @@ fn integration_test_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        Felt252::new(fib_entrypoint_selector.clone()),
+        biguint_to_felt(fib_entrypoint_selector).unwrap(),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -195,12 +200,12 @@ fn integration_test_cairo1() {
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -209,7 +214,7 @@ fn integration_test_cairo1() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(Felt252::new(fib_entrypoint_selector)),
+        entry_point_selector: Some(biguint_to_felt(fib_entrypoint_selector).unwrap()),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),

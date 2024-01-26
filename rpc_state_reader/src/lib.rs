@@ -14,7 +14,7 @@ pub use sir_state_reader::{
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         class_hash,
@@ -112,7 +112,7 @@ mod tests {
         match tx {
             SNTransaction::Invoke(tx) => InvokeFunction::from_invoke_transaction(
                 tx,
-                Felt252::from_bytes_be(tx_hash.0.bytes()),
+                Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
             ),
             _ => unreachable!(),
         }

@@ -3,8 +3,7 @@
 #[macro_use]
 extern crate honggfuzz;
 
-use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
-use num_traits::Zero;
+use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use starknet_in_rust::execution::execution_entry_point::ExecutionResult;
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
@@ -90,14 +89,13 @@ fn main() {
             let path = PathBuf::from(&json_file_name);
             let contract_class = ContractClass::from_path(path).unwrap();
 
-            let storage_entrypoint_selector = contract_class
+            let storage_entrypoint_selector = *contract_class
                 .entry_points_by_type()
                 .get(&EntryPointType::External)
                 .unwrap()
                 .get(0)
                 .unwrap()
-                .selector()
-                .clone();
+                .selector();
 
             fs::remove_file(cairo_file_name).expect("Failed to remove generated cairo source");
             fs::remove_file(json_file_name)
@@ -141,7 +139,7 @@ fn main() {
             let exec_entry_point = ExecutionEntryPoint::new(
                 address.clone(),
                 calldata.clone(),
-                storage_entrypoint_selector.clone(),
+                storage_entrypoint_selector,
                 caller_address,
                 entry_point_type,
                 Some(CallType::Delegate),
@@ -155,12 +153,12 @@ fn main() {
             let block_context = BlockContext::default();
             let mut tx_execution_context = TransactionExecutionContext::new(
                 Address(0.into()),
-                Felt252::zero(),
+                Felt252::ZERO,
                 Vec::new(),
-                0,
+                Default::default(),
                 10.into(),
                 block_context.invoke_tx_max_n_steps(),
-                TRANSACTION_VERSION.clone(),
+                *TRANSACTION_VERSION,
             );
             let mut resources_manager = ExecutionResourcesManager::default();
 
@@ -177,10 +175,12 @@ fn main() {
                 entry_point_selector: Some(storage_entrypoint_selector),
                 entry_point_type: Some(EntryPointType::External),
                 calldata,
-                retdata: [Felt252::from_bytes_be(data_to_ascii(data).as_bytes())].to_vec(),
+                retdata: [Felt252::from_bytes_be_slice(data_to_ascii(data).as_bytes())].to_vec(),
                 execution_resources: Some(ExecutionResources::default()),
                 class_hash: Some(class_hash),
-                storage_read_values: vec![Felt252::from_bytes_be(data_to_ascii(data).as_bytes())],
+                storage_read_values: vec![Felt252::from_bytes_be_slice(
+                    data_to_ascii(data).as_bytes(),
+                )],
                 accessed_storage_keys: expected_accessed_storage_keys,
                 ..Default::default()
             };
@@ -206,7 +206,7 @@ fn main() {
                     .storage_writes()
                     .get(&(address, expected_key_bytes))
                     .cloned(),
-                Some(Felt252::from_bytes_be(data_to_ascii(data).as_bytes()))
+                Some(Felt252::from_bytes_be_slice(data_to_ascii(data).as_bytes()))
             );
         });
         thread::sleep(Duration::from_secs(1));

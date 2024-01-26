@@ -1,7 +1,7 @@
 use super::error::TransactionError;
 use crate::{
     definitions::{
-        block_context::BlockContext,
+        block_context::{BlockContext, FeeType},
         constants::{FEE_FACTOR, INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
     },
     execution::{
@@ -14,7 +14,7 @@ use crate::{
         state_api::StateReader, ExecutionResourcesManager,
     },
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::{ToPrimitive, Zero};
 use std::collections::HashMap;
 
@@ -39,26 +39,26 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
 ) -> Result<CallInfo, TransactionError> {
-    if actual_fee > tx_execution_context.max_fee {
+    if actual_fee > tx_execution_context.account_tx_fields.max_fee() {
         return Err(TransactionError::ActualFeeExceedsMaxFee(
             actual_fee,
-            tx_execution_context.max_fee,
+            tx_execution_context.account_tx_fields.max_fee(),
         ));
     }
 
     let fee_token_address = block_context.starknet_os_config.fee_token_address.clone();
 
     let calldata = [
-        block_context.block_info.sequencer_address.0.clone(),
+        block_context.block_info.sequencer_address.0,
         Felt252::from(actual_fee), // U256.low
         0.into(),                  // U256.high
     ]
     .to_vec();
 
     let fee_transfer_call = ExecutionEntryPoint::new(
-        fee_token_address,
+        fee_token_address.get_by_fee_type(&FeeType::Eth).clone(),
         calldata,
-        TRANSFER_ENTRY_POINT_SELECTOR.clone(),
+        *TRANSFER_ENTRY_POINT_SELECTOR,
         tx_execution_context.account_contract_address.clone(),
         EntryPointType::External,
         Some(CallType::Call),
@@ -88,8 +88,8 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
 /// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
-    gas_price: u128,
     block_context: &BlockContext,
+    fee_type: &FeeType,
 ) -> Result<u128, TransactionError> {
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
@@ -99,7 +99,11 @@ pub fn calculate_tx_fee(
     let l1_gas_by_cairo_usage = calculate_l1_gas_by_cairo_usage(block_context, resources)?;
     let total_l1_gas_usage = gas_usage.to_f64().unwrap() + l1_gas_by_cairo_usage;
 
-    Ok(total_l1_gas_usage.ceil() as u128 * gas_price)
+    Ok(total_l1_gas_usage.ceil() as u128
+        * block_context
+            .starknet_os_config()
+            .gas_price()
+            .get_by_fee_type(fee_type))
 }
 
 /// Calculates the L1 gas consumed when submitting the underlying Cairo program to SHARP.
@@ -163,11 +167,7 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
         return Ok((None, 0));
     }
 
-    let actual_fee = calculate_tx_fee(
-        resources,
-        block_context.starknet_os_config.gas_price,
-        block_context,
-    )?;
+    let actual_fee = calculate_tx_fee(resources, block_context, &FeeType::Eth)?;
 
     let actual_fee = {
         let version_0 = tx_execution_context.version.is_zero();
@@ -201,7 +201,7 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::block_context::BlockContext,
+        definitions::block_context::{BlockContext, GasPrices},
         execution::TransactionExecutionContext,
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
@@ -221,7 +221,7 @@ mod tests {
         );
         let mut tx_execution_context = TransactionExecutionContext::default();
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
         let resources = HashMap::from([
             ("l1_gas_usage".to_string(), 200_usize),
             ("pedersen_builtin".to_string(), 10000_usize),
@@ -257,7 +257,7 @@ mod tests {
             ..Default::default()
         };
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
         let resources = HashMap::from([
             ("l1_gas_usage".to_string(), 200_usize),
             ("pedersen_builtin".to_string(), 10000_usize),

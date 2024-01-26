@@ -1,11 +1,12 @@
 use super::{
+    check_account_tx_fields_version,
     fee::{calculate_tx_fee, charge_fee},
-    get_tx_version, Transaction,
+    get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        block_context::BlockContext,
+        block_context::{BlockContext, FeeType},
         constants::{
             EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
@@ -32,9 +33,9 @@ use crate::{
     transaction::error::TransactionError,
     utils::{calculate_tx_resources, Address},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use getset::Getters;
-use num_traits::{One, Zero};
+use num_traits::Zero;
 use std::{collections::HashMap, fmt::Debug};
 
 #[cfg(feature = "cairo-native")]
@@ -60,7 +61,7 @@ pub struct InvokeFunction {
     hash_value: Felt252,
     #[getset(get = "pub")]
     signature: Vec<Felt252>,
-    max_fee: u128,
+    account_tx_fields: VersionSpecificAccountTxFields,
     nonce: Option<Felt252>,
     skip_validation: bool,
     skip_execute: bool,
@@ -73,25 +74,22 @@ impl InvokeFunction {
     pub fn new(
         contract_address: Address,
         entry_point_selector: Felt252,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
         chain_id: Felt252,
         nonce: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
-        let (entry_point_selector_field, additional_data) = preprocess_invoke_function_fields(
-            entry_point_selector.clone(),
-            nonce.clone(),
-            version.clone(),
-        )?;
+        let (entry_point_selector_field, additional_data) =
+            preprocess_invoke_function_fields(entry_point_selector, nonce, version)?;
         let hash_value = calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
-            version.clone(),
+            version,
             &contract_address,
             entry_point_selector_field,
             &calldata,
-            max_fee,
+            account_tx_fields.max_fee(),
             chain_id,
             &additional_data,
         )?;
@@ -99,7 +97,7 @@ impl InvokeFunction {
         InvokeFunction::new_with_tx_hash(
             contract_address,
             entry_point_selector,
-            max_fee,
+            account_tx_fields,
             version,
             calldata,
             signature,
@@ -112,7 +110,7 @@ impl InvokeFunction {
     pub fn new_with_tx_hash(
         contract_address: Address,
         entry_point_selector: Felt252,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         calldata: Vec<Felt252>,
         signature: Vec<Felt252>,
@@ -120,8 +118,9 @@ impl InvokeFunction {
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
+        check_account_tx_fields_version(&account_tx_fields, version)?;
 
-        let validate_entry_point_selector = VALIDATE_ENTRY_POINT_SELECTOR.clone();
+        let validate_entry_point_selector = *VALIDATE_ENTRY_POINT_SELECTOR;
 
         Ok(InvokeFunction {
             contract_address,
@@ -130,7 +129,7 @@ impl InvokeFunction {
             calldata,
             tx_type: TransactionType::InvokeFunction,
             version,
-            max_fee,
+            account_tx_fields,
             signature,
             validate_entry_point_selector,
             nonce,
@@ -150,6 +149,9 @@ impl InvokeFunction {
         match tx {
             starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, tx_hash),
             starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, tx_hash),
+            starknet_api::transaction::InvokeTransaction::V3(_) => {
+                Err(TransactionError::UnsuportedV3Transaction)
+            }
         }
     }
 
@@ -159,16 +161,16 @@ impl InvokeFunction {
     ) -> Result<TransactionExecutionContext, TransactionError> {
         Ok(TransactionExecutionContext::new(
             self.contract_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
-            self.max_fee,
+            self.account_tx_fields.clone(),
             if self.version.is_zero() {
-                Felt252::zero()
+                Felt252::ZERO
             } else {
-                self.nonce.clone().ok_or(TransactionError::MissingNonce)?
+                self.nonce.ok_or(TransactionError::MissingNonce)?
             },
             n_steps,
-            self.version.clone(),
+            self.version,
         ))
     }
 
@@ -180,15 +182,13 @@ impl InvokeFunction {
     pub(crate) fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
+        remaining_gas: u128,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.entry_point_selector != *EXECUTE_ENTRY_POINT_SELECTOR {
-            return Ok(None);
-        }
         if self.version.is_zero() || self.skip_validation {
             return Ok(None);
         }
@@ -196,12 +196,12 @@ impl InvokeFunction {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
-            self.validate_entry_point_selector.clone(),
+            self.validate_entry_point_selector,
             Address(0.into()),
             EntryPointType::External,
             None,
             None,
-            0,
+            remaining_gas,
         );
 
         let ExecutionResult { call_info, .. } = call.execute(
@@ -220,12 +220,18 @@ impl InvokeFunction {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
-        if let CompiledClass::Sierra(_) = contract_class {
+        if matches!(
+            contract_class,
+            CompiledClass::Casm {
+                sierra: Some(_),
+                ..
+            }
+        ) {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
             if !call_info
                 .as_ref()
-                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .map(|ci| ci.retdata == vec![*VALIDATE_RETDATA])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
@@ -253,8 +259,8 @@ impl InvokeFunction {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
             self.calldata.clone(),
-            self.entry_point_selector.clone(),
-            Address(Felt252::zero()),
+            self.entry_point_selector,
+            Address(Felt252::ZERO),
             EntryPointType::External,
             None,
             None,
@@ -282,7 +288,7 @@ impl InvokeFunction {
         &self,
         state: &mut CachedState<S, C>,
         block_context: &BlockContext,
-        remaining_gas: u128,
+        mut remaining_gas: u128,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
@@ -293,12 +299,17 @@ impl InvokeFunction {
         } else {
             self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
+                remaining_gas,
                 #[cfg(feature = "cairo-native")]
                 program_cache.clone(),
             )?
         };
+
+        if let Some(call_info) = &validate_info {
+            remaining_gas -= call_info.gas_consumed;
+        }
 
         // Execute transaction
         let ExecutionResult {
@@ -318,12 +329,15 @@ impl InvokeFunction {
             )?
         };
         let changes = state.count_actual_state_changes(Some((
-            &block_context.starknet_os_config.fee_token_address,
+            (block_context
+                .starknet_os_config
+                .fee_token_address
+                .get_by_fee_type(&FeeType::Eth)),
             &self.contract_address,
         )))?;
         let actual_resources = calculate_tx_resources(
             resources_manager,
-            &vec![call_info.clone(), validate_info.clone()],
+            &[call_info.clone(), validate_info.clone()],
             self.tx_type,
             changes,
             None,
@@ -362,19 +376,19 @@ impl InvokeFunction {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::one() && self.version != Felt252::zero() {
+        if self.version != Felt252::ONE && self.version != Felt252::ZERO {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Invoke".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![0, 1],
             ));
         }
 
-        if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context)?;
-        }
-
         self.handle_nonce(state)?;
+
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
+        }
 
         let mut transactional_state = state.create_transactional()?;
 
@@ -405,29 +419,30 @@ impl InvokeFunction {
         }
         let mut tx_exec_info = tx_exec_info?;
 
-        let actual_fee = calculate_tx_fee(
-            &tx_exec_info.actual_resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )?;
+        let actual_fee =
+            calculate_tx_fee(&tx_exec_info.actual_resources, block_context, &FeeType::Eth)?;
 
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if actual_fee > self.max_fee {
+        } else if actual_fee > self.account_tx_fields.max_fee() {
             // max_fee exceeded
             tx_exec_info = tx_exec_info.to_revert_error(
                 format!(
                     "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee, self.max_fee
+                    actual_fee,
+                    self.account_tx_fields.max_fee()
                 )
                 .as_str(),
             );
         } else {
             // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
             // If so, revert the transaction.
-            let (balance_low, balance_high) = transactional_state
-                .get_fee_token_balance(block_context, self.contract_address())?;
+            let (balance_low, balance_high) = transactional_state.get_fee_token_balance(
+                block_context,
+                self.contract_address(),
+                &FeeType::Eth,
+            )?;
             // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
             if balance_high.is_zero()
                 && balance_low < Felt252::from(actual_fee)
@@ -447,7 +462,7 @@ impl InvokeFunction {
             state,
             &tx_exec_info.actual_resources,
             block_context,
-            self.max_fee,
+            self.account_tx_fields.max_fee(),
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -489,22 +504,26 @@ impl InvokeFunction {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
-        if self.max_fee.is_zero() {
+        if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
         let minimal_fee = self.estimate_minimal_fee(block_context)?;
         // Check max fee is at least the estimated constant overhead.
-        if self.max_fee < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        if self.account_tx_fields.max_fee() < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(
+                self.account_tx_fields.max_fee(),
+                minimal_fee,
+            ));
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, self.contract_address())?;
+            state.get_fee_token_balance(block_context, self.contract_address(), fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+        if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(
-                self.max_fee,
+                self.account_tx_fields.max_fee(),
                 balance_low,
                 balance_high,
             ));
@@ -527,11 +546,7 @@ impl InvokeFunction {
             ),
             ("n_steps".to_string(), n_estimated_steps),
         ]);
-        calculate_tx_fee(
-            &resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )
+        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     // Simulation function
@@ -549,10 +564,19 @@ impl InvokeFunction {
             skip_execute,
             skip_fee_transfer,
             skip_nonce_check,
-            max_fee: if ignore_max_fee {
-                u128::MAX
+            account_tx_fields: if ignore_max_fee {
+                if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
+                    let mut current_fields = current.clone();
+                    current_fields.l1_resource_bounds = Some(ResourceBounds {
+                        max_amount: u64::MAX,
+                        max_price_per_unit: u128::MAX,
+                    });
+                    VersionSpecificAccountTxFields::Current(current_fields)
+                } else {
+                    VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
+                }
             } else {
-                self.max_fee
+                self.account_tx_fields.clone()
             },
             ..self.clone()
         };
@@ -600,7 +624,7 @@ pub(crate) fn preprocess_invoke_function_fields(
         match nonce {
             Some(n) => {
                 let additional_data = vec![n];
-                let entry_point_selector_field = Felt252::zero();
+                let entry_point_selector_field = Felt252::ZERO;
                 Ok((entry_point_selector_field, additional_data))
             }
             None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
@@ -616,32 +640,32 @@ fn convert_invoke_v0(
     value: starknet_api::transaction::InvokeTransactionV0,
     tx_hash: Felt252,
 ) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be(
+    let contract_address = Address(Felt252::from_bytes_be_slice(
         value.contract_address.0.key().bytes(),
     ));
     let max_fee = value.max_fee.0;
-    let entry_point_selector = Felt252::from_bytes_be(value.entry_point_selector.0.bytes());
+    let entry_point_selector = Felt252::from_bytes_be_slice(value.entry_point_selector.0.bytes());
     let nonce = None;
 
     let signature = value
         .signature
         .0
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
     let calldata = value
         .calldata
         .0
         .as_ref()
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
 
     InvokeFunction::new_with_tx_hash(
         contract_address,
         entry_point_selector,
-        max_fee,
-        Felt252::new(0),
+        VersionSpecificAccountTxFields::Deprecated(max_fee),
+        Felt252::from(0),
         calldata,
         signature,
         nonce,
@@ -653,30 +677,33 @@ fn convert_invoke_v1(
     value: starknet_api::transaction::InvokeTransactionV1,
     tx_hash: Felt252,
 ) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be(value.sender_address.0.key().bytes()));
+    let contract_address = Address(Felt252::from_bytes_be_slice(
+        value.sender_address.0.key().bytes(),
+    ));
     let max_fee = value.max_fee.0;
-    let nonce = Felt252::from_bytes_be(value.nonce.0.bytes());
-    let entry_point_selector = EXECUTE_ENTRY_POINT_SELECTOR.clone();
+    let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
+    let entry_point_selector = *EXECUTE_ENTRY_POINT_SELECTOR;
 
     let signature = value
         .signature
         .0
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
     let calldata = value
         .calldata
         .0
         .as_ref()
         .iter()
-        .map(|f| Felt252::from_bytes_be(f.bytes()))
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
         .collect();
 
     InvokeFunction::new_with_tx_hash(
         contract_address,
         entry_point_selector,
-        max_fee,
-        Felt252::new(1),
+        // TODO[0.13] Properly convert between V3 tx fields
+        VersionSpecificAccountTxFields::Deprecated(max_fee),
+        Felt252::ONE,
         calldata,
         signature,
         Some(nonce),
@@ -688,7 +715,8 @@ fn convert_invoke_v1(
 mod tests {
     use super::*;
     use crate::{
-        definitions::constants::QUERY_VERSION_1,
+        definitions::block_context::GasPrices,
+        definitions::constants::{QUERY_VERSION_1, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
@@ -700,7 +728,7 @@ mod tests {
         utils::{calculate_sn_keccak, ClassHash},
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use num_traits::Num;
+
     use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
     use starknet_api::{
         core::{ContractAddress, Nonce, PatriciaKey},
@@ -768,16 +796,15 @@ mod tests {
             ])),
         });
 
-        assert!(InvokeFunction::from_invoke_transaction(tx, Felt252::one()).is_ok())
+        assert!(InvokeFunction::from_invoke_transaction(tx, Felt252::ONE).is_ok())
     }
 
     #[test]
     fn test_invoke_apply_without_fees() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
+            entry_point_selector: Felt252::from_hex(
                 "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -787,7 +814,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -802,7 +829,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -851,16 +878,15 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
     fn test_invoke_execute() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -870,7 +896,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -885,7 +911,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -929,14 +955,14 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
     fn test_apply_invoke_entrypoint_not_found_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
+            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR),
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
@@ -944,7 +970,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -959,7 +985,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1000,9 +1026,8 @@ mod tests {
     fn test_apply_v0_with_no_nonce() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1012,7 +1037,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: None,
             skip_validation: false,
             skip_execute: false,
@@ -1027,7 +1052,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1076,14 +1101,14 @@ mod tests {
             result.call_info.as_ref().unwrap().calldata,
             internal_invoke_function.calldata
         );
-        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::new(144)]);
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 
     #[test]
     fn test_run_validate_entrypoint_nonce_is_none_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR).clone(),
+            entry_point_selector: (*EXECUTE_ENTRY_POINT_SELECTOR),
             entry_point_type: EntryPointType::External,
             calldata: Vec::new(),
             tx_type: TransactionType::InvokeFunction,
@@ -1091,7 +1116,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: None,
             skip_validation: false,
             skip_execute: false,
@@ -1106,7 +1131,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/amm.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1153,7 +1178,7 @@ mod tests {
         let class_hash: ClassHash = ClassHash([1; 32]);
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1164,9 +1189,8 @@ mod tests {
 
         let internal_invoke_function = InvokeFunction {
             contract_address,
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1176,7 +1200,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 1000,
+            account_tx_fields: VersionSpecificAccountTxFields::new_deprecated(1000),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -1217,19 +1241,15 @@ mod tests {
         let max_fee = 5;
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             entry_point_type: EntryPointType::External,
-            calldata: vec![1.into(), 1.into(), 10.into()],
+            calldata: vec![1.into()],
             tx_type: TransactionType::InvokeFunction,
-            version: 1.into(),
-            validate_entry_point_selector: 0.into(),
+            version: 0.into(),
+            validate_entry_point_selector: *VALIDATE_ENTRY_POINT_SELECTOR,
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee,
+            account_tx_fields: VersionSpecificAccountTxFields::new_deprecated(max_fee),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -1241,10 +1261,11 @@ mod tests {
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1266,7 +1287,7 @@ mod tests {
             .unwrap();
 
         let mut block_context = BlockContext::default();
-        block_context.starknet_os_config.gas_price = 1;
+        block_context.starknet_os_config.gas_price = GasPrices::new(1, 0);
 
         let tx_info = internal_invoke_function
             .execute(
@@ -1277,7 +1298,7 @@ mod tests {
                 None,
             )
             .unwrap();
-        let expected_actual_fee = 2483;
+        let expected_actual_fee = 1258;
         let expected_tx_info = tx_info.clone().to_revert_error(
             format!(
                 "Calculated fee ({}) exceeds max fee ({})",
@@ -1293,19 +1314,15 @@ mod tests {
     fn test_execute_invoke_twice_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            entry_point_selector: *VALIDATE_ENTRY_POINT_SELECTOR,
             entry_point_type: EntryPointType::External,
-            calldata: vec![1.into(), 1.into(), 10.into()],
+            calldata: vec![1.into(), 1.into(), 1.into(), 1.into()],
             tx_type: TransactionType::InvokeFunction,
             version: 1.into(),
-            validate_entry_point_selector: 0.into(),
+            validate_entry_point_selector: *VALIDATE_ENTRY_POINT_SELECTOR,
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: false,
             skip_execute: false,
@@ -1317,10 +1334,11 @@ mod tests {
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+        let contract_class =
+            ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1370,9 +1388,8 @@ mod tests {
     fn test_execute_inovoke_nonce_missing_should_fail() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
             )
             .unwrap(),
             entry_point_type: EntryPointType::External,
@@ -1382,7 +1399,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: None,
             skip_validation: false,
             skip_execute: false,
@@ -1397,7 +1414,7 @@ mod tests {
         let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1433,11 +1450,8 @@ mod tests {
     #[test]
     fn invoke_version_zero_with_non_zero_nonce_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             Some(1.into()),
             0.into(),
         )
@@ -1468,13 +1482,10 @@ mod tests {
 
     #[test]
     fn preprocess_invoke_function_fields_nonce_is_none() {
-        let entry_point_selector = Felt252::from_str_radix(
-            "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-            16,
-        )
-        .unwrap();
-        let result =
-            preprocess_invoke_function_fields(entry_point_selector.clone(), None, 0.into());
+        let entry_point_selector =
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap();
+        let result = preprocess_invoke_function_fields(entry_point_selector, None, 0.into());
 
         let expected_additional_data: Vec<Felt252> = Vec::new();
         let expected_entry_point_selector_field = entry_point_selector;
@@ -1490,11 +1501,8 @@ mod tests {
     #[test]
     fn invoke_version_one_with_no_nonce_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             None,
             1.into(),
         );
@@ -1508,13 +1516,10 @@ mod tests {
     #[test]
     fn invoke_version_one_with_no_nonce_with_query_base_should_fail() {
         let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_str_radix(
-                "112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-                16,
-            )
-            .unwrap(),
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
             None,
-            QUERY_VERSION_1.clone(),
+            *QUERY_VERSION_1,
         );
         assert!(expected_error.is_err());
     }
@@ -1531,7 +1536,7 @@ mod tests {
             validate_entry_point_selector: 0.into(),
             hash_value: 0.into(),
             signature: Vec::new(),
-            max_fee: 0,
+            account_tx_fields: Default::default(),
             nonce: Some(0.into()),
             skip_validation: true,
             skip_execute: false,
@@ -1544,7 +1549,7 @@ mod tests {
         let program_data = include_bytes!("../../starknet_programs/cairo1/factorial.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let contract_address = Address(0.into());
-        let nonce = Felt252::zero();
+        let nonce = Felt252::ZERO;
 
         state_reader
             .address_to_class_hash_mut()
@@ -1559,8 +1564,13 @@ mod tests {
 
         let casm_contract_class_cache = PermanentContractClassCache::default();
 
-        casm_contract_class_cache
-            .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+        casm_contract_class_cache.set_contract_class(
+            class_hash,
+            CompiledClass::Casm {
+                casm: Arc::new(contract_class),
+                sierra: None,
+            },
+        );
 
         let mut state =
             CachedState::new(Arc::new(state_reader), Arc::new(casm_contract_class_cache));
@@ -1610,14 +1620,14 @@ mod tests {
     fn invoke_wrong_version() {
         // declare tx
         let internal_declare = InvokeFunction::new(
-            Address(Felt252::one()),
-            Felt252::one(),
-            9000,
+            Address(Felt252::ONE),
+            Felt252::ONE,
+            VersionSpecificAccountTxFields::new_deprecated(9000),
             2.into(),
             vec![],
             vec![],
-            Felt252::one(),
-            Some(Felt252::zero()),
+            Felt252::ONE,
+            Some(Felt252::ZERO),
         )
         .unwrap();
         let result = internal_declare.execute(

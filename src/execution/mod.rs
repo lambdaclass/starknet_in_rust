@@ -2,6 +2,7 @@ pub mod execution_entry_point;
 pub mod gas_usage;
 pub mod os_usage;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+use crate::transaction::VersionSpecificAccountTxFields;
 use crate::utils::parse_felt_array;
 use crate::{
     definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
@@ -10,13 +11,13 @@ use crate::{
     transaction::error::TransactionError,
     utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
 };
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::relocatable::{MaybeRelocatable, Relocatable},
     vm::{runners::cairo_runner::ExecutionResources, vm_core::VirtualMachine},
 };
 use getset::Getters;
-use num_traits::{ToPrimitive, Zero};
+use num_traits::ToPrimitive;
 use serde::{Deserialize, Deserializer};
 use std::collections::{HashMap, HashSet};
 
@@ -97,7 +98,7 @@ impl CallInfo {
             class_hash,
             Some(CallType::Call),
             Some(EntryPointType::Constructor),
-            Some(CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone()),
+            Some(*CONSTRUCTOR_ENTRY_POINT_SELECTOR),
             None,
         )
     }
@@ -361,7 +362,7 @@ pub struct TransactionExecutionContext {
     pub(crate) n_emitted_events: u64,
     pub(crate) version: Felt252,
     pub(crate) account_contract_address: Address,
-    pub(crate) max_fee: u128,
+    pub(crate) account_tx_fields: VersionSpecificAccountTxFields,
     pub(crate) transaction_hash: Felt252,
     pub(crate) signature: Vec<Felt252>,
     #[get = "pub"]
@@ -376,13 +377,13 @@ impl TransactionExecutionContext {
         account_contract_address: Address,
         transaction_hash: Felt252,
         signature: Vec<Felt252>,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         nonce: Felt252,
-        n_steps: u64,
+        _n_steps: u64,
         version: Felt252,
     ) -> Self {
         let nonce = if version == 0.into() {
-            Felt252::zero()
+            Felt252::ZERO
         } else {
             nonce
         };
@@ -390,33 +391,28 @@ impl TransactionExecutionContext {
         TransactionExecutionContext {
             n_emitted_events: 0,
             account_contract_address,
-            max_fee,
+            account_tx_fields,
             nonce,
             signature,
             transaction_hash,
             version,
             n_sent_messages: 0,
-            _n_steps: n_steps,
+            _n_steps,
         }
     }
 
     pub fn create_for_testing(
         account_contract_address: Address,
-        _max_fee: u128,
         nonce: Felt252,
-        n_steps: u64,
+        _n_steps: u64,
         version: Felt252,
     ) -> Self {
         TransactionExecutionContext {
-            n_emitted_events: 0,
             version,
             account_contract_address,
-            max_fee: 0,
-            transaction_hash: Felt252::zero(),
-            signature: Vec::new(),
             nonce,
-            n_sent_messages: 0,
-            _n_steps: n_steps,
+            _n_steps,
+            ..Default::default()
         }
     }
 }
@@ -442,7 +438,7 @@ impl TxInfoStruct {
         TxInfoStruct {
             version: tx.version,
             account_contract_address: tx.account_contract_address,
-            max_fee: tx.max_fee,
+            max_fee: tx.account_tx_fields.max_fee(),
             signature_len: tx.signature.len(),
             signature,
             transaction_hash: tx.transaction_hash,
@@ -455,8 +451,8 @@ impl TxInfoStruct {
         vec![
             MaybeRelocatable::from(&self.version),
             MaybeRelocatable::from(&self.account_contract_address.0),
-            MaybeRelocatable::from(Felt252::new(self.max_fee)),
-            MaybeRelocatable::from(Felt252::new(self.signature_len)),
+            MaybeRelocatable::from(Felt252::from(self.max_fee)),
+            MaybeRelocatable::from(Felt252::from(self.signature_len)),
             MaybeRelocatable::from(&self.signature),
             MaybeRelocatable::from(&self.transaction_hash),
             MaybeRelocatable::from(&self.chain_id),
@@ -697,7 +693,7 @@ mod tests {
 
     #[test]
     fn test_get_sorted_single_event() {
-        let address = Address(Felt252::zero());
+        let address = Address(Felt252::ZERO);
         let ordered_event = OrderedEvent::new(0, vec![], vec![]);
         let event = Event::new(ordered_event.clone(), address.clone());
         let internal_calls = vec![CallInfo {
@@ -948,7 +944,7 @@ mod tests {
         let hash1 = ClassHash::default();
         let hash2 = ClassHash::default();
         let hash3 = ClassHash::default();
-        let hash4 = string_to_hash(&"0x3".to_string());
+        let hash4 = string_to_hash("0x3");
 
         child1.accessed_storage_keys = HashSet::new();
         child1.accessed_storage_keys.insert(hash1);
@@ -996,10 +992,10 @@ mod tests {
             ..Default::default()
         };
 
-        let hash1 = string_to_hash(&"0x0".to_string());
-        let hash2 = string_to_hash(&"0x1".to_string());
-        let hash3 = string_to_hash(&"0x2".to_string());
-        let hash4 = string_to_hash(&"0x3".to_string());
+        let hash1 = string_to_hash("0x0");
+        let hash2 = string_to_hash("0x1");
+        let hash3 = string_to_hash("0x2");
+        let hash4 = string_to_hash("0x3");
 
         validate_info.accessed_storage_keys = HashSet::new();
         validate_info.accessed_storage_keys.insert(hash1);
@@ -1008,7 +1004,7 @@ mod tests {
         fee_transfer_info.accessed_storage_keys.insert(hash3);
         fee_transfer_info.accessed_storage_keys.insert(hash4);
 
-        let hash5 = string_to_hash(&"0x5".to_string());
+        let hash5 = string_to_hash("0x5");
         call_info.accessed_storage_keys.insert(hash5);
 
         let txexecinfo = TransactionExecutionInfo::from_calls_info(

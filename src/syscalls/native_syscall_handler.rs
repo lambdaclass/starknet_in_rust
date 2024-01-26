@@ -1,40 +1,36 @@
-use crate::ContractClassCache;
-use std::{cell::RefCell, rc::Rc};
-
+use crate::VersionSpecificAccountTxFields;
+use crate::{
+    core::errors::state_errors::StateError,
+    definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    execution::{
+        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
+        TransactionExecutionContext,
+    },
+    hash_utils::calculate_contract_address,
+    services::api::{
+        contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
+    },
+    state::{
+        contract_storage_state::ContractStorageState,
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
+    syscalls::{
+        business_logic_syscall_handler::{KECCAK_ROUND_COST, SYSCALL_BASE, SYSCALL_GAS_COST},
+        syscall_handler_errors::SyscallHandlerError,
+    },
+    transaction::error::TransactionError,
+    utils::{felt_to_hash, Address, ClassHash},
+    ContractClassCache, EntryPointType,
+};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
 };
-use cairo_vm::felt::Felt252;
-use num_traits::Zero;
+use cairo_vm::Felt252;
 use starknet::core::utils::cairo_short_string_to_felt;
-
-use crate::definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR;
-use crate::execution::CallResult;
-use crate::hash_utils::calculate_contract_address;
-use crate::services::api::contract_class_errors::ContractClassError;
-use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::state::state_api::State;
-use crate::syscalls::business_logic_syscall_handler::KECCAK_ROUND_COST;
-use crate::utils::felt_to_hash;
-use crate::utils::ClassHash;
-use crate::{
-    core::errors::state_errors::StateError,
-    definitions::block_context::BlockContext,
-    execution::{
-        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
-        CallInfo, CallType, OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
-    },
-    state::{
-        contract_storage_state::ContractStorageState, state_api::StateReader,
-        ExecutionResourcesManager,
-    },
-    syscalls::business_logic_syscall_handler::{SYSCALL_BASE, SYSCALL_GAS_COST},
-    syscalls::syscall_handler_errors::SyscallHandlerError,
-    transaction::error::TransactionError,
-    utils::Address,
-    EntryPointType,
-};
+use std::{cell::RefCell, rc::Rc};
 
 #[derive(Debug)]
 pub struct NativeSyscallHandler<'a, 'cache, S, C>
@@ -64,9 +60,9 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
             .unwrap_or(0);
 
         if *gas < required_gas {
-            let out_of_gas_felt = Felt252::from_bytes_be("Out of gas".as_bytes());
+            let out_of_gas_felt = Felt252::from_bytes_be_slice("Out of gas".as_bytes());
             tracing::debug!("out of gas!: {:?} < {:?}", *gas, required_gas);
-            return Err(vec![out_of_gas_felt.clone()]);
+            return Err(vec![out_of_gas_felt]);
         }
 
         *gas = gas.saturating_sub(required_gas);
@@ -85,14 +81,15 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         &mut self,
         block_number: u64,
         gas: &mut u128,
-    ) -> SyscallResult<cairo_vm::felt::Felt252> {
+    ) -> SyscallResult<cairo_vm::Felt252> {
         tracing::debug!("Called `get_block_hash({block_number})` from Cairo Native");
         self.handle_syscall_request(gas, "get_block_hash")?;
 
         let current_block_number = self.block_context.block_info.block_number;
 
         if current_block_number < 10 || block_number > current_block_number - 10 {
-            let out_of_range_felt = Felt252::from_bytes_be("Block number out of range".as_bytes());
+            let out_of_range_felt =
+                Felt252::from_bytes_be_slice("Block number out of range".as_bytes());
             return Err(vec![out_of_range_felt]);
         }
         let key: Felt252 = block_number.into();
@@ -101,10 +98,10 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         match self
             .starknet_storage_state
             .state
-            .get_storage_at(&(block_hash_address, key.to_be_bytes()))
+            .get_storage_at(&(block_hash_address, key.to_bytes_be()))
         {
             Ok(value) => Ok(value),
-            Err(e) => Err(vec![Felt252::from_bytes_be(e.to_string().as_bytes())]),
+            Err(e) => Err(vec![Felt252::from_bytes_be_slice(e.to_string().as_bytes())]),
         }
     }
 
@@ -120,35 +117,31 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             block_info: BlockInfo {
                 block_number: self.block_context.block_info.block_number,
                 block_timestamp: self.block_context.block_info.block_timestamp,
-                sequencer_address: self.block_context.block_info.sequencer_address.0.clone(),
+                sequencer_address: self.block_context.block_info.sequencer_address.0,
             },
             tx_info: TxInfo {
-                version: self.tx_execution_context.version.clone(),
-                account_contract_address: self
-                    .tx_execution_context
-                    .account_contract_address
-                    .0
-                    .clone(),
-                max_fee: self.tx_execution_context.max_fee,
+                version: self.tx_execution_context.version,
+                account_contract_address: self.tx_execution_context.account_contract_address.0,
+                max_fee: self.tx_execution_context.account_tx_fields.max_fee(),
                 signature: self.tx_execution_context.signature.clone(),
-                transaction_hash: self.tx_execution_context.transaction_hash.clone(),
-                chain_id: self.block_context.starknet_os_config.chain_id.clone(),
-                nonce: self.tx_execution_context.nonce.clone(),
+                transaction_hash: self.tx_execution_context.transaction_hash,
+                chain_id: self.block_context.starknet_os_config.chain_id,
+                nonce: self.tx_execution_context.nonce,
             },
-            caller_address: self.caller_address.0.clone(),
-            contract_address: self.contract_address.0.clone(),
-            entry_point_selector: self.entry_point_selector.clone(),
+            caller_address: self.caller_address.0,
+            contract_address: self.contract_address.0,
+            entry_point_selector: self.entry_point_selector,
         })
     }
 
     fn deploy(
         &mut self,
-        class_hash: cairo_vm::felt::Felt252,
-        contract_address_salt: cairo_vm::felt::Felt252,
-        calldata: &[cairo_vm::felt::Felt252],
+        class_hash: Felt252,
+        contract_address_salt: Felt252,
+        calldata: &[Felt252],
         deploy_from_zero: bool,
         gas: &mut u128,
-    ) -> SyscallResult<(cairo_vm::felt::Felt252, Vec<cairo_vm::felt::Felt252>)> {
+    ) -> SyscallResult<(Felt252, Vec<Felt252>)> {
         tracing::debug!("Called `deploy({class_hash}, {calldata:?})` from Cairo Native");
         self.handle_syscall_request(gas, "deploy")?;
 
@@ -166,7 +159,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
                 deployer_address,
             )
             .map_err(|_| {
-                vec![Felt252::from_bytes_be(
+                vec![Felt252::from_bytes_be_slice(
                     b"FAILED_TO_CALCULATE_CONTRACT_ADDRESS",
                 )]
             })?,
@@ -177,7 +170,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         self.starknet_storage_state
             .state
             .deploy_contract(contract_address.clone(), class_hash_bytes)
-            .map_err(|_| vec![Felt252::from_bytes_be(b"CONTRACT_ADDRESS_UNAVAILABLE")])?;
+            .map_err(|_| {
+                vec![Felt252::from_bytes_be_slice(
+                    b"CONTRACT_ADDRESS_UNAVAILABLE",
+                )]
+            })?;
 
         let result = self
             .execute_constructor_entry_point(
@@ -186,7 +183,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
                 calldata.to_vec(),
                 *gas,
             )
-            .map_err(|_| vec![Felt252::from_bytes_be(b"CONSTRUCTOR_ENTRYPOINT_FAILURE")])?;
+            .map_err(|_| {
+                vec![Felt252::from_bytes_be_slice(
+                    b"CONSTRUCTOR_ENTRYPOINT_FAILURE",
+                )]
+            })?;
 
         *gas = gas.saturating_sub(result.gas_consumed);
 
@@ -211,19 +212,19 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         {
             Ok(_) => Ok(()),
             Err(e) => {
-                let replace_class_felt = Felt252::from_bytes_be(e.to_string().as_bytes());
-                Err(vec![replace_class_felt.clone()])
+                let replace_class_felt = Felt252::from_bytes_be_slice(e.to_string().as_bytes());
+                Err(vec![replace_class_felt])
             }
         }
     }
 
     fn library_call(
         &mut self,
-        class_hash: cairo_vm::felt::Felt252,
-        function_selector: cairo_vm::felt::Felt252,
-        calldata: &[cairo_vm::felt::Felt252],
+        class_hash: Felt252,
+        function_selector: Felt252,
+        calldata: &[Felt252],
         gas: &mut u128,
-    ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
+    ) -> SyscallResult<Vec<Felt252>> {
         tracing::debug!(
             "Called `library_call({class_hash}, {function_selector}, {calldata:?})` from Cairo Native"
         );
@@ -283,11 +284,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn call_contract(
         &mut self,
-        address: cairo_vm::felt::Felt252,
-        entrypoint_selector: cairo_vm::felt::Felt252,
-        calldata: &[cairo_vm::felt::Felt252],
+        address: Felt252,
+        entrypoint_selector: Felt252,
+        calldata: &[Felt252],
         gas: &mut u128,
-    ) -> SyscallResult<Vec<cairo_vm::felt::Felt252>> {
+    ) -> SyscallResult<Vec<Felt252>> {
         tracing::debug!(
             "Called `call_contract({address}, {entrypoint_selector}, {calldata:?})` from Cairo Native"
         );
@@ -299,7 +300,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             address,
             calldata.to_vec(),
             entrypoint_selector,
-            self.caller_address.clone(),
+            self.contract_address.clone(),
             EntryPointType::External,
             Some(CallType::Call),
             None,
@@ -341,27 +342,28 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     fn storage_read(
         &mut self,
         address_domain: u32,
-        address: cairo_vm::felt::Felt252,
+        address: Felt252,
         gas: &mut u128,
-    ) -> SyscallResult<cairo_vm::felt::Felt252> {
+    ) -> SyscallResult<Felt252> {
         tracing::debug!("Called `storage_read({address_domain}, {address})` from Cairo Native");
         self.handle_syscall_request(gas, "storage_read")?;
-        let value = match self.starknet_storage_state.read(Address(address.clone())) {
+        let value = match self.starknet_storage_state.read(Address(address)) {
             Ok(value) => Ok(value),
             Err(_e @ StateError::Io(_)) => todo!(),
-            Err(_) => Ok(Felt252::zero()),
+            Err(_) => Ok(Felt252::ZERO),
         };
 
-        tracing::debug!(" = {value:?}` from Cairo Native");
-
+        tracing::debug!(
+            "Called `storage_read({address_domain}, {address}) = {value:?}` from Cairo Native"
+        );
         value
     }
 
     fn storage_write(
         &mut self,
         address_domain: u32,
-        address: cairo_vm::felt::Felt252,
-        value: cairo_vm::felt::Felt252,
+        address: Felt252,
+        value: Felt252,
         gas: &mut u128,
     ) -> SyscallResult<()> {
         tracing::debug!(
@@ -375,8 +377,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn emit_event(
         &mut self,
-        keys: &[cairo_vm::felt::Felt252],
-        data: &[cairo_vm::felt::Felt252],
+        keys: &[Felt252],
+        data: &[Felt252],
         gas: &mut u128,
     ) -> SyscallResult<()> {
         let order = self.tx_execution_context.n_emitted_events;
@@ -392,8 +394,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn send_message_to_l1(
         &mut self,
-        to_address: cairo_vm::felt::Felt252,
-        payload: &[cairo_vm::felt::Felt252],
+        to_address: Felt252,
+        payload: &[Felt252],
         gas: &mut u128,
     ) -> SyscallResult<()> {
         tracing::debug!("Called `send_message_to_l1({to_address}, {payload:?})` from Cairo Native");
@@ -426,7 +428,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
         if length % 17 != 0 {
             let error_msg = b"Invalid keccak input size";
-            let felt_error = Felt252::from_bytes_be(error_msg);
+            let felt_error = Felt252::from_bytes_be_slice(error_msg);
             return Err(vec![felt_error]);
         }
 
@@ -436,7 +438,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         for i in 0..n_chunks {
             if *gas < KECCAK_ROUND_COST {
                 let error_msg = b"Syscall out of gas";
-                let felt_error = Felt252::from_bytes_be(error_msg);
+                let felt_error = Felt252::from_bytes_be_slice(error_msg);
                 return Err(vec![felt_error]);
             }
             *gas -= KECCAK_ROUND_COST;
@@ -551,7 +553,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         todo!()
     }
 
-    fn set_account_contract_address(&mut self, contract_address: cairo_vm::felt::Felt252) {
+    fn set_account_contract_address(&mut self, contract_address: Felt252) {
         self.tx_execution_context.account_contract_address = Address(contract_address);
     }
 
@@ -563,39 +565,45 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         self.block_context.block_info.block_timestamp = block_timestamp;
     }
 
-    fn set_caller_address(&mut self, address: cairo_vm::felt::Felt252) {
+    fn set_caller_address(&mut self, address: Felt252) {
         self.caller_address = Address(address);
     }
 
-    fn set_chain_id(&mut self, chain_id: cairo_vm::felt::Felt252) {
+    fn set_chain_id(&mut self, chain_id: Felt252) {
         self.block_context.starknet_os_config.chain_id = chain_id;
     }
 
-    fn set_contract_address(&mut self, address: cairo_vm::felt::Felt252) {
+    fn set_contract_address(&mut self, address: Felt252) {
         self.contract_address = Address(address);
     }
 
     fn set_max_fee(&mut self, max_fee: u128) {
-        self.tx_execution_context.max_fee = max_fee;
+        if matches!(
+            self.tx_execution_context.account_tx_fields,
+            VersionSpecificAccountTxFields::Deprecated(_)
+        ) {
+            self.tx_execution_context.account_tx_fields =
+                VersionSpecificAccountTxFields::new_deprecated(max_fee)
+        };
     }
 
-    fn set_nonce(&mut self, nonce: cairo_vm::felt::Felt252) {
+    fn set_nonce(&mut self, nonce: Felt252) {
         self.tx_execution_context.nonce = nonce;
     }
 
-    fn set_sequencer_address(&mut self, _address: cairo_vm::felt::Felt252) {
+    fn set_sequencer_address(&mut self, _address: Felt252) {
         todo!()
     }
 
-    fn set_signature(&mut self, signature: &[cairo_vm::felt::Felt252]) {
+    fn set_signature(&mut self, signature: &[Felt252]) {
         self.tx_execution_context.signature = signature.to_vec();
     }
 
-    fn set_transaction_hash(&mut self, transaction_hash: cairo_vm::felt::Felt252) {
+    fn set_transaction_hash(&mut self, transaction_hash: Felt252) {
         self.tx_execution_context.transaction_hash = transaction_hash;
     }
 
-    fn set_version(&mut self, version: cairo_vm::felt::Felt252) {
+    fn set_version(&mut self, version: Felt252) {
         self.tx_execution_context.version = version;
     }
 }
@@ -622,7 +630,7 @@ where
             return Ok(CallResult {
                 gas_consumed: 0,
                 is_success: false,
-                retdata: vec![Felt252::from_bytes_be(b"CLASS_HASH_NOT_FOUND").into()],
+                retdata: vec![Felt252::from_bytes_be_slice(b"CLASS_HASH_NOT_FOUND").into()],
             });
         };
 
@@ -644,7 +652,7 @@ where
         let call = ExecutionEntryPoint::new(
             contract_address.clone(),
             constructor_calldata,
-            CONSTRUCTOR_ENTRY_POINT_SELECTOR.clone(),
+            *CONSTRUCTOR_ENTRY_POINT_SELECTOR,
             self.contract_address.clone(),
             EntryPointType::Constructor,
             Some(CallType::Call),
@@ -675,17 +683,16 @@ where
         &self,
         contract_class: CompiledClass,
     ) -> Result<bool, StateError> {
-        match contract_class {
-            CompiledClass::Deprecated(class) => Ok(class
+        Ok(match contract_class {
+            CompiledClass::Deprecated(class) => class
                 .entry_points_by_type
                 .get(&EntryPointType::Constructor)
                 .ok_or(ContractClassError::NoneEntryPointType)?
-                .is_empty()),
-            CompiledClass::Casm(class) => Ok(class.entry_points_by_type.constructor.is_empty()),
-            CompiledClass::Sierra(sierra_program_and_entrypoints) => {
-                Ok(sierra_program_and_entrypoints.1.constructor.is_empty())
+                .is_empty(),
+            CompiledClass::Casm { casm: class, .. } => {
+                class.entry_points_by_type.constructor.is_empty()
             }
-        }
+        })
     }
 }
 

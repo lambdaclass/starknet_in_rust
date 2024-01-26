@@ -5,9 +5,9 @@ use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
+use cairo_vm::utils::bigint_to_felt;
 use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
-    felt::Felt252,
     hint_processor::{
         cairo_1_hint_processor::hint_processor::Cairo1HintProcessor,
         hint_processor_definition::{HintProcessorLogic, HintReference},
@@ -19,6 +19,7 @@ use cairo_vm::{
         errors::{hint_errors::HintError, vm_errors::VirtualMachineError},
         vm_core::VirtualMachine,
     },
+    Felt252,
 };
 use std::{any::Any, boxed::Box, collections::HashMap};
 
@@ -31,7 +32,6 @@ pub(crate) trait HintProcessorPostRun {
     ) -> Result<(), TransactionError>;
 }
 
-#[allow(unused)]
 pub(crate) struct SyscallHintProcessor<'a, S: StateReader, C: ContractClassCache> {
     pub(crate) cairo1_hint_processor: Cairo1HintProcessor,
     pub(crate) syscall_handler: BusinessLogicSyscallHandler<'a, S, C>,
@@ -162,7 +162,9 @@ fn extract_buffer(buffer: &ResOperand) -> Result<(&CellRef, Felt252), HintError>
         ResOperand::Deref(cell) => (cell, 0.into()),
         ResOperand::BinOp(bin_op) => {
             if let DerefOrImmediate::Immediate(val) = &bin_op.b {
-                (&bin_op.a, val.clone().value.into())
+                // TODO
+                // Remove this unwrap()
+                (&bin_op.a, bigint_to_felt(&val.value).unwrap())
             } else {
                 return Err(HintError::CustomHint("Failed to extract buffer, expected ResOperand of BinOp type to have Inmediate b value".to_owned().into_boxed_str()));
             }

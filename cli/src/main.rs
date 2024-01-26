@@ -1,7 +1,6 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer};
-use cairo_vm::felt::Felt252;
+use cairo_vm::{utils::felt_to_biguint, Felt252};
 use clap::{Args, Parser, Subcommand};
-use num_traits::{Num, Zero};
 use serde::{Deserialize, Serialize};
 use starknet_in_rust::{
     core::{
@@ -121,11 +120,11 @@ fn declare_parser(
 
     let tx_hash = calculate_declare_transaction_hash(
         &contract_class,
-        Felt252::zero(),
+        Felt252::ZERO,
         &Address(0.into()),
         0,
-        DECLARE_VERSION.clone(),
-        Felt252::zero(),
+        *DECLARE_VERSION,
+        Felt252::ZERO,
     )?;
     Ok((class_hash, tx_hash))
 }
@@ -140,18 +139,18 @@ fn deploy_parser(
     };
     let address = calculate_contract_address(
         &args.salt.into(),
-        &Felt252::from_str_radix(&args.class_hash[2..], 16)
+        &Felt252::from_hex(&args.class_hash)
             .map_err(|_| ParserError::ParseFelt(args.class_hash.clone()))?,
         &constructor_calldata,
         Address(0.into()),
     )?;
 
-    cached_state.deploy_contract(Address(address.clone()), string_to_hash(&args.class_hash))?;
+    cached_state.deploy_contract(Address(address), string_to_hash(&args.class_hash))?;
     let tx_hash = calculate_deploy_transaction_hash(
         0.into(),
-        &Address(address.clone()),
+        &Address(address),
         &constructor_calldata,
-        Felt252::zero(),
+        Felt252::ZERO,
     )?;
     Ok((address, tx_hash))
 }
@@ -161,7 +160,7 @@ fn invoke_parser(
     args: &InvokeArgs,
 ) -> Result<(Felt252, Felt252), ParserError> {
     let contract_address = Address(
-        Felt252::from_str_radix(&args.address[2..], 16)
+        Felt252::from_hex(&args.address)
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
@@ -171,7 +170,7 @@ fn invoke_parser(
         .map_err(StateError::from)?;
     let function_entrypoint_indexes = read_abi(&args.abi);
     let transaction_hash = args.hash.clone().map(|f| {
-        Felt252::from_str_radix(&f, 16)
+        Felt252::from_hex(&f)
             .map_err(|_| ParserError::ParseFelt(f.clone()))
             .unwrap()
     });
@@ -185,8 +184,7 @@ fn invoke_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector()
-        .clone();
+        .selector();
 
     let calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
@@ -194,12 +192,12 @@ fn invoke_parser(
     };
     let internal_invoke = InvokeFunction::new_with_tx_hash(
         contract_address.clone(),
-        entrypoint_selector.clone(),
-        0,
-        TRANSACTION_VERSION.clone(),
+        *entrypoint_selector,
+        Default::default(),
+        *TRANSACTION_VERSION,
         calldata.clone(),
         vec![],
-        Some(Felt252::zero()),
+        Some(Felt252::ZERO),
         transaction_hash.unwrap(),
     )?;
     let mut transactional_state = cached_state.create_transactional()?;
@@ -214,12 +212,12 @@ fn invoke_parser(
 
     let tx_hash = calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
         &contract_address,
-        entrypoint_selector,
+        *entrypoint_selector,
         &calldata,
         0,
-        Felt252::zero(),
+        Felt252::ZERO,
         &[],
     )?;
 
@@ -231,7 +229,7 @@ fn call_parser(
     args: &CallArgs,
 ) -> Result<Vec<Felt252>, ParserError> {
     let contract_address = Address(
-        Felt252::from_str_radix(&args.address[2..], 16)
+        Felt252::from_hex(&args.address)
             .map_err(|_| ParserError::ParseFelt(args.address.clone()))?,
     );
     let class_hash = cached_state.get_class_hash_at(&contract_address)?;
@@ -250,8 +248,7 @@ fn call_parser(
         .ok_or(ParserError::EntryPointType(*entry_point_type))?
         .get(*entry_point_index)
         .ok_or(ParserError::EntryPointIndex(*entry_point_index))?
-        .selector()
-        .clone();
+        .selector();
     let caller_address = Address(0.into());
     let calldata = match &args.inputs {
         Some(vec) => vec.iter().map(|&n| n.into()).collect(),
@@ -260,7 +257,7 @@ fn call_parser(
     let execution_entry_point = ExecutionEntryPoint::new(
         contract_address,
         calldata,
-        entrypoint_selector,
+        *entrypoint_selector,
         caller_address,
         *entry_point_type,
         None,
@@ -359,7 +356,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Declare transaction was sent.\nContract class hash: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },
@@ -375,7 +372,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Invoke transaction for contract deployment was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },
@@ -391,7 +388,7 @@ async fn main() -> Result<(), ParserError> {
             match response {
                 Ok(mut resp) => {
                     match resp.json::<(Felt252, Felt252)>().await {
-                        Ok(body) => println!("Invoke transaction was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", body.0.to_biguint(), body.1.to_biguint()),
+                        Ok(body) => println!("Invoke transaction was sent.\nContract address: 0x{:x}\nTransaction hash: 0x{:x}", felt_to_biguint(body.0), felt_to_biguint(body.1)),
                         Err(e) => println!("{e}")
                     }
                 },

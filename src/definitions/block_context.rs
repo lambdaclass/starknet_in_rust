@@ -3,7 +3,7 @@
 //! This module contains structs representing the context of a specific Starknet block.
 
 use crate::{state::BlockInfo, utils::Address};
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use core::fmt;
 use getset::{CopyGetters, Getters, MutGetters};
 use starknet_api::block::Block;
@@ -43,23 +43,23 @@ impl StarknetChainId {
     ///
     /// ```
     /// use starknet_in_rust::definitions::block_context::StarknetChainId;
-    /// use starknet_in_rust::felt::felt_str;
+    /// use starknet_in_rust::Felt252;
     ///
     /// assert_eq!(
     ///     StarknetChainId::MainNet.to_felt(),
-    ///     felt_str!("23448594291968334"),
+    ///     Felt252::from_dec_str("23448594291968334").unwrap(),
     /// );
     /// assert_eq!(
     ///    StarknetChainId::TestNet.to_felt(),
-    ///    felt_str!("1536727068981429685321"),
+    ///    Felt252::from_dec_str("1536727068981429685321").unwrap(),
     /// );
     /// assert_eq!(
     ///     StarknetChainId::TestNet2.to_felt(),
-    ///     felt_str!("393402129659245999442226"),
+    ///     Felt252::from_dec_str("393402129659245999442226").unwrap(),
     /// );
     /// ```
     pub fn to_felt(self) -> Felt252 {
-        Felt252::from_bytes_be(self.to_string().as_bytes())
+        Felt252::from_bytes_be_slice(self.to_string().as_bytes())
     }
 }
 
@@ -71,10 +71,60 @@ pub struct StarknetOsConfig {
     pub(crate) chain_id: Felt252,
     /// Address of the token used when paying fees
     #[get = "pub"]
-    pub(crate) fee_token_address: Address,
+    pub(crate) fee_token_address: FeeTokenAddresses,
     /// Price of gas
     #[get = "pub"]
-    pub(crate) gas_price: u128,
+    pub(crate) gas_price: GasPrices,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct GasPrices {
+    pub eth_l1_gas_price: u128,  // (Wei)
+    pub strk_l1_gas_price: u128, // (Fri)
+}
+
+impl GasPrices {
+    pub fn new(eth_l1_gas_price: u128, strk_l1_gas_price: u128) -> Self {
+        Self {
+            eth_l1_gas_price,
+            strk_l1_gas_price,
+        }
+    }
+
+    pub fn get_by_fee_type(&self, fee_type: &FeeType) -> u128 {
+        match fee_type {
+            FeeType::Strk => self.strk_l1_gas_price,
+            FeeType::Eth => self.eth_l1_gas_price,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct FeeTokenAddresses {
+    pub eth_fee_token_address: Address,
+    pub strk_fee_token_address: Address,
+}
+
+impl FeeTokenAddresses {
+    pub fn new(eth_fee_token_address: Address, strk_fee_token_address: Address) -> Self {
+        Self {
+            eth_fee_token_address,
+            strk_fee_token_address,
+        }
+    }
+
+    pub fn get_by_fee_type(&self, fee_type: &FeeType) -> &Address {
+        match fee_type {
+            FeeType::Strk => &self.strk_fee_token_address,
+            FeeType::Eth => &self.eth_fee_token_address,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Hash, Eq, PartialEq)]
+pub enum FeeType {
+    Strk,
+    Eth,
 }
 
 impl StarknetOsConfig {
@@ -85,7 +135,11 @@ impl StarknetOsConfig {
     /// * `chain_id` - [`Felt252`] of the configured chain.
     /// * `fee_token_address` - Address of the token used when paying fees.
     /// * `gas_price` - Price of gas.
-    pub const fn new(chain_id: Felt252, fee_token_address: Address, gas_price: u128) -> Self {
+    pub const fn new(
+        chain_id: Felt252,
+        fee_token_address: FeeTokenAddresses,
+        gas_price: GasPrices,
+    ) -> Self {
         StarknetOsConfig {
             chain_id,
             fee_token_address,
@@ -184,22 +238,22 @@ impl Default for BlockContext {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cairo_vm::felt::felt_str;
+    use cairo_vm::Felt252;
     use coverage_helper::test;
 
     #[test]
     fn starknet_chain_to_felt() {
         assert_eq!(
             StarknetChainId::MainNet.to_felt(),
-            felt_str!("23448594291968334"),
+            Felt252::from_dec_str("23448594291968334").unwrap(),
         );
         assert_eq!(
             StarknetChainId::TestNet.to_felt(),
-            felt_str!("1536727068981429685321"),
+            Felt252::from_dec_str("1536727068981429685321").unwrap(),
         );
         assert_eq!(
             StarknetChainId::TestNet2.to_felt(),
-            felt_str!("393402129659245999442226"),
+            Felt252::from_dec_str("393402129659245999442226").unwrap(),
         );
     }
 }

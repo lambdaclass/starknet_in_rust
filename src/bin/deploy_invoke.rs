@@ -1,6 +1,6 @@
-use cairo_vm::felt::{felt_str, Felt252};
+use cairo_vm::Felt252;
 use lazy_static::lazy_static;
-use num_traits::Zero;
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     services::api::contract_classes::{
@@ -34,9 +34,9 @@ lazy_static! {
 
     static ref CONTRACT_ADDRESS: Address = Address(1.into());
 
-    static ref INCREASE_BALANCE_SELECTOR: Felt252 = felt_str!("1530486729947006463063166157847785599120665941190480211966374137237989315360");
+    static ref INCREASE_BALANCE_SELECTOR: Felt252 = Felt252::from_dec_str("1530486729947006463063166157847785599120665941190480211966374137237989315360").unwrap();
 
-    static ref GET_BALANCE_SELECTOR: Felt252 = felt_str!("1636223440827086009537493065587328807418413867743950350615962740049133672085");
+    static ref GET_BALANCE_SELECTOR: Felt252 = Felt252::from_dec_str("1636223440827086009537493065587328807418413867743950350615962740049133672085").unwrap();
 }
 
 fn main() {
@@ -51,14 +51,14 @@ fn main() {
 
     let call_data = vec![];
     let contract_address_salt = 1.into();
-    let chain_id = block_context.starknet_os_config().chain_id().clone();
+    let chain_id = *block_context.starknet_os_config().chain_id();
 
     let deploy = Deploy::new(
         contract_address_salt,
         CONTRACT_CLASS.clone(),
         call_data,
-        block_context.starknet_os_config().chain_id().clone(),
-        TRANSACTION_VERSION.clone(),
+        *block_context.starknet_os_config().chain_id(),
+        *TRANSACTION_VERSION,
     )
     .unwrap();
 
@@ -87,7 +87,7 @@ fn main() {
     state
         .cache_mut()
         .nonce_initial_values_mut()
-        .insert(contract_address.clone(), Felt252::zero());
+        .insert(contract_address.clone(), Felt252::ZERO);
 
     for i in 0..RUNS {
         let nonce_first = Felt252::from(i * 2);
@@ -95,12 +95,12 @@ fn main() {
 
         let invoke_first = InvokeFunction::new(
             contract_address.clone(),
-            INCREASE_BALANCE_SELECTOR.clone(),
-            0,
-            TRANSACTION_VERSION.clone(),
+            *INCREASE_BALANCE_SELECTOR,
+            Default::default(),
+            *TRANSACTION_VERSION,
             vec![1000.into()],
             signature.clone(),
-            chain_id.clone(),
+            chain_id,
             Some(nonce_first),
         )
         .unwrap();
@@ -117,12 +117,12 @@ fn main() {
 
         let invoke_second = InvokeFunction::new(
             contract_address.clone(),
-            GET_BALANCE_SELECTOR.clone(),
-            0,
-            TRANSACTION_VERSION.clone(),
+            *GET_BALANCE_SELECTOR,
+            Default::default(),
+            *TRANSACTION_VERSION,
             vec![],
             signature.clone(),
-            chain_id.clone(),
+            chain_id,
             Some(nonce_second),
         )
         .unwrap();

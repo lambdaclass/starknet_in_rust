@@ -1,6 +1,6 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::core::errors::state_errors::StateError;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{
     types::errors::math_errors::MathError,
     vm::errors::{

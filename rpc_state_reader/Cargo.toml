@@ -15,7 +15,7 @@ serde_json = { version = "1.0", features = [
     "arbitrary_precision",
     "raw_value",
 ] }
-starknet_api = "0.4.1"
+starknet_api = "0.6.0"
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
 starknet = { workspace = true }
@@ -24,7 +24,8 @@ flate2 = "1.0.25"
 serde_with = "3.0.0"
 dotenv = "0.15.0"
 cairo-vm = { workspace = true }
-blockifier = "=0.2.0-rc0"
+cairo-vm-blockifier = { package = "cairo-vm", version = "0.8.2" }
+blockifier = "=0.4.0"
 starknet_in_rust = { path = "../", version = "0.4.0" }
 
 [dev-dependencies]

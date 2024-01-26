@@ -4,13 +4,14 @@ use self::{
 };
 use crate::{
     core::errors::state_errors::StateError,
+    definitions::block_context::GasPrices,
     transaction::error::TransactionError,
     utils::{
         get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, Address,
         ClassHash, CompiledClassHash,
     },
 };
-use cairo_vm::{felt::Felt252, vm::runners::cairo_runner::ExecutionResources};
+use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use getset::Getters;
 use std::{collections::HashMap, sync::Arc};
 
@@ -27,8 +28,8 @@ pub struct BlockInfo {
     pub block_number: u64,
     /// Timestamp of the beginning of the last block creation attempt.
     pub block_timestamp: u64,
-    /// L1 gas price (in Wei) measured at the beginning of the last block creation attempt.
-    pub gas_price: u128,
+    /// L1 gas price measured at the beginning of the last block creation attempt.
+    pub gas_price: GasPrices,
     /// The sequencer address of this block.
     pub sequencer_address: Address,
 }
@@ -39,7 +40,10 @@ impl BlockInfo {
         BlockInfo {
             block_number: 0, // To do: In cairo-lang, this value is set to -1
             block_timestamp: 0,
-            gas_price: 0,
+            gas_price: GasPrices {
+                strk_l1_gas_price: 0,
+                eth_l1_gas_price: 0,
+            },
             sequencer_address,
         }
     }
@@ -67,7 +71,7 @@ impl Default for BlockInfo {
         Self {
             block_number: 0,
             block_timestamp: 0,
-            gas_price: 0,
+            gas_price: Default::default(),
             sequencer_address: Address(0.into()),
         }
     }
@@ -248,7 +252,7 @@ mod test {
         },
         utils::{Address, ClassHash},
     };
-    use cairo_vm::felt::Felt252;
+    use cairo_vm::Felt252;
     use std::{collections::HashMap, sync::Arc};
 
     /// Ensures that a StateDiff constructed from a CachedState without any updates has no storage updates.
@@ -258,7 +262,7 @@ mod test {
 
         let contract_address = Address(32123.into());
         let class_hash = ClassHash([9; 32]);
-        let nonce = Felt252::new(42);
+        let nonce = Felt252::from(42);
 
         state_reader
             .address_to_class_hash
@@ -335,7 +339,7 @@ mod test {
 
         let contract_address = Address(32123.into());
         let class_hash = ClassHash([9; 32]);
-        let nonce = Felt252::new(42);
+        let nonce = Felt252::from(42);
 
         state_reader
             .address_to_class_hash
@@ -381,7 +385,7 @@ mod test {
 
         let contract_address = Address(32123.into());
         let class_hash = ClassHash([9; 32]);
-        let nonce = Felt252::new(42);
+        let nonce = Felt252::from(42);
 
         state_reader
             .address_to_class_hash
@@ -392,7 +396,7 @@ mod test {
 
         let entry: StorageEntry = (Address(555.into()), [0; 32]);
         let mut storage_writes = HashMap::new();
-        storage_writes.insert(entry, Felt252::new(666));
+        storage_writes.insert(entry, Felt252::from(666));
         let cache = StateCache::new(
             HashMap::new(),
             HashMap::new(),

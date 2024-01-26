@@ -24,8 +24,7 @@ pub mod fee;
 pub mod invoke_function;
 pub mod l1_handler;
 
-use cairo_vm::felt::Felt252;
-use num_traits::{One, Zero};
+use cairo_vm::Felt252;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -181,9 +180,78 @@ impl Transaction {
 // This is used to execute old transactions an may be removed in the future as its not part of the current standard implementation
 fn get_tx_version(version: Felt252) -> Felt252 {
     match version {
-        version if version == *QUERY_VERSION_0 => Felt252::zero(),
-        version if version == *QUERY_VERSION_1 => Felt252::one(),
+        version if version == *QUERY_VERSION_0 => Felt252::ZERO,
+        version if version == *QUERY_VERSION_1 => Felt252::ONE,
         version if version == *QUERY_VERSION_2 => 2.into(),
         version => version,
+    }
+}
+
+// Check that account_tx_fields is compatible with the tx's version
+fn check_account_tx_fields_version(
+    account_tx_fields: &VersionSpecificAccountTxFields,
+    version: Felt252,
+) -> Result<(), TransactionError> {
+    match (account_tx_fields, version) {
+        (VersionSpecificAccountTxFields::Deprecated(_), v) if v == Felt252::THREE => {
+            Err(TransactionError::DeprecatedAccountTxFieldsVInV3TX)
+        }
+        (VersionSpecificAccountTxFields::Current(_), v) if v < Felt252::THREE => {
+            Err(TransactionError::CurrentAccountTxFieldsInNonV3TX)
+        }
+        _ => Ok(()),
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum DataAvailabilityMode {
+    L1,
+    L2,
+}
+
+#[derive(Clone, Debug)]
+pub struct ResourceBounds {
+    pub max_amount: u64,
+    pub max_price_per_unit: u128,
+}
+
+#[derive(Clone, Debug)]
+pub struct CurrentAccountTxFields {
+    pub l1_resource_bounds: Option<ResourceBounds>,
+    pub l2_resource_bounds: Option<ResourceBounds>,
+    pub tip: u64,
+    pub nonce_data_availability_mode: DataAvailabilityMode,
+    pub fee_data_availability_mode: DataAvailabilityMode,
+    pub paymaster_data: Vec<Felt252>,
+    pub account_deployment_data: Vec<Felt252>,
+}
+
+#[derive(Clone, Debug)]
+pub enum VersionSpecificAccountTxFields {
+    // Deprecated fields only consist of max_fee
+    Deprecated(u128),
+    Current(CurrentAccountTxFields),
+}
+
+impl Default for VersionSpecificAccountTxFields {
+    fn default() -> Self {
+        Self::Deprecated(0)
+    }
+}
+
+impl VersionSpecificAccountTxFields {
+    pub fn new_deprecated(max_fee: u128) -> Self {
+        Self::Deprecated(max_fee)
+    }
+    // TODO[0.13]: This method should be removed after completing V3 Tx related changes
+    pub(crate) fn max_fee(&self) -> u128 {
+        match self {
+            Self::Deprecated(max_fee) => *max_fee,
+            Self::Current(current) => current
+                .l1_resource_bounds
+                .as_ref()
+                .map(|rb| rb.max_amount as u128 * rb.max_price_per_unit)
+                .unwrap_or_default(),
+        }
     }
 }

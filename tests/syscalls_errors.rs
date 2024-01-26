@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use assert_matches::assert_matches;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -48,14 +48,13 @@ fn test_contract<'a>(
     let mut tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
-            10,
             0.into(),
             block_context.invoke_tx_max_n_steps(),
-            TRANSACTION_VERSION.clone(),
+            *TRANSACTION_VERSION,
         )
     });
 
-    let nonce = tx_execution_context.nonce().clone();
+    let nonce = *tx_execution_context.nonce();
 
     let mut state_reader = InMemoryStateReader::default();
     state_reader
@@ -162,7 +161,7 @@ fn call_contract_with_extra_arguments() {
 #[test]
 fn call_contract_not_deployed() {
     let contract_address = Address(2222.into());
-    let wrong_address = contract_address.0.clone() - Felt252::new(2); // another address
+    let wrong_address = contract_address.0 - Felt252::from(2); // another address
     let error_msg = format!(
         "Contract address {:?} is not deployed",
         felt_to_hash(&wrong_address)
@@ -214,10 +213,7 @@ fn deploy_not_declared_class_hash() {
         BlockContext::default(),
         None,
         [].into_iter(),
-        [
-            Felt252::from_bytes_be(not_declared_class_hash.to_bytes_be()),
-            0.into(),
-        ],
+        [Felt252::from_bytes_be(&not_declared_class_hash.0), 0.into()],
         &StateError::NoneCompiledHash(not_declared_class_hash).to_string(),
     );
 }

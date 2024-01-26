@@ -1,4 +1,4 @@
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::ToPrimitive;
 
@@ -19,7 +19,6 @@ use crate::{
 // ```
 
 /// Abstracts every request variant for each syscall.
-#[allow(unused)]
 #[derive(Debug, PartialEq)]
 pub(crate) enum SyscallRequest {
     /// Emits an event with a given set of keys and data.
@@ -55,12 +54,10 @@ pub(crate) enum SyscallRequest {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 /// Gets the timestamp of the block in which the transaction is executed.
-#[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GetBlockTimestampRequest {}
 
 /// Deploys a new instance of a previously declared class.
-#[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct DeployRequest {
     // The hash of the class to deploy.
@@ -175,7 +172,6 @@ pub(crate) struct GetBlockHashRequest {
 /// Replaces the class of the calling contract (i.e. the contract whose address is
 /// returned by `get_contract_address` at the time the syscall is called) by the class
 /// of the given hash.
-#[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ReplaceClassRequest {
     /// The hash of the class that will replace the calling contract one.
@@ -183,7 +179,6 @@ pub(crate) struct ReplaceClassRequest {
 }
 
 /// Computes the Keccak256 hash of the given data.
-#[allow(unused)]
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct KeccakRequest {
     /// The input data start.
@@ -328,7 +323,7 @@ impl FromPtr for StorageReadRequest {
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
         let reserved = get_big_int(vm, syscall_ptr)?;
-        let key = get_big_int(vm, &syscall_ptr + 1)?.to_be_bytes();
+        let key = get_big_int(vm, &syscall_ptr + 1)?.to_bytes_be();
         Ok(StorageReadRequest { key, reserved }.into())
     }
 }

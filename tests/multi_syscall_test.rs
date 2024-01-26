@@ -1,6 +1,6 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_vm::felt::Felt252;
-use num_traits::{Num, Zero};
+use cairo_vm::Felt252;
+
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -30,10 +30,15 @@ fn test_multiple_syscall() {
 
     let address = Address(1111.into());
     let class_hash: ClassHash = ClassHash([1; 32]);
-    let nonce = Felt252::zero();
+    let nonce = Felt252::ZERO;
 
-    contract_class_cache
-        .set_contract_class(class_hash, CompiledClass::Casm(Arc::new(contract_class)));
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
     let mut state_reader = InMemoryStateReader::default();
     state_reader
         .address_to_class_hash_mut()
@@ -164,7 +169,7 @@ fn test_multiple_syscall() {
         );
         assert_eq!(
             call_info.retdata,
-            vec![Felt252::from_str_radix("310939249775", 10).unwrap()]
+            vec![Felt252::from_dec_str("310939249775").unwrap()]
         )
     }
 
@@ -184,27 +189,24 @@ fn test_multiple_syscall() {
             vec![
                 OrderedEvent {
                     order: 0,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![1.into()]
                 },
                 OrderedEvent {
                     order: 1,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![2.into()]
                 },
                 OrderedEvent {
                     order: 2,
-                    keys: vec![Felt252::from_str_radix(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541",
-                        10
+                    keys: vec![Felt252::from_dec_str(
+                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
                     )
                     .unwrap()],
                     data: vec![3.into()]
@@ -228,7 +230,7 @@ fn test_syscall(
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        Felt252::new(entrypoint_selector),
+        entrypoint_selector,
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -240,12 +242,12 @@ fn test_syscall(
     let block_context = BlockContext::default();
     let mut tx_execution_context = TransactionExecutionContext::new(
         Address(0.into()),
-        Felt252::zero(),
+        Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
-        TRANSACTION_VERSION.clone(),
+        *TRANSACTION_VERSION,
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     exec_entry_point

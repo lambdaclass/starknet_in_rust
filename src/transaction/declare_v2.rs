@@ -1,6 +1,10 @@
 use super::fee::{calculate_tx_fee, charge_fee};
-use super::{get_tx_version, Transaction};
+use super::{
+    check_account_tx_fields_version, get_tx_version, ResourceBounds, Transaction,
+    VersionSpecificAccountTxFields,
+};
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
+use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::execution::gas_usage::get_onchain_data_segment_length;
@@ -31,7 +35,7 @@ use crate::{
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
-use cairo_vm::felt::Felt252;
+use cairo_vm::Felt252;
 use num_traits::Zero;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -51,7 +55,7 @@ pub struct DeclareV2 {
     pub sender_address: Address,
     pub validate_entry_point_selector: Felt252,
     pub version: Felt252,
-    pub max_fee: u128,
+    pub account_tx_fields: VersionSpecificAccountTxFields,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
     // maybe change this for ClassHash
@@ -86,7 +90,7 @@ impl DeclareV2 {
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
@@ -94,13 +98,13 @@ impl DeclareV2 {
         let sierra_class_hash = compute_sierra_class_hash(sierra_contract_class)?;
 
         let hash_value = calculate_declare_v2_transaction_hash(
-            sierra_class_hash.clone(),
-            compiled_class_hash.clone(),
+            sierra_class_hash,
+            compiled_class_hash,
             chain_id,
             &sender_address,
-            max_fee,
-            version.clone(),
-            nonce.clone(),
+            account_tx_fields.max_fee(),
+            version,
+            nonce,
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
@@ -109,7 +113,7 @@ impl DeclareV2 {
             casm_contract_class,
             compiled_class_hash,
             sender_address,
-            max_fee,
+            account_tx_fields,
             version,
             signature,
             nonce,
@@ -138,14 +142,15 @@ impl DeclareV2 {
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
         let version = get_tx_version(version);
-        let validate_entry_point_selector = VALIDATE_DECLARE_ENTRY_POINT_SELECTOR.clone();
+        check_account_tx_fields_version(&account_tx_fields, version)?;
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
         let internal_declare = DeclareV2 {
             sierra_contract_class: sierra_contract_class.to_owned(),
@@ -153,7 +158,7 @@ impl DeclareV2 {
             sender_address,
             validate_entry_point_selector,
             version,
-            max_fee,
+            account_tx_fields,
             signature,
             nonce,
             compiled_class_hash,
@@ -185,7 +190,7 @@ impl DeclareV2 {
         casm_contract_class: Option<CasmContractClass>,
         compiled_class_hash: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
@@ -199,7 +204,7 @@ impl DeclareV2 {
             casm_contract_class,
             compiled_class_hash,
             sender_address,
-            max_fee,
+            account_tx_fields,
             version,
             signature,
             nonce,
@@ -227,19 +232,19 @@ impl DeclareV2 {
         compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
         let hash_value = calculate_declare_v2_transaction_hash(
-            sierra_class_hash.clone(),
-            compiled_class_hash.clone(),
+            sierra_class_hash,
+            compiled_class_hash,
             chain_id,
             &sender_address,
-            max_fee,
-            version.clone(),
-            nonce.clone(),
+            account_tx_fields.max_fee(),
+            version,
+            nonce,
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
@@ -248,7 +253,7 @@ impl DeclareV2 {
             casm_contract_class,
             compiled_class_hash,
             sender_address,
-            max_fee,
+            account_tx_fields,
             version,
             signature,
             nonce,
@@ -266,18 +271,18 @@ impl DeclareV2 {
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
-            self.hash_value.clone(),
+            self.hash_value,
             self.signature.clone(),
-            self.max_fee,
-            self.nonce.clone(),
+            self.account_tx_fields.clone(),
+            self.nonce,
             n_steps,
-            self.version.clone(),
+            self.version,
         )
     }
 
     /// returns the calldata with which the contract is executed
     pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = self.compiled_class_hash.clone();
+        let bytes = self.compiled_class_hash;
         Vec::from([bytes])
     }
 
@@ -300,22 +305,26 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         block_context: &BlockContext,
+        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
-        if self.max_fee.is_zero() {
+        if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
         let minimal_fee = self.estimate_minimal_fee(block_context)?;
         // Check max fee is at least the estimated constant overhead.
-        if self.max_fee < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
+        if self.account_tx_fields.max_fee() < minimal_fee {
+            return Err(TransactionError::MaxFeeTooLow(
+                self.account_tx_fields.max_fee(),
+                minimal_fee,
+            ));
         }
         // Check that the current balance is high enough to cover the max_fee
         let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, &self.sender_address)?;
+            state.get_fee_token_balance(block_context, &self.sender_address, fee_type)?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+        if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(
-                self.max_fee,
+                self.account_tx_fields.max_fee(),
                 balance_low,
                 balance_high,
             ));
@@ -338,11 +347,7 @@ impl DeclareV2 {
             ),
             ("n_steps".to_string(), n_estimated_steps),
         ]);
-        calculate_tx_fee(
-            &resources,
-            block_context.starknet_os_config.gas_price,
-            block_context,
-        )
+        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     /// Execute the validation of the contract in the cairo-vm. Returns a TransactionExecutionInfo if succesful.
@@ -369,37 +374,38 @@ impl DeclareV2 {
         if self.version != 2.into() {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeclareV2".to_string(),
-                self.version.clone(),
+                self.version,
                 vec![2],
             ));
         }
 
-        if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context)?;
-        }
-
         self.handle_nonce(state)?;
-        let initial_gas = INITIAL_GAS_COST;
+
+        if !self.skip_fee_transfer {
+            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
+        }
 
         let mut resources_manager = ExecutionResourcesManager::default();
 
-        let (execution_result, _remaining_gas) = if self.skip_validate {
-            (ExecutionResult::default(), 0)
+        let execution_result = if self.skip_validate {
+            ExecutionResult::default()
         } else {
-            let (info, gas) = self.run_validate_entrypoint(
-                initial_gas,
+            self.run_validate_entrypoint(
                 state,
-                &mut resources_manager,
                 block_context,
+                &mut resources_manager,
+                INITIAL_GAS_COST,
                 #[cfg(feature = "cairo-native")]
                 program_cache.clone(),
-            )?;
-            (info, gas)
+            )?
         };
         self.compile_and_store_casm_class(state)?;
 
         let storage_changes = state.count_actual_state_changes(Some((
-            &block_context.starknet_os_config.fee_token_address,
+            (block_context
+                .starknet_os_config
+                .fee_token_address
+                .get_by_fee_type(&FeeType::Eth)),
             &self.sender_address,
         )))?;
 
@@ -418,7 +424,7 @@ impl DeclareV2 {
             state,
             &actual_resources,
             block_context,
-            self.max_fee,
+            self.account_tx_fields.max_fee(),
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -462,10 +468,26 @@ impl DeclareV2 {
         state
             .set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash.clone())?;
 
-        let compiled_contract_class = ClassHash::from(self.compiled_class_hash.clone());
+        let compiled_contract_class = ClassHash::from(self.compiled_class_hash);
         state.set_contract_class(
             &compiled_contract_class,
-            &CompiledClass::Casm(Arc::new(casm_class)),
+            &CompiledClass::Casm {
+                casm: Arc::new(casm_class),
+                sierra: self
+                    .sierra_contract_class
+                    .as_ref()
+                    .map(|contract_class| {
+                        Result::<_, TransactionError>::Ok(Arc::new((
+                            contract_class.extract_sierra_program().map_err(|e| {
+                                TransactionError::CustomError(format!(
+                                    "Sierra program extraction failed: {e}"
+                                ))
+                            })?,
+                            contract_class.entry_points_by_type.clone(),
+                        )))
+                    })
+                    .transpose()?,
+            },
         )?;
 
         Ok(())
@@ -473,23 +495,23 @@ impl DeclareV2 {
 
     fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
         &self,
-        mut remaining_gas: u128,
         state: &mut CachedState<S, C>,
-        resources_manager: &mut ExecutionResourcesManager,
         block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
+        remaining_gas: u128,
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
-    ) -> Result<(ExecutionResult, u128), TransactionError> {
-        let calldata = [self.compiled_class_hash.clone()].to_vec();
+    ) -> Result<ExecutionResult, TransactionError> {
+        let calldata = [self.compiled_class_hash].to_vec();
 
         let entry_point = ExecutionEntryPoint {
             contract_address: self.sender_address.clone(),
-            entry_point_selector: self.validate_entry_point_selector.clone(),
+            entry_point_selector: self.validate_entry_point_selector,
             initial_gas: remaining_gas,
             entry_point_type: EntryPointType::External,
             calldata,
-            caller_address: Address(Felt252::zero()),
+            caller_address: Address(Felt252::ZERO),
             code_address: None,
             class_hash: None,
             call_type: CallType::Call,
@@ -518,13 +540,19 @@ impl DeclareV2 {
         let contract_class = state
             .get_contract_class(&class_hash)
             .map_err(|_| TransactionError::MissingCompiledClass)?;
-        if let CompiledClass::Sierra(_) = contract_class {
+        if matches!(
+            contract_class,
+            CompiledClass::Casm {
+                sierra: Some(_),
+                ..
+            }
+        ) {
             // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
             // return `VALID`.
             if !execution_result
                 .call_info
                 .as_ref()
-                .map(|ci| ci.retdata == vec![VALIDATE_RETDATA.clone()])
+                .map(|ci| ci.retdata == vec![*VALIDATE_RETDATA])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
@@ -533,10 +561,9 @@ impl DeclareV2 {
 
         if execution_result.call_info.is_some() {
             verify_no_calls_to_other_contracts(&execution_result.call_info)?;
-            remaining_gas -= execution_result.call_info.clone().unwrap().gas_consumed;
         }
 
-        Ok((execution_result, remaining_gas))
+        Ok(execution_result)
     }
 
     // ---------------
@@ -554,10 +581,19 @@ impl DeclareV2 {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            max_fee: if ignore_max_fee {
-                u128::MAX
+            account_tx_fields: if ignore_max_fee {
+                if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
+                    let mut current_fields = current.clone();
+                    current_fields.l1_resource_bounds = Some(ResourceBounds {
+                        max_amount: u64::MAX,
+                        max_price_per_unit: u128::MAX,
+                    });
+                    VersionSpecificAccountTxFields::Current(current_fields)
+                } else {
+                    VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
+                }
             } else {
-                self.max_fee
+                self.account_tx_fields.clone()
             },
             skip_nonce_check,
             ..self.clone()
@@ -585,8 +621,8 @@ mod tests {
         utils::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-    use cairo_vm::felt::Felt252;
-    use num_traits::{One, Zero};
+    use cairo_vm::Felt252;
+
     use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
     #[test]
@@ -622,11 +658,11 @@ mod tests {
             None,
             casm_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             [1.into()].to_vec(),
-            Felt252::zero(),
-            Felt252::one(),
+            Felt252::ZERO,
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -652,7 +688,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -692,11 +728,11 @@ mod tests {
             Some(casm_class),
             casm_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             [1.into()].to_vec(),
-            Felt252::zero(),
-            Felt252::one(),
+            Felt252::ZERO,
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -722,7 +758,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -736,13 +772,13 @@ mod tests {
         let path;
         #[cfg(not(feature = "cairo_1_tests"))]
         {
-            version = QUERY_VERSION_2.clone();
+            version = *QUERY_VERSION_2;
             path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         }
 
         #[cfg(feature = "cairo_1_tests")]
         {
-            version = QUERY_VERSION_2.clone();
+            version = *QUERY_VERSION_2;
             path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
         }
 
@@ -764,11 +800,11 @@ mod tests {
             Some(casm_class),
             casm_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             vec![],
-            Felt252::zero(),
-            Felt252::zero(),
+            Felt252::ZERO,
+            Felt252::ZERO,
         )
         .unwrap();
 
@@ -794,7 +830,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -834,11 +870,11 @@ mod tests {
             None,
             casm_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             [1.into()].to_vec(),
-            Felt252::zero(),
-            Felt252::one(),
+            Felt252::ZERO,
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -864,7 +900,7 @@ mod tests {
             .get_contract_class(&internal_declare_compiled_class_hash)
             .unwrap()
         {
-            CompiledClass::Casm(casm) => casm.as_ref().clone(),
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
             _ => unreachable!(),
         };
 
@@ -903,13 +939,13 @@ mod tests {
         let internal_declare = DeclareV2::new_with_tx_hash(
             &sierra_contract_class,
             None,
-            sended_class_hash.clone(),
+            sended_class_hash,
             sender_address,
-            0,
+            Default::default(),
             version,
             [1.into()].to_vec(),
-            Felt252::zero(),
-            Felt252::one(),
+            Felt252::ZERO,
+            Felt252::ONE,
         )
         .unwrap();
 
@@ -955,13 +991,13 @@ mod tests {
         let internal_declare = DeclareV2::new(
             &sierra_contract_class,
             None,
-            Felt252::one(),
+            Felt252::ONE,
             chain_id,
-            Address(Felt252::one()),
-            0,
+            Address(Felt252::ONE),
+            Default::default(),
             1.into(),
             Vec::new(),
-            Felt252::zero(),
+            Felt252::ZERO,
         )
         .unwrap();
         let result = internal_declare.execute(
