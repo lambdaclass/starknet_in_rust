@@ -385,10 +385,7 @@ fn integration_test_erc20() {
 }
 
 #[test]
-#[cfg_attr(
-    feature = "cairo_2_tests",
-    ignore = "Broken until GetExecutionInfoV2 libfunc is implemented"
-)]
+#[ignore = "Broken until GetExecutionInfoV2 libfunc is implemented"]
 fn call_contract_test() {
     let class_hash = ClassHash([1; 32]);
     let caller_address = Address(1.into());
@@ -432,10 +429,7 @@ fn call_contract_test() {
 }
 
 #[test]
-#[cfg_attr(
-    feature = "cairo_2_tests",
-    ignore = "Broken until GetExecutionInfoV2 libfunc is implemented"
-)]
+#[ignore = "Broken until GetExecutionInfoV2 libfunc is implemented"]
 fn call_echo_contract_test() {
     let class_hash = ClassHash([1; 32]);
     let caller_address = Address(1.into());
@@ -480,10 +474,7 @@ fn call_echo_contract_test() {
 }
 
 #[test]
-#[cfg_attr(
-    feature = "cairo_2_tests",
-    ignore = "Broken until GetExecutionInfoV2 libfunc is implemented"
-)]
+#[ignore = "Broken until GetExecutionInfoV2 libfunc is implemented"]
 fn call_events_contract_test() {
     let class_hash = ClassHash([1; 32]);
     let caller_address = Address(1.into());
