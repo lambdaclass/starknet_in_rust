@@ -240,7 +240,7 @@ pub fn execute_tx_configurable_with_state(
                         starknet_api::transaction::DeclareTransaction::V1(ref tx) => tx.max_fee.0,
                         starknet_api::transaction::DeclareTransaction::V2(ref tx) => tx.max_fee.0,
                         starknet_api::transaction::DeclareTransaction::V3(_) => {
-                            return Err(TransactionError::UnsuportedV3Transaction)
+                            return Err(TransactionError::CurrentAccountTxFieldsInNonV3TX)
                         }
                     },
                     Felt252::from_bytes_be_slice(tx.version().0.bytes()),
