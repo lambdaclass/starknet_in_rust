@@ -1083,7 +1083,7 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
     pub(crate) fn allocate_felt_segment(
         &mut self,
         vm: &mut VirtualMachine,
-        data: &Vec<Felt252>,
+        data: &[Felt252],
     ) -> Result<(Relocatable, Relocatable), SyscallHandlerError> {
         let segment_start = vm.add_memory_segment();
         let segment_end = vm.load_data(segment_start, &data.iter().map(|f| f.into()).collect())?;

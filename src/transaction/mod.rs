@@ -213,11 +213,11 @@ pub enum DataAvailabilityMode {
     L2,
 }
 
-impl Into<Felt252> for DataAvailabilityMode {
-    fn into(self) -> Felt252 {
-        match self {
-            Self::L1 => Felt252::ZERO,
-            Self::L2 => Felt252::ONE,
+impl From<DataAvailabilityMode> for Felt252 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => Felt252::ZERO,
+            DataAvailabilityMode::L2 => Felt252::ONE,
         }
     }
 }
