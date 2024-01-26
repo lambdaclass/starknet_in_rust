@@ -20,6 +20,7 @@ use crate::{
 pub use cairo_vm::Felt252;
 use definitions::block_context::FeeType;
 use std::sync::Arc;
+use transaction::VersionSpecificAccountTxFields;
 
 #[cfg(test)]
 #[macro_use]
@@ -171,7 +172,7 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
         contract_address,
         transaction_hash,
         signature,
-        max_fee,
+        VersionSpecificAccountTxFields::new_deprecated(max_fee),
         nonce,
         block_context.invoke_tx_max_n_steps(),
         version.into(),
@@ -273,6 +274,7 @@ mod test {
         },
         transaction::{
             Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
+            VersionSpecificAccountTxFields,
         },
         utils::{
             felt_to_hash,
@@ -322,7 +324,7 @@ mod test {
         let invoke_function = InvokeFunction::new(
             TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             *VALIDATE_ENTRY_POINT_SELECTOR,
-            0, // should be ignored.
+            VersionSpecificAccountTxFields::new_deprecated(0), // should be ignored.
             1.into(),
             calldata,
             vec![],
@@ -491,7 +493,7 @@ mod test {
         let invoke = InvokeFunction::new(
             address,
             entrypoint_selector,
-            1000000,
+            VersionSpecificAccountTxFields::new_deprecated(1000000),
             Felt252::ZERO,
             calldata,
             vec![],
@@ -591,7 +593,7 @@ mod test {
             InvokeFunction::new(
                 address.clone(),
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata.clone(),
                 vec![],
@@ -605,7 +607,7 @@ mod test {
             InvokeFunction::new(
                 address.clone(),
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata.clone(),
                 vec![],
@@ -619,7 +621,7 @@ mod test {
             InvokeFunction::new(
                 address,
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata,
                 vec![],
@@ -727,7 +729,7 @@ mod test {
             InvokeFunction::new(
                 address,
                 entrypoint_selector,
-                1000000,
+                VersionSpecificAccountTxFields::new_deprecated(1000000),
                 Felt252::ONE,
                 calldata,
                 vec![],
@@ -899,7 +901,7 @@ mod test {
             InvokeFunction::new(
                 CONTRACT_ADDRESS.clone(),
                 selector,
-                0,
+                VersionSpecificAccountTxFields::new_deprecated(0),
                 *TRANSACTION_VERSION,
                 calldata,
                 SIGNATURE.clone(),
@@ -947,7 +949,7 @@ mod test {
         let deploy_account_tx = Transaction::DeployAccount(
             DeployAccount::new(
                 CLASS_HASH.to_owned(),
-                0,
+                Default::default(),
                 1.into(),
                 Felt252::ZERO,
                 vec![],
@@ -986,7 +988,7 @@ mod test {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             version: 2.into(),
-            max_fee: 2900,
+            account_tx_fields: VersionSpecificAccountTxFields::Deprecated(2900),
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),
@@ -1125,7 +1127,7 @@ mod test {
             InvokeFunction::new(
                 CONTRACT_ADDRESS.clone(),
                 selector,
-                0,
+                VersionSpecificAccountTxFields::new_deprecated(0),
                 *TRANSACTION_VERSION,
                 calldata,
                 SIGNATURE.clone(),

@@ -17,9 +17,6 @@ use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::Zero;
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
-use starknet_in_rust::definitions::constants::{
-    DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR,
-};
 use starknet_in_rust::execution::execution_entry_point::ExecutionEntryPoint;
 use starknet_in_rust::execution::TransactionExecutionContext;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
@@ -41,6 +38,10 @@ use starknet_in_rust::{
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     definitions::block_context::{FeeTokenAddresses, FeeType, GasPrices},
+};
+use starknet_in_rust::{
+    definitions::constants::{DEFAULT_CAIRO_RESOURCE_FEE_WEIGHTS, VALIDATE_ENTRY_POINT_SELECTOR},
+    transaction::VersionSpecificAccountTxFields,
 };
 use starknet_in_rust::{
     definitions::{
@@ -700,7 +701,7 @@ fn invoke_tx(calldata: Vec<Felt252>, max_fee: u128) -> InvokeFunction {
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         *EXECUTE_ENTRY_POINT_SELECTOR,
-        max_fee,
+        VersionSpecificAccountTxFields::new_deprecated(max_fee),
         *TRANSACTION_VERSION,
         calldata,
         vec![],
@@ -714,7 +715,7 @@ fn invoke_tx_with_nonce(calldata: Vec<Felt252>, max_fee: u128, nonce: Felt252) -
     InvokeFunction::new(
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         *EXECUTE_ENTRY_POINT_SELECTOR,
-        max_fee,
+        VersionSpecificAccountTxFields::new_deprecated(max_fee),
         *TRANSACTION_VERSION,
         calldata,
         vec![],
@@ -885,7 +886,7 @@ fn declarev2_tx() -> DeclareV2 {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         version: 2.into(),
-        max_fee: 50000000,
+        account_tx_fields: VersionSpecificAccountTxFields::new_deprecated(50000000),
         signature: vec![],
         nonce: 0.into(),
         hash_value: 0.into(),
@@ -1689,7 +1690,7 @@ fn test_deploy_account() {
 
     let deploy_account_tx = DeployAccount::new(
         *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
-        expected_fee,
+        VersionSpecificAccountTxFields::new_deprecated(expected_fee),
         *TRANSACTION_VERSION,
         Default::default(),
         Default::default(),
@@ -1815,7 +1816,7 @@ fn test_deploy_account_revert() {
 
     let deploy_account_tx = DeployAccount::new(
         *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
-        max_fee,
+        VersionSpecificAccountTxFields::new_deprecated(max_fee),
         *TRANSACTION_VERSION,
         Default::default(),
         Default::default(),
@@ -2370,7 +2371,7 @@ fn test_invoke_tx_wrong_entrypoint() {
         TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         // Entrypoiont that doesnt exits in the contract
         Felt252::from_bytes_be(&calculate_sn_keccak(b"none_function")),
-        2483,
+        VersionSpecificAccountTxFields::new_deprecated(2483),
         *TRANSACTION_VERSION,
         vec![
             test_contract_address, // CONTRACT_ADDRESS
@@ -2405,7 +2406,7 @@ fn test_deploy_undeclared_account() {
     // Deploy transaction with a not_deployed_class_hash class_hash
     let deploy_account_tx = DeployAccount::new(
         not_deployed_class_hash,
-        0,
+        Default::default(),
         *TRANSACTION_VERSION,
         Default::default(),
         Default::default(),
@@ -2539,7 +2540,7 @@ fn test_library_call_with_declare_v2() {
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        100000000,
+        VersionSpecificAccountTxFields::new_deprecated(100000000),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         *TRANSACTION_VERSION,

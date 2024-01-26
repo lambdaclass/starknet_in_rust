@@ -105,7 +105,7 @@ fn test_erc20_cairo2() {
         Address(0.into()),
         Felt252::ZERO,
         Vec::new(),
-        0,
+        Default::default(),
         10.into(),
         block_context.invoke_tx_max_n_steps(),
         1.into(),
@@ -155,7 +155,7 @@ fn test_erc20_cairo2() {
 
     let internal_deploy_account = DeployAccount::new(
         ClassHash::from(Felt252::from_dec_str("1").unwrap()),
-        0,
+        Default::default(),
         1.into(),
         Felt252::ZERO,
         vec![2.into()],
@@ -212,7 +212,7 @@ fn test_erc20_cairo2() {
 
     let internal_deploy_account = DeployAccount::new(
         ClassHash::from(Felt252::from_dec_str("1").unwrap()),
-        0,
+        Default::default(),
         1.into(),
         Felt252::ZERO,
         vec![2.into()],

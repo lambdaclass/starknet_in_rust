@@ -48,7 +48,6 @@ fn test_contract<'a>(
     let mut tx_execution_context = tx_execution_context_option.unwrap_or_else(|| {
         TransactionExecutionContext::create_for_testing(
             Address(0.into()),
-            10,
             0.into(),
             block_context.invoke_tx_max_n_steps(),
             *TRANSACTION_VERSION,

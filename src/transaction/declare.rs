@@ -244,7 +244,7 @@ impl Declare {
             self.sender_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            self.max_fee,
+            super::VersionSpecificAccountTxFields::new_deprecated(self.max_fee),
             self.nonce,
             n_steps,
             self.version,
@@ -391,11 +391,12 @@ impl Declare {
                 vec![0, 1],
             ));
         }
+
+        self.handle_nonce(state)?;
+
         if !self.skip_fee_transfer {
             self.check_fee_balance(state, block_context, &FeeType::Eth)?;
         }
-
-        self.handle_nonce(state)?;
 
         let mut tx_exec_info = self.apply(
             state,

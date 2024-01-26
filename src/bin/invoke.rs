@@ -78,7 +78,7 @@ fn main() {
         let invoke_first = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
             *INCREASE_BALANCE_SELECTOR,
-            0,
+            Default::default(),
             *TRANSACTION_VERSION,
             vec![1000.into()],
             signature.clone(),
@@ -100,7 +100,7 @@ fn main() {
         let invoke_second = InvokeFunction::new(
             CONTRACT_ADDRESS.clone(),
             *GET_BALANCE_SELECTOR,
-            0,
+            Default::default(),
             *TRANSACTION_VERSION,
             vec![],
             signature.clone(),
