@@ -46,6 +46,7 @@ use cairo_vm::{
 use std::sync::Arc;
 #[cfg(feature = "cairo-native")]
 use {
+    crate::sandboxing::IsolatedExecutor,
     crate::state::StateDiff,
     cairo_native::cache::{JitProgramCache, ProgramCache},
     cairo_native::OptLevel,
@@ -116,6 +117,7 @@ impl ExecutionEntryPoint {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
@@ -174,6 +176,7 @@ impl ExecutionEntryPoint {
                     block_context,
                     &class_hash,
                     program_cache,
+                    sandbox,
                 ) {
                     Ok(call_info) => {
                         state.apply_state_update(&StateDiff::from_cached_state(
@@ -684,6 +687,7 @@ impl ExecutionEntryPoint {
         block_context: &BlockContext,
         class_hash: &ClassHash,
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        sandbox: Option<&IsolatedExecutor>,
     ) -> Result<CallInfo, TransactionError> {
         use cairo_native::{
             executor::NativeExecutor, metadata::syscall_handler::SyscallHandlerMeta,
@@ -753,6 +757,7 @@ impl ExecutionEntryPoint {
             block_context: block_context.clone(),
             program_cache: program_cache.clone(),
             resources_manager: Default::default(),
+            sandbox,
         };
 
         let syscall_meta = SyscallHandlerMeta::new(&mut syscall_handler);

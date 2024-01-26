@@ -13,6 +13,7 @@ metrics = []
 # Disclaimer: This feature enables state modifications being applied on reverted and failings txs, and also disables address availability check when deploying contracts.
 # Only use for benchmarking using the replay binary
 replay_benchmark = []
+cairo-native = ["dep:ipc-channel", "dep:tracing-appender", "dep:cairo-native", "dep:uuid"]
 
 [workspace]
 members = [
@@ -43,8 +44,10 @@ cairo-lang-runner = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "5e003699e53003c03b848e3001f1d4ec0d7007ed", optional = true }
-
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "a2e6d118af9a54295ef1ca4d693b98e54ffc3b0f", features = ["with-serde"], optional = true }
+ipc-channel = { version = "0.18.0", features = ["memfd"], optional = true }
+tracing-appender = { version = "0.2.3", optional = true}
+uuid = { version = "1.6.1", features = ["serde", "v4"], optional = true }
 
 cairo-vm = { workspace = true }
 flate2 = "1.0.25"
@@ -70,6 +73,7 @@ starknet_api = { workspace = true }
 starknet-crypto = "0.6.1"
 thiserror = { workspace = true }
 tracing = "0.1.37"
+tracing-subscriber = "0.3.17"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
@@ -86,6 +90,11 @@ harness = false
 [[bin]]
 path = "src/bin/native_bench.rs"
 name = "cairo_native"
+required-features = ["cairo-native"]
+
+[[bin]]
+path = "src/bin/native_executor.rs"
+name = "cairo_native_executor"
 required-features = ["cairo-native"]
 
 [[bench]]

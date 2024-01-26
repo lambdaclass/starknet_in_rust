@@ -83,6 +83,7 @@ impl Transaction {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
             Transaction::Declare(tx) => tx.execute(
@@ -90,24 +91,32 @@ impl Transaction {
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             ),
             Transaction::DeclareV2(tx) => tx.execute(
                 state,
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             ),
             Transaction::Deploy(tx) => tx.execute(
                 state,
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             ),
             Transaction::DeployAccount(tx) => tx.execute(
                 state,
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             ),
             Transaction::InvokeFunction(tx) => tx.execute(
                 state,
@@ -115,6 +124,8 @@ impl Transaction {
                 remaining_gas,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             ),
             Transaction::L1Handler(tx) => tx.execute(
                 state,
@@ -122,6 +133,8 @@ impl Transaction {
                 remaining_gas,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             ),
         }
     }

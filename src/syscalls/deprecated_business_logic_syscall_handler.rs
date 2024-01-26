@@ -238,6 +238,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<(), StateError> {
         let contract_class = self
             .starknet_storage_state
@@ -282,6 +283,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
                 self.block_context.invoke_tx_max_n_steps,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )
             .map_err(|_| StateError::ExecutionEntryPoint)?;
 
@@ -341,6 +344,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<Address, SyscallHandlerError> {
         let request = match self.read_and_validate_syscall_request("deploy", vm, syscall_ptr)? {
             DeprecatedSyscallRequest::Deploy(request) => request,
@@ -395,6 +399,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             constructor_calldata,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
         Ok(deploy_contract_address)
     }
@@ -408,6 +414,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<Vec<Felt252>, SyscallHandlerError> {
         let request = self.read_and_validate_syscall_request(syscall_name, vm, syscall_ptr)?;
 
@@ -510,6 +517,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
                 self.block_context.invoke_tx_max_n_steps,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )
             .map_err(|e| SyscallHandlerError::ExecutionError(e.to_string()))?;
 
@@ -555,6 +564,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<(), SyscallHandlerError> {
         self.call_contract_and_write_response(
             "delegate_l1_handler",
@@ -562,6 +572,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             syscall_ptr,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )
     }
 
@@ -694,12 +706,15 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<(), SyscallHandlerError> {
         let contract_address = self.syscall_deploy(
             vm,
             syscall_ptr,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         let response = DeprecatedDeployResponse::new(
@@ -724,6 +739,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<(), SyscallHandlerError> {
         let retdata = self.syscall_call_contract(
             syscall_name,
@@ -731,6 +747,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             syscall_ptr,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         let retdata_maybe_reloc = retdata
@@ -885,6 +903,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<(), SyscallHandlerError> {
         self.call_contract_and_write_response(
             "library_call",
@@ -892,6 +911,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             syscall_ptr,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )
     }
 
@@ -903,6 +924,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<(), SyscallHandlerError> {
         self.call_contract_and_write_response(
             "library_call_l1_handler",
@@ -910,6 +932,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             syscall_ptr,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )
     }
 
@@ -921,6 +945,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<(), SyscallHandlerError> {
         self.call_contract_and_write_response(
             "call_contract",
@@ -928,6 +953,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             syscall_ptr,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )
     }
 
@@ -939,6 +966,7 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<(), SyscallHandlerError> {
         self.call_contract_and_write_response(
             "delegate_call",
@@ -946,6 +974,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedBLSyscallHandler<'a, S
             syscall_ptr,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )
     }
 
@@ -1138,6 +1168,8 @@ mod tests {
                 relocatable!(1, 0),
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None
             ),
             Err(SyscallHandlerError::DeployFromZero(4))
         )

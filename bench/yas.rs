@@ -385,6 +385,8 @@ where
         &BlockContext::default(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -426,6 +428,8 @@ where
         &BlockContext::default(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -467,6 +471,8 @@ where
         &BlockContext::default(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -508,6 +514,8 @@ where
         &BlockContext::default(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -560,6 +568,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -607,6 +617,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -646,6 +658,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -701,6 +715,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -752,6 +768,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -801,6 +819,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -859,6 +879,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -919,6 +941,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -967,6 +991,8 @@ where
         u64::MAX.into(),
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     // Ensure the execution was successful.

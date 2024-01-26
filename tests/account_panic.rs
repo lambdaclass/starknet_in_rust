@@ -119,6 +119,8 @@ fn account_panic() {
             u128::MAX,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .expect("failed to invoke");
     let call_info = exec_info.call_info.as_ref().unwrap();

@@ -138,6 +138,8 @@ fn test_contract(
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .expect("Account Deploy Failed")
         .call_info
@@ -179,6 +181,8 @@ fn test_contract(
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .expect("could not declare the contract class");
 
@@ -203,6 +207,8 @@ fn test_contract(
             &mut state,
             &block_context,
             0,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -252,6 +258,8 @@ fn test_contract(
             &mut state,
             &block_context,
             0,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )

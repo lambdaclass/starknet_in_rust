@@ -162,6 +162,7 @@ impl Deploy {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         state.set_contract_class(&self.contract_hash, &self.contract_class)?;
         state.deploy_contract(self.contract_address.clone(), self.contract_hash)?;
@@ -175,6 +176,8 @@ impl Deploy {
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )
         }
     }
@@ -229,6 +232,7 @@ impl Deploy {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -265,6 +269,8 @@ impl Deploy {
             block_context.validate_max_n_steps,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         let changes = state.count_actual_state_changes(None)?;
@@ -291,7 +297,7 @@ impl Deploy {
     /// ## Parameters
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache, sandbox), fields(
         tx_type = ?TransactionType::Deploy,
         self.version = ?self.version,
         self.contract_hash = ?self.contract_hash,
@@ -306,12 +312,15 @@ impl Deploy {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut tx_exec_info = self.apply(
             state,
             block_context,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
         let (fee_transfer_info, actual_fee) = (None, 0);
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
@@ -385,6 +394,8 @@ mod tests {
                 &block_context,
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
 
@@ -442,6 +453,8 @@ mod tests {
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         assert_matches!(result.unwrap_err(), TransactionError::CairoRunner(..))
     }
@@ -482,6 +495,8 @@ mod tests {
         let result = internal_deploy.execute(
             &mut state,
             &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );

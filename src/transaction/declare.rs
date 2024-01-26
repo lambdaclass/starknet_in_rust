@@ -194,6 +194,7 @@ impl Declare {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         // validate transaction
         let mut resources_manager = ExecutionResourcesManager::default();
@@ -206,6 +207,8 @@ impl Declare {
                 &mut resources_manager,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
         let changes = state.count_actual_state_changes(Some((
@@ -260,6 +263,7 @@ impl Declare {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<Option<CallInfo>, TransactionError> {
         if self.version.is_zero() {
             return Ok(None);
@@ -287,6 +291,8 @@ impl Declare {
             block_context.validate_max_n_steps,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
@@ -365,7 +371,7 @@ impl Declare {
 
     /// Calculates actual fee used by the transaction using the execution
     /// info returned by apply(), then updates the transaction execution info with the data of the fee.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache, sandbox), fields(
         tx_type = ?TransactionType::Declare,
         self.version = ?self.version,
         self.class_hash = ?self.class_hash,
@@ -380,6 +386,7 @@ impl Declare {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if self.version != Felt252::ONE && self.version != Felt252::ZERO {
             return Err(TransactionError::UnsupportedTxVersion(
@@ -400,6 +407,8 @@ impl Declare {
             block_context,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         let mut tx_execution_context =
@@ -413,6 +422,8 @@ impl Declare {
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         state.set_contract_class(
@@ -591,6 +602,8 @@ mod tests {
                     &BlockContext::default(),
                     #[cfg(feature = "cairo-native")]
                     None,
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
                 .unwrap(),
             transaction_exec_info
@@ -670,6 +683,8 @@ mod tests {
                 &BlockContext::default(),
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
 
@@ -679,6 +694,8 @@ mod tests {
             .execute(
                 &mut state,
                 &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             )
@@ -749,12 +766,16 @@ mod tests {
                 &BlockContext::default(),
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
 
         let expected_error = internal_declare.execute(
             &mut state,
             &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );
@@ -800,6 +821,8 @@ mod tests {
         let internal_declare_error = internal_declare.execute(
             &mut state,
             &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );
@@ -872,6 +895,8 @@ mod tests {
             internal_declare.execute(
                 &mut state,
                 &BlockContext::default(),
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             ),
@@ -977,6 +1002,8 @@ mod tests {
                     &bock_context,
                     #[cfg(feature = "cairo-native")]
                     None,
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
                 .unwrap()
                 .actual_fee
@@ -985,6 +1012,8 @@ mod tests {
                         &mut state_copy,
                         &bock_context,
                         0,
+                        #[cfg(feature = "cairo-native")]
+                        None,
                         #[cfg(feature = "cairo-native")]
                         None,
                     )
@@ -1014,6 +1043,8 @@ mod tests {
         let result = internal_declare.execute(
             &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );

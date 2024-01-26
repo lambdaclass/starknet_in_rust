@@ -104,7 +104,7 @@ impl L1Handler {
     }
 
     /// Applies self to 'state' by executing the L1-handler entry point.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache, sandbox), fields(
         tx_type = ?TransactionType::L1Handler,
         self.hash_value = ?self.hash_value,
         self.contract_address = ?self.contract_address,
@@ -119,6 +119,7 @@ impl L1Handler {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let entrypoint = ExecutionEntryPoint::new(
@@ -148,6 +149,8 @@ impl L1Handler {
                 block_context.invoke_tx_max_n_steps,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
 
@@ -325,6 +328,8 @@ mod test {
                 &mut state,
                 &block_context,
                 100000,
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             )

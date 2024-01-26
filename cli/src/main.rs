@@ -207,6 +207,8 @@ fn invoke_parser(
         0,
         #[cfg(feature = "cairo-native")]
         None,
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
     cached_state.apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
 
@@ -272,6 +274,8 @@ fn call_parser(
         &mut TransactionExecutionContext::default(),
         false,
         block_context.invoke_tx_max_n_steps(),
+        #[cfg(feature = "cairo-native")]
+        None,
         #[cfg(feature = "cairo-native")]
         None,
     )?;

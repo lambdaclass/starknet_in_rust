@@ -122,6 +122,8 @@ fn test_erc20_cairo2() {
             block_context.invoke_tx_max_n_steps(),
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     let erc20_address = *call_info.call_info.unwrap().retdata.get(0).unwrap();
@@ -178,6 +180,8 @@ fn test_erc20_cairo2() {
         .execute(
             &mut state,
             &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -237,6 +241,8 @@ fn test_erc20_cairo2() {
             &Default::default(),
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .validate_info
@@ -256,6 +262,8 @@ fn test_erc20_cairo2() {
         account_address_1.clone(),
         #[cfg(feature = "cairo-native")]
         None,
+        #[cfg(feature = "cairo-native")]
+        None,
     )
     .unwrap();
 
@@ -272,6 +280,8 @@ fn test_erc20_cairo2() {
         account_address_1.clone(),
         #[cfg(feature = "cairo-native")]
         None,
+        #[cfg(feature = "cairo-native")]
+        None,
     )
     .unwrap();
 
@@ -286,6 +296,8 @@ fn test_erc20_cairo2() {
         &mut state,
         BlockContext::default(),
         account_address_1,
+        #[cfg(feature = "cairo-native")]
+        None,
         #[cfg(feature = "cairo-native")]
         None,
     )

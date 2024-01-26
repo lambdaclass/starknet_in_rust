@@ -8,6 +8,7 @@ use crate::{
         TransactionExecutionContext,
     },
     hash_utils::calculate_contract_address,
+    sandboxing::IsolatedExecutor,
     services::api::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
@@ -49,6 +50,7 @@ where
     pub(crate) block_context: BlockContext,
     pub(crate) internal_calls: Vec<CallInfo>,
     pub(crate) program_cache: Rc<RefCell<ProgramCache<'cache, ClassHash>>>,
+    pub(crate) sandbox: Option<&'a IsolatedExecutor>,
 }
 
 impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a, 'cache, S, C> {
@@ -132,6 +134,13 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             contract_address: self.contract_address.0,
             entry_point_selector: self.entry_point_selector,
         })
+    }
+
+    fn get_execution_info_v2(
+        &mut self,
+        _remaining_gas: &mut u128,
+    ) -> SyscallResult<cairo_native::starknet::ExecutionInfoV2> {
+        todo!()
     }
 
     fn deploy(
@@ -254,6 +263,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             false,
             self.block_context.invoke_tx_max_n_steps,
             Some(self.program_cache.clone()),
+            self.sandbox,
         )?;
 
         let call_info = call_info.ok_or(SyscallHandlerError::ExecutionError(
@@ -318,6 +328,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
                 false,
                 self.block_context.invoke_tx_max_n_steps,
                 Some(self.program_cache.clone()),
+                self.sandbox,
             )
             .unwrap();
 
@@ -669,6 +680,7 @@ where
                 false,
                 u64::MAX,
                 Some(self.program_cache.clone()),
+                self.sandbox,
             )
             .map_err(|_| StateError::ExecutionEntryPoint)?;
 

@@ -81,6 +81,8 @@ fn internal_deploy_account() {
             &Default::default(),
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -194,6 +196,8 @@ fn internal_deploy_account_cairo1() {
         .execute(
             &mut state,
             &Default::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )

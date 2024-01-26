@@ -354,7 +354,7 @@ impl DeclareV2 {
     /// ## Parameter:
     /// - state: An state that implements the State and StateReader traits.
     /// - block_context: The block that contains the execution context
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache, sandbox), fields(
         tx_type = ?TransactionType::Declare,
         self.version = ?self.version,
         self.sierra_class_hash = ?self.sierra_class_hash,
@@ -370,6 +370,7 @@ impl DeclareV2 {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if self.version != 2.into() {
             return Err(TransactionError::UnsupportedTxVersion(
@@ -397,6 +398,8 @@ impl DeclareV2 {
                 INITIAL_GAS_COST,
                 #[cfg(feature = "cairo-native")]
                 program_cache.clone(),
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
         self.compile_and_store_casm_class(state)?;
@@ -429,6 +432,8 @@ impl DeclareV2 {
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
@@ -502,6 +507,7 @@ impl DeclareV2 {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<ExecutionResult, TransactionError> {
         let calldata = [self.compiled_class_hash].to_vec();
 
@@ -532,6 +538,8 @@ impl DeclareV2 {
                 block_context.validate_max_n_steps,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
 
@@ -1003,6 +1011,8 @@ mod tests {
         let result = internal_declare.execute(
             &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );
