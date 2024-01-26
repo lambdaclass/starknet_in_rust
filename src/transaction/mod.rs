@@ -213,10 +213,37 @@ pub enum DataAvailabilityMode {
     L2,
 }
 
+impl Into<starknet_api::data_availability::DataAvailabilityMode> for DataAvailabilityMode {
+    fn into(self) -> starknet_api::data_availability::DataAvailabilityMode {
+        match self {
+            DataAvailabilityMode::L1 => starknet_api::data_availability::DataAvailabilityMode::L1,
+            DataAvailabilityMode::L2 => starknet_api::data_availability::DataAvailabilityMode::L2,
+        }
+    }
+}
+
+impl From<starknet_api::data_availability::DataAvailabilityMode> for DataAvailabilityMode {
+    fn from(value: starknet_api::data_availability::DataAvailabilityMode) -> Self {
+        match value {
+            starknet_api::data_availability::DataAvailabilityMode::L1 => Self::L1,
+            starknet_api::data_availability::DataAvailabilityMode::L2 => Self::L2,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct ResourceBounds {
     pub max_amount: u64,
     pub max_price_per_unit: u128,
+}
+
+impl From<&starknet_api::transaction::ResourceBounds> for ResourceBounds {
+    fn from(value: &starknet_api::transaction::ResourceBounds) -> Self {
+        Self {
+            max_amount: value.max_amount,
+            max_price_per_unit: value.max_price_per_unit,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default)]
