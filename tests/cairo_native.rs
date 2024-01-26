@@ -400,7 +400,10 @@ fn call_contract_test() {
         .load_contract_at_address(
             class_hash,
             caller_address.clone(),
+            #[cfg(not(feature = "cairo_1_tests"))]
             "starknet_programs/cairo2/caller.cairo",
+            #[cfg(feature = "cairo_1_tests")]
+            "starknet_programs/cairo1/caller.cairo",
         )
         .unwrap();
 
@@ -408,7 +411,10 @@ fn call_contract_test() {
         .load_contract_at_address(
             callee_class_hash,
             callee_address.clone(),
+            #[cfg(not(feature = "cairo_1_tests"))]
             "starknet_programs/cairo2/callee.cairo",
+            #[cfg(feature = "cairo_1_tests")]
+            "starknet_programs/cairo1/callee.cairo",
         )
         .unwrap();
 
@@ -447,7 +453,10 @@ fn call_echo_contract_test() {
         .load_contract_at_address(
             class_hash,
             caller_address.clone(),
+            #[cfg(not(feature = "cairo_1_tests"))]
             "starknet_programs/cairo2/echo_caller.cairo",
+            #[cfg(feature = "cairo_1_tests")]
+            "starknet_programs/cairo1/echo_caller.cairo",
         )
         .unwrap();
 
@@ -455,7 +464,10 @@ fn call_echo_contract_test() {
         .load_contract_at_address(
             callee_class_hash,
             callee_address.clone(),
+            #[cfg(not(feature = "cairo_1_tests"))]
             "starknet_programs/cairo2/echo.cairo",
+            #[cfg(feature = "cairo_1_tests")]
+            "starknet_programs/cairo1/echo.cairo",
         )
         .unwrap();
 
@@ -495,7 +507,10 @@ fn call_events_contract_test() {
         .load_contract_at_address(
             class_hash,
             caller_address.clone(),
+            #[cfg(not(feature = "cairo_1_tests"))]
             "starknet_programs/cairo2/caller.cairo",
+            #[cfg(feature = "cairo_1_tests")]
+            "starknet_programs/cairo1/caller.cairo",
         )
         .unwrap();
 
@@ -503,7 +518,10 @@ fn call_events_contract_test() {
         .load_contract_at_address(
             callee_class_hash,
             callee_address.clone(),
+            #[cfg(not(feature = "cairo_1_tests"))]
             "starknet_programs/cairo2/event_emitter.cairo",
+            #[cfg(feature = "cairo_1_tests")]
+            "starknet_programs/cairo1/event_emitter.cairo",
         )
         .unwrap();
 
