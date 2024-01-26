@@ -106,6 +106,7 @@ fn get_block_hash_test_failure2() {
 }
 
 #[test]
+#[ignore = "Broken until GetExecutionInfoV2 libfunc is implemented"]
 fn integration_test_erc20() {
     let class_hash = ClassHash([1; 32]);
     let caller_address = Address(1.into());
@@ -799,6 +800,7 @@ fn deploy_syscall_address_unavailable_test() {
 }
 
 #[test]
+#[ignore = "Broken until GetExecutionInfoV2 libfunc is implemented"]
 fn get_execution_info_test() {
     let class_hash = ClassHash([1; 32]);
     let address = Address(1.into());
