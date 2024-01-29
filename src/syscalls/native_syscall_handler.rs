@@ -1,4 +1,5 @@
 use crate::VersionSpecificAccountTxFields;
+use cairo_native::starknet::ExecutionInfoV2;
 use crate::{
     core::errors::state_errors::StateError,
     definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
@@ -77,6 +78,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
 impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     for NativeSyscallHandler<'a, 'cache, S, C>
 {
+    fn get_execution_info_v2(
+        &mut self,
+        _: &mut u128,
+    ) -> Result<ExecutionInfoV2, Vec<cairo_vm::Felt252>> {
+        todo!()
+    }
     fn get_block_hash(
         &mut self,
         block_number: u64,
