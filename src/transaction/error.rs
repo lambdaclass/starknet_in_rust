@@ -2,12 +2,10 @@ use crate::{
     core::errors::{
         contract_address_errors::ContractAddressError, hash_errors::HashError,
         state_errors::StateError,
-    },
-    definitions::transaction_type::TransactionType,
-    execution::os_usage::OsResources,
-    syscalls::syscall_handler_errors::SyscallHandlerError,
-    utils::ClassHash,
+    }, definitions::transaction_type::TransactionType, execution::os_usage::OsResources, syscalls::syscall_handler_errors::SyscallHandlerError, utils::ClassHash
 };
+
+
 use cairo_vm::{
     types::{
         errors::{math_errors::MathError, program_errors::ProgramError},
@@ -164,4 +162,7 @@ pub enum TransactionError {
     DeprecatedAccountTxFieldsVInV3TX,
     #[error("Non V3 Transactions can't be created with non deprecated account tx fields")]
     CurrentAccountTxFieldsInNonV3TX,
+    #[cfg(feature = "cairo-native")]
+    #[error("sandbox error {0}")]
+    SandboxError(#[from] crate::sandboxing::SandboxError)
 }

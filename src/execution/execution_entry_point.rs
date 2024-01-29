@@ -188,7 +188,7 @@ impl ExecutionEntryPoint {
                             revert_error: None,
                             n_reverted_steps: 0,
                         })
-                    }
+                    },
                     Err(e) => {
                         if !support_reverted {
                             state.apply_state_update(&StateDiff::from_cached_state(
