@@ -14,8 +14,21 @@ use cairo_native::{
     execution_result::ContractExecutionResult,
     starknet::{ExecutionInfo, StarkNetSyscallHandler, SyscallResult},
 };
+use thiserror::Error;
 
 use crate::utils::ClassHash;
+
+#[derive(Debug, Error)]
+pub enum SandboxError {
+    #[error("process error")]
+    ProcessError(u32),
+    #[error("ipc error: {0}")]
+    IpcBincodeError(#[from] ipc_channel::Error),
+    #[error("ipc bincode error: {0}")]
+    IpcError(#[from] ipc_channel::ipc::IpcError),
+    #[error("serializer error {0:?}")]
+    SerializeError(#[from] serde_json::Error),
+}
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,7 +233,7 @@ impl IsolatedExecutor {
         gas: Option<u128>,
         function_idx: usize,
         handler: &mut impl StarkNetSyscallHandler,
-    ) -> Result<ContractExecutionResult, Box<dyn std::error::Error>> {
+    ) -> Result<ContractExecutionResult, SandboxError> {
         tracing::debug!("running program");
         let id = Uuid::new_v4();
 
