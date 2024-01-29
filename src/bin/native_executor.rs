@@ -626,6 +626,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut cache = JitProgramCache::new(&native_context);
+    tracing::info!("initialized program cache");
 
     loop {
         tracing::info!("waiting for message");
@@ -641,9 +642,9 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                 function_idx,
                 gas,
             } => {
-                tracing::info!("Message: ExecuteJIT");
+                tracing::info!("Message: ExecuteJIT with id {}", id);
                 sender.send(Message::Ack(id).wrap()?)?;
-                tracing::info!("sent ack: {:?}", id);
+                tracing::info!("sent ack: {}", id);
 
                 let program = program.into_v1()?.program;
                 let native_executor =
