@@ -88,6 +88,13 @@ impl StarkNetSyscallHandler for SyscallHandler {
         }
     }
 
+    fn get_execution_info_v2(
+        &mut self,
+        _remaining_gas: &mut u128,
+    ) -> SyscallResult<cairo_native::starknet::ExecutionInfoV2> {
+        todo!()
+    }
+
     fn deploy(
         &mut self,
         class_hash: Felt,
@@ -573,13 +580,6 @@ impl StarkNetSyscallHandler for SyscallHandler {
     }
 
     fn set_version(&mut self, _version: Felt) {
-        todo!()
-    }
-
-    fn get_execution_info_v2(
-        &mut self,
-        _remaining_gas: &mut u128,
-    ) -> SyscallResult<cairo_native::starknet::ExecutionInfoV2> {
         todo!()
     }
 }

@@ -102,6 +102,10 @@ path = "bench/yas.rs"
 name = "yas"
 harness = false
 
+[[example]]
+name = "sandbox"
+required-features = ["cairo-native"]
+
 [profile.release]
 codegen-units = 1
 lto = "fat"
