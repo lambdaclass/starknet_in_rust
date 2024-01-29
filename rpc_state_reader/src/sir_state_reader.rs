@@ -6,10 +6,10 @@ use starknet_api::{
     core::{ClassHash as SNClassHash, ContractAddress, PatriciaKey},
     hash::{StarkFelt, StarkHash},
     state::StorageKey,
-    transaction::{Transaction as SNTransaction, TransactionHash, TransactionVersion},
+    transaction::{Transaction as SNTransaction, TransactionHash},
 };
 use starknet_in_rust::{
-    core::{contract_address::compute_casm_class_hash, errors::state_errors::StateError},
+    core::errors::state_errors::StateError,
     definitions::{
         block_context::{BlockContext, FeeTokenAddresses, StarknetChainId, StarknetOsConfig},
         constants::{
@@ -28,8 +28,8 @@ use starknet_in_rust::{
         BlockInfo,
     },
     transaction::{
-        error::TransactionError, Declare, DeclareV2, DeployAccount, InvokeFunction, L1Handler,
-        VersionSpecificAccountTxFields,
+        declare_tx_from_sn_api_transaction, error::TransactionError, DeployAccount, InvokeFunction,
+        L1Handler,
     },
     utils::{Address, ClassHash},
 };
@@ -224,74 +224,12 @@ pub fn execute_tx_configurable_with_state(
                 contract_class
             };
 
-            if tx.version() != TransactionVersion(2_u8.into()) {
-                let contract_class = match contract_class {
-                    CompiledClass::Deprecated(cc) => cc.as_ref().clone(),
-                    _ => unreachable!(),
-                };
-
-                let declare = Declare::new_with_tx_and_class_hash(
-                    contract_class,
-                    Address(Felt252::from_bytes_be_slice(
-                        tx.sender_address().0.key().bytes(),
-                    )),
-                    match tx {
-                        starknet_api::transaction::DeclareTransaction::V0(ref tx) => tx.max_fee.0,
-                        starknet_api::transaction::DeclareTransaction::V1(ref tx) => tx.max_fee.0,
-                        starknet_api::transaction::DeclareTransaction::V2(ref tx) => tx.max_fee.0,
-                        starknet_api::transaction::DeclareTransaction::V3(_) => {
-                            return Err(TransactionError::CurrentAccountTxFieldsInNonV3TX)
-                        }
-                    },
-                    Felt252::from_bytes_be_slice(tx.version().0.bytes()),
-                    tx.signature()
-                        .0
-                        .iter()
-                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-                        .collect(),
-                    Felt252::from_bytes_be_slice(tx.nonce().0.bytes()),
-                    Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
-                    class_hash,
-                )
-                .unwrap();
-                declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
-            } else {
-                let contract_class = match contract_class {
-                    CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
-                    _ => unreachable!(),
-                };
-
-                let compiled_class_hash = compute_casm_class_hash(&contract_class).unwrap();
-
-                let declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
-                    None,
-                    Felt252::from_bytes_be_slice(tx.class_hash().0.bytes()),
-                    Some(contract_class),
-                    compiled_class_hash,
-                    Address(Felt252::from_bytes_be_slice(
-                        tx.sender_address().0.key().bytes(),
-                    )),
-                    // TODO[0.13] Properly convert between V3 tx fields
-                    VersionSpecificAccountTxFields::new_deprecated(match tx {
-                        starknet_api::transaction::DeclareTransaction::V0(ref tx) => tx.max_fee.0,
-                        starknet_api::transaction::DeclareTransaction::V1(ref tx) => tx.max_fee.0,
-                        starknet_api::transaction::DeclareTransaction::V2(ref tx) => tx.max_fee.0,
-                        starknet_api::transaction::DeclareTransaction::V3(_) => {
-                            return Err(TransactionError::UnsuportedV3Transaction)
-                        }
-                    }),
-                    Felt252::from_bytes_be_slice(tx.version().0.bytes()),
-                    tx.signature()
-                        .0
-                        .iter()
-                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-                        .collect(),
-                    Felt252::from_bytes_be_slice(tx.nonce().0.bytes()),
-                    Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
-                )
-                .unwrap();
-                declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
-            }
+            let declare = declare_tx_from_sn_api_transaction(
+                tx,
+                Felt252::from_bytes_be_slice(tx_hash.0.bytes()),
+                contract_class,
+            )?;
+            declare.create_for_simulation(skip_validate, false, false, false, skip_nonce_check)
         }
         SNTransaction::L1Handler(tx) => L1Handler::from_sn_api_tx(
             tx,

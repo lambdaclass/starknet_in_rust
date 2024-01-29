@@ -1,6 +1,7 @@
 use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds};
 use super::{
-    check_account_tx_fields_version, get_tx_version, CurrentAccountTxFields, ResourceBounds, VersionSpecificAccountTxFields
+    check_account_tx_fields_version, get_tx_version, CurrentAccountTxFields, ResourceBounds,
+    VersionSpecificAccountTxFields,
 };
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
 use crate::definitions::block_context::FeeType;
@@ -593,18 +594,32 @@ impl DeployAccount {
         let account_tx_fields = match &value {
             starknet_api::transaction::DeployAccountTransaction::V1(tx) => {
                 VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
-            },
+            }
             starknet_api::transaction::DeployAccountTransaction::V3(tx) => {
                 VersionSpecificAccountTxFields::Current(CurrentAccountTxFields {
-                    l1_resource_bounds: tx.resource_bounds.0.get(&Resource::L1Gas).map(|r| r.into()).unwrap_or_default(),
-                    l2_resource_bounds: tx.resource_bounds.0.get(&Resource::L2Gas).map(|r| r.into()),
+                    l1_resource_bounds: tx
+                        .resource_bounds
+                        .0
+                        .get(&Resource::L1Gas)
+                        .map(|r| r.into())
+                        .unwrap_or_default(),
+                    l2_resource_bounds: tx
+                        .resource_bounds
+                        .0
+                        .get(&Resource::L2Gas)
+                        .map(|r| r.into()),
                     tip: tx.tip.0,
                     nonce_data_availability_mode: tx.nonce_data_availability_mode.into(),
                     fee_data_availability_mode: tx.fee_data_availability_mode.into(),
-                    paymaster_data: tx.paymaster_data.0.iter().map(|f| Felt252::from_bytes_be_slice(f.bytes())).collect(),
+                    paymaster_data: tx
+                        .paymaster_data
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                        .collect(),
                     account_deployment_data: Default::default(),
                 })
-            },
+            }
         };
 
         let version = Felt252::from_bytes_be_slice(value.version().0.bytes());

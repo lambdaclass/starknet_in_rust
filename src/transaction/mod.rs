@@ -1,10 +1,12 @@
 use crate::{
+    core::contract_address::compute_casm_class_hash,
     definitions::block_context::BlockContext,
     definitions::{
         block_context::FeeType,
         constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
     },
     execution::TransactionExecutionInfo,
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
@@ -28,6 +30,7 @@ pub mod invoke_function;
 pub mod l1_handler;
 
 use cairo_vm::Felt252;
+use starknet_api::transaction::Resource;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -203,6 +206,103 @@ fn check_account_tx_fields_version(
             Err(TransactionError::CurrentAccountTxFieldsInNonV3TX)
         }
         _ => Ok(()),
+    }
+}
+
+/// Creates a `Declare or DeclareV2` from a starknet api `DeclareTransaction`.
+pub fn declare_tx_from_sn_api_transaction(
+    tx: starknet_api::transaction::DeclareTransaction,
+    tx_hash: Felt252,
+    contract_class: CompiledClass,
+) -> Result<Transaction, TransactionError> {
+    let account_tx_fields = match &tx {
+        starknet_api::transaction::DeclareTransaction::V0(tx) => {
+            VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+        }
+        starknet_api::transaction::DeclareTransaction::V1(tx) => {
+            VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+        }
+        starknet_api::transaction::DeclareTransaction::V2(tx) => {
+            VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+        }
+        starknet_api::transaction::DeclareTransaction::V3(tx) => {
+            VersionSpecificAccountTxFields::Current(CurrentAccountTxFields {
+                l1_resource_bounds: tx
+                    .resource_bounds
+                    .0
+                    .get(&Resource::L1Gas)
+                    .map(|r| r.into())
+                    .unwrap_or_default(),
+                l2_resource_bounds: tx.resource_bounds.0.get(&Resource::L2Gas).map(|r| r.into()),
+                tip: tx.tip.0,
+                nonce_data_availability_mode: tx.nonce_data_availability_mode.into(),
+                fee_data_availability_mode: tx.fee_data_availability_mode.into(),
+                paymaster_data: tx
+                    .paymaster_data
+                    .0
+                    .iter()
+                    .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                    .collect(),
+                account_deployment_data: tx
+                    .account_deployment_data
+                    .0
+                    .iter()
+                    .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                    .collect(),
+            })
+        }
+    };
+    let sender_address = Address(Felt252::from_bytes_be_slice(
+        tx.sender_address().0.key().bytes(),
+    ));
+    let version = Felt252::from_bytes_be_slice(tx.version().0.bytes());
+    let nonce = Felt252::from_bytes_be_slice(tx.nonce().0.bytes());
+
+    let signature = tx
+        .signature()
+        .0
+        .iter()
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+        .collect();
+
+    if version < Felt252::TWO {
+        // Create Declare tx
+        let contract_class = match contract_class {
+            CompiledClass::Deprecated(cc) => cc.as_ref().clone(),
+            _ => return Err(TransactionError::DeclareV2NoSierraOrCasm),
+        };
+
+        Declare::new_with_tx_hash(
+            contract_class,
+            sender_address,
+            account_tx_fields.max_fee(),
+            version,
+            signature,
+            nonce,
+            tx_hash,
+        )
+        .map(|d| Transaction::Declare(d))
+    } else {
+        let contract_class = match contract_class {
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
+            _ => return Err(TransactionError::DeclareV2NoSierraOrCasm),
+        };
+
+        let compiled_class_hash = compute_casm_class_hash(&contract_class).unwrap();
+
+        DeclareV2::new_with_sierra_class_hash_and_tx_hash(
+            None,
+            Felt252::from_bytes_be_slice(tx.class_hash().0.bytes()),
+            Some(contract_class),
+            compiled_class_hash,
+            sender_address,
+            account_tx_fields,
+            version,
+            signature,
+            nonce,
+            tx_hash,
+        )
+        .map(|d| Transaction::DeclareV2(Box::new(d)))
     }
 }
 
