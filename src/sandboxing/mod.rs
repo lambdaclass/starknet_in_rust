@@ -191,7 +191,7 @@ impl WrappedMessage {
 
 #[derive(Debug)]
 pub struct IsolatedExecutor {
-    proc: Child,
+    pub proc: Child,
     sender: IpcSender<WrappedMessage>,
     receiver: IpcReceiver<WrappedMessage>,
 }
