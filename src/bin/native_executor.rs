@@ -2,11 +2,12 @@ use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use cairo_lang_utils::ResultHelper;
 use cairo_native::{
+    cache::JitProgramCache,
     context::NativeContext,
-    executor::JitNativeExecutor,
     metadata::syscall_handler::SyscallHandlerMeta,
     starknet::{StarkNetSyscallHandler, SyscallResult},
     utils::find_entry_point_by_idx,
+    OptLevel,
 };
 use cairo_vm::Felt252 as Felt;
 use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
@@ -624,6 +625,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         receiver: receiver.clone(),
     };
 
+    let mut cache = JitProgramCache::new(&native_context);
+
     loop {
         tracing::info!("waiting for message");
 
@@ -632,6 +635,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         match message {
             Message::ExecuteJIT {
                 id,
+                class_hash,
                 program,
                 inputs,
                 function_idx,
@@ -640,15 +644,14 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tracing::info!("Message: ExecuteJIT");
                 sender.send(Message::Ack(id).wrap()?)?;
                 tracing::info!("sent ack: {:?}", id);
+
                 let program = program.into_v1()?.program;
-                let native_program = native_context.compile(&program)?;
+                let native_executor =
+                    cache.compile_and_insert(class_hash, &program, OptLevel::Default);
 
                 let entry_point_fn = find_entry_point_by_idx(&program, function_idx).unwrap();
 
                 let fn_id = &entry_point_fn.id;
-
-                let native_executor =
-                    JitNativeExecutor::from_native_module(native_program, Default::default());
 
                 let result = native_executor.invoke_contract_dynamic(
                     fn_id,
@@ -663,7 +666,6 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 tracing::info!("sent result msg");
             }
-            Message::ExecutionResult { .. } => {}
             Message::Ack(_) => {}
             Message::Ping => {
                 tracing::info!("Message: Ping");
@@ -673,8 +675,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tracing::info!("Message: KILL");
                 break;
             }
-            Message::SyscallRequest(_) => todo!(),
-            Message::SyscallAnswer(_) => todo!(),
+            _ => unreachable!(),
         }
     }
 

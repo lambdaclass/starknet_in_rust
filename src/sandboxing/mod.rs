@@ -15,11 +15,14 @@ use cairo_native::{
     starknet::{ExecutionInfo, StarkNetSyscallHandler, SyscallResult},
 };
 
+use crate::utils::ClassHash;
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Message {
     ExecuteJIT {
         id: Uuid,
+        class_hash: ClassHash,
         program: VersionedProgram,
         inputs: Vec<Felt>,
         function_idx: usize,
@@ -160,7 +163,9 @@ impl Message {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum WrappedMessage {
-    Message(String), // ipc-channel uses bincode and doesnt support serializing Vecs
+    // ipc-channel uses bincode and doesnt support serializing Vecs
+    // so we serialize it to a json string first and pass it as a string.
+    Message(String),
 }
 
 impl WrappedMessage {
@@ -209,6 +214,7 @@ impl IsolatedExecutor {
 
     pub fn run_program(
         &self,
+        class_hash: ClassHash,
         program: Program,
         inputs: Vec<Felt>,
         gas: Option<u128>,
@@ -220,6 +226,7 @@ impl IsolatedExecutor {
 
         let msg = Message::ExecuteJIT {
             id,
+            class_hash,
             program: program.into_artifact(),
             inputs,
             gas,

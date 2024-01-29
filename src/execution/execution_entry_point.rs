@@ -743,6 +743,7 @@ impl ExecutionEntryPoint {
         let value = if let Some(sandbox) = sandbox {
             sandbox
                 .run_program(
+                    *class_hash,
                     sierra_program.clone(),
                     self.calldata.clone(),
                     Some(self.initial_gas),
