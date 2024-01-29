@@ -749,10 +749,7 @@ impl ExecutionEntryPoint {
                     Some(self.initial_gas),
                     entry_point.function_idx,
                     &mut syscall_handler,
-                )
-                .map_err(|e| {
-                    TransactionError::CustomError(format!("cairo-native error: {:?}", e))
-                })?
+                )?
         } else {
             let native_executor: NativeExecutor = {
                 let mut cache = program_cache.borrow_mut();
