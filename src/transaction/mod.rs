@@ -281,7 +281,7 @@ pub fn declare_tx_from_sn_api_transaction(
             nonce,
             tx_hash,
         )
-        .map(|d| Transaction::Declare(d))
+        .map(Transaction::Declare)
     } else {
         let contract_class = match contract_class {
             CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
@@ -313,9 +313,9 @@ pub enum DataAvailabilityMode {
     L2,
 }
 
-impl Into<starknet_api::data_availability::DataAvailabilityMode> for DataAvailabilityMode {
-    fn into(self) -> starknet_api::data_availability::DataAvailabilityMode {
-        match self {
+impl From<DataAvailabilityMode> for starknet_api::data_availability::DataAvailabilityMode {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
             DataAvailabilityMode::L1 => starknet_api::data_availability::DataAvailabilityMode::L1,
             DataAvailabilityMode::L2 => starknet_api::data_availability::DataAvailabilityMode::L2,
         }
