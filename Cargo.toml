@@ -24,10 +24,10 @@ members = [
 ]
 
 [workspace.dependencies]
-cairo-lang-casm = "2.4.2"
-cairo-lang-sierra = "2.4.2"
-cairo-lang-starknet = "2.4.2"
-cairo-lang-utils = "2.4.2"
+cairo-lang-casm = "=2.4.2"
+cairo-lang-sierra = "=2.4.2"
+cairo-lang-starknet = "=2.4.2"
+cairo-lang-utils = "=2.4.2"
 cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "7af00641014f295d820cbc6417714d6470823440", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
 starknet = "0.5.0"
