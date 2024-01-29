@@ -157,7 +157,7 @@ impl ExecutionEntryPoint {
                 })
             }
             #[cfg(feature = "cairo-native")]
-            CompiledClass::Casm {
+            casm@CompiledClass::Casm {
                 sierra: Some(sierra_program_and_entrypoints),
                 ..
             } => {
@@ -190,8 +190,36 @@ impl ExecutionEntryPoint {
                         })
                     },
                     Err(TransactionError::SandboxError(e)) => {
-                        match e
-                    }
+                       // See contract class
+                        match self._execute(
+                            state,
+                            resources_manager,
+                            block_context,
+                            tx_execution_context,
+                            contract_class,
+                            class_hash,
+                            support_reverted,
+                        ) {
+                            Ok(call_info) => Ok(ExecutionResult {
+                                call_info: Some(call_info),
+                                revert_error: None,
+                                n_reverted_steps: 0,
+                            }),
+                            Err(e) => {
+                                if !support_reverted {
+                                    return Err(e);
+                                }
+        
+                                let n_reverted_steps =
+                                    (max_steps as usize) - resources_manager.cairo_usage.n_steps;
+                                Ok(ExecutionResult {
+                                    call_info: None,
+                                    revert_error: Some(e.to_string()),
+                                    n_reverted_steps,
+                                })
+                            }
+                        }
+                    },
                     Err(e) => {
                         if !support_reverted {
                             state.apply_state_update(&StateDiff::from_cached_state(
