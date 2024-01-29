@@ -189,6 +189,9 @@ impl ExecutionEntryPoint {
                             n_reverted_steps: 0,
                         })
                     },
+                    Err(TransactionError::SandboxError(e)) => {
+                        match e
+                    }
                     Err(e) => {
                         if !support_reverted {
                             state.apply_state_update(&StateDiff::from_cached_state(
@@ -741,15 +744,14 @@ impl ExecutionEntryPoint {
         };
 
         let value = if let Some(sandbox) = sandbox {
-            sandbox
-                .run_program(
-                    *class_hash,
-                    sierra_program.clone(),
-                    self.calldata.clone(),
-                    Some(self.initial_gas),
-                    entry_point.function_idx,
-                    &mut syscall_handler,
-                )?
+            sandbox.run_program(
+                *class_hash,
+                sierra_program.clone(),
+                self.calldata.clone(),
+                Some(self.initial_gas),
+                entry_point.function_idx,
+                &mut syscall_handler,
+            )?
         } else {
             let native_executor: NativeExecutor = {
                 let mut cache = program_cache.borrow_mut();
