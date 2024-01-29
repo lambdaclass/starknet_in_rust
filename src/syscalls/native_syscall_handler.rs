@@ -26,7 +26,10 @@ use crate::{
 };
 use cairo_native::{
     cache::ProgramCache,
-    starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
+    starknet::{
+        BlockInfo, ExecutionInfo, ExecutionInfoV2, StarkNetSyscallHandler, SyscallResult, TxInfo,
+        U256,
+    },
 };
 use cairo_vm::Felt252;
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -73,7 +76,6 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
         Ok(())
     }
 }
-
 impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     for NativeSyscallHandler<'a, 'cache, S, C>
 {
@@ -459,6 +461,13 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         .concat();
 
         SyscallResult::Ok(U256(hash[0..32].try_into().unwrap()))
+    }
+
+    fn get_execution_info_v2(
+        &mut self,
+        _: &mut u128,
+    ) -> Result<ExecutionInfoV2, Vec<cairo_vm::Felt252>> {
+        todo!()
     }
 
     fn secp256k1_add(
