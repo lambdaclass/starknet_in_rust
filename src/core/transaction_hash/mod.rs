@@ -53,7 +53,7 @@ impl TransactionHashPrefix {
 ///     8. A concatenation of the nonce and fee data availability modes.
 ///     9. Transaction-specific additional data.
 #[allow(clippy::too_many_arguments)]
-pub fn deprecated_calculate_transaction_hash_common_poseidon(
+pub fn calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: Felt252,
     sender_address: &Address,
