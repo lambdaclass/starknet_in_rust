@@ -66,23 +66,12 @@ pub fn calculate_transaction_hash_common_poseidon(
     l2_resource_bounds: Option<ResourceBounds>,
 ) -> Felt252 {
     const DATA_AVAILABILITY_MODE_BITS: u64 = 32;
-    lazy_static! {
-        // DataAvalability::L1 as felt << DataAvailability bits: 0 << 32
-        static ref DA_MODE_L1_SHL_DA_MODE_BITS: FieldElement =
-            FieldElement::ZERO;
-        // DataAvalability::L2 as felt << DataAvailability bits: 1 << 32
-        static ref DA_MODE_L2_SHL_DA_MODE_BITS: FieldElement = (1_u32 << DATA_AVAILABILITY_MODE_BITS).into();
-    };
+
     let fee_fields_hash = hash_fee_related_fields(tip, &l1_resource_bounds, &l2_resource_bounds);
 
-    // Its easier to match to constants than to use the Into<Felt252> implementation and handle bitshifts using BigUint
-    let da_mode_concatenation = match nonce_data_availability_mode {
-        DataAvailabilityMode::L1 => *DA_MODE_L1_SHL_DA_MODE_BITS,
-        DataAvailabilityMode::L2 => *DA_MODE_L2_SHL_DA_MODE_BITS,
-    } + match fee_data_availability_mode {
-        DataAvailabilityMode::L1 => FieldElement::ZERO,
-        DataAvailabilityMode::L2 => FieldElement::ONE,
-    };
+    let da_mode_concatenation: u64 = (Into::<u64>::into(nonce_data_availability_mode)
+        << DATA_AVAILABILITY_MODE_BITS)
+        + Into::<u64>::into(fee_data_availability_mode);
 
     let field_element = |f: Felt252| {
         // Conversion between two felt types shouldn't fail
@@ -94,12 +83,22 @@ pub fn calculate_transaction_hash_common_poseidon(
         field_element(version),
         field_element(sender_address.0),
         fee_fields_hash,
-        starknet_crypto::poseidon_hash_many(&paymaster_data.iter().map(|f| field_element(*f)).collect::<Vec<_>>()),
+        starknet_crypto::poseidon_hash_many(
+            &paymaster_data
+                .iter()
+                .map(|f| field_element(*f))
+                .collect::<Vec<_>>(),
+        ),
         field_element(chain_id),
         field_element(nonce),
-        da_mode_concatenation,
+        da_mode_concatenation.into(),
     ];
-    data_to_hash.extend_from_slice(&tx_type_specific_data.iter().map(|f| field_element(*f)).collect::<Vec<_>>());
+    data_to_hash.extend_from_slice(
+        &tx_type_specific_data
+            .iter()
+            .map(|f| field_element(*f))
+            .collect::<Vec<_>>(),
+    );
     Felt252::from_bytes_be(&starknet_crypto::poseidon_hash_many(&data_to_hash).to_bytes_be())
 }
 
