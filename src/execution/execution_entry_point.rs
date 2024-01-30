@@ -157,9 +157,9 @@ impl ExecutionEntryPoint {
                 })
             }
             #[cfg(feature = "cairo-native")]
-            casm@CompiledClass::Casm {
+            CompiledClass::Casm {
                 sierra: Some(sierra_program_and_entrypoints),
-                ..
+                casm
             } => {
                 let mut transactional_state = state.create_transactional()?;
 
@@ -189,14 +189,13 @@ impl ExecutionEntryPoint {
                             n_reverted_steps: 0,
                         })
                     },
-                    Err(TransactionError::SandboxError(e)) => {
-                       // See contract class
+                    Err(TransactionError::SandboxError(_)) => {
                         match self._execute(
                             state,
                             resources_manager,
                             block_context,
                             tx_execution_context,
-                            contract_class,
+                            casm,
                             class_hash,
                             support_reverted,
                         ) {
