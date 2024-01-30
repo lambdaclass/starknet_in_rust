@@ -1,4 +1,5 @@
 use crate::core::errors::hash_errors::HashError;
+use crate::transaction::error::TransactionError;
 use crate::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
@@ -128,6 +129,60 @@ pub fn deprecated_calculate_declare_transaction_hash(
         chain_id,
         &additional_data,
     )
+}
+
+/// Calculate the hash for an invoke transaction.
+pub(super) fn deprecated_calculate_invoke_transaction_hash(
+    chain_id: Felt252,
+    contract_address: &Address,
+    entry_point_selector: Felt252,
+    max_fee: u128,
+    version: Felt252,
+    nonce: Option<Felt252>,
+    calldata: &[Felt252],
+) -> Result<Felt252, TransactionError> {
+    let (entry_point_selector_field, additional_data) =
+        preprocess_invoke_function_fields(entry_point_selector, nonce, version)?;
+    deprecated_calculate_transaction_hash_common(
+        TransactionHashPrefix::Invoke,
+        version,
+        &contract_address,
+        entry_point_selector_field,
+        calldata,
+        max_fee,
+        chain_id,
+        &additional_data,
+    )
+    .map_err(TransactionError::HashError)
+}
+
+// Performs validation on fields related to function invocation transaction.
+// InvokeFunction transaction.
+// Deduces and returns fields required for hash calculation of
+fn preprocess_invoke_function_fields(
+    entry_point_selector: Felt252,
+    nonce: Option<Felt252>,
+    version: Felt252,
+) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
+    if version.is_zero() {
+        match nonce {
+            Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
+            None => {
+                let additional_data = Vec::new();
+                let entry_point_selector_field = entry_point_selector;
+                Ok((entry_point_selector_field, additional_data))
+            }
+        }
+    } else {
+        match nonce {
+            Some(n) => {
+                let additional_data = vec![n];
+                let entry_point_selector_field = Felt252::ZERO;
+                Ok((entry_point_selector_field, additional_data))
+            }
+            None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
+        }
+    }
 }
 
 // ----------------------------

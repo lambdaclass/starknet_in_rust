@@ -197,7 +197,7 @@ pub(super) fn calculate_declare_v2_transaction_hash(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn calculate_invoke_account_transaction_hash(
+pub(super) fn calculate_invoke_transaction_hash(
     version: Felt252,
     nonce: Felt252,
     sender_address: &Address,

@@ -3,7 +3,10 @@ pub mod deprecated;
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 
-use crate::{transaction::VersionSpecificAccountTxFields, utils::Address};
+use crate::{
+    transaction::{error::TransactionError, VersionSpecificAccountTxFields},
+    utils::Address,
+};
 
 use super::errors::hash_errors::HashError;
 
@@ -124,6 +127,48 @@ pub fn calculate_declare_v2_transaction_hash(
                 fields.tip,
                 &fields.paymaster_data,
                 &fields.account_deployment_data,
+            ))
+        }
+    }
+}
+
+/// Calculate the hash for a DeployAccount transaction.
+/// Uses the older pedersen version for deprecated account tx fields and the newer poseidon version for current account tx fields
+pub fn calculate_invoke_transaction_hash(
+    chain_id: Felt252,
+    contract_address: &Address,
+    entry_point_selector: Felt252,
+    version: Felt252,
+    nonce: Option<Felt252>,
+    calldata: &[Felt252],
+    account_tx_fields: &VersionSpecificAccountTxFields,
+) -> Result<Felt252, TransactionError> {
+    match account_tx_fields {
+        VersionSpecificAccountTxFields::Deprecated(max_fee) => {
+            deprecated::deprecated_calculate_invoke_transaction_hash(
+                chain_id,
+                contract_address,
+                entry_point_selector,
+                *max_fee,
+                version,
+                nonce,
+                calldata,
+            )
+        }
+        VersionSpecificAccountTxFields::Current(fields) => {
+            Ok(current::calculate_invoke_transaction_hash(
+                version,
+                nonce.unwrap_or_default(),
+                contract_address,
+                fields.nonce_data_availability_mode,
+                fields.fee_data_availability_mode,
+                &Some(fields.l1_resource_bounds.clone()),
+                &fields.l2_resource_bounds,
+                fields.tip,
+                &fields.paymaster_data,
+                calldata,
+                &fields.account_deployment_data,
+                chain_id,
             ))
         }
     }
