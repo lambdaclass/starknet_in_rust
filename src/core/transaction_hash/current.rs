@@ -120,6 +120,7 @@ fn hash_fee_related_fields(
                 + FieldElement::from(resource_bounds.max_price_per_unit),
         );
     };
+
     let mut data_to_hash: Vec<FieldElement> = vec![tip.into()];
     if let Some(resource_bounds) = l1_resource_bounds {
         push_resource_bounds(

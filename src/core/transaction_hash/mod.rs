@@ -46,6 +46,7 @@ impl TransactionHashPrefix {
 
 /// Calculate the hash for a DeployAccount transaction.
 /// Uses the older pedersen version for deprecated account tx fields and the newer poseidon version for current account tx fields
+#[allow(clippy::too_many_arguments)]
 pub fn calculate_deploy_account_transaction_hash(
     version: Felt252,
     nonce: Felt252,
