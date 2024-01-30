@@ -3,6 +3,10 @@ pub mod deprecated;
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 
+use crate::{transaction::VersionSpecificAccountTxFields, utils::Address};
+
+use super::errors::hash_errors::HashError;
+
 #[derive(Debug)]
 /// Enum representing the different types of transaction hash prefixes.
 pub enum TransactionHashPrefix {
@@ -33,6 +37,51 @@ impl TransactionHashPrefix {
             TransactionHashPrefix::DeployAccount => *DEPLOY_ACCOUNT_TX_HASH_PREFIX,
             TransactionHashPrefix::Invoke => *INVOKE_TX_HASH_PREFIX,
             TransactionHashPrefix::L1Handler => *L1_HANDLER_TX_HASH_PREFIX,
+        }
+    }
+}
+
+/// Calculate the hash for a DeployAccount transaction.
+/// Uses the older pedersen version for deprecated account tx fields and the newer poseidon version for current account tx fields
+pub fn calculate_deploy_account_transaction_hash(
+    version: Felt252,
+    nonce: Felt252,
+    contract_address: &Address,
+    salt: Felt252,
+    class_hash: Felt252,
+    constructor_calldata: &[Felt252],
+    chain_id: Felt252,
+    account_tx_fields: &VersionSpecificAccountTxFields,
+) -> Result<Felt252, HashError> {
+    match account_tx_fields {
+        VersionSpecificAccountTxFields::Deprecated(max_fee) => {
+            deprecated::deprecated_calculate_deploy_account_transaction_hash(
+                version,
+                contract_address,
+                class_hash,
+                constructor_calldata,
+                *max_fee,
+                nonce,
+                salt,
+                chain_id,
+            )
+        }
+        VersionSpecificAccountTxFields::Current(fields) => {
+            Ok(current::calculate_deploy_account_transaction_hash(
+                version,
+                nonce,
+                contract_address,
+                fields.nonce_data_availability_mode,
+                fields.fee_data_availability_mode,
+                &Some(fields.l1_resource_bounds.clone()),
+                &fields.l2_resource_bounds,
+                fields.tip,
+                &fields.paymaster_data,
+                salt,
+                class_hash,
+                constructor_calldata,
+                chain_id,
+            ))
         }
     }
 }

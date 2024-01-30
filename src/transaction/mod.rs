@@ -206,7 +206,7 @@ fn check_account_tx_fields_version(
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Copy)]
 pub enum DataAvailabilityMode {
     #[default]
     L1,

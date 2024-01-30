@@ -75,7 +75,7 @@ pub fn deprecated_calculate_deploy_transaction_hash(
 
 /// Calculate the hash for deploying an account transaction.
 #[allow(clippy::too_many_arguments)]
-pub fn deprecated_calculate_deploy_account_transaction_hash(
+pub(super) fn deprecated_calculate_deploy_account_transaction_hash(
     version: Felt252,
     contract_address: &Address,
     class_hash: Felt252,

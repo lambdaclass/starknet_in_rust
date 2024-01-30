@@ -126,7 +126,7 @@ fn hash_fee_related_fields(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn calculate_deploy_account_transaction_hash(
+pub(super) fn calculate_deploy_account_transaction_hash(
     version: Felt252,
     nonce: Felt252,
     contract_address: &Address,
