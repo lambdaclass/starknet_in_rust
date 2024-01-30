@@ -1,5 +1,5 @@
 use crate::core::errors::hash_errors::HashError;
-use crate::transaction::ResourceBounds;
+use crate::transaction::{DataAvailabilityMode, ResourceBounds};
 use crate::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
@@ -60,12 +60,47 @@ pub fn calculate_transaction_hash_common_poseidon(
     tx_type_specific_data: &[Felt252],
     tip: u64,
     paymaster_data: &[Felt252],
-    nonce_data_availability_mode: Felt252,
-    fee_data_availability_mode: Felt252,
+    nonce_data_availability_mode: DataAvailabilityMode,
+    fee_data_availability_mode: DataAvailabilityMode,
     l1_resource_bounds: Option<ResourceBounds>,
     l2_resource_bounds: Option<ResourceBounds>,
-) -> Result<Felt252, HashError> {
+) -> Felt252 {
+    const DATA_AVAILABILITY_MODE_BITS: u64 = 32;
+    lazy_static! {
+        // DataAvalability::L1 as felt << DataAvailability bits: 0 << 32
+        static ref DA_MODE_L1_SHL_DA_MODE_BITS: FieldElement =
+            FieldElement::ZERO;
+        // DataAvalability::L2 as felt << DataAvailability bits: 1 << 32
+        static ref DA_MODE_L2_SHL_DA_MODE_BITS: FieldElement = (1_u32 << DATA_AVAILABILITY_MODE_BITS).into();
+    };
     let fee_fields_hash = hash_fee_related_fields(tip, &l1_resource_bounds, &l2_resource_bounds);
+
+    // Its easier to match to constants than to use the Into<Felt252> implementation and handle bitshifts using BigUint
+    let da_mode_concatenation = match nonce_data_availability_mode {
+        DataAvailabilityMode::L1 => *DA_MODE_L1_SHL_DA_MODE_BITS,
+        DataAvailabilityMode::L2 => *DA_MODE_L2_SHL_DA_MODE_BITS,
+    } + match fee_data_availability_mode {
+        DataAvailabilityMode::L1 => FieldElement::ZERO,
+        DataAvailabilityMode::L2 => FieldElement::ONE,
+    };
+
+    let field_element = |f: Felt252| {
+        // Conversion between two felt types shouldn't fail
+        FieldElement::from_bytes_be(&f.to_bytes_be()).unwrap_or_default()
+    };
+
+    let mut data_to_hash: Vec<FieldElement> = vec![
+        field_element(tx_hash_prefix.get_prefix()),
+        field_element(version),
+        field_element(sender_address.0),
+        fee_fields_hash,
+        starknet_crypto::poseidon_hash_many(&paymaster_data.iter().map(|f| field_element(*f)).collect::<Vec<_>>()),
+        field_element(chain_id),
+        field_element(nonce),
+        da_mode_concatenation,
+    ];
+    data_to_hash.extend_from_slice(&tx_type_specific_data.iter().map(|f| field_element(*f)).collect::<Vec<_>>());
+    Felt252::from_bytes_be(&starknet_crypto::poseidon_hash_many(&data_to_hash).to_bytes_be())
 }
 
 // Calculates the hash of the fee related fields of a transaction:
@@ -74,8 +109,8 @@ pub fn calculate_transaction_hash_common_poseidon(
 //         in the resource bounds, in the following order: L1_gas, L2_gas.
 fn hash_fee_related_fields(
     tip: u64,
-    l1_resource_bounds: Option<ResourceBounds>,
-    l2_resource_bounds: Option<ResourceBounds>,
+    l1_resource_bounds: &Option<ResourceBounds>,
+    l2_resource_bounds: &Option<ResourceBounds>,
 ) -> FieldElement {
     const MAX_AMOUNT_BITS: u64 = 64;
     const MAX_PRICE_PER_UNIT_BITS: u64 = 128;
@@ -92,10 +127,10 @@ fn hash_fee_related_fields(
         )
         .unwrap();
         static ref L1_GAS_SHL_RESOURCE_VALUE_OFFSET: FieldElement =
-            FieldElement::from_byte_slice_be(&(*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
+            FieldElement::from_byte_slice_be(&(&*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
                 .unwrap();
         static ref L2_GAS_SHL_RESOURCE_VALUE_OFFSET: FieldElement =
-            FieldElement::from_byte_slice_be(&(*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
+            FieldElement::from_byte_slice_be(&(&*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
                 .unwrap();
     };
     let mut data_to_hash: Vec<FieldElement> = vec![tip.into()];
