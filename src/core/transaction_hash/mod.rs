@@ -38,8 +38,10 @@ impl TransactionHashPrefix {
     }
 }
 
+// Current transaction hash functions (V3 txs)
+
 /// Calculates the transaction hash in the StarkNet network - a unique identifier of the
-/// transaction.
+/// transaction, for V3 transactions.
 /// The transaction hash is a hash of the following information:
 ///     1. A prefix that depends on the transaction type.
 ///     2. The transaction's version.
@@ -151,8 +153,10 @@ fn hash_fee_related_fields(
     starknet_crypto::poseidon_hash_many(&data_to_hash)
 }
 
+// Deprecated transaction hash functions (V0-1-2 txs)
+
 /// Calculates the transaction hash in the StarkNet network - a unique identifier of the
-/// transaction.
+/// transaction, for transactions of version 2 or lower
 /// The transaction hash is a hash chain of the following information:
 ///    1. A prefix that depends on the transaction type.
 ///    2. The transaction's version.
@@ -213,7 +217,6 @@ pub fn deprecated_calculate_deploy_transaction_hash(
     )
 }
 
-// TODO[0.13] Investigate how transaction hashes are calculated for V3 Txs (aka without max_fee)
 /// Calculate the hash for deploying an account transaction.
 #[allow(clippy::too_many_arguments)]
 pub fn deprecated_calculate_deploy_account_transaction_hash(
