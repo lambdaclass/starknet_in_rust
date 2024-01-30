@@ -987,6 +987,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2]);
+        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2, 3]);
     }
 }
