@@ -14,7 +14,7 @@ use crate::state::cached_state::CachedState;
 use crate::state::contract_class_cache::ContractClassCache;
 use crate::utils::ClassHash;
 use crate::{
-    core::transaction_hash::calculate_declare_v2_transaction_hash,
+    core::transaction_hash::deprecated_calculate_declare_v2_transaction_hash,
     definitions::{
         block_context::BlockContext,
         constants::{INITIAL_GAS_COST, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
@@ -92,7 +92,7 @@ impl DeclareV2 {
     ) -> Result<Self, TransactionError> {
         let sierra_class_hash = compute_sierra_class_hash(sierra_contract_class)?;
 
-        let hash_value = calculate_declare_v2_transaction_hash(
+        let hash_value = deprecated_calculate_declare_v2_transaction_hash(
             sierra_class_hash,
             compiled_class_hash,
             chain_id,
@@ -232,7 +232,7 @@ impl DeclareV2 {
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
-        let hash_value = calculate_declare_v2_transaction_hash(
+        let hash_value = deprecated_calculate_declare_v2_transaction_hash(
             sierra_class_hash,
             compiled_class_hash,
             chain_id,

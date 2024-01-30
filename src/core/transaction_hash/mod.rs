@@ -51,7 +51,7 @@ impl TransactionHashPrefix {
 ///     8. A concatenation of the nonce and fee data availability modes.
 ///     9. Transaction-specific additional data.
 #[allow(clippy::too_many_arguments)]
-pub fn calculate_transaction_hash_common_poseidon(
+pub fn deprecated_calculate_transaction_hash_common_poseidon(
     tx_hash_prefix: TransactionHashPrefix,
     version: Felt252,
     sender_address: &Address,
@@ -151,7 +151,6 @@ fn hash_fee_related_fields(
     starknet_crypto::poseidon_hash_many(&data_to_hash)
 }
 
-// TODO[0.13] Investigate how transaction hashes are calculated for V3 Txs (aka without max_fee)
 /// Calculates the transaction hash in the StarkNet network - a unique identifier of the
 /// transaction.
 /// The transaction hash is a hash chain of the following information:
@@ -168,7 +167,7 @@ fn hash_fee_related_fields(
 ///     H([x,y,z]) = h(h(x,y),z) = H([w, z]) where w = h(x,y)
 /// ```
 #[allow(clippy::too_many_arguments)]
-pub fn calculate_transaction_hash_common(
+pub fn deprecated_calculate_transaction_hash_common(
     tx_hash_prefix: TransactionHashPrefix,
     version: Felt252,
     contract_address: &Address,
@@ -196,13 +195,13 @@ pub fn calculate_transaction_hash_common(
 }
 
 /// Calculate the hash for deploying a transaction.
-pub fn calculate_deploy_transaction_hash(
+pub fn deprecated_calculate_deploy_transaction_hash(
     version: Felt252,
     contract_address: &Address,
     constructor_calldata: &[Felt252],
     chain_id: Felt252,
 ) -> Result<Felt252, HashError> {
-    calculate_transaction_hash_common(
+    deprecated_calculate_transaction_hash_common(
         TransactionHashPrefix::Deploy,
         version,
         contract_address,
@@ -217,7 +216,7 @@ pub fn calculate_deploy_transaction_hash(
 // TODO[0.13] Investigate how transaction hashes are calculated for V3 Txs (aka without max_fee)
 /// Calculate the hash for deploying an account transaction.
 #[allow(clippy::too_many_arguments)]
-pub fn calculate_deploy_account_transaction_hash(
+pub fn deprecated_calculate_deploy_account_transaction_hash(
     version: Felt252,
     contract_address: &Address,
     class_hash: Felt252,
@@ -230,7 +229,7 @@ pub fn calculate_deploy_account_transaction_hash(
     let mut calldata: Vec<Felt252> = vec![class_hash, salt];
     calldata.extend_from_slice(constructor_calldata);
 
-    calculate_transaction_hash_common(
+    deprecated_calculate_transaction_hash_common(
         TransactionHashPrefix::DeployAccount,
         version,
         contract_address,
@@ -243,7 +242,7 @@ pub fn calculate_deploy_account_transaction_hash(
 }
 
 /// Calculate the hash for a declared transaction.
-pub fn calculate_declare_transaction_hash(
+pub fn deprecated_calculate_declare_transaction_hash(
     contract_class: &ContractClass,
     chain_id: Felt252,
     sender_address: &Address,
@@ -260,7 +259,7 @@ pub fn calculate_declare_transaction_hash(
         (Vec::new(), vec![class_hash])
     };
 
-    calculate_transaction_hash_common(
+    deprecated_calculate_transaction_hash_common(
         TransactionHashPrefix::Declare,
         version,
         sender_address,
@@ -276,8 +275,7 @@ pub fn calculate_declare_transaction_hash(
 //      V2 Hash Functions
 // ----------------------------
 
-// TODO[0.13] Investigate how transaction hashes are calculated for V3 Txs (aka without max_fee)
-pub fn calculate_declare_v2_transaction_hash(
+pub fn deprecated_calculate_declare_v2_transaction_hash(
     sierra_class_hash: Felt252,
     compiled_class_hash: Felt252,
     chain_id: Felt252,
@@ -289,7 +287,7 @@ pub fn calculate_declare_v2_transaction_hash(
     let calldata = [sierra_class_hash].to_vec();
     let additional_data = [nonce, compiled_class_hash].to_vec();
 
-    calculate_transaction_hash_common(
+    deprecated_calculate_transaction_hash_common(
         TransactionHashPrefix::Declare,
         version,
         sender_address,
@@ -311,7 +309,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn calculate_transaction_hash_common_test() {
+    fn deprecated_calculate_transaction_hash_common_test() {
         let tx_hash_prefix = TransactionHashPrefix::Declare;
         let version = 0.into();
         let contract_address = Address(42.into());
@@ -321,13 +319,13 @@ mod tests {
         let chain_id = 1.into();
         let additional_data: Vec<Felt252> = Vec::new();
 
-        // Expected value taken from Python implementation of calculate_transaction_hash_common function
+        // Expected value taken from Python implementation of deprecated_calculate_transaction_hash_common function
         let expected = Felt252::from_dec_str(
             "2401716064129505935860131145275652294383308751137512921151718435935971973354",
         )
         .unwrap();
 
-        let result = calculate_transaction_hash_common(
+        let result = deprecated_calculate_transaction_hash_common(
             tx_hash_prefix,
             version,
             &contract_address,
@@ -361,7 +359,7 @@ mod tests {
 
         let (calldata, additional_data) = (vec![class_hash], vec![nonce]);
 
-        let tx = calculate_transaction_hash_common(
+        let tx = deprecated_calculate_transaction_hash_common(
             TransactionHashPrefix::Declare,
             version,
             &sender_address,

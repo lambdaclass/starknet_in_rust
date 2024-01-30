@@ -1,5 +1,5 @@
 use crate::core::contract_address::compute_deprecated_class_hash;
-use crate::core::transaction_hash::calculate_declare_transaction_hash;
+use crate::core::transaction_hash::deprecated_calculate_declare_transaction_hash;
 use crate::definitions::block_context::{BlockContext, FeeType};
 use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 use crate::definitions::transaction_type::TransactionType;
@@ -75,7 +75,7 @@ impl Declare {
         let hash = compute_deprecated_class_hash(&contract_class)?;
         let class_hash = felt_to_hash(&hash);
 
-        let hash_value = calculate_declare_transaction_hash(
+        let hash_value = deprecated_calculate_declare_transaction_hash(
             &contract_class,
             chain_id,
             &sender_address,

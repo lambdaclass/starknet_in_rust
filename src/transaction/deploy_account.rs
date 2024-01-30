@@ -12,7 +12,7 @@ use crate::state::StateDiff;
 use crate::{
     core::{
         errors::state_errors::StateError,
-        transaction_hash::calculate_deploy_account_transaction_hash,
+        transaction_hash::deprecated_calculate_deploy_account_transaction_hash,
     },
     definitions::{
         block_context::BlockContext,
@@ -102,7 +102,7 @@ impl DeployAccount {
             Address(Felt252::ZERO),
         )?);
 
-        let hash_value = calculate_deploy_account_transaction_hash(
+        let hash_value = deprecated_calculate_deploy_account_transaction_hash(
             version,
             &contract_address,
             Felt252::from_bytes_be(&class_hash.0),

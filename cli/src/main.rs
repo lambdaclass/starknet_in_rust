@@ -7,8 +7,9 @@ use starknet_in_rust::{
         contract_address::compute_deprecated_class_hash,
         errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
         transaction_hash::{
-            calculate_declare_transaction_hash, calculate_deploy_transaction_hash,
-            calculate_transaction_hash_common, TransactionHashPrefix,
+            deprecated_calculate_declare_transaction_hash,
+            deprecated_calculate_deploy_transaction_hash,
+            deprecated_calculate_transaction_hash_common, TransactionHashPrefix,
         },
     },
     definitions::{
@@ -118,7 +119,7 @@ fn declare_parser(
         &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
     )?;
 
-    let tx_hash = calculate_declare_transaction_hash(
+    let tx_hash = deprecated_calculate_declare_transaction_hash(
         &contract_class,
         Felt252::ZERO,
         &Address(0.into()),
@@ -146,7 +147,7 @@ fn deploy_parser(
     )?;
 
     cached_state.deploy_contract(Address(address), string_to_hash(&args.class_hash))?;
-    let tx_hash = calculate_deploy_transaction_hash(
+    let tx_hash = deprecated_calculate_deploy_transaction_hash(
         0.into(),
         &Address(address),
         &constructor_calldata,
@@ -210,7 +211,7 @@ fn invoke_parser(
     )?;
     cached_state.apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
 
-    let tx_hash = calculate_transaction_hash_common(
+    let tx_hash = deprecated_calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
         *TRANSACTION_VERSION,
         &contract_address,

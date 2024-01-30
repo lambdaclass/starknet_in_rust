@@ -4,7 +4,7 @@ use super::{
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
-    core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
+    core::transaction_hash::{deprecated_calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
         block_context::{BlockContext, FeeType},
         constants::{
@@ -78,7 +78,7 @@ impl InvokeFunction {
     ) -> Result<Self, TransactionError> {
         let (entry_point_selector_field, additional_data) =
             preprocess_invoke_function_fields(entry_point_selector, nonce, version)?;
-        let hash_value = calculate_transaction_hash_common(
+        let hash_value = deprecated_calculate_transaction_hash_common(
             TransactionHashPrefix::Invoke,
             version,
             &contract_address,
