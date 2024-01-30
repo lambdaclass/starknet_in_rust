@@ -159,7 +159,7 @@ impl ExecutionEntryPoint {
             #[cfg(feature = "cairo-native")]
             CompiledClass::Casm {
                 sierra: Some(sierra_program_and_entrypoints),
-                casm
+                casm,
             } => {
                 let mut transactional_state = state.create_transactional()?;
 
@@ -188,7 +188,7 @@ impl ExecutionEntryPoint {
                             revert_error: None,
                             n_reverted_steps: 0,
                         })
-                    },
+                    }
                     Err(TransactionError::SandboxError(_)) => {
                         match self._execute(
                             state,
@@ -208,7 +208,7 @@ impl ExecutionEntryPoint {
                                 if !support_reverted {
                                     return Err(e);
                                 }
-        
+
                                 let n_reverted_steps =
                                     (max_steps as usize) - resources_manager.cairo_usage.n_steps;
                                 Ok(ExecutionResult {
@@ -218,7 +218,7 @@ impl ExecutionEntryPoint {
                                 })
                             }
                         }
-                    },
+                    }
                     Err(e) => {
                         if !support_reverted {
                             state.apply_state_update(&StateDiff::from_cached_state(

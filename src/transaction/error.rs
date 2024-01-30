@@ -2,9 +2,12 @@ use crate::{
     core::errors::{
         contract_address_errors::ContractAddressError, hash_errors::HashError,
         state_errors::StateError,
-    }, definitions::transaction_type::TransactionType, execution::os_usage::OsResources, syscalls::syscall_handler_errors::SyscallHandlerError, utils::ClassHash
+    },
+    definitions::transaction_type::TransactionType,
+    execution::os_usage::OsResources,
+    syscalls::syscall_handler_errors::SyscallHandlerError,
+    utils::ClassHash,
 };
-
 
 use cairo_vm::{
     types::{
@@ -164,5 +167,5 @@ pub enum TransactionError {
     CurrentAccountTxFieldsInNonV3TX,
     #[cfg(feature = "cairo-native")]
     #[error("sandbox error {0}")]
-    SandboxError(#[from] crate::sandboxing::SandboxError)
+    SandboxError(#[from] crate::sandboxing::SandboxError),
 }
