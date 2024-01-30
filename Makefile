@@ -32,7 +32,7 @@ usage:
 	@echo '    build:           Builds the Rust code'
 	@echo '    check:           Runs cargo check'
 	@echo '    deps:            Installs dependencies'
-	@echo '    deps-macos:      Installs depedencies for MacOS'
+	@echo '    deps-macos:      Installs dependencies for MacOS'
 	@echo '    clean:           Cleans all build artifacts'
 	@echo '    clippy:          Runs clippy'
 	@echo '    test:            Runs all tests'

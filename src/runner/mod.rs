@@ -224,7 +224,7 @@ where
     /// Returns a vector of pointers to the initial stack of the builtins invoked by the contract besides the gas and the syscall_segment pointer.
     /// ## Parameters
     /// - CairoRunner: An instance of a cairo runner that will execute the contract.
-    /// - vm: An instance of the cairo virutal machine that will execute the contract.
+    /// - vm: An instance of the cairo virtual machine that will execute the contract.
     /// - gas: The amount of gas that the caller has available.
     pub fn prepare_os_context_cairo1(
         cairo_runner: &CairoRunner,
@@ -262,7 +262,7 @@ where
     /// Returns a vector of pointers to the initial stack of the builtins invoked by the contract
     /// ## Parameters
     /// - CairoRunner: An instance of a cairo runner that will execute the contract.
-    /// - vm: An instance of the cairo virutal machine that will execute the contract.
+    /// - vm: An instance of the cairo virtual machine that will execute the contract.
     pub fn prepare_os_context_cairo0(
         cairo_runner: &CairoRunner,
         vm: &mut VirtualMachine,
@@ -375,7 +375,7 @@ where
         let syscall_base_ptr = initial_os_context
             .last()
             .ok_or(TransactionError::EmptyOsContext)?;
-        // Stack ends with: syscall_ptr, vairant_selector, retdata_start, retdata_end.
+        // Stack ends with: syscall_ptr, variant_selector, retdata_start, retdata_end.
         let syscall_stop_ptr = self
             .vm
             .get_maybe(&(self.vm.get_ap() - 4)?)

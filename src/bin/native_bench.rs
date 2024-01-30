@@ -567,7 +567,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
     // 4. do transfers between the accounts
 
     let transfer_entrypoint_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"transfer"));
-    // calldata for transfering 123 tokens from account1 to account2
+    // calldata for transferring 123 tokens from account1 to account2
     let calldata = vec![Felt252::from(12), Felt252::from(123)];
 
     for _ in 0..executions {
