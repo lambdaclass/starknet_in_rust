@@ -134,7 +134,7 @@ pub fn deprecated_calculate_declare_transaction_hash(
 //      V2 Hash Functions
 // ----------------------------
 
-pub fn deprecated_calculate_declare_v2_transaction_hash(
+pub(super) fn deprecated_calculate_declare_v2_transaction_hash(
     sierra_class_hash: Felt252,
     compiled_class_hash: Felt252,
     chain_id: Felt252,

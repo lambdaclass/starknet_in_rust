@@ -85,3 +85,46 @@ pub fn calculate_deploy_account_transaction_hash(
         }
     }
 }
+
+/// Calculate the hash for a Declare transaction of version 2+.
+/// Uses the older pedersen version for deprecated account tx fields and the newer poseidon version for current account tx fields
+pub fn calculate_declare_v2_transaction_hash(
+    sierra_class_hash: Felt252,
+    compiled_class_hash: Felt252,
+    version: Felt252,
+    nonce: Felt252,
+    sender_address: &Address,
+    chain_id: Felt252,
+    account_tx_fields: &VersionSpecificAccountTxFields,
+) -> Result<Felt252, HashError> {
+    match account_tx_fields {
+        VersionSpecificAccountTxFields::Deprecated(max_fee) => {
+            deprecated::deprecated_calculate_declare_v2_transaction_hash(
+                sierra_class_hash,
+                compiled_class_hash,
+                chain_id,
+                sender_address,
+                *max_fee,
+                version,
+                nonce,
+            )
+        }
+        VersionSpecificAccountTxFields::Current(fields) => {
+            Ok(current::calculate_declare_v2_transaction_hash(
+                sierra_class_hash,
+                compiled_class_hash,
+                chain_id,
+                sender_address,
+                version,
+                nonce,
+                fields.nonce_data_availability_mode,
+                fields.fee_data_availability_mode,
+                &Some(fields.l1_resource_bounds.clone()),
+                &fields.l2_resource_bounds,
+                fields.tip,
+                &fields.paymaster_data,
+                &fields.account_deployment_data,
+            ))
+        }
+    }
+}

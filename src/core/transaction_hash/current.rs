@@ -166,3 +166,48 @@ pub(super) fn calculate_deploy_account_transaction_hash(
         l2_resource_bounds,
     )
 }
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn calculate_declare_v2_transaction_hash(
+    sierra_class_hash: Felt252,
+    compiled_class_hash: Felt252,
+    chain_id: Felt252,
+    sender_address: &Address,
+    version: Felt252,
+    nonce: Felt252,
+    nonce_data_availability_mode: DataAvailabilityMode,
+    fee_data_availability_mode: DataAvailabilityMode,
+    l1_resource_bounds: &Option<ResourceBounds>,
+    l2_resource_bounds: &Option<ResourceBounds>,
+    tip: u64,
+    paymaster_data: &[Felt252],
+    account_deployment_data: &[Felt252],
+) -> Felt252 {
+    let declare_specific_data = vec![
+        Felt252::from_bytes_be(
+            &poseidon_hash_many(
+                &account_deployment_data
+                    .into_iter()
+                    .map(|f| FieldElement::from_bytes_be(&f.to_bytes_be()).unwrap_or_default())
+                    .collect::<Vec<_>>(),
+            )
+            .to_bytes_be(),
+        ),
+        sierra_class_hash,
+        compiled_class_hash,
+    ];
+    calculate_transaction_hash_common(
+        TransactionHashPrefix::Declare,
+        version,
+        sender_address,
+        chain_id,
+        nonce,
+        &declare_specific_data,
+        tip,
+        paymaster_data,
+        nonce_data_availability_mode,
+        fee_data_availability_mode,
+        l1_resource_bounds,
+        l2_resource_bounds,
+    )
+}
