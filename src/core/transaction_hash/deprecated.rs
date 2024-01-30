@@ -293,4 +293,60 @@ mod tests {
             .unwrap()
         )
     }
+
+    #[test]
+    fn preprocess_invoke_function_fields_nonce_is_none() {
+        let entry_point_selector =
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap();
+        let result = preprocess_invoke_function_fields(entry_point_selector, None, 0.into());
+
+        let expected_additional_data: Vec<Felt252> = Vec::new();
+        let expected_entry_point_selector_field = entry_point_selector;
+        assert_eq!(
+            result.unwrap(),
+            (
+                expected_entry_point_selector_field,
+                expected_additional_data
+            )
+        )
+    }
+
+    #[test]
+    fn preprocess_invoke_function_fields_version_one_with_no_nonce_should_fail() {
+        let expected_error = preprocess_invoke_function_fields(
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
+            None,
+            1.into(),
+        );
+        assert!(expected_error.is_err());
+        assert_matches!(
+            expected_error.unwrap_err(),
+            TransactionError::InvokeFunctionNonZeroMissingNonce
+        )
+    }
+
+    #[test]
+    fn preprocess_invoke_function_fields_version_one_with_no_nonce_with_query_base_should_fail() {
+        let expected_error = preprocess_invoke_function_fields(
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
+            None,
+            *crate::definitions::constants::QUERY_VERSION_1,
+        );
+        assert!(expected_error.is_err());
+    }
+
+    #[test]
+    fn preprocess_invoke_function_fields_version_zero_with_non_zero_nonce_should_fail() {
+        let expected_error = preprocess_invoke_function_fields(
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
+            Some(1.into()),
+            0.into(),
+        )
+        .unwrap_err();
+        assert_matches!(expected_error, TransactionError::InvokeFunctionZeroHasNonce)
+    }
 }
