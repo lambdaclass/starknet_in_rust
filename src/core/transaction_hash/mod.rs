@@ -1,11 +1,15 @@
 use crate::core::errors::hash_errors::HashError;
+use crate::transaction::ResourceBounds;
 use crate::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
     services::api::contract_classes::deprecated_contract_class::ContractClass, utils::Address,
 };
 use cairo_vm::Felt252;
-use num_traits::Zero;
+use lazy_static::lazy_static;
+use num_bigint::BigUint;
+use num_traits::{Num, ToBytes, Zero};
+use starknet_crypto::FieldElement;
 
 #[derive(Debug)]
 /// Enum representing the different types of transaction hash prefixes.
@@ -32,6 +36,85 @@ impl TransactionHashPrefix {
             }
         }
     }
+}
+
+/// Calculates the transaction hash in the StarkNet network - a unique identifier of the
+/// transaction.
+/// The transaction hash is a hash of the following information:
+///     1. A prefix that depends on the transaction type.
+///     2. The transaction's version.
+///     3. Sender address.
+///     4. A hash of the fee-related fields (see `_hash_fee_related_fields()`'s docstring).
+///     5. A hash of the paymaster data.
+///     6. The network's chain ID.
+///     7. The transaction's nonce.
+///     8. A concatenation of the nonce and fee data availability modes.
+///     9. Transaction-specific additional data.
+#[allow(clippy::too_many_arguments)]
+pub fn calculate_transaction_hash_common_poseidon(
+    tx_hash_prefix: TransactionHashPrefix,
+    version: Felt252,
+    sender_address: &Address,
+    chain_id: Felt252,
+    nonce: Felt252,
+    tx_type_specific_data: &[Felt252],
+    tip: u64,
+    paymaster_data: &[Felt252],
+    nonce_data_availability_mode: Felt252,
+    fee_data_availability_mode: Felt252,
+    l1_resource_bounds: Option<ResourceBounds>,
+    l2_resource_bounds: Option<ResourceBounds>,
+) -> Result<Felt252, HashError> {
+    let fee_fields_hash = hash_fee_related_fields(tip, &l1_resource_bounds, &l2_resource_bounds);
+}
+
+// Calculates the hash of the fee related fields of a transaction:
+//     1. The transaction's tip.
+//     2. A concatenation of the resource name, max amount and max price per unit - for each entry
+//         in the resource bounds, in the following order: L1_gas, L2_gas.
+fn hash_fee_related_fields(
+    tip: u64,
+    l1_resource_bounds: Option<ResourceBounds>,
+    l2_resource_bounds: Option<ResourceBounds>,
+) -> FieldElement {
+    const MAX_AMOUNT_BITS: u64 = 64;
+    const MAX_PRICE_PER_UNIT_BITS: u64 = 128;
+    const RESOURCE_VALUE_OFFSET: u64 = MAX_AMOUNT_BITS + MAX_PRICE_PER_UNIT_BITS;
+    lazy_static! {
+        static ref L1_GAS: BigUint = BigUint::from_str_radix(
+            "0x00000000000000000000000000000000000000000000000000004c315f474153",
+            16
+        )
+        .unwrap();
+        static ref L2_GAS: BigUint = BigUint::from_str_radix(
+            "0x00000000000000000000000000000000000000000000000000004c325f474153",
+            16
+        )
+        .unwrap();
+        static ref L1_GAS_SHL_RESOURCE_VALUE_OFFSET: FieldElement =
+            FieldElement::from_byte_slice_be(&(*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
+                .unwrap();
+        static ref L2_GAS_SHL_RESOURCE_VALUE_OFFSET: FieldElement =
+            FieldElement::from_byte_slice_be(&(*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
+                .unwrap();
+    };
+    let mut data_to_hash: Vec<FieldElement> = vec![tip.into()];
+    if let Some(resource_bounds) = l1_resource_bounds {
+        data_to_hash.push(
+            *L1_GAS_SHL_RESOURCE_VALUE_OFFSET
+                + FieldElement::from(resource_bounds.max_amount << MAX_PRICE_PER_UNIT_BITS)
+                + FieldElement::from(resource_bounds.max_price_per_unit),
+        );
+    }
+    if let Some(resource_bounds) = l2_resource_bounds {
+        data_to_hash.push(
+            *L2_GAS_SHL_RESOURCE_VALUE_OFFSET
+                + FieldElement::from(resource_bounds.max_amount << MAX_PRICE_PER_UNIT_BITS)
+                + FieldElement::from(resource_bounds.max_price_per_unit),
+        );
+    }
+
+    starknet_crypto::poseidon_hash_many(&data_to_hash)
 }
 
 // TODO[0.13] Investigate how transaction hashes are calculated for V3 Txs (aka without max_fee)
