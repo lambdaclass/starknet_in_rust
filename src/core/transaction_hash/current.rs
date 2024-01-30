@@ -6,7 +6,7 @@ use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
 use num_traits::{Num, ToBytes};
-use starknet_crypto::FieldElement;
+use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 use super::TransactionHashPrefix;
 
@@ -36,8 +36,8 @@ pub fn calculate_transaction_hash_common(
     paymaster_data: &[Felt252],
     nonce_data_availability_mode: DataAvailabilityMode,
     fee_data_availability_mode: DataAvailabilityMode,
-    l1_resource_bounds: Option<ResourceBounds>,
-    l2_resource_bounds: Option<ResourceBounds>,
+    l1_resource_bounds: &Option<ResourceBounds>,
+    l2_resource_bounds: &Option<ResourceBounds>,
 ) -> Felt252 {
     const DATA_AVAILABILITY_MODE_BITS: u64 = 32;
 
@@ -123,4 +123,46 @@ fn hash_fee_related_fields(
     }
 
     starknet_crypto::poseidon_hash_many(&data_to_hash)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn calculate_deploy_account_transaction_hash(
+    version: Felt252,
+    nonce: Felt252,
+    contract_address: &Address,
+    nonce_data_availability_mode: DataAvailabilityMode,
+    fee_data_availability_mode: DataAvailabilityMode,
+    l1_resource_bounds: &Option<ResourceBounds>,
+    l2_resource_bounds: &Option<ResourceBounds>,
+    tip: u64,
+    paymaster_data: &[Felt252],
+    salt: Felt252,
+    class_hash: Felt252,
+    constructor_calldata: &[Felt252],
+    chain_id: Felt252,
+) -> Felt252 {
+    let constructor_calldata_hash = Felt252::from_bytes_be(
+        &poseidon_hash_many(
+            &constructor_calldata
+                .into_iter()
+                .map(|f| FieldElement::from_bytes_be(&f.to_bytes_be()).unwrap_or_default())
+                .collect::<Vec<_>>(),
+        )
+        .to_bytes_be(),
+    );
+    let deploy_account_specific_data = vec![constructor_calldata_hash, class_hash, salt];
+    calculate_transaction_hash_common(
+        TransactionHashPrefix::DeployAccount,
+        version,
+        contract_address,
+        chain_id,
+        nonce,
+        &deploy_account_specific_data,
+        tip,
+        paymaster_data,
+        nonce_data_availability_mode,
+        fee_data_availability_mode,
+        l1_resource_bounds,
+        l2_resource_bounds,
+    )
 }
