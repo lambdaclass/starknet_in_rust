@@ -141,16 +141,8 @@ pub(super) fn calculate_deploy_account_transaction_hash(
     constructor_calldata: &[Felt252],
     chain_id: Felt252,
 ) -> Felt252 {
-    let constructor_calldata_hash = Felt252::from_bytes_be(
-        &poseidon_hash_many(
-            &constructor_calldata
-                .into_iter()
-                .map(|f| FieldElement::from_bytes_be(&f.to_bytes_be()).unwrap_or_default())
-                .collect::<Vec<_>>(),
-        )
-        .to_bytes_be(),
-    );
-    let deploy_account_specific_data = vec![constructor_calldata_hash, class_hash, salt];
+    let deploy_account_specific_data =
+        vec![poseidon_hash_array(constructor_calldata), class_hash, salt];
     calculate_transaction_hash_common(
         TransactionHashPrefix::DeployAccount,
         version,
@@ -184,15 +176,7 @@ pub(super) fn calculate_declare_v2_transaction_hash(
     account_deployment_data: &[Felt252],
 ) -> Felt252 {
     let declare_specific_data = vec![
-        Felt252::from_bytes_be(
-            &poseidon_hash_many(
-                &account_deployment_data
-                    .into_iter()
-                    .map(|f| FieldElement::from_bytes_be(&f.to_bytes_be()).unwrap_or_default())
-                    .collect::<Vec<_>>(),
-            )
-            .to_bytes_be(),
-        ),
+        poseidon_hash_array(account_deployment_data),
         sierra_class_hash,
         compiled_class_hash,
     ];
@@ -209,5 +193,53 @@ pub(super) fn calculate_declare_v2_transaction_hash(
         fee_data_availability_mode,
         l1_resource_bounds,
         l2_resource_bounds,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn calculate_invoke_account_transaction_hash(
+    version: Felt252,
+    nonce: Felt252,
+    sender_address: &Address,
+    nonce_data_availability_mode: DataAvailabilityMode,
+    fee_data_availability_mode: DataAvailabilityMode,
+    l1_resource_bounds: &Option<ResourceBounds>,
+    l2_resource_bounds: &Option<ResourceBounds>,
+    tip: u64,
+    paymaster_data: &[Felt252],
+    calldata: &[Felt252],
+    account_deployment_data: &[Felt252],
+    chain_id: Felt252,
+) -> Felt252 {
+    let invoke_specific_data = vec![
+        poseidon_hash_array(account_deployment_data),
+        poseidon_hash_array(calldata),
+    ];
+
+    calculate_transaction_hash_common(
+        TransactionHashPrefix::DeployAccount,
+        version,
+        sender_address,
+        chain_id,
+        nonce,
+        &invoke_specific_data,
+        tip,
+        paymaster_data,
+        nonce_data_availability_mode,
+        fee_data_availability_mode,
+        l1_resource_bounds,
+        l2_resource_bounds,
+    )
+}
+
+fn poseidon_hash_array(data: &[Felt252]) -> Felt252 {
+    Felt252::from_bytes_be(
+        &poseidon_hash_many(
+            &data
+                .into_iter()
+                .map(|f| FieldElement::from_bytes_be(&f.to_bytes_be()).unwrap_or_default())
+                .collect::<Vec<_>>(),
+        )
+        .to_bytes_be(),
     )
 }
