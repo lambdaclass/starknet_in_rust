@@ -1,6 +1,9 @@
 use crate::{
     definitions::block_context::BlockContext,
-    definitions::constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    definitions::{
+        block_context::FeeType,
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+    },
     execution::TransactionExecutionInfo,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
@@ -203,21 +206,22 @@ fn check_account_tx_fields_version(
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub enum DataAvailabilityMode {
+    #[default]
     L1,
     L2,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ResourceBounds {
     pub max_amount: u64,
     pub max_price_per_unit: u128,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CurrentAccountTxFields {
-    pub l1_resource_bounds: Option<ResourceBounds>,
+    pub l1_resource_bounds: ResourceBounds,
     pub l2_resource_bounds: Option<ResourceBounds>,
     pub tip: u64,
     pub nonce_data_availability_mode: DataAvailabilityMode,
@@ -243,15 +247,21 @@ impl VersionSpecificAccountTxFields {
     pub fn new_deprecated(max_fee: u128) -> Self {
         Self::Deprecated(max_fee)
     }
-    // TODO[0.13]: This method should be removed after completing V3 Tx related changes
-    pub(crate) fn max_fee(&self) -> u128 {
+
+    pub fn max_fee(&self) -> u128 {
         match self {
             Self::Deprecated(max_fee) => *max_fee,
-            Self::Current(current) => current
-                .l1_resource_bounds
-                .as_ref()
-                .map(|rb| rb.max_amount as u128 * rb.max_price_per_unit)
-                .unwrap_or_default(),
+            Self::Current(current) => {
+                current.l1_resource_bounds.max_amount as u128
+                    * current.l1_resource_bounds.max_price_per_unit
+            }
+        }
+    }
+
+    pub fn fee_type(&self) -> FeeType {
+        match self {
+            Self::Deprecated(_) => FeeType::Eth,
+            Self::Current(_) => FeeType::Strk,
         }
     }
 }
