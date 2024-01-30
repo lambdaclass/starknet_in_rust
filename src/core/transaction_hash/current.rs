@@ -41,7 +41,7 @@ pub fn calculate_transaction_hash_common(
 ) -> Felt252 {
     const DATA_AVAILABILITY_MODE_BITS: u64 = 32;
 
-    let fee_fields_hash = hash_fee_related_fields(tip, &l1_resource_bounds, &l2_resource_bounds);
+    let fee_fields_hash = hash_fee_related_fields(tip, l1_resource_bounds, l2_resource_bounds);
 
     let da_mode_concatenation: u64 = (Into::<u64>::into(nonce_data_availability_mode)
         << DATA_AVAILABILITY_MODE_BITS)
@@ -236,7 +236,7 @@ fn poseidon_hash_array(data: &[Felt252]) -> Felt252 {
     Felt252::from_bytes_be(
         &poseidon_hash_many(
             &data
-                .into_iter()
+                .iter()
                 .map(|f| FieldElement::from_bytes_be(&f.to_bytes_be()).unwrap_or_default())
                 .collect::<Vec<_>>(),
         )

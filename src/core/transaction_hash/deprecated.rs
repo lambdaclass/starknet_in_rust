@@ -146,7 +146,7 @@ pub(super) fn deprecated_calculate_invoke_transaction_hash(
     deprecated_calculate_transaction_hash_common(
         TransactionHashPrefix::Invoke,
         version,
-        &contract_address,
+        contract_address,
         entry_point_selector_field,
         calldata,
         max_fee,

@@ -7,9 +7,12 @@ use starknet_in_rust::{
         contract_address::compute_deprecated_class_hash,
         errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
         transaction_hash::{
-            deprecated_calculate_declare_transaction_hash,
-            deprecated_calculate_deploy_transaction_hash,
-            deprecated_calculate_transaction_hash_common, TransactionHashPrefix,
+            deprecated::{
+                deprecated_calculate_declare_transaction_hash,
+                deprecated_calculate_deploy_transaction_hash,
+                deprecated_calculate_transaction_hash_common,
+            },
+            TransactionHashPrefix,
         },
     },
     definitions::{
