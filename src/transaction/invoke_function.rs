@@ -1621,6 +1621,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1]);
+        if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1, 3]);
     }
 }

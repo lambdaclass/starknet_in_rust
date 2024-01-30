@@ -808,6 +808,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1]);
+        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1,3]);
     }
 }
