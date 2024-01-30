@@ -106,19 +106,33 @@ fn hash_fee_related_fields(
             FieldElement::from_byte_slice_be(&(&*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
                 .unwrap();
     };
+
+    let push_resource_bounds = |data_to_hash: &mut Vec<FieldElement>,
+                                resource_val_shifted: FieldElement,
+                                resource_bounds: &ResourceBounds| {
+        data_to_hash.push(
+            resource_val_shifted
+                + FieldElement::from_byte_slice_be(
+                    &(BigUint::from(resource_bounds.max_amount) << MAX_PRICE_PER_UNIT_BITS)
+                        .to_be_bytes(),
+                )
+                .unwrap_or_default()
+                + FieldElement::from(resource_bounds.max_price_per_unit),
+        );
+    };
     let mut data_to_hash: Vec<FieldElement> = vec![tip.into()];
     if let Some(resource_bounds) = l1_resource_bounds {
-        data_to_hash.push(
-            *L1_GAS_SHL_RESOURCE_VALUE_OFFSET
-                + FieldElement::from(resource_bounds.max_amount << MAX_PRICE_PER_UNIT_BITS)
-                + FieldElement::from(resource_bounds.max_price_per_unit),
+        push_resource_bounds(
+            &mut data_to_hash,
+            *L1_GAS_SHL_RESOURCE_VALUE_OFFSET,
+            resource_bounds,
         );
     }
     if let Some(resource_bounds) = l2_resource_bounds {
-        data_to_hash.push(
-            *L2_GAS_SHL_RESOURCE_VALUE_OFFSET
-                + FieldElement::from(resource_bounds.max_amount << MAX_PRICE_PER_UNIT_BITS)
-                + FieldElement::from(resource_bounds.max_price_per_unit),
+        push_resource_bounds(
+            &mut data_to_hash,
+            *L2_GAS_SHL_RESOURCE_VALUE_OFFSET,
+            resource_bounds,
         );
     }
 
