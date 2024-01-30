@@ -1,4 +1,4 @@
-use super::error::TransactionError;
+use super::{error::TransactionError, VersionSpecificAccountTxFields};
 use crate::{
     definitions::{
         block_context::{BlockContext, FeeType},
@@ -6,12 +6,19 @@ use crate::{
     },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
+        gas_usage::get_onchain_data_segment_length,
+        os_usage::{
+            ESTIMATED_DECLARE_STEPS, ESTIMATED_DEPLOY_ACCOUNT_STEPS,
+            ESTIMATED_INVOKE_FUNCTION_STEPS,
+        },
         CallInfo, CallType, TransactionExecutionContext,
     },
     services::api::contract_classes::deprecated_contract_class::EntryPointType,
     state::{
-        cached_state::CachedState, contract_class_cache::ContractClassCache,
-        state_api::StateReader, ExecutionResourcesManager,
+        cached_state::CachedState,
+        contract_class_cache::ContractClassCache,
+        state_api::{StateChangesCount, StateReader},
+        ExecutionResourcesManager,
     },
 };
 use cairo_vm::Felt252;
@@ -83,13 +90,22 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
     call_info.ok_or(TransactionError::CallInfoIsNone)
 }
 
-/// Calculates the fee of a transaction given its execution resources.
-/// We add the l1_gas_usage (which may include, for example, the direct cost of L2-to-L1
-/// messages) to the gas consumed by Cairo resource and multiply by the L1 gas price.
+/// Calculates the fee that should be charged, given execution resources.
 pub fn calculate_tx_fee(
     resources: &HashMap<String, usize>,
     block_context: &BlockContext,
     fee_type: &FeeType,
+) -> Result<u128, TransactionError> {
+    let l1_gas_usage = calculate_tx_l1_gas_usage(resources, block_context)?;
+    Ok(l1_gas_usage * block_context.get_gas_price_by_fee_type(fee_type))
+}
+
+/// Computes and returns the total L1 gas consumption.
+/// We add the l1_gas_usage (which may include, for example, the direct cost of L2-to-L1 messages)
+/// to the gas consumed by Cairo VM resource.
+pub fn calculate_tx_l1_gas_usage(
+    resources: &HashMap<String, usize>,
+    block_context: &BlockContext,
 ) -> Result<u128, TransactionError> {
     let gas_usage = resources
         .get(&"l1_gas_usage".to_string())
@@ -99,11 +115,7 @@ pub fn calculate_tx_fee(
     let l1_gas_by_cairo_usage = calculate_l1_gas_by_cairo_usage(block_context, resources)?;
     let total_l1_gas_usage = gas_usage.to_f64().unwrap() + l1_gas_by_cairo_usage;
 
-    Ok(total_l1_gas_usage.ceil() as u128
-        * block_context
-            .starknet_os_config()
-            .gas_price()
-            .get_by_fee_type(fee_type))
+    Ok(total_l1_gas_usage.ceil() as u128)
 }
 
 /// Calculates the L1 gas consumed when submitting the underlying Cairo program to SHARP.
@@ -196,6 +208,87 @@ pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     };
 
     Ok((fee_transfer_info, actual_fee))
+}
+// Minimal Fee estimation
+
+pub(crate) enum AccountTxType {
+    Declare,
+    Invoke,
+    DeployAccount,
+}
+
+pub(crate) fn check_fee_bounds(
+    account_tx_fields: &VersionSpecificAccountTxFields,
+    block_context: &BlockContext,
+    tx_type: AccountTxType,
+) -> Result<(), TransactionError> {
+    let minimal_l1_gas_amount = estimate_minimal_l1_gas(block_context, tx_type)?;
+    match account_tx_fields {
+        VersionSpecificAccountTxFields::Deprecated(max_fee) => {
+            let minimal_fee = minimal_l1_gas_amount
+                * block_context.get_gas_price_by_fee_type(&account_tx_fields.fee_type());
+            // Check max fee is at least the estimated constant overhead.
+            if *max_fee < minimal_fee {
+                return Err(TransactionError::MaxFeeTooLow(*max_fee, minimal_fee));
+            }
+        }
+        VersionSpecificAccountTxFields::Current(fields) => {
+            // Check l1_gas amount
+            if (fields.l1_resource_bounds.max_amount as u128) < minimal_l1_gas_amount {
+                return Err(TransactionError::MaxL1GasAmountTooLow(
+                    fields.l1_resource_bounds.max_amount,
+                    minimal_l1_gas_amount,
+                ))?;
+            }
+            // Check l1_gas price
+            let actual_gas_price =
+                block_context.get_gas_price_by_fee_type(&account_tx_fields.fee_type());
+            if fields.l1_resource_bounds.max_price_per_unit < actual_gas_price {
+                return Err(TransactionError::MaxL1GasPriceTooLow(
+                    fields.l1_resource_bounds.max_price_per_unit,
+                    actual_gas_price,
+                ))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn estimate_minimal_l1_gas(
+    block_context: &BlockContext,
+    tx_type: AccountTxType,
+) -> Result<u128, TransactionError> {
+    let n_estimated_steps = match tx_type {
+        AccountTxType::Declare => ESTIMATED_DECLARE_STEPS,
+        AccountTxType::Invoke => ESTIMATED_INVOKE_FUNCTION_STEPS,
+        AccountTxType::DeployAccount => ESTIMATED_DEPLOY_ACCOUNT_STEPS,
+    };
+    let state_changes = match tx_type {
+        AccountTxType::Declare => StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        },
+        AccountTxType::Invoke => StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        },
+        AccountTxType::DeployAccount => StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 1,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 1,
+        },
+    };
+    let gas_cost = get_onchain_data_segment_length(&state_changes);
+    let resources = HashMap::from([
+        ("l1_gas_usage".to_string(), gas_cost),
+        ("n_steps".to_string(), n_estimated_steps),
+    ]);
+    calculate_tx_l1_gas_usage(&resources, block_context)
 }
 
 #[cfg(test)]

@@ -216,6 +216,10 @@ impl BlockContext {
             enforce_l1_handler_fee,
         }
     }
+
+    pub fn get_gas_price_by_fee_type(&self, fee_type: &FeeType) -> u128 {
+        self.starknet_os_config.gas_price.get_by_fee_type(fee_type)
+    }
 }
 
 impl Default for BlockContext {

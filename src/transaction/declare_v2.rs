@@ -1,4 +1,4 @@
-use super::fee::{calculate_tx_fee, charge_fee};
+use super::fee::{charge_fee, check_fee_bounds};
 use super::{
     check_account_tx_fields_version, get_tx_version, ResourceBounds, Transaction,
     VersionSpecificAccountTxFields,
@@ -7,15 +7,11 @@ use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_clas
 use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
-use crate::execution::gas_usage::get_onchain_data_segment_length;
-use crate::execution::os_usage::ESTIMATED_DECLARE_STEPS;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
-use crate::services::eth_definitions::eth_gas_constants::SHARP_GAS_PER_MEMORY_WORD;
 use crate::state::cached_state::CachedState;
 use crate::state::contract_class_cache::ContractClassCache;
-use crate::state::state_api::StateChangesCount;
 use crate::utils::ClassHash;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
@@ -37,7 +33,6 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::Felt252;
 use num_traits::Zero;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -305,22 +300,22 @@ impl DeclareV2 {
         &self,
         state: &mut S,
         block_context: &BlockContext,
-        fee_type: &FeeType,
     ) -> Result<(), TransactionError> {
         if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
-        let minimal_fee = self.estimate_minimal_fee(block_context)?;
         // Check max fee is at least the estimated constant overhead.
-        if self.account_tx_fields.max_fee() < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(
-                self.account_tx_fields.max_fee(),
-                minimal_fee,
-            ));
-        }
+        check_fee_bounds(
+            &self.account_tx_fields,
+            block_context,
+            super::fee::AccountTxType::Declare,
+        )?;
         // Check that the current balance is high enough to cover the max_fee
-        let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, &self.sender_address, fee_type)?;
+        let (balance_low, balance_high) = state.get_fee_token_balance(
+            block_context,
+            &self.sender_address,
+            &self.account_tx_fields.fee_type(),
+        )?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
         if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(
@@ -330,24 +325,6 @@ impl DeclareV2 {
             ));
         }
         Ok(())
-    }
-
-    fn estimate_minimal_fee(&self, block_context: &BlockContext) -> Result<u128, TransactionError> {
-        let n_estimated_steps = ESTIMATED_DECLARE_STEPS;
-        let onchain_data_length = get_onchain_data_segment_length(&StateChangesCount {
-            n_storage_updates: 1,
-            n_class_hash_updates: 0,
-            n_compiled_class_hash_updates: 0,
-            n_modified_contracts: 1,
-        });
-        let resources = HashMap::from([
-            (
-                "l1_gas_usage".to_string(),
-                onchain_data_length * SHARP_GAS_PER_MEMORY_WORD,
-            ),
-            ("n_steps".to_string(), n_estimated_steps),
-        ]);
-        calculate_tx_fee(&resources, block_context, &FeeType::Eth)
     }
 
     /// Execute the validation of the contract in the cairo-vm. Returns a TransactionExecutionInfo if succesful.
@@ -382,7 +359,7 @@ impl DeclareV2 {
         self.handle_nonce(state)?;
 
         if !self.skip_fee_transfer {
-            self.check_fee_balance(state, block_context, &FeeType::Eth)?;
+            self.check_fee_balance(state, block_context)?;
         }
 
         let mut resources_manager = ExecutionResourcesManager::default();
@@ -584,10 +561,10 @@ impl DeclareV2 {
             account_tx_fields: if ignore_max_fee {
                 if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
                     let mut current_fields = current.clone();
-                    current_fields.l1_resource_bounds = Some(ResourceBounds {
+                    current_fields.l1_resource_bounds = ResourceBounds {
                         max_amount: u64::MAX,
                         max_price_per_unit: u128::MAX,
-                    });
+                    };
                     VersionSpecificAccountTxFields::Current(current_fields)
                 } else {
                     VersionSpecificAccountTxFields::new_deprecated(u128::MAX)

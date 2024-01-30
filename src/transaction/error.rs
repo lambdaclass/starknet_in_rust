@@ -156,6 +156,10 @@ pub enum TransactionError {
     WrongValidateRetdata,
     #[error("Max fee ({0}) is too low. Minimum fee: {1}.")]
     MaxFeeTooLow(u128, u128),
+    #[error("Max l1 gas amount ({0}) is too low. Minimum l1 gas amount: {1}.")]
+    MaxL1GasAmountTooLow(u64, u128),
+    #[error("Max l1 gas price ({0}) is too low. Actual l1 gas price: {1}.")]
+    MaxL1GasPriceTooLow(u128, u128),
     #[error("Max fee ({0}) exceeds balance (Uint256({1}, {2})).")]
     MaxFeeExceedsBalance(u128, Felt252, Felt252),
     #[error("V3 Transactions not Supported Yet")]
