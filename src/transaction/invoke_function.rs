@@ -4,7 +4,9 @@ use super::{
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
-    core::transaction_hash::{deprecated_calculate_transaction_hash_common, TransactionHashPrefix},
+    core::transaction_hash::{
+        deprecated::deprecated_calculate_transaction_hash_common, TransactionHashPrefix,
+    },
     definitions::{
         block_context::{BlockContext, FeeType},
         constants::{

@@ -14,7 +14,7 @@ use crate::state::cached_state::CachedState;
 use crate::state::contract_class_cache::ContractClassCache;
 use crate::utils::ClassHash;
 use crate::{
-    core::transaction_hash::deprecated_calculate_declare_v2_transaction_hash,
+    core::transaction_hash::deprecated::deprecated_calculate_declare_v2_transaction_hash,
     definitions::{
         block_context::BlockContext,
         constants::{INITIAL_GAS_COST, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},

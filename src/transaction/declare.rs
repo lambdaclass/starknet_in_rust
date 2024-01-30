@@ -1,5 +1,5 @@
 use crate::core::contract_address::compute_deprecated_class_hash;
-use crate::core::transaction_hash::deprecated_calculate_declare_transaction_hash;
+use crate::core::transaction_hash::deprecated::deprecated_calculate_declare_transaction_hash;
 use crate::definitions::block_context::{BlockContext, FeeType};
 use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 use crate::definitions::transaction_type::TransactionType;

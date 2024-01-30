@@ -12,7 +12,7 @@ use crate::state::StateDiff;
 use crate::{
     core::{
         errors::state_errors::StateError,
-        transaction_hash::deprecated_calculate_deploy_account_transaction_hash,
+        transaction_hash::deprecated::deprecated_calculate_deploy_account_transaction_hash,
     },
     definitions::{
         block_context::BlockContext,

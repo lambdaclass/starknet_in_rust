@@ -3,7 +3,7 @@ use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
         errors::state_errors::StateError,
-        transaction_hash::deprecated_calculate_deploy_transaction_hash,
+        transaction_hash::deprecated::deprecated_calculate_deploy_transaction_hash,
     },
     definitions::{
         block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR,
