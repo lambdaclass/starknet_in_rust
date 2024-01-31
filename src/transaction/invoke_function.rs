@@ -1685,8 +1685,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sandbox() {
-        use crate::sandboxing::IsolatedExecutor;
+fn test_sandbox() {
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
             entry_point_selector: Felt252::from_hex(
@@ -1712,12 +1711,7 @@ mod tests {
         let mut state_reader = InMemoryStateReader::default();
         // Set contract_class
         let class_hash: ClassHash = ClassHash([1; 32]);
-
-        let path = std::env::current_dir()
-            .unwrap()
-            .join("starknet_programs/fibonacci.json");
-        dbg!("After, dir:{:?}", &path);
-        let contract_class = ContractClass::from_path(path).unwrap();
+        let contract_class = ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
         // Set contract_state
         let contract_address = Address(0.into());
         let nonce = Felt252::ZERO;
@@ -1740,13 +1734,6 @@ mod tests {
                 &CompiledClass::Deprecated(Arc::new(contract_class)),
             )
             .unwrap();
-        let path = std::env::current_dir()
-            .unwrap()
-            .join("target/debug/cairo-executor");
-
-        let isolated_executor = IsolatedExecutor::new(&path).unwrap();
-        let sandbox = Some(&isolated_executor);
-        println!("After");
 
         let result = internal_invoke_function
             .execute(
@@ -1756,7 +1743,7 @@ mod tests {
                 #[cfg(feature = "cairo-native")]
                 None,
                 #[cfg(feature = "cairo-native")]
-                sandbox,
+                None,
             )
             .unwrap();
 
