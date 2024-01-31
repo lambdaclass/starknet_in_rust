@@ -94,3 +94,6 @@ harness = false
 [profile.release]
 codegen-units = 1
 lto = "fat"
+
+[profile.test]
+opt-level = 3

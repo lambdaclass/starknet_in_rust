@@ -1,4 +1,9 @@
 name: rust-tests
+# TODO:
+# - Split tests from coverage so I can use nightly :'(
+#   A test matrix should do.
+# - Fix coverage creation, doesn't seem to work.
+# - Find out where the compilation slowness lies. Maybe just don't optimize, but let's see.
 
 on:
   merge_group:
@@ -99,6 +104,7 @@ jobs:
       RPC_ENDPOINT_MAINNET: ${{ secrets.JUNO_ENDPOINT_MAINNET }}
       MLIR_SYS_170_PREFIX: /usr/lib/llvm-17/
       TABLEGEN_170_PREFIX: /usr/lib/llvm-17/
+      TEST_COLLECT_COVERAGE: 1
     strategy:
       fail-fast: false
       matrix:
@@ -162,55 +168,47 @@ jobs:
     - name: Run tests (${{ matrix.target }})
       run: make ${{ matrix.target }}
 
+    - name: Save coverage report
+      if: ${{ matrix.target != 'test-doctest' }}
+      uses: actions/cache/save@v3
+      with:
+        path: lcov-${{ matrix.target }}.info
+        key: coverage-cache-${{ github.sha }}-${{ matrix.target }}
+
   coverage:
-    name: Generate and upload coverage report
+    name: Upload coverage report
+    needs: tests
     runs-on: ubuntu-latest
+    env:
+      TEST_COLLECT_COVERAGE: 1
     steps:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Install Rust nightly
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: nightly
-
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-on-failure: true
-
-    - name: Cache coverage report
-      id: restore-report
+    - name: Fetch coverage report for test-cairo-1
       uses: actions/cache/restore@v3
       with:
-        path: lcov.info
-        key: coverage-cache-${{ github.sha }}
+        path: lcov-test-cairo-1.info
+        key: coverage-cache-${{ github.sha }}-test-cairo-1
+        fail-on-cache-miss: true
 
-    - name: Python3 Build
-      uses: actions/setup-python@v4
+    - name: Fetch coverage report for test-cairo-2
+      uses: actions/cache/restore@v3
       with:
-        python-version: '3.9'
-        cache: 'pip'
-    - uses: Swatinem/rust-cache@v2
+        path: lcov-test-cairo-2.info
+        key: coverage-cache-${{ github.sha }}-test-cairo-2
+        fail-on-cache-miss: true
+
+    - name: Fetch coverage report for test-cairo-native
+      uses: actions/cache/restore@v3
       with:
-        cache-on-failure: true
-
-    - name: Install deps
-      run: make deps
-
-    - name: Generate coverage report
-      if: steps.restore-report.outputs.cache-hit != 'true'
-      run: make coverage-report
-
-    - name: Save coverage report
-      if: steps.restore-report.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v3
-      with:
-        path: lcov.info
-        key: coverage-cache-${{ github.sha }}
+        path: lcov-test-cairo-native.info
+        key: coverage-cache-${{ github.sha }}-test-cairo-native
+        fail-on-cache-miss: true
 
     - name: Upload coverage to codecov.io
       uses: codecov/codecov-action@v3
       with:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: lcov.info
+        files: lcov-test-cairo-1.info lcov-test-cairo-2.info lcov-test-cairo-native.info
