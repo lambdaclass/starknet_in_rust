@@ -1683,4 +1683,96 @@ mod tests {
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
         if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1]);
     }
+
+    #[test]
+    fn test_sandbox() {
+        use crate::sandboxing::IsolatedExecutor;
+        let internal_invoke_function = InvokeFunction {
+            contract_address: Address(0.into()),
+            entry_point_selector: Felt252::from_hex(
+                "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+            )
+            .unwrap(),
+            entry_point_type: EntryPointType::External,
+            calldata: vec![1.into(), 1.into(), 10.into()],
+            tx_type: TransactionType::InvokeFunction,
+            version: 0.into(),
+            validate_entry_point_selector: 0.into(),
+            hash_value: 0.into(),
+            signature: Vec::new(),
+            account_tx_fields: Default::default(),
+            nonce: Some(0.into()),
+            skip_validation: false,
+            skip_execute: false,
+            skip_fee_transfer: false,
+            skip_nonce_check: false,
+        };
+
+        // Instantiate CachedState
+        let mut state_reader = InMemoryStateReader::default();
+        // Set contract_class
+        let class_hash: ClassHash = ClassHash([1; 32]);
+
+        let path = std::env::current_dir()
+            .unwrap()
+            .join("starknet_programs/fibonacci.json");
+        dbg!("After, dir:{:?}", &path);
+        let contract_class = ContractClass::from_path(path).unwrap();
+        // Set contract_state
+        let contract_address = Address(0.into());
+        let nonce = Felt252::ZERO;
+
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(contract_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce
+            .insert(contract_address, nonce);
+
+        let mut state = CachedState::new(
+            Arc::new(state_reader),
+            Arc::new(PermanentContractClassCache::default()),
+        );
+
+        state
+            .set_contract_class(
+                &class_hash,
+                &CompiledClass::Deprecated(Arc::new(contract_class)),
+            )
+            .unwrap();
+        let path = std::env::current_dir()
+            .unwrap()
+            .join("target/debug/cairo-executor");
+
+        let isolated_executor = IsolatedExecutor::new(&path).unwrap();
+        let sandbox = Some(&isolated_executor);
+        println!("After");
+
+        let result = internal_invoke_function
+            .execute(
+                &mut state,
+                &BlockContext::default(),
+                0,
+                #[cfg(feature = "cairo-native")]
+                None,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
+            )
+            .unwrap();
+
+        assert_eq!(result.tx_type, Some(TransactionType::InvokeFunction));
+        assert_eq!(
+            result.call_info.as_ref().unwrap().class_hash,
+            Some(class_hash)
+        );
+        assert_eq!(
+            result.call_info.as_ref().unwrap().entry_point_selector,
+            Some(internal_invoke_function.entry_point_selector)
+        );
+        assert_eq!(
+            result.call_info.as_ref().unwrap().calldata,
+            internal_invoke_function.calldata
+        );
+        assert_eq!(result.call_info.unwrap().retdata, vec![Felt252::from(144)]);
+    }
 }
