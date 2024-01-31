@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{
     transaction::{DataAvailabilityMode, ResourceBounds},
     utils::Address,
@@ -5,7 +7,7 @@ use crate::{
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
-use num_traits::{Num, ToBytes};
+use num_traits::ToBytes;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
 
 use super::TransactionHashPrefix;
@@ -89,21 +91,19 @@ fn hash_fee_related_fields(
     const MAX_PRICE_PER_UNIT_BITS: u64 = 128;
     const RESOURCE_VALUE_OFFSET: u64 = MAX_AMOUNT_BITS + MAX_PRICE_PER_UNIT_BITS;
     lazy_static! {
-        static ref L1_GAS: BigUint = BigUint::from_str_radix(
-            "00000000000000000000000000000000000000000000000000004c315f474153",
-            16
+        static ref L1_GAS: BigUint = BigUint::from_str(
+            "83774935613779",
         )
         .unwrap();
-        static ref L2_GAS: BigUint = BigUint::from_str_radix(
-            "00000000000000000000000000000000000000000000000000004c325f474153",
-            16
+        static ref L2_GAS: BigUint = BigUint::from_str(
+            "83779230581075",
         )
         .unwrap();
         static ref L1_GAS_SHL_RESOURCE_VALUE_OFFSET: FieldElement =
             FieldElement::from_byte_slice_be(&(&*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
                 .unwrap();
         static ref L2_GAS_SHL_RESOURCE_VALUE_OFFSET: FieldElement =
-            FieldElement::from_byte_slice_be(&(&*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
+            FieldElement::from_byte_slice_be(&(&*L2_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
                 .unwrap();
     };
 
