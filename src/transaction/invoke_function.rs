@@ -1735,6 +1735,10 @@ fn test_sandbox() {
             )
             .unwrap();
 
+        let path = std::env::current_dir()
+        .unwrap()
+        .join("target/debug/cairo_native_executor");
+        let sandbox = crate::sandboxing::IsolatedExecutor::new(&path).unwrap();
         let result = internal_invoke_function
             .execute(
                 &mut state,
@@ -1743,7 +1747,7 @@ fn test_sandbox() {
                 #[cfg(feature = "cairo-native")]
                 None,
                 #[cfg(feature = "cairo-native")]
-                None,
+               Some(&sandbox),
             )
             .unwrap();
 
