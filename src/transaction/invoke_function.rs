@@ -379,11 +379,11 @@ impl InvokeFunction {
             ));
         }
 
+        self.handle_nonce(state)?;
+
         if !self.skip_fee_transfer {
             self.check_fee_balance(state, block_context)?;
         }
-
-        self.handle_nonce(state)?;
 
         let mut transactional_state = state.create_transactional()?;
 
