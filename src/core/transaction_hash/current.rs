@@ -322,4 +322,46 @@ mod tests {
                 .unwrap()
         )
     }
+
+    #[test]
+    fn calculate_declare_hash_test() {
+        // Transaction data taken from TestNet tx 0x75eb08d4f3eb099797635fbc3a0fa2c197a33ebc5c0546144d04e8043e05ee
+        let tx_hash = calculate_deploy_account_transaction_hash(
+            Felt252::THREE,
+            Felt252::ZERO,
+            &Address(
+                Felt252::from_hex(
+                    "0x04e3187459e17c3c196faeae49616f3e8e1a60a0b7d621b953f9b347b093ecab",
+                )
+                .unwrap(),
+            ),
+            DataAvailabilityMode::L1,
+            DataAvailabilityMode::L1,
+            &Some(ResourceBounds {
+                max_amount: 0x137d,
+                max_price_per_unit: 0x1ad85ddc6,
+            }),
+            &Some(ResourceBounds::default()),
+            0,
+            &vec![],
+            Felt252::from_hex("0x7794e240544f56f345118c67c4c89c50c06a6159d15f66eb5ab41ce669a1bd4")
+                .unwrap(),
+            Felt252::from_hex("0x29927c8af6bccf3f6fda035981e765a7bdbf18a2dc0d630494f8758aa908e2b")
+                .unwrap(),
+            &vec![
+                Felt252::from_hex(
+                    "0x7794e240544f56f345118c67c4c89c50c06a6159d15f66eb5ab41ce669a1bd4",
+                )
+                .unwrap(),
+                Felt252::from_hex("0x0").unwrap(),
+            ],
+            StarknetChainId::TestNet.to_felt(),
+        );
+
+        assert_eq!(
+            tx_hash,
+            Felt252::from_hex("0x77a5b45a5ade8d59914b1a764f0a5d1e916e398b4089caed6fecd147b20e35")
+                .unwrap()
+        )
+    }
 }
