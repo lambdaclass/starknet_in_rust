@@ -232,7 +232,7 @@ pub(super) fn calculate_invoke_transaction_hash(
     ];
 
     calculate_transaction_hash_common(
-        TransactionHashPrefix::DeployAccount,
+        TransactionHashPrefix::Invoke,
         version,
         sender_address,
         chain_id,
