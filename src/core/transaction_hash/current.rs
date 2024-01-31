@@ -275,7 +275,7 @@ mod tests {
             }),
             &Some(ResourceBounds::default()),
             0,
-            &vec![],
+            &[],
             &vec![
                 Felt252::from_hex("0x1").unwrap(),
                 Felt252::from_hex(
@@ -309,7 +309,7 @@ mod tests {
                 )
                 .unwrap(),
             ],
-            &vec![],
+            &[],
             StarknetChainId::TestNet.to_felt(),
         );
 
@@ -340,18 +340,16 @@ mod tests {
             }),
             &Some(ResourceBounds::default()),
             0,
-            &vec![],
+            &[],
             Felt252::from_hex("0x7794e240544f56f345118c67c4c89c50c06a6159d15f66eb5ab41ce669a1bd4")
                 .unwrap(),
             Felt252::from_hex("0x29927c8af6bccf3f6fda035981e765a7bdbf18a2dc0d630494f8758aa908e2b")
                 .unwrap(),
-            &vec![
-                Felt252::from_hex(
+            &[Felt252::from_hex(
                     "0x7794e240544f56f345118c67c4c89c50c06a6159d15f66eb5ab41ce669a1bd4",
                 )
                 .unwrap(),
-                Felt252::from_hex("0x0").unwrap(),
-            ],
+                Felt252::from_hex("0x0").unwrap()],
             StarknetChainId::TestNet.to_felt(),
         );
 
