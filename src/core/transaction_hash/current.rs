@@ -20,7 +20,7 @@ use super::TransactionHashPrefix;
 ///     1. A prefix that depends on the transaction type.
 ///     2. The transaction's version.
 ///     3. Sender address.
-///     4. A hash of the fee-related fields (see `_hash_fee_related_fields()`'s docstring).
+///     4. A hash of the fee-related fields (see `hash_fee_related_fields()`'s docstring).
 ///     5. A hash of the paymaster data.
 ///     6. The network's chain ID.
 ///     7. The transaction's nonce.
@@ -82,6 +82,7 @@ pub fn calculate_transaction_hash_common(
 //     1. The transaction's tip.
 //     2. A concatenation of the resource name, max amount and max price per unit - for each entry
 //         in the resource bounds, in the following order: L1_gas, L2_gas.
+// If either l1_resource_bounds or l2_resource_bounds is None the default value will be used (max_amount = 0, max_price_per_unit = 0)
 fn hash_fee_related_fields(
     tip: u64,
     l1_resource_bounds: &Option<ResourceBounds>,
@@ -116,20 +117,16 @@ fn hash_fee_related_fields(
     };
 
     let mut data_to_hash: Vec<FieldElement> = vec![tip.into()];
-    if let Some(resource_bounds) = l1_resource_bounds {
-        push_resource_bounds(
-            &mut data_to_hash,
-            *L1_GAS_SHL_RESOURCE_VALUE_OFFSET,
-            resource_bounds,
-        );
-    }
-    if let Some(resource_bounds) = l2_resource_bounds {
-        push_resource_bounds(
-            &mut data_to_hash,
-            *L2_GAS_SHL_RESOURCE_VALUE_OFFSET,
-            resource_bounds,
-        );
-    }
+    push_resource_bounds(
+        &mut data_to_hash,
+        *L1_GAS_SHL_RESOURCE_VALUE_OFFSET,
+        &l1_resource_bounds.clone().unwrap_or_default(),
+    );
+    push_resource_bounds(
+        &mut data_to_hash,
+        *L2_GAS_SHL_RESOURCE_VALUE_OFFSET,
+        &l2_resource_bounds.clone().unwrap_or_default(),
+    );
 
     starknet_crypto::poseidon_hash_many(&data_to_hash)
 }
