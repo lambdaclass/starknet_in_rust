@@ -90,12 +90,12 @@ fn hash_fee_related_fields(
     const RESOURCE_VALUE_OFFSET: u64 = MAX_AMOUNT_BITS + MAX_PRICE_PER_UNIT_BITS;
     lazy_static! {
         static ref L1_GAS: BigUint = BigUint::from_str_radix(
-            "0x00000000000000000000000000000000000000000000000000004c315f474153",
+            "00000000000000000000000000000000000000000000000000004c315f474153",
             16
         )
         .unwrap();
         static ref L2_GAS: BigUint = BigUint::from_str_radix(
-            "0x00000000000000000000000000000000000000000000000000004c325f474153",
+            "00000000000000000000000000000000000000000000000000004c325f474153",
             16
         )
         .unwrap();
