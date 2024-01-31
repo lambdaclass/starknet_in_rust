@@ -91,14 +91,8 @@ fn hash_fee_related_fields(
     const MAX_PRICE_PER_UNIT_BITS: u64 = 128;
     const RESOURCE_VALUE_OFFSET: u64 = MAX_AMOUNT_BITS + MAX_PRICE_PER_UNIT_BITS;
     lazy_static! {
-        static ref L1_GAS: BigUint = BigUint::from_str(
-            "83774935613779",
-        )
-        .unwrap();
-        static ref L2_GAS: BigUint = BigUint::from_str(
-            "83779230581075",
-        )
-        .unwrap();
+        static ref L1_GAS: BigUint = BigUint::from_str("83774935613779",).unwrap();
+        static ref L2_GAS: BigUint = BigUint::from_str("83779230581075",).unwrap();
         static ref L1_GAS_SHL_RESOURCE_VALUE_OFFSET: FieldElement =
             FieldElement::from_byte_slice_be(&(&*L1_GAS << RESOURCE_VALUE_OFFSET).to_be_bytes())
                 .unwrap();
@@ -257,4 +251,75 @@ fn poseidon_hash_array(data: &[Felt252]) -> Felt252 {
         )
         .to_bytes_be(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::definitions::block_context::StarknetChainId;
+
+    #[test]
+    fn calculate_invoke_hash_test() {
+        // Transaction data taken from TestNet tx 0x75eb08d4f3eb099797635fbc3a0fa2c197a33ebc5c0546144d04e8043e05ee
+        let tx_hash = calculate_invoke_transaction_hash(
+            Felt252::THREE,
+            Felt252::from_hex("0x1091e").unwrap(),
+            &Address(
+                Felt252::from_hex(
+                    "0x35acd6dd6c5045d18ca6d0192af46b335a5402c02d41f46e4e77ea2c951d9a3",
+                )
+                .unwrap(),
+            ),
+            DataAvailabilityMode::L1,
+            DataAvailabilityMode::L1,
+            &Some(ResourceBounds {
+                max_amount: 0x61a80,
+                max_price_per_unit: 0x5af3107a4000,
+            }),
+            &Some(ResourceBounds::default()),
+            0,
+            &vec![],
+            &vec![
+                Felt252::from_hex("0x1").unwrap(),
+                Felt252::from_hex(
+                    "0x3fe8e4571772bbe0065e271686bd655efd1365a5d6858981e582f82f2c10313",
+                )
+                .unwrap(),
+                Felt252::from_hex(
+                    "0x31aafc75f498fdfa7528880ad27246b4c15af4954f96228c9a132b328de1c92",
+                )
+                .unwrap(),
+                Felt252::from_hex("0x6").unwrap(),
+                Felt252::from_hex(
+                    "0x7b72968a3461c83ef80837f10274d408d0fa5944089bcc24b6507e1fe9cfebd",
+                )
+                .unwrap(),
+                Felt252::from_hex("0x3").unwrap(),
+                Felt252::from_hex(
+                    "0x1533c867cfca1edc4d18e8bd1f8fdb570d5ba6e6c0d08c569de0d20e7c7d5c6",
+                )
+                .unwrap(),
+                Felt252::from_hex(
+                    "0x2d65735f9d358e2c9c07784597fa5c161ddafde39c06e97e65f8939d2ab0d0c",
+                )
+                .unwrap(),
+                Felt252::from_hex(
+                    "0x380a081ef58fdbf8afde92eecac79f3eccc3f4cac4ef940310320c15bccf4c9",
+                )
+                .unwrap(),
+                Felt252::from_hex(
+                    "0x3f2741161d2ea121fbdf96bf8a60e0d6fc8fc04ec48a28d77ccb7a3890f7301",
+                )
+                .unwrap(),
+            ],
+            &vec![],
+            StarknetChainId::TestNet.to_felt(),
+        );
+
+        assert_eq!(
+            tx_hash,
+            Felt252::from_hex("0x75eb08d4f3eb099797635fbc3a0fa2c197a33ebc5c0546144d04e8043e05ee")
+                .unwrap()
+        )
+    }
 }
