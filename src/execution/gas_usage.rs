@@ -107,6 +107,15 @@ pub const fn get_onchain_data_segment_length(state_changes: &StateChangesCount) 
         + state_changes.n_compiled_class_hash_updates * 2
 }
 
+pub fn get_onchain_data_cost(state_changes: &StateChangesCount) -> usize {
+    let onchain_data_segment_length = get_onchain_data_segment_length(state_changes);
+    let naive_cost = onchain_data_segment_length * SHARP_GAS_PER_DA_WORD;
+
+    let mut discount = state_changes.n_modified_contracts * MODIFIED_CONTRACT_DISCOUNT;
+    discount += GAS_PER_MEMORY_WORD - FEE_BALANCE_VALUE_COST;
+    naive_cost.saturating_sub(discount)
+}
+
 /// Calculates the cost of ConsumedMessageToL2 event emissions caused by an L1 handler with the given
 /// payload size.
 ///
@@ -267,5 +276,19 @@ mod test {
             ),
             76439
         )
+    }
+
+    #[test]
+    fn test_get_onchain_data_cost() {
+        // Input values and expected output taken from blockifier test `test_onchain_data_discount`
+        let state_changes = StateChangesCount {
+            n_storage_updates: 1,
+            n_class_hash_updates: 0,
+            n_compiled_class_hash_updates: 0,
+            n_modified_contracts: 7,
+        };
+
+        let onchain_data_cost = get_onchain_data_cost(&state_changes);
+        assert_eq!(onchain_data_cost, 6392)
     }
 }
