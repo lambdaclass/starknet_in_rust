@@ -102,17 +102,13 @@ pub trait State {
         let (low_key, high_key) = get_erc20_balance_var_addresses(contract_address)?;
         let low = self.get_storage_at(&(
             block_context
-                .starknet_os_config()
-                .fee_token_address()
-                .get_by_fee_type(fee_type)
+                .get_fee_token_address_by_fee_type(fee_type)
                 .clone(),
             low_key,
         ))?;
         let high = self.get_storage_at(&(
             block_context
-                .starknet_os_config()
-                .fee_token_address()
-                .get_by_fee_type(fee_type)
+                .get_fee_token_address_by_fee_type(fee_type)
                 .clone(),
             high_key,
         ))?;

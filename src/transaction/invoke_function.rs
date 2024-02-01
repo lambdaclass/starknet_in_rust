@@ -1,12 +1,12 @@
 use super::{
     check_account_tx_fields_version,
-    fee::{calculate_tx_fee, charge_fee, check_fee_bounds},
+    fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks},
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
     core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
     definitions::{
-        block_context::{BlockContext, FeeType},
+        block_context::BlockContext,
         constants::{
             EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
@@ -324,10 +324,7 @@ impl InvokeFunction {
             )?
         };
         let changes = state.count_actual_state_changes(Some((
-            (block_context
-                .starknet_os_config
-                .fee_token_address
-                .get_by_fee_type(&FeeType::Eth)),
+            (block_context.get_fee_token_address_by_fee_type(&self.account_tx_fields.fee_type())),
             &self.contract_address,
         )))?;
         let actual_resources = calculate_tx_resources(
@@ -414,54 +411,48 @@ impl InvokeFunction {
         }
         let mut tx_exec_info = tx_exec_info?;
 
-        let actual_fee =
-            calculate_tx_fee(&tx_exec_info.actual_resources, block_context, &FeeType::Eth)?;
+        let actual_fee = calculate_tx_fee(
+            &tx_exec_info.actual_resources,
+            block_context,
+            &self.account_tx_fields.fee_type(),
+        )?;
 
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if actual_fee > self.account_tx_fields.max_fee() {
-            // max_fee exceeded
-            tx_exec_info = tx_exec_info.to_revert_error(
-                format!(
-                    "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee,
-                    self.account_tx_fields.max_fee()
-                )
-                .as_str(),
-            );
         } else {
-            // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
-            // If so, revert the transaction.
-            let (balance_low, balance_high) = transactional_state.get_fee_token_balance(
+            match run_post_execution_fee_checks(
+                &mut transactional_state,
+                &self.account_tx_fields,
                 block_context,
+                actual_fee,
+                &tx_exec_info.actual_resources,
                 self.contract_address(),
-                &FeeType::Eth,
-            )?;
-            // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-            if balance_high.is_zero()
-                && balance_low < Felt252::from(actual_fee)
-                && !self.skip_fee_transfer
-            {
-                tx_exec_info = tx_exec_info.to_revert_error("Insufficient fee token balance");
-            } else {
-                state.apply_state_update(&StateDiff::from_cached_state(
-                    transactional_state.cache(),
-                )?)?;
+                self.skip_fee_transfer,
+            ) {
+                Ok(_) => {
+                    state.apply_state_update(&StateDiff::from_cached_state(
+                        transactional_state.cache(),
+                    )?)?;
+                }
+                Err(TransactionError::FeeCheck(error)) => {
+                    tx_exec_info = tx_exec_info.to_revert_error(&error.to_string());
+                }
+                error => error?,
             }
         }
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
+
         let (fee_transfer_info, actual_fee) = charge_fee(
             state,
-            &tx_exec_info.actual_resources,
+            actual_fee,
             block_context,
-            self.account_tx_fields.max_fee(),
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
-            program_cache,
+            program_cache.clone(),
         )?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);

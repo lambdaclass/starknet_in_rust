@@ -25,7 +25,9 @@ use crate::{
 use cairo_vm::Felt252;
 use num_traits::Zero;
 
-use super::fee::{charge_fee, estimate_minimal_l1_gas};
+use super::fee::{
+    calculate_tx_fee, charge_fee, estimate_minimal_l1_gas, run_post_execution_fee_checks,
+};
 use super::{get_tx_version, Transaction};
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -205,10 +207,7 @@ impl Declare {
             )?
         };
         let changes = state.count_actual_state_changes(Some((
-            (block_context
-                .starknet_os_config
-                .fee_token_address
-                .get_by_fee_type(&FeeType::Eth)),
+            (block_context.get_fee_token_address_by_fee_type(&FeeType::Eth)),
             &self.sender_address,
         )))?;
         let actual_resources = calculate_tx_resources(
@@ -384,11 +383,27 @@ impl Declare {
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let (fee_transfer_info, actual_fee) = charge_fee(
-            state,
+
+        let calculated_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
             block_context,
-            self.max_fee,
+            &tx_execution_context.account_tx_fields.fee_type(),
+        )?;
+
+        run_post_execution_fee_checks(
+            state,
+            &tx_execution_context.account_tx_fields,
+            block_context,
+            calculated_fee,
+            &tx_exec_info.actual_resources,
+            &self.sender_address,
+            self.skip_fee_transfer,
+        )?;
+
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            calculated_fee,
+            block_context,
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]

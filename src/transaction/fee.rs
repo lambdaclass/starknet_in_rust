@@ -1,8 +1,11 @@
-use super::{error::TransactionError, VersionSpecificAccountTxFields};
+use super::{
+    error::{FeeCheckError, TransactionError},
+    VersionSpecificAccountTxFields,
+};
 use crate::{
     definitions::{
         block_context::{BlockContext, FeeType},
-        constants::{FEE_FACTOR, INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
+        constants::{INITIAL_GAS_COST, TRANSFER_ENTRY_POINT_SELECTOR},
     },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
@@ -17,9 +20,10 @@ use crate::{
     state::{
         cached_state::CachedState,
         contract_class_cache::ContractClassCache,
-        state_api::{StateChangesCount, StateReader},
+        state_api::{State, StateChangesCount, StateReader},
         ExecutionResourcesManager,
     },
+    utils::Address,
 };
 use cairo_vm::Felt252;
 use num_traits::{ToPrimitive, Zero};
@@ -46,25 +50,17 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
 ) -> Result<CallInfo, TransactionError> {
-    if actual_fee > tx_execution_context.account_tx_fields.max_fee() {
-        return Err(TransactionError::ActualFeeExceedsMaxFee(
-            actual_fee,
-            tx_execution_context.account_tx_fields.max_fee(),
-        ));
-    }
-
-    let fee_token_address = block_context.starknet_os_config.fee_token_address.clone();
-
-    let calldata = [
-        block_context.block_info.sequencer_address.0,
-        Felt252::from(actual_fee), // U256.low
-        0.into(),                  // U256.high
-    ]
-    .to_vec();
+    let fee_token_address = block_context
+        .get_fee_token_address_by_fee_type(&tx_execution_context.account_tx_fields.fee_type())
+        .clone();
 
     let fee_transfer_call = ExecutionEntryPoint::new(
-        fee_token_address.get_by_fee_type(&FeeType::Eth).clone(),
-        calldata,
+        fee_token_address,
+        vec![
+            block_context.block_info.sequencer_address.0, // Recipient
+            Felt252::from(actual_fee),                    // Fee.low  (U256)
+            0.into(),                                     // Fee.high (U256)
+        ],
         *TRANSFER_ENTRY_POINT_SELECTOR,
         tx_execution_context.account_contract_address.clone(),
         EntryPointType::External,
@@ -73,12 +69,11 @@ pub(crate) fn execute_fee_transfer<S: StateReader, C: ContractClassCache>(
         INITIAL_GAS_COST,
     );
 
-    let mut resources_manager = ExecutionResourcesManager::default();
     let ExecutionResult { call_info, .. } = fee_transfer_call
         .execute(
             state,
             block_context,
-            &mut resources_manager,
+            &mut ExecutionResourcesManager::default(),
             tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps,
@@ -166,32 +161,23 @@ fn max_of_keys(cairo_rsc: &HashMap<String, usize>, weights: &HashMap<String, f64
 /// The [FeeInfo] with the given actual fee.
 pub fn charge_fee<S: StateReader, C: ContractClassCache>(
     state: &mut CachedState<S, C>,
-    resources: &HashMap<String, usize>,
+    calculated_fee: u128,
     block_context: &BlockContext,
-    max_fee: u128,
     tx_execution_context: &mut TransactionExecutionContext,
     skip_fee_transfer: bool,
     #[cfg(feature = "cairo-native")] program_cache: Option<
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
 ) -> Result<FeeInfo, TransactionError> {
+    let max_fee = tx_execution_context.account_tx_fields.max_fee();
     if max_fee.is_zero() {
         return Ok((None, 0));
     }
 
-    let actual_fee = calculate_tx_fee(resources, block_context, &FeeType::Eth)?;
-
-    let actual_fee = {
-        let version_0 = tx_execution_context.version.is_zero();
-        let fee_exceeded_max = actual_fee > max_fee;
-
-        if version_0 && fee_exceeded_max {
-            0
-        } else if version_0 && !fee_exceeded_max {
-            actual_fee
-        } else {
-            actual_fee.min(max_fee) * FEE_FACTOR
-        }
+    let actual_fee = if tx_execution_context.version.is_zero() && calculated_fee > max_fee {
+        0
+    } else {
+        calculated_fee.min(max_fee)
     };
 
     let fee_transfer_info = if skip_fee_transfer {
@@ -254,6 +240,81 @@ pub(crate) fn check_fee_bounds(
     Ok(())
 }
 
+pub(crate) fn run_post_execution_fee_checks<S: StateReader, C: ContractClassCache>(
+    state: &mut CachedState<S, C>,
+    account_tx_fields: &VersionSpecificAccountTxFields,
+    block_context: &BlockContext,
+    actual_fee: u128,
+    actual_resources: &HashMap<String, usize>,
+    sender_address: &Address,
+    skip_fee_transfer: bool,
+) -> Result<(), TransactionError> {
+    if account_tx_fields.max_fee().is_zero() {
+        return Ok(());
+    }
+    check_actual_cost_within_bounds(
+        block_context,
+        account_tx_fields,
+        actual_fee,
+        actual_resources,
+    )?;
+    check_can_pay_fee(
+        block_context,
+        state,
+        sender_address,
+        actual_fee,
+        &account_tx_fields.fee_type(),
+        skip_fee_transfer,
+    )
+}
+
+// Checks that the cost of the transaction (Measured by l1_gas in V3 Txs, and by fee in lower Tx versions) is within the bounds of the transaction
+fn check_actual_cost_within_bounds(
+    block_context: &BlockContext,
+    account_tx_fields: &VersionSpecificAccountTxFields,
+    actual_fee: u128,
+    actual_resources: &HashMap<String, usize>,
+) -> Result<(), TransactionError> {
+    match account_tx_fields {
+        VersionSpecificAccountTxFields::Current(fields) => {
+            let actual_used_l1_gas = calculate_tx_l1_gas_usage(actual_resources, block_context)?;
+            if actual_used_l1_gas > fields.l1_resource_bounds.max_amount as u128 {
+                return Err(FeeCheckError::L1GasAmountExceedsMax(
+                    actual_used_l1_gas,
+                    fields.l1_resource_bounds.max_amount,
+                )
+                .into());
+            }
+        }
+        VersionSpecificAccountTxFields::Deprecated(max_fee) => {
+            if actual_fee > *max_fee {
+                return Err(FeeCheckError::FeeExceedsMax(actual_fee, *max_fee).into());
+            }
+        }
+    }
+    Ok(())
+}
+
+// Checks that the account's fee token balance is high enough to cover the actual_fee
+fn check_can_pay_fee<S: StateReader, C: ContractClassCache>(
+    block_context: &BlockContext,
+    state: &mut CachedState<S, C>,
+    sender_address: &Address,
+    actual_fee: u128,
+    fee_type: &FeeType,
+    skip_fee_transfer: bool,
+) -> Result<(), TransactionError> {
+    // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
+    let (balance_low, balance_high) =
+        state.get_fee_token_balance(block_context, sender_address, fee_type)?;
+    // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
+    if balance_high.is_zero() && balance_low < Felt252::from(actual_fee) && !skip_fee_transfer {
+        Err(FeeCheckError::InsufficientFeeTokenBalance.into())
+    } else {
+        Ok(())
+    }
+}
+
 pub(crate) fn estimate_minimal_l1_gas(
     block_context: &BlockContext,
     tx_type: AccountTxType,
@@ -300,7 +361,10 @@ mod tests {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
         },
-        transaction::fee::charge_fee,
+        transaction::{
+            fee::{calculate_tx_fee, charge_fee},
+            VersionSpecificAccountTxFields,
+        },
     };
     use std::{collections::HashMap, sync::Arc};
 
@@ -319,14 +383,20 @@ mod tests {
             ("l1_gas_usage".to_string(), 200_usize),
             ("pedersen_builtin".to_string(), 10000_usize),
         ]);
-        let max_fee = 100;
+        tx_execution_context.account_tx_fields = VersionSpecificAccountTxFields::Deprecated(100);
         let skip_fee_transfer = true;
+
+        let calculated_fee = calculate_tx_fee(
+            &resources,
+            &block_context,
+            &tx_execution_context.account_tx_fields.fee_type(),
+        )
+        .unwrap();
 
         let result = charge_fee(
             &mut state,
-            &resources,
+            calculated_fee,
             &block_context,
-            max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -355,14 +425,20 @@ mod tests {
             ("l1_gas_usage".to_string(), 200_usize),
             ("pedersen_builtin".to_string(), 10000_usize),
         ]);
-        let max_fee = 100;
+        tx_execution_context.account_tx_fields = VersionSpecificAccountTxFields::Deprecated(100);
         let skip_fee_transfer = true;
+
+        let calculated_fee = calculate_tx_fee(
+            &resources,
+            &block_context,
+            &tx_execution_context.account_tx_fields.fee_type(),
+        )
+        .unwrap();
 
         let result = charge_fee(
             &mut state,
-            &resources,
+            calculated_fee,
             &block_context,
-            max_fee,
             &mut tx_execution_context,
             skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -370,6 +446,6 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(result.1, max_fee);
+        assert_eq!(result.1, 100);
     }
 }

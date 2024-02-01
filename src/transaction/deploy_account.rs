@@ -1,14 +1,12 @@
-use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds};
+use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks};
 use super::{
     check_account_tx_fields_version, get_tx_version, ResourceBounds, VersionSpecificAccountTxFields,
 };
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
-use crate::state::StateDiff;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -206,61 +204,36 @@ impl DeployAccount {
             self.check_fee_balance(state, block_context)?;
         }
 
-        let mut transactional_state = state.create_transactional()?;
-        let tx_exec_info = self.apply(
-            &mut transactional_state,
+        let mut tx_exec_info = self.apply(
+            state,
             block_context,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
-        );
-        #[cfg(feature = "replay_benchmark")]
-        // Add initial values to cache despite tx outcome
-        {
-            state.cache_mut().storage_initial_values_mut().extend(
-                transactional_state
-                    .cache()
-                    .storage_initial_values
-                    .clone()
-                    .into_iter(),
-            );
-            state.cache_mut().class_hash_initial_values_mut().extend(
-                transactional_state
-                    .cache()
-                    .class_hash_initial_values
-                    .clone()
-                    .into_iter(),
-            );
-        }
-        let mut tx_exec_info = tx_exec_info?;
-
-        let actual_fee =
-            calculate_tx_fee(&tx_exec_info.actual_resources, block_context, &FeeType::Eth)?;
-
-        if let Some(revert_error) = tx_exec_info.revert_error.clone() {
-            // execution error
-            tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if actual_fee > self.account_tx_fields.max_fee() {
-            // max_fee exceeded
-            tx_exec_info = tx_exec_info.to_revert_error(
-                format!(
-                    "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee,
-                    self.account_tx_fields.max_fee()
-                )
-                .as_str(),
-            );
-        } else {
-            state
-                .apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
-        }
+        )?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let (fee_transfer_info, actual_fee) = charge_fee(
-            state,
+
+        let calculated_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
             block_context,
-            self.account_tx_fields.max_fee(),
+            &tx_execution_context.account_tx_fields.fee_type(),
+        )?;
+
+        run_post_execution_fee_checks(
+            state,
+            &self.account_tx_fields,
+            block_context,
+            calculated_fee,
+            &tx_exec_info.actual_resources,
+            &self.contract_address,
+            self.skip_fee_transfer,
+        )?;
+
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            calculated_fee,
+            block_context,
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -330,9 +303,7 @@ impl DeployAccount {
             TransactionType::DeployAccount,
             state.count_actual_state_changes(Some((
                 (block_context
-                    .starknet_os_config
-                    .fee_token_address
-                    .get_by_fee_type(&FeeType::Eth)),
+                    .get_fee_token_address_by_fee_type(&self.account_tx_fields.fee_type())),
                 &self.contract_address,
             )))?,
             None,
