@@ -435,6 +435,10 @@ impl IsolatedExecutor {
             }
         }
     }
+    pub fn kill(&mut self) {
+        let _ = self.sender.send(Message::Kill.wrap().unwrap());
+        let _ = self.proc.kill();
+    }
 }
 
 impl Drop for IsolatedExecutor {

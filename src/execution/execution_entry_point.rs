@@ -858,27 +858,7 @@ impl ExecutionEntryPoint {
 mod tests {
     use super::*;
     #[test]
-fn test_sandbox() {    
-        // let internal_invoke_function = InvokeFunction {
-        //     contract_address: Address(0.into()),
-        //     entry_point_selector: Felt252::from_hex(
-        //         "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
-        //     )
-        //     .unwrap(),
-        //     entry_point_type: EntryPointType::External,
-        //     calldata: vec![1.into(), 1.into(), 10.into()],
-        //     tx_type: TransactionType::InvokeFunction,
-        //     version: 0.into(),
-        //     validate_entry_point_selector: 0.into(),
-        //     hash_value: 0.into(),
-        //     signature: Vec::new(),
-        //     account_tx_fields: Default::default(),
-        //     nonce: Some(0.into()),
-        //     skip_validation: false,
-        //     skip_execute: false,
-        //     skip_fee_transfer: false,
-        //     skip_nonce_check: false,
-        // };
+fn fallback_procedure_sandbox_kill_test() {    
 
         let path = std::path::Path::new("starknet_programs/cairo2/fibonacci.cairo");
 
@@ -941,11 +921,12 @@ fn test_sandbox() {
                 .unwrap()
                 .join("target/debug/cairo_native_executor")
         });
-        let sandbox = IsolatedExecutor::new(executor_path.as_path()).unwrap();
+        let mut sandbox = IsolatedExecutor::new(executor_path.as_path()).unwrap();
+        sandbox.kill();
 
         let execution_result_native = ExecutionEntryPoint::new(
             callee_address.clone(),
-            vec![1.into(), 1.into(), 10.into()],
+            vec![1.into(), 1.into(), 11.into()],
             Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
                 .unwrap(),
             caller_address.clone(),
@@ -978,6 +959,8 @@ fn test_sandbox() {
         //     execution_result_native.call_info.as_ref().unwrap().class_hash,
         //     Some(class_hash)
         // );
+        println!("{}", execution_result_native.call_info.clone().unwrap().retdata.first().unwrap().to_bigint());
+        println!("{}",Felt252::from(144).to_bigint());
         assert_eq!(execution_result_native.call_info.unwrap().retdata, vec![Felt252::from(144)]);
     }
 }
