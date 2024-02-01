@@ -190,11 +190,11 @@ impl DeployAccount {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::ONE {
+        if !(self.version == Felt252::ONE || self.version == Felt252::THREE) {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeployAccount".to_string(),
                 self.version,
-                vec![1],
+                vec![1, 3],
             ));
         }
 
@@ -779,6 +779,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1]);
+        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1,3]);
     }
 }

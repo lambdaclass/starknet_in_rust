@@ -2,7 +2,7 @@ use crate::{
     definitions::block_context::BlockContext,
     definitions::{
         block_context::FeeType,
-        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2, QUERY_VERSION_3},
     },
     execution::TransactionExecutionInfo,
     state::{
@@ -185,7 +185,8 @@ fn get_tx_version(version: Felt252) -> Felt252 {
     match version {
         version if version == *QUERY_VERSION_0 => Felt252::ZERO,
         version if version == *QUERY_VERSION_1 => Felt252::ONE,
-        version if version == *QUERY_VERSION_2 => 2.into(),
+        version if version == *QUERY_VERSION_2 => Felt252::TWO,
+        version if version == *QUERY_VERSION_3 => Felt252::THREE,
         version => version,
     }
 }

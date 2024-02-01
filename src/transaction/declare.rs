@@ -360,7 +360,7 @@ impl Declare {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::ONE && self.version != Felt252::ZERO {
+        if !(self.version == Felt252::ZERO || self.version == Felt252::ONE) {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Declare".to_string(),
                 self.version,

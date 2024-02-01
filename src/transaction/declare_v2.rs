@@ -347,11 +347,11 @@ impl DeclareV2 {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != 2.into() {
+        if !(self.version == Felt252::TWO || self.version == Felt252::THREE) {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeclareV2".to_string(),
                 self.version,
-                vec![2],
+                vec![2, 3],
             ));
         }
 
@@ -999,6 +999,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2]);
+        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2, 3]);
     }
 }

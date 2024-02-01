@@ -368,11 +368,14 @@ impl InvokeFunction {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::ONE && self.version != Felt252::ZERO {
+        if !(self.version == Felt252::ZERO
+            || self.version == Felt252::ONE
+            || self.version == Felt252::THREE)
+        {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Invoke".to_string(),
                 self.version,
-                vec![0, 1],
+                vec![0, 1, 3],
             ));
         }
 
@@ -1609,6 +1612,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1]);
+        if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1, 3]);
     }
 }
