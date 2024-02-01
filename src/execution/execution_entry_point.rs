@@ -852,3 +852,132 @@ impl ExecutionEntryPoint {
         })
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+fn test_sandbox() {    
+        // let internal_invoke_function = InvokeFunction {
+        //     contract_address: Address(0.into()),
+        //     entry_point_selector: Felt252::from_hex(
+        //         "0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9",
+        //     )
+        //     .unwrap(),
+        //     entry_point_type: EntryPointType::External,
+        //     calldata: vec![1.into(), 1.into(), 10.into()],
+        //     tx_type: TransactionType::InvokeFunction,
+        //     version: 0.into(),
+        //     validate_entry_point_selector: 0.into(),
+        //     hash_value: 0.into(),
+        //     signature: Vec::new(),
+        //     account_tx_fields: Default::default(),
+        //     nonce: Some(0.into()),
+        //     skip_validation: false,
+        //     skip_execute: false,
+        //     skip_fee_transfer: false,
+        //     skip_nonce_check: false,
+        // };
+
+        let path = std::path::Path::new("starknet_programs/cairo2/fibonacci.cairo");
+
+        let casm_contract_class_data = std::fs::read_to_string(path.with_extension("casm")).unwrap();
+        let sierra_contract_class_data = std::fs::read_to_string(path.with_extension("sierra")).unwrap();
+
+        let casm_contract_class: CasmContractClass = serde_json::from_str(&casm_contract_class_data).unwrap();
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_str(&sierra_contract_class_data).unwrap();
+
+        let casm_contract_class = Arc::new(casm_contract_class);
+        let sierra_contract_class = Arc::new((
+            sierra_contract_class.extract_sierra_program().unwrap(),
+            sierra_contract_class.entry_points_by_type,
+        ));
+
+
+        let mut state_reader = crate::state::in_memory_state_reader::InMemoryStateReader::default();
+        let cache = crate::state::contract_class_cache::PermanentContractClassCache::default();
+
+        let class_hash = ClassHash([1; 32]);
+        let caller_address = Address(1.into());
+        let callee_address = Address(1.into());
+
+        cache.set_contract_class(
+            class_hash,
+            CompiledClass::Casm {
+                casm: casm_contract_class,
+                sierra: Some(sierra_contract_class),
+            },
+        );
+    
+        state_reader
+            .address_to_class_hash_mut()
+            .insert(caller_address.clone(), class_hash);
+        state_reader
+            .address_to_nonce_mut()
+            .insert(callee_address.clone(), Felt252::default());
+    
+        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(cache));
+    
+        state.cache_mut().storage_initial_values_mut().insert(
+            (Address(Felt252::ONE), crate::utils::felt_to_hash(&10.into()).0),
+            Felt252::from_bytes_be(&[5; 32]),
+        );
+    
+        let class_hash = *state
+            .state_reader
+            .address_to_class_hash
+            .get(&caller_address)
+            .unwrap();
+    
+        let mut block_context = BlockContext::default();
+        block_context.block_info_mut().block_number = 30;
+
+        let executor_path = std::env::var("CAIRO_NATIVE_EXECUTOR_PATH")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            std::env::current_dir()
+                .unwrap()
+                .join("target/debug/cairo_native_executor")
+        });
+        let sandbox = IsolatedExecutor::new(executor_path.as_path()).unwrap();
+
+        let execution_result_native = ExecutionEntryPoint::new(
+            callee_address.clone(),
+            vec![1.into(), 1.into(), 10.into()],
+            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
+                .unwrap(),
+            caller_address.clone(),
+            crate::EntryPointType::External,
+            Some(CallType::Delegate),
+            Some(class_hash),
+            u128::MAX,
+        )
+        .execute(
+            &mut state,
+            &block_context,
+            &mut ExecutionResourcesManager::default(),
+            &mut TransactionExecutionContext::new(
+                Address(Felt252::default()),
+                Felt252::default(),
+                Vec::default(),
+                Default::default(),
+                10.into(),
+                block_context.invoke_tx_max_n_steps(),
+                *crate::definitions::constants::TRANSACTION_VERSION,
+            ),
+            false,
+            block_context.invoke_tx_max_n_steps(),
+            None,
+            Some(&sandbox),
+        ).unwrap();
+
+
+        // assert_eq!(
+        //     execution_result_native.call_info.as_ref().unwrap().class_hash,
+        //     Some(class_hash)
+        // );
+        assert_eq!(execution_result_native.call_info.unwrap().retdata, vec![Felt252::from(144)]);
+    }
+}
