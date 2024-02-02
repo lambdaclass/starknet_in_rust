@@ -101,8 +101,8 @@ pub(super) fn deprecated_calculate_deploy_account_transaction_hash(
     )
 }
 
-/// Calculate the hash for a declared transaction.
-pub fn deprecated_calculate_declare_transaction_hash(
+/// Calculate the hash for a deprecated declare transaction.
+pub fn calculate_declare_deprecated_transaction_hash(
     contract_class: &ContractClass,
     chain_id: Felt252,
     sender_address: &Address,
@@ -185,11 +185,8 @@ fn preprocess_invoke_function_fields(
     }
 }
 
-// ----------------------------
-//      V2 Hash Functions
-// ----------------------------
-
-pub(super) fn deprecated_calculate_declare_v2_transaction_hash(
+/// Calculate the hash for a declare transaction.
+pub(super) fn deprecated_calculate_declare_transaction_hash(
     sierra_class_hash: Felt252,
     compiled_class_hash: Felt252,
     chain_id: Felt252,
@@ -255,7 +252,7 @@ mod tests {
     }
 
     #[test]
-    fn calculate_declare_hash_test() {
+    fn calculate_declare_deprecated_hash_test() {
         let chain_id = StarknetChainId::MainNet;
         let sender_address = Address(
             Felt252::from_dec_str(
