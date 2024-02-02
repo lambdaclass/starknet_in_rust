@@ -94,11 +94,11 @@ impl DeclareV2 {
         let hash_value = calculate_declare_v2_transaction_hash(
             sierra_class_hash,
             compiled_class_hash,
-            chain_id,
-            &sender_address,
-            account_tx_fields.max_fee(),
             version,
             nonce,
+            &sender_address,
+            chain_id,
+            &account_tx_fields,
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
@@ -234,11 +234,11 @@ impl DeclareV2 {
         let hash_value = calculate_declare_v2_transaction_hash(
             sierra_class_hash,
             compiled_class_hash,
-            chain_id,
-            &sender_address,
-            account_tx_fields.max_fee(),
             version,
             nonce,
+            &sender_address,
+            chain_id,
+            &account_tx_fields,
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(

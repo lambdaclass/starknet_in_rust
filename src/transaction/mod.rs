@@ -207,11 +207,20 @@ fn check_account_tx_fields_version(
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Copy)]
 pub enum DataAvailabilityMode {
     #[default]
     L1,
     L2,
+}
+
+impl From<DataAvailabilityMode> for u64 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => 0,
+            DataAvailabilityMode::L2 => 1,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default)]
