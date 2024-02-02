@@ -42,7 +42,7 @@ use {
 ///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
 ///  contract class.
 #[derive(Debug, Clone)]
-pub struct Declare {
+pub struct DeclareDeprecated {
     pub class_hash: ClassHash,
     pub sender_address: Address,
     pub validate_entry_point_selector: Felt252,
@@ -61,7 +61,7 @@ pub struct Declare {
 // ------------------------------------------------------------
 //                        Functions
 // ------------------------------------------------------------
-impl Declare {
+impl DeclareDeprecated {
     #[allow(clippy::too_many_arguments)]
     /// Constructor creates a new Declare instance.
     pub fn new(
@@ -88,7 +88,7 @@ impl Declare {
 
         let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
-        let internal_declare = Declare {
+        let internal_declare = DeclareDeprecated {
             class_hash,
             sender_address,
             validate_entry_point_selector,
@@ -125,7 +125,7 @@ impl Declare {
 
         let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
-        let internal_declare = Declare {
+        let internal_declare = DeclareDeprecated {
             class_hash,
             sender_address,
             validate_entry_point_selector,
@@ -158,7 +158,7 @@ impl Declare {
         let version = get_tx_version(version);
         let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
-        let internal_declare = Declare {
+        let internal_declare = DeclareDeprecated {
             class_hash,
             sender_address,
             validate_entry_point_selector,
@@ -429,7 +429,7 @@ impl Declare {
         ignore_max_fee: bool,
         skip_nonce_check: bool,
     ) -> Transaction {
-        let tx = Declare {
+        let tx = DeclareDeprecated {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
@@ -443,7 +443,7 @@ impl Declare {
             ..self.clone()
         };
 
-        Transaction::Declare(tx)
+        Transaction::DeclareDeprecated(tx)
     }
 }
 
@@ -517,7 +517,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = Declare::new(
+        let internal_declare = DeclareDeprecated::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::ONE),
@@ -637,7 +637,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Declare same class twice
-        let internal_declare = Declare::new(
+        let internal_declare = DeclareDeprecated::new(
             fib_contract_class.clone(),
             chain_id,
             Address(Felt252::ONE),
@@ -648,7 +648,7 @@ mod tests {
         )
         .unwrap();
 
-        let second_internal_declare = Declare::new(
+        let second_internal_declare = DeclareDeprecated::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::ONE),
@@ -727,7 +727,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Declare same class twice
-        let internal_declare = Declare::new(
+        let internal_declare = DeclareDeprecated::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::ONE),
@@ -781,7 +781,7 @@ mod tests {
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
-        let internal_declare = Declare::new(
+        let internal_declare = DeclareDeprecated::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::ONE),
@@ -851,7 +851,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // Use non-zero value so that the actual fee calculation is done
-        let internal_declare = Declare::new(
+        let internal_declare = DeclareDeprecated::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::ONE),
@@ -935,7 +935,7 @@ mod tests {
         // declare tx
         // Signature & tx hash values are hand-picked for account validations to pass
         let mut declare =
-            Declare::new(
+            DeclareDeprecated::new(
                 fib_contract_class,
                 chain_id,
                 Address(Felt252::ONE),
@@ -996,7 +996,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = Declare::new(
+        let internal_declare = DeclareDeprecated::new(
             fib_contract_class,
             chain_id,
             Address(Felt252::ONE),

@@ -58,7 +58,7 @@ use starknet_in_rust::{
         BlockInfo,
     },
     transaction::{
-        error::TransactionError, invoke_function::InvokeFunction, Declare, DeployAccount,
+        error::TransactionError, invoke_function::InvokeFunction, DeclareDeprecated, DeployAccount,
     },
     utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
 };
@@ -762,8 +762,8 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
     }
 }
 
-fn declare_tx() -> Declare {
-    Declare {
+fn declare_tx() -> DeclareDeprecated {
+    DeclareDeprecated {
         contract_class: ContractClass::from_path(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: *TEST_EMPTY_CONTRACT_CLASS_HASH,
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),

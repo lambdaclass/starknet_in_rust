@@ -273,8 +273,8 @@ mod test {
             ExecutionResourcesManager,
         },
         transaction::{
-            Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
-            VersionSpecificAccountTxFields,
+            DeclareDeprecated, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler,
+            Transaction, VersionSpecificAccountTxFields,
         },
         utils::{
             felt_to_hash,
@@ -824,8 +824,8 @@ mod test {
         let class = CONTRACT_CLASS.clone();
         let address = CONTRACT_ADDRESS.clone();
         // new consumes more execution time than raw struct instantiation
-        let declare_tx = Transaction::Declare(
-            Declare::new(
+        let declare_tx = Transaction::DeclareDeprecated(
+            DeclareDeprecated::new(
                 class,
                 StarknetChainId::TestNet.to_felt(),
                 address,
@@ -1255,7 +1255,7 @@ mod test {
         // declare tx
         // Signature & tx hash values are hand-picked for account validations to pass
         let mut declare =
-            Declare::new(
+            DeclareDeprecated::new(
                 fib_contract_class,
                 chain_id,
                 Address(Felt252::ONE),
@@ -1277,7 +1277,7 @@ mod test {
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config_mut().gas_price = GasPrices::new(12, 0);
 
-        let declare_tx = Transaction::Declare(declare);
+        let declare_tx = Transaction::DeclareDeprecated(declare);
 
         let without_validate_fee = simulate_transaction(
             &[&declare_tx],

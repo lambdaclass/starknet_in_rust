@@ -19,7 +19,7 @@ use starknet_in_rust::{
         contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader,
     },
-    transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
+    transaction::{DeclareDeprecated, Deploy, DeployAccount, InvokeFunction},
     utils::{Address, ClassHash},
 };
 use std::{hint::black_box, sync::Arc};
@@ -142,7 +142,7 @@ pub fn declare(
         let address = CONTRACT_ADDRESS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let declare_tx = Declare::new(
+            let declare_tx = DeclareDeprecated::new(
                 class,
                 StarknetChainId::TestNet.to_felt(),
                 address,

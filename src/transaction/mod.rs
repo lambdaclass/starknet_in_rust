@@ -12,7 +12,7 @@ use crate::{
     },
     utils::Address,
 };
-pub use declare::Declare;
+pub use declare::DeclareDeprecated;
 pub use declare_v2::DeclareV2;
 pub use deploy::Deploy;
 pub use deploy_account::DeployAccount;
@@ -42,15 +42,15 @@ use {
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
 /// it can be one of:
+/// - DeclareDeprecated
 /// - Declare
-/// - DeclareV2
 /// - Deploy
 /// - DeployAccount
 /// - InvokeFunction
 /// - L1Handler
 pub enum Transaction {
-    /// A declare transaction.
-    Declare(Declare),
+    /// A deprecated declare transaction.
+    DeclareDeprecated(DeclareDeprecated),
     /// A declare transaction.
     DeclareV2(Box<DeclareV2>),
     /// A deploy transaction.
@@ -69,7 +69,7 @@ impl Transaction {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
             Transaction::InvokeFunction(tx) => tx.contract_address().clone(),
-            Transaction::Declare(tx) => tx.sender_address.clone(),
+            Transaction::DeclareDeprecated(tx) => tx.sender_address.clone(),
             Transaction::DeclareV2(tx) => tx.sender_address.clone(),
             Transaction::DeployAccount(tx) => tx.contract_address().clone(),
             Transaction::L1Handler(tx) => tx.contract_address().clone(),
@@ -91,7 +91,7 @@ impl Transaction {
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Declare(tx) => tx.execute(
+            Transaction::DeclareDeprecated(tx) => tx.execute(
                 state,
                 block_context,
                 #[cfg(feature = "cairo-native")]
@@ -146,7 +146,7 @@ impl Transaction {
         skip_nonce_check: bool,
     ) -> Self {
         match self {
-            Transaction::Declare(tx) => tx.create_for_simulation(
+            Transaction::DeclareDeprecated(tx) => tx.create_for_simulation(
                 skip_validate,
                 skip_execute,
                 skip_fee_transfer,
@@ -273,7 +273,7 @@ pub fn declare_tx_from_sn_api_transaction(
             _ => return Err(TransactionError::DeclareV2NoSierraOrCasm),
         };
 
-        Declare::new_with_tx_hash(
+        DeclareDeprecated::new_with_tx_hash(
             contract_class,
             sender_address,
             account_tx_fields.max_fee(),
@@ -282,7 +282,7 @@ pub fn declare_tx_from_sn_api_transaction(
             nonce,
             tx_hash,
         )
-        .map(Transaction::Declare)
+        .map(Transaction::DeclareDeprecated)
     } else {
         let contract_class = match contract_class {
             CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
