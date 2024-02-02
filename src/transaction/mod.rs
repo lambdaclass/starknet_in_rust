@@ -3,7 +3,7 @@ use crate::{
     definitions::block_context::BlockContext,
     definitions::{
         block_context::FeeType,
-        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2, QUERY_VERSION_3},
     },
     execution::TransactionExecutionInfo,
     services::api::contract_classes::compiled_class::CompiledClass,
@@ -188,7 +188,8 @@ fn get_tx_version(version: Felt252) -> Felt252 {
     match version {
         version if version == *QUERY_VERSION_0 => Felt252::ZERO,
         version if version == *QUERY_VERSION_1 => Felt252::ONE,
-        version if version == *QUERY_VERSION_2 => 2.into(),
+        version if version == *QUERY_VERSION_2 => Felt252::TWO,
+        version if version == *QUERY_VERSION_3 => Felt252::THREE,
         version => version,
     }
 }
@@ -306,7 +307,7 @@ pub fn declare_tx_from_sn_api_transaction(
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Copy)]
 pub enum DataAvailabilityMode {
     #[default]
     L1,
@@ -327,6 +328,15 @@ impl From<starknet_api::data_availability::DataAvailabilityMode> for DataAvailab
         match value {
             starknet_api::data_availability::DataAvailabilityMode::L1 => Self::L1,
             starknet_api::data_availability::DataAvailabilityMode::L2 => Self::L2,
+        }
+    }
+}
+
+impl From<DataAvailabilityMode> for u64 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => 0,
+            DataAvailabilityMode::L2 => 1,
         }
     }
 }
