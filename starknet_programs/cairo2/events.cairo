@@ -43,7 +43,7 @@ mod ContractWithEvent {
         self.value.write(0);
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn emit_event(ref self: ContractState, incremental: bool) {
         if incremental {
             self.emit(Event::IncrementalEvent(IncrementalEvent { value: self.value.read() }));

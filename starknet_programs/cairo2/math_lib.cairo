@@ -1,4 +1,3 @@
-#[starnet::interface]
 trait IMath<TContractState> {
     fn square_root(ref self: TContractState, n: felt252) -> felt252;
 }
@@ -15,7 +14,7 @@ mod Math {
     struct Storage{
     }
 
-    #[external(v0)]
+    #[abi(per_item)]
     impl Math of super::IMath<ContractState> {
         fn square_root(ref self: ContractState, n: felt252) -> felt252 {
             let n_u128: u128 = n.try_into().unwrap();

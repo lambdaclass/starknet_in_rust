@@ -29,7 +29,7 @@ mod GetNumberWrapper {
     // We use a constant for the contract_address to test the replace_class functionality
     const get_number_contract_address: felt252 = 1;
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl GetNumberWrapper of super::IGetNumber<ContractState> {
         fn get_number(self: @ContractState) -> felt252 {
             let address = contract_address_try_from_felt252(get_number_contract_address).unwrap();
