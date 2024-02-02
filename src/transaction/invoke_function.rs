@@ -4,7 +4,7 @@ use super::{
     get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
 };
 use crate::{
-    core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
+    core::transaction_hash::calculate_invoke_transaction_hash,
     definitions::{
         block_context::BlockContext,
         constants::{
@@ -76,17 +76,14 @@ impl InvokeFunction {
         chain_id: Felt252,
         nonce: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
-        let (entry_point_selector_field, additional_data) =
-            preprocess_invoke_function_fields(entry_point_selector, nonce, version)?;
-        let hash_value = calculate_transaction_hash_common(
-            TransactionHashPrefix::Invoke,
-            version,
-            &contract_address,
-            entry_point_selector_field,
-            &calldata,
-            account_tx_fields.max_fee(),
+        let hash_value = calculate_invoke_transaction_hash(
             chain_id,
-            &additional_data,
+            &contract_address,
+            entry_point_selector,
+            version,
+            nonce,
+            &calldata,
+            &account_tx_fields,
         )?;
 
         InvokeFunction::new_with_tx_hash(
@@ -573,36 +570,6 @@ pub fn verify_no_calls_to_other_contracts(
     Ok(call_info)
 }
 
-// Performs validation on fields related to function invocation transaction.
-// InvokeFunction transaction.
-// Deduces and returns fields required for hash calculation of
-
-pub(crate) fn preprocess_invoke_function_fields(
-    entry_point_selector: Felt252,
-    nonce: Option<Felt252>,
-    version: Felt252,
-) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
-    if version.is_zero() {
-        match nonce {
-            Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
-            None => {
-                let additional_data = Vec::new();
-                let entry_point_selector_field = entry_point_selector;
-                Ok((entry_point_selector_field, additional_data))
-            }
-        }
-    } else {
-        match nonce {
-            Some(n) => {
-                let additional_data = vec![n];
-                let entry_point_selector_field = Felt252::ZERO;
-                Ok((entry_point_selector_field, additional_data))
-            }
-            None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
-        }
-    }
-}
-
 // ----------------------------------
 //      Try from starknet api
 // ----------------------------------
@@ -687,7 +654,7 @@ mod tests {
     use super::*;
     use crate::{
         definitions::block_context::GasPrices,
-        definitions::constants::{QUERY_VERSION_1, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
+        definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
@@ -1419,18 +1386,6 @@ mod tests {
     }
 
     #[test]
-    fn invoke_version_zero_with_non_zero_nonce_should_fail() {
-        let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
-                .unwrap(),
-            Some(1.into()),
-            0.into(),
-        )
-        .unwrap_err();
-        assert_matches!(expected_error, TransactionError::InvokeFunctionZeroHasNonce)
-    }
-
-    #[test]
     // the test should try to make verify_no_calls_to_other_contracts fail
     fn verify_no_calls_to_other_contracts_should_fail() {
         let mut call_info = CallInfo::default();
@@ -1449,50 +1404,6 @@ mod tests {
             expected_error.unwrap_err(),
             TransactionError::UnauthorizedActionOnValidate
         );
-    }
-
-    #[test]
-    fn preprocess_invoke_function_fields_nonce_is_none() {
-        let entry_point_selector =
-            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
-                .unwrap();
-        let result = preprocess_invoke_function_fields(entry_point_selector, None, 0.into());
-
-        let expected_additional_data: Vec<Felt252> = Vec::new();
-        let expected_entry_point_selector_field = entry_point_selector;
-        assert_eq!(
-            result.unwrap(),
-            (
-                expected_entry_point_selector_field,
-                expected_additional_data
-            )
-        )
-    }
-
-    #[test]
-    fn invoke_version_one_with_no_nonce_should_fail() {
-        let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
-                .unwrap(),
-            None,
-            1.into(),
-        );
-        assert!(expected_error.is_err());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::InvokeFunctionNonZeroMissingNonce
-        )
-    }
-
-    #[test]
-    fn invoke_version_one_with_no_nonce_with_query_base_should_fail() {
-        let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
-                .unwrap(),
-            None,
-            *QUERY_VERSION_1,
-        );
-        assert!(expected_error.is_err());
     }
 
     #[test]

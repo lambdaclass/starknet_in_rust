@@ -102,13 +102,13 @@ impl DeployAccount {
 
         let hash_value = calculate_deploy_account_transaction_hash(
             version,
+            nonce,
             &contract_address,
+            contract_address_salt,
             Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
-            account_tx_fields.max_fee(),
-            nonce,
-            contract_address_salt,
             chain_id,
+            &account_tx_fields,
         )?;
 
         Ok(Self {
