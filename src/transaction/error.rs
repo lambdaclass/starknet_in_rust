@@ -148,8 +148,8 @@ pub enum TransactionError {
     InvalidCompiledClassHash(String, String),
     #[error(transparent)]
     FromByteArrayError(#[from] FromByteArrayError),
-    #[error("DeclareV2 transaction has neither Sierra nor Casm contract class set")]
-    DeclareV2NoSierraOrCasm,
+    #[error("Declare transaction has neither Sierra nor Casm contract class set")]
+    DeclareNoSierraOrCasm,
     #[error("Unsupported {0} transaction version: {1}. Supported versions:{2:?}")]
     UnsupportedTxVersion(String, Felt252, Vec<usize>),
     #[error("The `validate` entry point should return `VALID`.")]

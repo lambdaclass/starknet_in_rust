@@ -43,9 +43,9 @@ use {
 
 /// Represents a declare transaction in the starknet network.
 /// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
-/// DeclareV2 is meant to be used with the new cairo contract sintax, starting from Cairo1.
+/// Declare is meant to be used with the new cairo contract sintax, starting from Cairo1.
 #[derive(Debug, Clone)]
-pub struct DeclareV2 {
+pub struct Declare {
     pub sender_address: Address,
     pub validate_entry_point_selector: Felt252,
     pub version: Felt252,
@@ -64,8 +64,8 @@ pub struct DeclareV2 {
     pub skip_nonce_check: bool,
 }
 
-impl DeclareV2 {
-    /// Creates a new instance of a [DeclareV2].
+impl Declare {
+    /// Creates a new instance of a [Declare].
     /// It will calculate the sierra class hash and the transaction hash.
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
@@ -146,7 +146,7 @@ impl DeclareV2 {
         check_account_tx_fields_version(&account_tx_fields, version)?;
         let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
-        let internal_declare = DeclareV2 {
+        let internal_declare = Declare {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sierra_class_hash,
             sender_address,
@@ -206,7 +206,7 @@ impl DeclareV2 {
         )
     }
 
-    /// Creates a new instance of a [DeclareV2] but without the computation of the sierra class hash.
+    /// Creates a new instance of a [Declare] but without the computation of the sierra class hash.
     /// ## Parameters:
     /// - sierra_contract_class: The sierra contract class of the contract to declare
     /// - sierra_class_hash: The precomputed hash for the sierra contract
@@ -349,7 +349,7 @@ impl DeclareV2 {
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if !(self.version == Felt252::TWO || self.version == Felt252::THREE) {
             return Err(TransactionError::UnsupportedTxVersion(
-                "DeclareV2".to_string(),
+                "Declare".to_string(),
                 self.version,
                 vec![2, 3],
             ));
@@ -440,7 +440,7 @@ impl DeclareV2 {
             None => CasmContractClass::from_contract_class(
                 self.sierra_contract_class
                     .clone()
-                    .ok_or(TransactionError::DeclareV2NoSierraOrCasm)?,
+                    .ok_or(TransactionError::DeclareNoSierraOrCasm)?,
                 true,
             )
             .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?,
@@ -566,7 +566,7 @@ impl DeclareV2 {
         ignore_max_fee: bool,
         skip_nonce_check: bool,
     ) -> Transaction {
-        let tx = DeclareV2 {
+        let tx = Declare {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
@@ -588,13 +588,13 @@ impl DeclareV2 {
             ..self.clone()
         };
 
-        Transaction::DeclareV2(Box::new(tx))
+        Transaction::Declare(Box::new(tx))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::DeclareV2;
+    use super::Declare;
     use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
     use crate::definitions::block_context::{BlockContext, StarknetChainId};
     use crate::definitions::constants::QUERY_VERSION_2;
@@ -642,7 +642,7 @@ mod tests {
 
         // create internal declare v2
 
-        let internal_declare = DeclareV2::new_with_tx_hash(
+        let internal_declare = Declare::new_with_tx_hash(
             &sierra_contract_class,
             None,
             casm_class_hash,
@@ -712,7 +712,7 @@ mod tests {
 
         // create internal declare v2
 
-        let internal_declare = DeclareV2::new_with_tx_hash(
+        let internal_declare = Declare::new_with_tx_hash(
             &sierra_contract_class,
             Some(casm_class),
             casm_class_hash,
@@ -783,7 +783,7 @@ mod tests {
 
         // create internal declare v2
 
-        let internal_declare = DeclareV2::new_with_sierra_class_hash_and_tx_hash(
+        let internal_declare = Declare::new_with_sierra_class_hash_and_tx_hash(
             Some(sierra_contract_class),
             sierra_class_hash,
             Some(casm_class),
@@ -854,7 +854,7 @@ mod tests {
 
         // create internal declare v2
 
-        let internal_declare = DeclareV2::new_with_tx_hash(
+        let internal_declare = Declare::new_with_tx_hash(
             &sierra_contract_class,
             None,
             casm_class_hash,
@@ -925,7 +925,7 @@ mod tests {
         let sended_class_hash = Felt252::from(5);
         // create internal declare v2
 
-        let internal_declare = DeclareV2::new_with_tx_hash(
+        let internal_declare = Declare::new_with_tx_hash(
             &sierra_contract_class,
             None,
             sended_class_hash,
@@ -977,7 +977,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = DeclareV2::new(
+        let internal_declare = Declare::new(
             &sierra_contract_class,
             None,
             Felt252::ONE,
@@ -999,6 +999,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2, 3]);
+        if tx == "Declare" && ver == 1.into() && supp == vec![2, 3]);
     }
 }
