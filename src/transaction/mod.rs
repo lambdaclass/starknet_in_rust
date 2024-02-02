@@ -12,16 +12,16 @@ use crate::{
     },
     utils::Address,
 };
+pub use declare::Declare;
 pub use declare_deprecated::DeclareDeprecated;
-pub use declare_v2::Declare;
 pub use deploy::Deploy;
 pub use deploy_account::DeployAccount;
 use error::TransactionError;
 pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
 
+pub mod declare;
 pub mod declare_deprecated;
-pub mod declare_v2;
 pub mod deploy;
 pub mod deploy_account;
 pub mod error;
