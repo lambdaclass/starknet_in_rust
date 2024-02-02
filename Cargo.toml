@@ -44,6 +44,7 @@ cairo-lang-utils = { workspace = true }
 cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "66d16af0db37ba6769d4576a49e12a40af14f565", optional = true }
 k256 = "0.13.3"
 p256 = "0.13.2"
+sec1 = "0.7.3"
 
 cairo-vm = { workspace = true }
 flate2 = "1.0.25"

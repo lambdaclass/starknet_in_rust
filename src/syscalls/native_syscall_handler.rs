@@ -32,6 +32,8 @@ use cairo_native::{
     },
 };
 use cairo_vm::Felt252;
+use k256::elliptic_curve::sec1::FromEncodedPoint;
+use sha3::digest::generic_array::GenericArray;
 use starknet::core::utils::cairo_short_string_to_felt;
 use std::{cell::RefCell, rc::Rc};
 
@@ -468,11 +470,31 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn secp256k1_new(
         &mut self,
-        _x: cairo_native::starknet::U256,
-        _y: cairo_native::starknet::U256,
+        x: cairo_native::starknet::U256,
+        y: cairo_native::starknet::U256,
         _gas: &mut u128,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
+        let mut x_iter =
+            x.hi.to_be_bytes()
+                .into_iter()
+                .chain(x.lo.to_be_bytes());
+        let mut y_iter =
+            y.hi.to_be_bytes()
+                .into_iter()
+                .chain(y.lo.to_be_bytes());
+
+        let x_value = GenericArray::from_exact_iter(x_iter.next()).unwrap();
+        let y_value = GenericArray::from_exact_iter(y_iter.next()).unwrap();
+
+        let point = k256::AffinePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(&x_value, &y_value, false),
+        );
+
+        if point.is_some().unwrap_u8() != 0 {
+            Ok(Some(cairo_native::starknet::Secp256k1Point { x, y }))
+        } else {
+            Ok(None)
+        }
     }
 
     fn secp256k1_add(

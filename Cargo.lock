@@ -4686,6 +4686,7 @@ dependencies = [
  "once_cell",
  "p256",
  "pretty_assertions_sorted",
+ "sec1",
  "serde",
  "serde_json",
  "serde_json_pythonic",
