@@ -1683,6 +1683,4 @@ mod tests {
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
         if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1]);
     }
-
-    
 }

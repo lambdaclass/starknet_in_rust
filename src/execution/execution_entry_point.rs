@@ -189,7 +189,7 @@ impl ExecutionEntryPoint {
                             n_reverted_steps: 0,
                         })
                     }
-                    Err(TransactionError::SandboxError(_)) => {
+                    Err(TransactionError::SandboxError(_e)) => {
                         match self._execute(
                             state,
                             resources_manager,
@@ -853,19 +853,22 @@ impl ExecutionEntryPoint {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+    use std::process::Command;
+
     use super::*;
     #[test]
-fn fallback_procedure_sandbox_kill_test() {    
-
+    fn fallback_procedure_sandbox_kill_test() {
         let path = std::path::Path::new("starknet_programs/cairo2/fibonacci.cairo");
 
-        let casm_contract_class_data = std::fs::read_to_string(path.with_extension("casm")).unwrap();
-        let sierra_contract_class_data = std::fs::read_to_string(path.with_extension("sierra")).unwrap();
+        let casm_contract_class_data =
+            std::fs::read_to_string(path.with_extension("casm")).unwrap();
+        let sierra_contract_class_data =
+            std::fs::read_to_string(path.with_extension("sierra")).unwrap();
 
-        let casm_contract_class: CasmContractClass = serde_json::from_str(&casm_contract_class_data).unwrap();
+        let casm_contract_class: CasmContractClass =
+            serde_json::from_str(&casm_contract_class_data).unwrap();
         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
             serde_json::from_str(&sierra_contract_class_data).unwrap();
 
@@ -874,7 +877,6 @@ fn fallback_procedure_sandbox_kill_test() {
             sierra_contract_class.extract_sierra_program().unwrap(),
             sierra_contract_class.entry_points_by_type,
         ));
-
 
         let mut state_reader = crate::state::in_memory_state_reader::InMemoryStateReader::default();
         let cache = crate::state::contract_class_cache::PermanentContractClassCache::default();
@@ -890,38 +892,50 @@ fn fallback_procedure_sandbox_kill_test() {
                 sierra: Some(sierra_contract_class),
             },
         );
-    
+
         state_reader
             .address_to_class_hash_mut()
             .insert(caller_address.clone(), class_hash);
         state_reader
             .address_to_nonce_mut()
             .insert(callee_address.clone(), Felt252::default());
-    
+
         let mut state = CachedState::new(Arc::new(state_reader), Arc::new(cache));
-    
+
         state.cache_mut().storage_initial_values_mut().insert(
-            (Address(Felt252::ONE), crate::utils::felt_to_hash(&10.into()).0),
+            (
+                Address(Felt252::ONE),
+                crate::utils::felt_to_hash(&10.into()).0,
+            ),
             Felt252::from_bytes_be(&[5; 32]),
         );
-    
+
         let class_hash = *state
             .state_reader
             .address_to_class_hash
             .get(&caller_address)
             .unwrap();
-    
+
         let mut block_context = BlockContext::default();
         block_context.block_info_mut().block_number = 30;
 
         let executor_path = std::env::var("CAIRO_NATIVE_EXECUTOR_PATH")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| {
-            std::env::current_dir()
-                .unwrap()
-                .join("target/debug/cairo_native_executor")
-        });
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|_| {
+                std::env::current_dir()
+                    .unwrap()
+                    .join("target/debug/cairo_native_executor")
+            });
         let mut sandbox = IsolatedExecutor::new(executor_path.as_path()).unwrap();
+
+        let check_sandbox_pid_before = Command::new("lsof")
+            .arg("-p")
+            .arg(sandbox.proc.id().to_string())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .output()
+            .unwrap();
+
         sandbox.kill();
 
         let execution_result_native = ExecutionEntryPoint::new(
@@ -952,15 +966,23 @@ fn fallback_procedure_sandbox_kill_test() {
             block_context.invoke_tx_max_n_steps(),
             None,
             Some(&sandbox),
-        ).unwrap();
+        )
+        .unwrap();
 
-
-        // assert_eq!(
-        //     execution_result_native.call_info.as_ref().unwrap().class_hash,
-        //     Some(class_hash)
-        // );
-        println!("{}", execution_result_native.call_info.clone().unwrap().retdata.first().unwrap().to_bigint());
-        println!("{}",Felt252::from(144).to_bigint());
-        assert_eq!(execution_result_native.call_info.unwrap().retdata, vec![Felt252::from(144)]);
+        let check_sandbox_pid_after: std::process::Output = Command::new("lsof")
+            .arg("-p")
+            .arg(sandbox.proc.id().to_string())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .output()
+            .unwrap();
+        assert_ne!(
+            String::from_utf8_lossy(&check_sandbox_pid_after.stderr),
+            String::from_utf8_lossy(&check_sandbox_pid_before.stdout)
+        );
+        assert_eq!(
+            execution_result_native.call_info.unwrap().retdata,
+            vec![Felt252::from(144)]
+        );
     }
 }
