@@ -23,7 +23,7 @@ use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledC
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::ExecutionResourcesManager;
 use starknet_in_rust::transaction::fee::calculate_tx_fee;
-use starknet_in_rust::transaction::{DeclareV2, Deploy};
+use starknet_in_rust::transaction::{Declare, Deploy};
 use starknet_in_rust::utils::CompiledClassHash;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
@@ -780,7 +780,7 @@ fn declare_tx() -> DeclareDeprecated {
     }
 }
 
-fn declarev2_tx() -> DeclareV2 {
+fn declarev2_tx() -> Declare {
     #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/raw_contract_classes/fibonacci.sierra");
     #[cfg(feature = "cairo_1_tests")]
@@ -791,7 +791,7 @@ fn declarev2_tx() -> DeclareV2 {
         CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
     let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
-    DeclareV2 {
+    Declare {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         version: 2.into(),

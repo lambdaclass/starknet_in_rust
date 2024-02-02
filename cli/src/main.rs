@@ -8,7 +8,7 @@ use starknet_in_rust::{
         errors::{contract_address_errors::ContractAddressError, state_errors::StateError},
         transaction_hash::{
             deprecated::{
-                deprecated_calculate_declare_transaction_hash,
+                calculate_declare_deprecated_transaction_hash,
                 deprecated_calculate_deploy_transaction_hash,
                 deprecated_calculate_transaction_hash_common,
             },
@@ -122,7 +122,7 @@ fn declare_parser(
         &CompiledClass::Deprecated(Arc::new(contract_class.clone())),
     )?;
 
-    let tx_hash = deprecated_calculate_declare_transaction_hash(
+    let tx_hash = calculate_declare_deprecated_transaction_hash(
         &contract_class,
         Felt252::ZERO,
         &Address(0.into()),
