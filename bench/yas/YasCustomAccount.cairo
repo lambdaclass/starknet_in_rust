@@ -43,7 +43,7 @@ mod Account {
         core::starknet::VALIDATED
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl Account of IAccount<ContractState> {
         fn __execute__(ref self: ContractState, mut calls: Array<Call>) -> Span<felt252> {
             assert(calls.len() == 1_u32, 'MULTI_CALL_NOT_SUPPORTED');
