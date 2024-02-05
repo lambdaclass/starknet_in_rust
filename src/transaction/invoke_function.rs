@@ -1,7 +1,8 @@
 use super::{
     check_account_tx_fields_version,
     fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks},
-    get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
+    get_tx_version, CurrentAccountTxFields, ResourceBounds, Transaction,
+    VersionSpecificAccountTxFields,
 };
 use crate::{
     core::transaction_hash::calculate_invoke_transaction_hash,
@@ -31,6 +32,7 @@ use crate::{
 use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_api::transaction::Resource;
 use std::fmt::Debug;
 
 #[cfg(feature = "cairo-native")]
@@ -138,13 +140,85 @@ impl InvokeFunction {
         tx: starknet_api::transaction::InvokeTransaction,
         tx_hash: Felt252,
     ) -> Result<Self, TransactionError> {
-        match tx {
-            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, tx_hash),
-            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, tx_hash),
-            starknet_api::transaction::InvokeTransaction::V3(_) => {
-                Err(TransactionError::UnsuportedV3Transaction)
+        let account_tx_fields = match &tx {
+            starknet_api::transaction::InvokeTransaction::V0(tx) => {
+                VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
             }
-        }
+            starknet_api::transaction::InvokeTransaction::V1(tx) => {
+                VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+            }
+            starknet_api::transaction::InvokeTransaction::V3(tx) => {
+                VersionSpecificAccountTxFields::Current(CurrentAccountTxFields {
+                    l1_resource_bounds: tx
+                        .resource_bounds
+                        .0
+                        .get(&Resource::L1Gas)
+                        .map(|r| r.into())
+                        .unwrap_or_default(),
+                    l2_resource_bounds: tx
+                        .resource_bounds
+                        .0
+                        .get(&Resource::L2Gas)
+                        .map(|r| r.into()),
+                    tip: tx.tip.0,
+                    nonce_data_availability_mode: tx.nonce_data_availability_mode.into(),
+                    fee_data_availability_mode: tx.fee_data_availability_mode.into(),
+                    paymaster_data: tx
+                        .paymaster_data
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                        .collect(),
+                    account_deployment_data: tx
+                        .account_deployment_data
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                        .collect(),
+                })
+            }
+        };
+        let entry_point_selector = match &tx {
+            starknet_api::transaction::InvokeTransaction::V0(tx) => {
+                Felt252::from_bytes_be_slice(tx.entry_point_selector.0.bytes())
+            }
+            starknet_api::transaction::InvokeTransaction::V1(_)
+            | starknet_api::transaction::InvokeTransaction::V3(_) => *EXECUTE_ENTRY_POINT_SELECTOR,
+        };
+        let contract_address = Address(Felt252::from_bytes_be_slice(
+            tx.sender_address().0.key().bytes(),
+        ));
+        let version = Felt252::from_bytes_be_slice(tx.version().0.bytes());
+        let nonce = if version.is_zero() {
+            None
+        } else {
+            Some(Felt252::from_bytes_be_slice(tx.nonce().0.bytes()))
+        };
+
+        let signature = tx
+            .signature()
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+            .collect();
+        let calldata = tx
+            .calldata()
+            .0
+            .as_ref()
+            .iter()
+            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+            .collect();
+
+        InvokeFunction::new_with_tx_hash(
+            contract_address,
+            entry_point_selector,
+            account_tx_fields,
+            version,
+            calldata,
+            signature,
+            nonce,
+            tx_hash,
+        )
     }
 
     fn get_execution_context(
@@ -568,85 +642,6 @@ pub fn verify_no_calls_to_other_contracts(
         }
     }
     Ok(call_info)
-}
-
-// ----------------------------------
-//      Try from starknet api
-// ----------------------------------
-
-fn convert_invoke_v0(
-    value: starknet_api::transaction::InvokeTransactionV0,
-    tx_hash: Felt252,
-) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be_slice(
-        value.contract_address.0.key().bytes(),
-    ));
-    let max_fee = value.max_fee.0;
-    let entry_point_selector = Felt252::from_bytes_be_slice(value.entry_point_selector.0.bytes());
-    let nonce = None;
-
-    let signature = value
-        .signature
-        .0
-        .iter()
-        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-        .collect();
-    let calldata = value
-        .calldata
-        .0
-        .as_ref()
-        .iter()
-        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-        .collect();
-
-    InvokeFunction::new_with_tx_hash(
-        contract_address,
-        entry_point_selector,
-        VersionSpecificAccountTxFields::Deprecated(max_fee),
-        Felt252::from(0),
-        calldata,
-        signature,
-        nonce,
-        tx_hash,
-    )
-}
-
-fn convert_invoke_v1(
-    value: starknet_api::transaction::InvokeTransactionV1,
-    tx_hash: Felt252,
-) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be_slice(
-        value.sender_address.0.key().bytes(),
-    ));
-    let max_fee = value.max_fee.0;
-    let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
-    let entry_point_selector = *EXECUTE_ENTRY_POINT_SELECTOR;
-
-    let signature = value
-        .signature
-        .0
-        .iter()
-        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-        .collect();
-    let calldata = value
-        .calldata
-        .0
-        .as_ref()
-        .iter()
-        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-        .collect();
-
-    InvokeFunction::new_with_tx_hash(
-        contract_address,
-        entry_point_selector,
-        // TODO[0.13] Properly convert between V3 tx fields
-        VersionSpecificAccountTxFields::Deprecated(max_fee),
-        Felt252::ONE,
-        calldata,
-        signature,
-        Some(nonce),
-        tx_hash,
-    )
 }
 
 #[cfg(test)]
