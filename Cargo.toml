@@ -30,7 +30,7 @@ cairo-lang-utils = "=2.5.3"
 cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "ecd4de21ad404a14d535165b6ca760bdce51d42c", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
 starknet = "0.5.0"
-starknet_api = "0.6.0"
+starknet_api = {version = "0.7.0-dev.0"}
 thiserror = "1.0.32"
 
 [dependencies]
