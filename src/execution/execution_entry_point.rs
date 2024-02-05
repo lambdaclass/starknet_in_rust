@@ -854,6 +854,7 @@ impl ExecutionEntryPoint {
 }
 
 #[cfg(test)]
+#[cfg(feature = "cairo-native")]
 mod tests {
     use std::process::Command;
 
