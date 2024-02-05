@@ -43,7 +43,7 @@ use {
 
 /// Represents a declare transaction in the starknet network.
 /// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
-/// Declare is meant to be used with the new cairo contract sintax, starting from Cairo1.
+/// Declare is meant to be used with the new cairo contract syntax, starting from Cairo1.
 #[derive(Debug, Clone)]
 pub struct Declare {
     pub sender_address: Address,
@@ -661,9 +661,7 @@ mod tests {
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
-        assert!(declare
-            .compile_and_store_casm_class(&mut state)
-            .is_ok());
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
@@ -671,8 +669,7 @@ mod tests {
             true,
         )
         .unwrap();
-        let declare_compiled_class_hash =
-            ClassHash::from(declare.compiled_class_hash);
+        let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
             .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
@@ -731,18 +728,13 @@ mod tests {
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
-        assert!(declare
-            .compile_and_store_casm_class(&mut state)
-            .is_ok());
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
 
         // test we  can retreive the data
-        let expected_casm_class = CasmContractClass::from_contract_class(
-            declare.sierra_contract_class.unwrap(),
-            true,
-        )
-        .unwrap();
-        let declare_compiled_class_hash =
-            ClassHash::from(declare.compiled_class_hash);
+        let expected_casm_class =
+            CasmContractClass::from_contract_class(declare.sierra_contract_class.unwrap(), true)
+                .unwrap();
+        let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
             .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
@@ -803,18 +795,13 @@ mod tests {
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
-        assert!(declare
-            .compile_and_store_casm_class(&mut state)
-            .is_ok());
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
 
         // test we  can retreive the data
-        let expected_casm_class = CasmContractClass::from_contract_class(
-            declare.sierra_contract_class.unwrap(),
-            true,
-        )
-        .unwrap();
-        let declare_compiled_class_hash =
-            ClassHash::from(declare.compiled_class_hash);
+        let expected_casm_class =
+            CasmContractClass::from_contract_class(declare.sierra_contract_class.unwrap(), true)
+                .unwrap();
+        let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
             .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
@@ -873,9 +860,7 @@ mod tests {
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
-        assert!(declare
-            .compile_and_store_casm_class(&mut state)
-            .is_ok());
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
@@ -883,8 +868,7 @@ mod tests {
             true,
         )
         .unwrap();
-        let declare_compiled_class_hash =
-            ClassHash::from(declare.compiled_class_hash);
+        let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
             .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
