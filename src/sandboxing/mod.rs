@@ -20,11 +20,9 @@ use crate::utils::ClassHash;
 
 #[derive(Debug, Error)]
 pub enum SandboxError {
-    #[error("process error")]
-    ProcessError(u32),
-    #[error("ipc error: {0}")]
-    IpcBincodeError(#[from] ipc_channel::Error),
     #[error("ipc bincode error: {0}")]
+    IpcBincodeError(#[from] ipc_channel::Error),
+    #[error("ipc error: {0}")]
     IpcError(#[from] ipc_channel::ipc::IpcError),
     #[error("serializer error {0:?}")]
     SerializeError(#[from] serde_json::Error),
