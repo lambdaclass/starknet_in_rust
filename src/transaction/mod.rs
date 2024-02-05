@@ -314,14 +314,6 @@ pub enum DataAvailabilityMode {
     L2,
 }
 
-impl From<DataAvailabilityMode> for Felt252 {
-    fn from(val: DataAvailabilityMode) -> Self {
-        match val {
-            DataAvailabilityMode::L1 => Felt252::ZERO,
-        }
-    }
-}
-
 impl From<DataAvailabilityMode> for starknet_api::data_availability::DataAvailabilityMode {
     fn from(val: DataAvailabilityMode) -> Self {
         match val {
@@ -336,6 +328,15 @@ impl From<starknet_api::data_availability::DataAvailabilityMode> for DataAvailab
         match value {
             starknet_api::data_availability::DataAvailabilityMode::L1 => Self::L1,
             starknet_api::data_availability::DataAvailabilityMode::L2 => Self::L2,
+        }
+    }
+}
+
+impl From<DataAvailabilityMode> for Felt252 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => Felt252::ZERO,
+            DataAvailabilityMode::L2 => Felt252::ONE,
         }
     }
 }
