@@ -11,7 +11,6 @@ use cairo_native::cache::AotProgramCache;
 use cairo_native::cache::JitProgramCache;
 use cairo_native::cache::ProgramCache;
 use cairo_native::context::NativeContext;
-use cairo_vm::utils::biguint_to_felt;
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use starknet_in_rust::definitions::block_context::BlockContext;
@@ -349,7 +348,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
             let exec_entry_point = ExecutionEntryPoint::new(
                 DEPLOYER_ADDRESS.clone(),
                 ERC20_DEPLOYER_CALLDATA.to_vec(),
-                biguint_to_felt(deploy_entrypoint_selector).unwrap(),
+                Felt252::from(deploy_entrypoint_selector),
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),
@@ -430,7 +429,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
             let exec_entry_point = ExecutionEntryPoint::new(
                 DEPLOYER_ADDRESS.clone(),
                 ERC20_DEPLOYER_CALLDATA.to_vec(),
-                biguint_to_felt(deploy_entrypoint_selector).unwrap(),
+                Felt252::from(deploy_entrypoint_selector),
                 ERC20_DEPLOYMENT_CALLER_ADDRESS.clone(),
                 EntryPointType::External,
                 Some(CallType::Delegate),

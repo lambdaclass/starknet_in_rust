@@ -25,7 +25,7 @@ serde_with = "3.0.0"
 dotenv = "0.15.0"
 cairo-vm = { workspace = true }
 cairo-vm-blockifier = { package = "cairo-vm", version = "0.8.2" }
-blockifier = "=0.4.0"
+blockifier = "=0.5.0-dev.0"
 starknet_in_rust = { path = "../", version = "0.4.0" }
 
 [dev-dependencies]

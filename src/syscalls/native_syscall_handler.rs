@@ -24,6 +24,7 @@ use crate::{
     utils::{felt_to_hash, Address, ClassHash},
     ContractClassCache, EntryPointType,
 };
+use cairo_native::starknet::{Secp256k1Point, Secp256r1Point};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{
@@ -83,7 +84,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         &mut self,
         block_number: u64,
         gas: &mut u128,
-    ) -> SyscallResult<cairo_vm::Felt252> {
+    ) -> Result<Felt252, Vec<Felt252>> {
         tracing::debug!("Called `get_block_hash({block_number})` from Cairo Native");
         self.handle_syscall_request(gas, "get_block_hash")?;
 
@@ -452,21 +453,24 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         }
         // state[0] and state[1] conform the hash_low (u128)
         // state[2] and state[3] conform the hash_high (u128)
-        let hash = [
-            state[0].to_le_bytes(),
-            state[1].to_le_bytes(),
-            state[2].to_le_bytes(),
-            state[3].to_le_bytes(),
-        ]
-        .concat();
+        let lo_bytes: [u8; 16] = [state[0].to_le_bytes(), state[1].to_le_bytes()]
+            .concat()
+            .try_into()
+            .unwrap();
 
-        SyscallResult::Ok(U256(hash[0..32].try_into().unwrap()))
+        let hi_bytes: [u8; 16] = [state[2].to_le_bytes(), state[3].to_le_bytes()]
+            .concat()
+            .try_into()
+            .unwrap();
+
+        SyscallResult::Ok(U256 {
+            hi: u128::from_le_bytes(hi_bytes),
+            lo: u128::from_le_bytes(lo_bytes),
+        })
+        // SyscallResult::Ok(U256(hash[0..32].try_into().unwrap()))
     }
 
-    fn get_execution_info_v2(
-        &mut self,
-        _: &mut u128,
-    ) -> Result<ExecutionInfoV2, Vec<cairo_vm::Felt252>> {
+    fn get_execution_info_v2(&mut self, _: &mut u128) -> Result<ExecutionInfoV2, Vec<Felt252>> {
         todo!()
     }
 
@@ -475,12 +479,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         _p0: cairo_native::starknet::Secp256k1Point,
         _p1: cairo_native::starknet::Secp256k1Point,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+    ) -> SyscallResult<cairo_native::starknet::Secp256k1Point> {
         todo!()
     }
 
     fn secp256k1_get_point_from_x(
-        &self,
+        &mut self,
         _x: cairo_native::starknet::U256,
         _y_parity: bool,
         _gas: &mut u128,
@@ -489,7 +493,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     }
 
     fn secp256k1_get_xy(
-        &self,
+        &mut self,
         _p: cairo_native::starknet::Secp256k1Point,
         _gas: &mut u128,
     ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
@@ -497,16 +501,16 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     }
 
     fn secp256k1_mul(
-        &self,
+        &mut self,
         _p: cairo_native::starknet::Secp256k1Point,
         _m: cairo_native::starknet::U256,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+    ) -> Result<Secp256k1Point, Vec<cairo_vm::Felt252>> {
         todo!()
     }
 
     fn secp256k1_new(
-        &self,
+        &mut self,
         _x: cairo_native::starknet::U256,
         _y: cairo_native::starknet::U256,
         _gas: &mut u128,
@@ -515,37 +519,37 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     }
 
     fn secp256r1_add(
-        &self,
-        _p0: cairo_native::starknet::Secp256k1Point,
-        _p1: cairo_native::starknet::Secp256k1Point,
+        &mut self,
+        _p0: Secp256r1Point,
+        _p1: Secp256r1Point,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+    ) -> Result<Secp256r1Point, Vec<cairo_vm::Felt252>> {
         todo!()
     }
 
     fn secp256r1_get_point_from_x(
-        &self,
+        &mut self,
         _x: cairo_native::starknet::U256,
         _y_parity: bool,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+    ) -> Result<std::option::Option<Secp256r1Point>, Vec<cairo_vm::Felt252>> {
         todo!()
     }
 
     fn secp256r1_get_xy(
-        &self,
-        _p: cairo_native::starknet::Secp256k1Point,
+        &mut self,
+        _p: Secp256r1Point,
         _gas: &mut u128,
     ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
         todo!()
     }
 
     fn secp256r1_mul(
-        &self,
-        _p: cairo_native::starknet::Secp256k1Point,
+        &mut self,
+        _p: Secp256r1Point,
         _m: cairo_native::starknet::U256,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+    ) -> Result<Secp256r1Point, Vec<Felt252>> {
         todo!()
     }
 
@@ -554,7 +558,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         _x: cairo_native::starknet::U256,
         _y: cairo_native::starknet::U256,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+    ) -> Result<std::option::Option<Secp256r1Point>, Vec<Felt252>> {
         todo!()
     }
 
