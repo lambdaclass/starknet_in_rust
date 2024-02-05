@@ -24,6 +24,7 @@ use crate::{
     utils::{felt_to_hash, Address, ClassHash},
     ContractClassCache, EntryPointType,
 };
+use cairo_native::starknet::{Secp256k1Point, Secp256r1Point};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{
@@ -33,10 +34,10 @@ use cairo_native::{
 };
 use cairo_vm::Felt252;
 use k256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use sec1::point::Coordinates;
 use sha3::digest::generic_array::GenericArray;
 use starknet::core::utils::cairo_short_string_to_felt;
 use std::{cell::RefCell, rc::Rc};
-use sec1::point::Coordinates;
 
 #[derive(Debug)]
 pub struct NativeSyscallHandler<'a, 'cache, S, C>
@@ -457,8 +458,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         // state[0] and state[1] conform the hash_low (u128)
         // state[2] and state[3] conform the hash_high (u128)
         SyscallResult::Ok(U256 {
-            lo: state[2] as u128 | ((state[3] as u128) << 64),
-            hi: state[0] as u128 | ((state[1] as u128) << 64),
+            lo: state[0] as u128 | ((state[1] as u128) << 64),
+            hi: state[2] as u128 | ((state[3] as u128) << 64),
         })
     }
 
@@ -471,12 +472,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn secp256k1_new(
         &mut self,
-        x: cairo_native::starknet::U256,
-        y: cairo_native::starknet::U256,
+        x: U256,
+        y: U256,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        let point =
-            k256::ProjectivePoint::from_encoded_point(&k256::EncodedPoint::from_affine_coordinates(
+    ) -> SyscallResult<Option<Secp256k1Point>> {
+        let point = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
                     x.hi.to_be_bytes().into_iter().chain(x.lo.to_be_bytes()),
                 )
@@ -486,10 +487,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
                 )
                 .unwrap(),
                 false,
-            ));
+            ),
+        );
 
         if point.is_some().unwrap_u8() != 0 {
-            Ok(Some(cairo_native::starknet::Secp256k1Point { x, y }))
+            Ok(Some(Secp256k1Point { x, y }))
         } else {
             Ok(None)
         }
@@ -497,12 +499,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn secp256k1_add(
         &mut self,
-        p0: cairo_native::starknet::Secp256k1Point,
-        p1: cairo_native::starknet::Secp256k1Point,
+        p0: Secp256k1Point,
+        p1: Secp256k1Point,
         _gas: &mut u128,
-    ) -> SyscallResult<cairo_native::starknet::Secp256k1Point> {
-        let p0 =
-            k256::ProjectivePoint::from_encoded_point(&k256::EncodedPoint::from_affine_coordinates(
+    ) -> SyscallResult<Secp256k1Point> {
+        let p0 = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
                     p0.x.hi
                         .to_be_bytes()
@@ -518,10 +520,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
                 )
                 .unwrap(),
                 false,
-            ))
-            .unwrap();
-        let p1 =
-            k256::ProjectivePoint::from_encoded_point(&k256::EncodedPoint::from_affine_coordinates(
+            ),
+        )
+        .unwrap();
+        let p1 = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
                     p1.x.hi
                         .to_be_bytes()
@@ -537,86 +540,188 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
                 )
                 .unwrap(),
                 false,
-            ))
-            .unwrap();
+            ),
+        )
+        .unwrap();
 
         let p = p0 + p1;
-        let (_x, _y) = match p.to_encoded_point(false).coordinates() {
+
+        let p = p.to_encoded_point(false);
+        let (x, y) = match p.coordinates() {
             Coordinates::Uncompressed { x, y } => (x, y),
             _ => unreachable!(),
         };
 
-        todo!()
+        let x: [u8; 32] = x.as_slice().try_into().unwrap();
+        let y: [u8; 32] = y.as_slice().try_into().unwrap();
+        Ok(Secp256k1Point {
+            x: U256 {
+                hi: u128::from_be_bytes(x[0..8].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[8..16].try_into().unwrap()),
+            },
+            y: U256 {
+                hi: u128::from_be_bytes(y[0..8].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[8..16].try_into().unwrap()),
+            },
+        })
     }
 
     fn secp256k1_mul(
         &mut self,
-        _p: cairo_native::starknet::Secp256k1Point,
-        _m: cairo_native::starknet::U256,
+        _p: Secp256k1Point,
+        _m: U256,
         _gas: &mut u128,
-    ) -> SyscallResult<cairo_native::starknet::Secp256k1Point> {
+    ) -> SyscallResult<Secp256k1Point> {
+        // TODO: Find a way to "import" a scalar that doesn't involve:
+        //   hi * (2 ^ 64) + lo
+
         todo!()
     }
 
     fn secp256k1_get_point_from_x(
         &mut self,
-        _x: cairo_native::starknet::U256,
+        _x: U256,
         _y_parity: bool,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+    ) -> SyscallResult<Option<Secp256k1Point>> {
+        // TODO: Find a way to create a point from the x coordinate and y parity only.
+
         todo!()
     }
 
     fn secp256k1_get_xy(
         &mut self,
-        _p: cairo_native::starknet::Secp256k1Point,
+        p: Secp256k1Point,
         _gas: &mut u128,
-    ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
-        todo!()
+    ) -> SyscallResult<(U256, U256)> {
+        Ok((p.x, p.y))
     }
 
     fn secp256r1_new(
         &mut self,
-        _x: cairo_native::starknet::U256,
-        _y: cairo_native::starknet::U256,
+        x: U256,
+        y: U256,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256r1Point>> {
-        todo!()
+    ) -> SyscallResult<Option<Secp256r1Point>> {
+        let point = p256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    x.hi.to_be_bytes().into_iter().chain(x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    y.hi.to_be_bytes().into_iter().chain(y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        );
+
+        if point.is_some().unwrap_u8() != 0 {
+            Ok(Some(Secp256r1Point { x, y }))
+        } else {
+            Ok(None)
+        }
     }
 
     fn secp256r1_add(
         &mut self,
-        _p0: cairo_native::starknet::Secp256r1Point,
-        _p1: cairo_native::starknet::Secp256r1Point,
+        p0: Secp256r1Point,
+        p1: Secp256r1Point,
         _gas: &mut u128,
-    ) -> SyscallResult<cairo_native::starknet::Secp256r1Point> {
-        todo!()
+    ) -> SyscallResult<Secp256r1Point> {
+        let p0 = p256::ProjectivePoint::from_encoded_point(
+            &p256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p0.x.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p0.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p0.y.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p0.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+        let p1 = p256::ProjectivePoint::from_encoded_point(
+            &p256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p1.x.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p1.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p1.y.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p1.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+
+        let p = p0 + p1;
+
+        let p = p.to_encoded_point(false);
+        let (x, y) = match p.coordinates() {
+            Coordinates::Uncompressed { x, y } => (x, y),
+            _ => unreachable!(),
+        };
+
+        let x: [u8; 32] = x.as_slice().try_into().unwrap();
+        let y: [u8; 32] = y.as_slice().try_into().unwrap();
+        Ok(Secp256r1Point {
+            x: U256 {
+                hi: u128::from_be_bytes(x[0..8].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[8..16].try_into().unwrap()),
+            },
+            y: U256 {
+                hi: u128::from_be_bytes(y[0..8].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[8..16].try_into().unwrap()),
+            },
+        })
     }
 
     fn secp256r1_mul(
         &mut self,
-        _p: cairo_native::starknet::Secp256r1Point,
-        _m: cairo_native::starknet::U256,
+        _p: Secp256r1Point,
+        _m: U256,
         _gas: &mut u128,
-    ) -> SyscallResult<cairo_native::starknet::Secp256r1Point> {
+    ) -> SyscallResult<Secp256r1Point> {
+        // TODO: Find a way to "import" a scalar that doesn't involve:
+        //   hi * (2 ^ 64) + lo
+
         todo!()
     }
 
     fn secp256r1_get_point_from_x(
         &mut self,
-        _x: cairo_native::starknet::U256,
+        _x: U256,
         _y_parity: bool,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256r1Point>> {
+    ) -> SyscallResult<Option<Secp256r1Point>> {
+        // TODO: Find a way to create a point from the x coordinate and y parity only.
+
         todo!()
     }
 
     fn secp256r1_get_xy(
         &mut self,
-        _p: cairo_native::starknet::Secp256r1Point,
+        p: Secp256r1Point,
         _gas: &mut u128,
-    ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
-        todo!()
+    ) -> SyscallResult<(U256, U256)> {
+        Ok((p.x, p.y))
     }
 
     fn pop_log(&mut self) {
