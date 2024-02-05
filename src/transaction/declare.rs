@@ -146,7 +146,7 @@ impl Declare {
         check_account_tx_fields_version(&account_tx_fields, version)?;
         let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
 
-        let internal_declare = Declare {
+        let declare = Declare {
             sierra_contract_class: sierra_contract_class.to_owned(),
             sierra_class_hash,
             sender_address,
@@ -164,7 +164,7 @@ impl Declare {
             skip_nonce_check: false,
         };
 
-        Ok(internal_declare)
+        Ok(declare)
     }
 
     // creates a new instance of a declare but without the computation of the transaction hash.
@@ -640,9 +640,9 @@ mod tests {
             CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
-        // create internal declare v2
+        // create declare
 
-        let internal_declare = Declare::new_with_tx_hash(
+        let declare = Declare::new_with_tx_hash(
             &sierra_contract_class,
             None,
             casm_class_hash,
@@ -661,20 +661,20 @@ mod tests {
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
-        assert!(internal_declare
+        assert!(declare
             .compile_and_store_casm_class(&mut state)
             .is_ok());
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.unwrap().clone(),
+            declare.sierra_contract_class.unwrap().clone(),
             true,
         )
         .unwrap();
-        let internal_declare_compiled_class_hash =
-            ClassHash::from(internal_declare.compiled_class_hash);
+        let declare_compiled_class_hash =
+            ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
-            .get_contract_class(&internal_declare_compiled_class_hash)
+            .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
         {
             CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
@@ -710,9 +710,9 @@ mod tests {
             CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
-        // create internal declare v2
+        // create declare
 
-        let internal_declare = Declare::new_with_tx_hash(
+        let declare = Declare::new_with_tx_hash(
             &sierra_contract_class,
             Some(casm_class),
             casm_class_hash,
@@ -731,20 +731,20 @@ mod tests {
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
-        assert!(internal_declare
+        assert!(declare
             .compile_and_store_casm_class(&mut state)
             .is_ok());
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.unwrap(),
+            declare.sierra_contract_class.unwrap(),
             true,
         )
         .unwrap();
-        let internal_declare_compiled_class_hash =
-            ClassHash::from(internal_declare.compiled_class_hash);
+        let declare_compiled_class_hash =
+            ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
-            .get_contract_class(&internal_declare_compiled_class_hash)
+            .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
         {
             CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
@@ -781,9 +781,9 @@ mod tests {
             CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
-        // create internal declare v2
+        // create declare tx
 
-        let internal_declare = Declare::new_with_sierra_class_hash_and_tx_hash(
+        let declare = Declare::new_with_sierra_class_hash_and_tx_hash(
             Some(sierra_contract_class),
             sierra_class_hash,
             Some(casm_class),
@@ -803,20 +803,20 @@ mod tests {
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
-        assert!(internal_declare
+        assert!(declare
             .compile_and_store_casm_class(&mut state)
             .is_ok());
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.unwrap(),
+            declare.sierra_contract_class.unwrap(),
             true,
         )
         .unwrap();
-        let internal_declare_compiled_class_hash =
-            ClassHash::from(internal_declare.compiled_class_hash);
+        let declare_compiled_class_hash =
+            ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
-            .get_contract_class(&internal_declare_compiled_class_hash)
+            .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
         {
             CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
@@ -852,9 +852,9 @@ mod tests {
             CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
-        // create internal declare v2
+        // create declare tx
 
-        let internal_declare = Declare::new_with_tx_hash(
+        let declare = Declare::new_with_tx_hash(
             &sierra_contract_class,
             None,
             casm_class_hash,
@@ -873,20 +873,20 @@ mod tests {
         let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
         // call compile and store
-        assert!(internal_declare
+        assert!(declare
             .compile_and_store_casm_class(&mut state)
             .is_ok());
 
         // test we  can retreive the data
         let expected_casm_class = CasmContractClass::from_contract_class(
-            internal_declare.sierra_contract_class.unwrap().clone(),
+            declare.sierra_contract_class.unwrap().clone(),
             true,
         )
         .unwrap();
-        let internal_declare_compiled_class_hash =
-            ClassHash::from(internal_declare.compiled_class_hash);
+        let declare_compiled_class_hash =
+            ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
-            .get_contract_class(&internal_declare_compiled_class_hash)
+            .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
         {
             CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
@@ -923,9 +923,9 @@ mod tests {
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         let sended_class_hash = Felt252::from(5);
-        // create internal declare v2
+        // create declare
 
-        let internal_declare = Declare::new_with_tx_hash(
+        let declare = Declare::new_with_tx_hash(
             &sierra_contract_class,
             None,
             sended_class_hash,
@@ -948,7 +948,7 @@ mod tests {
             casm_class_hash, sended_class_hash
         );
         assert_eq!(
-            internal_declare
+            declare
                 .compile_and_store_casm_class(&mut state)
                 .unwrap_err()
                 .to_string(),
@@ -977,7 +977,7 @@ mod tests {
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = Declare::new(
+        let declare = Declare::new(
             &sierra_contract_class,
             None,
             Felt252::ONE,
@@ -989,7 +989,7 @@ mod tests {
             Felt252::ZERO,
         )
         .unwrap();
-        let result = internal_declare.execute(
+        let result = declare.execute(
             &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
             #[cfg(feature = "cairo-native")]
