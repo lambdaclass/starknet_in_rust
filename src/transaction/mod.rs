@@ -210,7 +210,7 @@ fn check_account_tx_fields_version(
     }
 }
 
-/// Creates a `Declare or Declare` from a starknet api `DeclareTransaction`.
+/// Creates a `DeclareDeprecated or Declare` from a starknet api `DeclareTransaction`.
 pub fn declare_tx_from_sn_api_transaction(
     tx: starknet_api::transaction::DeclareTransaction,
     tx_hash: Felt252,
