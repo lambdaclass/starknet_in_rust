@@ -1,4 +1,4 @@
-use cairo_vm::{utils::biguint_to_felt, Felt252};
+use cairo_vm::Felt252;
 use starknet_in_rust::{
     call_contract,
     definitions::block_context::{BlockContext, StarknetChainId},
@@ -91,7 +91,7 @@ fn test_erc20_cairo2() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),

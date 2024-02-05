@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cairo_vm::{utils::biguint_to_felt, Felt252};
+use cairo_vm::Felt252;
 use starknet_in_rust::{
     core::contract_address::compute_casm_class_hash,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -91,7 +91,7 @@ fn account_panic() {
     let calldata: Vec<_> = [
         1.into(),
         contract_class_hash_felt,
-        biguint_to_felt(selector_contract).unwrap(),
+        Felt252::from(selector_contract),
         1.into(),
         2.into(),
     ]

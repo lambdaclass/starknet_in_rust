@@ -467,7 +467,6 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             hi: u128::from_le_bytes(hi_bytes),
             lo: u128::from_le_bytes(lo_bytes),
         })
-        // SyscallResult::Ok(U256(hash[0..32].try_into().unwrap()))
     }
 
     fn get_execution_info_v2(&mut self, _: &mut u128) -> Result<ExecutionInfoV2, Vec<Felt252>> {
