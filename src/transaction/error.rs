@@ -162,10 +162,22 @@ pub enum TransactionError {
     MaxL1GasPriceTooLow(u128, u128),
     #[error("Max fee ({0}) exceeds balance (Uint256({1}, {2})).")]
     MaxFeeExceedsBalance(u128, Felt252, Felt252),
-    #[error("V3 Transactions not Supported Yet")]
-    UnsuportedV3Transaction,
     #[error("V3 Transactions can't be created with deprecated account tx fields")]
     DeprecatedAccountTxFieldsVInV3TX,
     #[error("Non V3 Transactions can't be created with non deprecated account tx fields")]
     CurrentAccountTxFieldsInNonV3TX,
+    // Variant used to detect revert errors in revertible transactions
+    #[error(transparent)]
+    FeeCheck(#[from] FeeCheckError),
+}
+
+#[derive(Debug, Error)]
+// Enum used to detect revert errors in revertible transactions post-execution checks
+pub enum FeeCheckError {
+    #[error("Insufficient fee token balance")]
+    InsufficientFeeTokenBalance,
+    #[error("Calculated l1 gas amount ({0}) exceeds max l1 gas amount ({1})")]
+    L1GasAmountExceedsMax(u128, u64),
+    #[error("Calculated fee ({0}) exceeds max fee ({1})")]
+    FeeExceedsMax(u128, u128),
 }

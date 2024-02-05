@@ -1,10 +1,9 @@
-use super::fee::{charge_fee, check_fee_bounds};
+use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks};
 use super::{
     check_account_tx_fields_version, get_tx_version, ResourceBounds, Transaction,
     VersionSpecificAccountTxFields,
 };
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
-use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
@@ -95,11 +94,11 @@ impl DeclareV2 {
         let hash_value = calculate_declare_v2_transaction_hash(
             sierra_class_hash,
             compiled_class_hash,
-            chain_id,
-            &sender_address,
-            account_tx_fields.max_fee(),
             version,
             nonce,
+            &sender_address,
+            chain_id,
+            &account_tx_fields,
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
@@ -235,11 +234,11 @@ impl DeclareV2 {
         let hash_value = calculate_declare_v2_transaction_hash(
             sierra_class_hash,
             compiled_class_hash,
-            chain_id,
-            &sender_address,
-            account_tx_fields.max_fee(),
             version,
             nonce,
+            &sender_address,
+            chain_id,
+            &account_tx_fields,
         )?;
 
         Self::new_with_sierra_class_hash_and_tx_hash(
@@ -348,11 +347,11 @@ impl DeclareV2 {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != 2.into() {
+        if !(self.version == Felt252::TWO || self.version == Felt252::THREE) {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeclareV2".to_string(),
                 self.version,
-                vec![2],
+                vec![2, 3],
             ));
         }
 
@@ -379,10 +378,7 @@ impl DeclareV2 {
         self.compile_and_store_casm_class(state)?;
 
         let storage_changes = state.count_actual_state_changes(Some((
-            (block_context
-                .starknet_os_config
-                .fee_token_address
-                .get_by_fee_type(&FeeType::Eth)),
+            (block_context.get_fee_token_address_by_fee_type(&self.account_tx_fields.fee_type())),
             &self.sender_address,
         )))?;
 
@@ -395,13 +391,29 @@ impl DeclareV2 {
             execution_result.n_reverted_steps,
         )?;
 
-        let mut tx_execution_context =
-            self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let (fee_transfer_info, actual_fee) = charge_fee(
-            state,
+        let calculated_fee = calculate_tx_fee(
             &actual_resources,
             block_context,
-            self.account_tx_fields.max_fee(),
+            &self.account_tx_fields.fee_type(),
+        )?;
+
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.invoke_tx_max_n_steps);
+
+        run_post_execution_fee_checks(
+            state,
+            &self.account_tx_fields,
+            block_context,
+            calculated_fee,
+            &actual_resources,
+            &self.sender_address,
+            self.skip_fee_transfer,
+        )?;
+
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            calculated_fee,
+            block_context,
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -987,6 +999,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2]);
+        if tx == "DeclareV2" && ver == 1.into() && supp == vec![2, 3]);
     }
 }

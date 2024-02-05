@@ -986,7 +986,7 @@ mod test {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             version: 2.into(),
-            account_tx_fields: VersionSpecificAccountTxFields::Deprecated(2900),
+            account_tx_fields: VersionSpecificAccountTxFields::Deprecated(4000),
             signature: vec![],
             nonce: 0.into(),
             hash_value: 0.into(),
