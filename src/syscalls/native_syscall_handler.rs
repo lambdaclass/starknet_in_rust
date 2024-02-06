@@ -20,8 +20,8 @@ use crate::{
         business_logic_syscall_handler::{KECCAK_ROUND_COST, SYSCALL_BASE, SYSCALL_GAS_COST},
         syscall_handler_errors::SyscallHandlerError,
     },
-    transaction::error::TransactionError,
-    utils::{felt_to_hash, Address, ClassHash},
+    transaction::{error::TransactionError, Address},
+    utils::{felt_to_hash, ClassHash},
     ContractClassCache, EntryPointType,
 };
 use cairo_native::{

@@ -22,7 +22,8 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader,
         ExecutionResourcesManager,
     },
-    utils::{Address, ClassHash},
+    transaction::Address,
+    utils::ClassHash,
     EntryPointType,
 };
 use std::{collections::HashMap, path::PathBuf, sync::Arc};

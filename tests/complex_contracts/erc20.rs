@@ -10,8 +10,8 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::State, ExecutionResourcesManager,
     },
-    transaction::DeployAccount,
-    utils::{calculate_sn_keccak, Address, ClassHash},
+    transaction::{Address, DeployAccount},
+    utils::{calculate_sn_keccak, ClassHash},
     CasmContractClass, EntryPointType,
 };
 use std::sync::Arc;

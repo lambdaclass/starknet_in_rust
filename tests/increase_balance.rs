@@ -17,7 +17,8 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         ExecutionResourcesManager,
     },
-    utils::{calculate_sn_keccak, Address},
+    transaction::Address,
+    utils::calculate_sn_keccak,
 };
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 

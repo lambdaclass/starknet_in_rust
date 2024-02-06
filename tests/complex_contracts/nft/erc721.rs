@@ -16,13 +16,11 @@ use starknet_in_rust::transaction::error::TransactionError;
 use starknet_in_rust::utils::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
-    execution::{CallInfo, CallType, OrderedEvent},
-    state::{
+    execution::{CallInfo, CallType, OrderedEvent}, state::{
         contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
         ExecutionResourcesManager,
-    },
-    utils::{calculate_sn_keccak, Address},
+    }, transaction::Address, utils::calculate_sn_keccak
 };
 use std::{
     collections::{HashMap, HashSet},

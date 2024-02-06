@@ -56,6 +56,30 @@ impl fmt::Debug for Address {
     }
 }
 
+impl From<Felt252> for Address {
+    fn from(value: Felt252) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&Felt252> for Address {
+    fn from(value: &Felt252) -> Self {
+        Self(*value)
+    }
+}
+
+impl From<Address> for Felt252 {
+    fn from(value: Address) -> Self {
+        value.0
+    }
+}
+
+impl From<&Address> for Felt252 {
+    fn from(value: &Address) -> Self {
+        value.0
+    }
+}
+
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
 /// it can be one of:

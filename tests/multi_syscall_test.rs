@@ -14,7 +14,8 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader,
         ExecutionResourcesManager,
     },
-    utils::{calculate_sn_keccak, Address, ClassHash},
+    transaction::Address,
+    utils::{calculate_sn_keccak, ClassHash},
     EntryPointType,
 };
 use std::{sync::Arc, vec};

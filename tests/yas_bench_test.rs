@@ -907,7 +907,8 @@ mod utils {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader, state_api::State,
         },
-        utils::{Address, ClassHash},
+        transaction::Address,
+        utils::ClassHash,
         CasmContractClass, ContractClass as SierraContractClass,
     };
     use std::{fs, path::Path, sync::Arc};
