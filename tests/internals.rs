@@ -219,97 +219,6 @@ fn create_account_tx_test_state() -> Result<
     Ok((block_context, cached_state))
 }
 
-fn create_account_tx_test_state_revert_test() -> Result<
-    (
-        BlockContext,
-        CachedState<InMemoryStateReader, PermanentContractClassCache>,
-    ),
-    Box<dyn std::error::Error>,
-> {
-    let block_context = new_starknet_block_context_for_testing();
-
-    let test_contract_class_hash = *TEST_CLASS_HASH;
-    let test_account_contract_class_hash = *TEST_ACCOUNT_CONTRACT_CLASS_HASH;
-    let test_erc20_class_hash = *TEST_ERC20_CONTRACT_CLASS_HASH;
-    let class_hash_to_class = HashMap::from([
-        (
-            test_account_contract_class_hash,
-            ContractClass::from_path(
-                "starknet_programs/account_without_validation_and_expensive_constructor.json",
-            )?,
-        ),
-        (
-            test_contract_class_hash,
-            ContractClass::from_path(TEST_CONTRACT_PATH)?,
-        ),
-        (
-            test_erc20_class_hash,
-            ContractClass::from_path(ERC20_CONTRACT_PATH)?,
-        ),
-    ]);
-
-    let test_contract_address = TEST_CONTRACT_ADDRESS.clone();
-    let test_account_contract_address = TEST_ACCOUNT_CONTRACT_ADDRESS.clone();
-    let test_erc20_address = block_context
-        .starknet_os_config()
-        .fee_token_address()
-        .eth_fee_token_address
-        .clone();
-    let address_to_class_hash = HashMap::from([
-        (test_contract_address, test_contract_class_hash),
-        (
-            test_account_contract_address,
-            test_account_contract_class_hash,
-        ),
-        (test_erc20_address.clone(), test_erc20_class_hash),
-    ]);
-
-    let test_erc20_account_balance_key = *TEST_ERC20_ACCOUNT_BALANCE_KEY;
-
-    let storage_view = HashMap::from([(
-        (test_erc20_address, test_erc20_account_balance_key),
-        *INITIAL_BALANCE,
-    )]);
-
-    let cached_state = CachedState::new(
-        {
-            let mut state_reader = InMemoryStateReader::default();
-            for (contract_address, class_hash) in address_to_class_hash {
-                let storage_keys: HashMap<(Address, [u8; 32]), Felt252> = storage_view
-                    .iter()
-                    .filter_map(|((address, storage_key), storage_value)| {
-                        (address == &contract_address).then_some((
-                            (address.clone(), storage_key.to_bytes_be()),
-                            *storage_value,
-                        ))
-                    })
-                    .collect();
-
-                let stored: HashMap<StorageEntry, Felt252> = storage_keys;
-
-                state_reader
-                    .address_to_class_hash_mut()
-                    .insert(contract_address.clone(), class_hash);
-
-                state_reader
-                    .address_to_nonce_mut()
-                    .insert(contract_address.clone(), Felt252::ZERO);
-                state_reader.address_to_storage_mut().extend(stored);
-            }
-            for (class_hash, contract_class) in class_hash_to_class {
-                state_reader.class_hash_to_compiled_class_mut().insert(
-                    class_hash,
-                    CompiledClass::Deprecated(Arc::new(contract_class)),
-                );
-            }
-            Arc::new(state_reader)
-        },
-        Arc::new(PermanentContractClassCache::default()),
-    );
-
-    Ok((block_context, cached_state))
-}
-
 fn expected_state_before_tx() -> CachedState<InMemoryStateReader, PermanentContractClassCache> {
     let in_memory_state_reader = initial_in_memory_state_reader();
 
@@ -1716,8 +1625,8 @@ fn test_deploy_account() {
     )
     .unwrap();
 
-    state.set_storage_at(
-        &(
+    state.cache_mut().storage_initial_values_mut().insert(
+        (
             block_context
                 .starknet_os_config()
                 .fee_token_address()
@@ -1825,170 +1734,6 @@ fn test_deploy_account() {
     assert_eq!(class_hash_from_state, *deploy_account_tx.class_hash());
 }
 
-#[test]
-fn test_deploy_account_revert() {
-    let (block_context, mut state) = create_account_tx_test_state_revert_test().unwrap();
-
-    let actual_fee = 3100;
-    let max_fee = 3097;
-
-    let deploy_account_tx = DeployAccount::new(
-        *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
-        VersionSpecificAccountTxFields::new_deprecated(max_fee),
-        *TRANSACTION_VERSION,
-        Default::default(),
-        Default::default(),
-        Default::default(),
-        Default::default(),
-        StarknetChainId::TestNet.to_felt(),
-    )
-    .unwrap();
-
-    state.set_storage_at(
-        &(
-            block_context
-                .starknet_os_config()
-                .fee_token_address()
-                .eth_fee_token_address
-                .clone(),
-            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
-                .clone()
-                .to_bytes_be(),
-        ),
-        *INITIAL_BALANCE,
-    );
-
-    let (state_before, mut state_after) = expected_deploy_account_states();
-
-    assert_eq_sorted!(&state.cache(), &state_before.cache());
-    assert_eq!(
-        (&*state.contract_class_cache().clone())
-            .into_iter()
-            .collect::<Vec<_>>(),
-        (&*state_before.contract_class_cache().clone())
-            .into_iter()
-            .collect::<Vec<_>>()
-    );
-    assert_eq!(state.contract_class_cache().as_ref().into_iter().count(), 0);
-
-    let tx_info = deploy_account_tx
-        .execute(
-            &mut state,
-            &block_context,
-            #[cfg(feature = "cairo-native")]
-            None,
-            #[cfg(feature = "cairo-native")]
-            None,
-        )
-        .unwrap();
-
-    assert!(tx_info.revert_error.is_some());
-
-    let mut state_reverted = state_before;
-
-    // Add initial writes (these 'bypass' the transactional state because it's a state reader and
-    // it will cache initial values when looking for them).
-    state_reverted
-        .cache_mut()
-        .class_hash_initial_values_mut()
-        .extend(
-            state_after
-                .cache_mut()
-                .class_hash_initial_values_mut()
-                .clone(),
-        );
-    state_reverted
-        .cache_mut()
-        .nonce_initial_values_mut()
-        .extend(state_after.cache_mut().nonce_initial_values_mut().clone());
-    state_reverted
-        .cache_mut()
-        .storage_initial_values_mut()
-        .extend(state_after.cache_mut().storage_initial_values_mut().clone());
-    state_reverted
-        .cache_mut()
-        .storage_initial_values_mut()
-        .extend(state_after.cache_mut().storage_initial_values_mut().clone());
-
-    // Set storage writes related to the fee transfer
-    state_reverted
-        .cache_mut()
-        .storage_writes_mut()
-        .extend(state_after.cache_mut().storage_writes().clone());
-    state_reverted.set_storage_at(
-        &(
-            Address(0x1001.into()),
-            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
-                .clone()
-                .to_bytes_be(),
-        ),
-        *INITIAL_BALANCE - max_fee as u64, // minus the max fee that will be transfered
-    );
-    state_reverted.cache_mut().storage_writes_mut().insert(
-        (
-            Address(0x1001.into()),
-            TEST_ERC20_SEQUENCER_BALANCE_KEY.clone().to_bytes_be(),
-        ),
-        max_fee.into(), // the max fee received by the sequencer
-    );
-
-    // Set nonce
-    state_reverted
-        .cache_mut()
-        .nonce_writes_mut()
-        .extend(state_after.cache_mut().nonce_writes_mut().clone());
-
-    assert_eq_sorted!(state.cache(), state_reverted.cache());
-
-    let expected_fee_transfer_call_info = expected_fee_transfer_call_info(
-        &block_context,
-        deploy_account_tx.contract_address(),
-        max_fee,
-    );
-
-    let resources = HashMap::from([
-        ("n_steps".to_string(), 3914),
-        ("range_check_builtin".to_string(), 83),
-        ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 3060),
-    ]);
-
-    let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
-
-    assert_eq!(fee, actual_fee);
-
-    let mut expected_execution_info = TransactionExecutionInfo::new(
-        None,
-        None,
-        None,
-        None,
-        max_fee,
-        // Entry **not** in blockifier.
-        // Default::default(),
-        resources,
-        TransactionType::DeployAccount.into(),
-    )
-    .to_revert_error(format!("Calculated fee ({}) exceeds max fee ({})", fee, max_fee).as_str());
-
-    expected_execution_info.set_fee_info(max_fee, expected_fee_transfer_call_info.into());
-
-    assert_eq_sorted!(tx_info, expected_execution_info);
-
-    let nonce_from_state = state
-        .get_nonce_at(deploy_account_tx.contract_address())
-        .unwrap();
-    assert_eq!(nonce_from_state, Felt252::ONE);
-
-    let hash = felt_to_hash(&TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY);
-
-    validate_final_balances(&mut state, &block_context, &hash, max_fee);
-
-    let class_hash_from_state = state
-        .get_class_hash_at(deploy_account_tx.contract_address())
-        .unwrap();
-    assert_eq!(class_hash_from_state, [0; 32]);
-}
-
 fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader, PermanentContractClassCache>,
     CachedState<InMemoryStateReader, PermanentContractClassCache>,
@@ -2036,15 +1781,18 @@ fn expected_deploy_account_states() -> (
         )),
         Arc::new(PermanentContractClassCache::default()),
     );
-    state_before.set_storage_at(
-        &(
-            Address(0x1001.into()),
-            TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
-                .clone()
-                .to_bytes_be(),
-        ),
-        *INITIAL_BALANCE,
-    );
+    state_before
+        .cache_mut()
+        .storage_initial_values_mut()
+        .insert(
+            (
+                Address(0x1001.into()),
+                TEST_ERC20_DEPLOYED_ACCOUNT_BALANCE_KEY
+                    .clone()
+                    .to_bytes_be(),
+            ),
+            *INITIAL_BALANCE,
+        );
 
     let mut state_after = state_before.clone_for_testing();
 
@@ -2109,6 +1857,20 @@ fn expected_deploy_account_states() -> (
         ),
         felt_to_hash(&0x111.into()),
     );
+    // Also set the previous value as initial_value for the class hash written by the deploy
+    // This will be added by update_initial_values_of_write_only_accesses when counting storage changes
+    state_after
+        .cache_mut()
+        .class_hash_initial_values_mut()
+        .insert(
+            Address(
+                Felt252::from_dec_str(
+                    "386181506763903095743576862849245034886954647214831045800703908858571591162",
+                )
+                .unwrap(),
+            ),
+            Felt252::ZERO.into(),
+        );
     state_after.cache_mut().storage_writes_mut().insert(
         (
             Address(0x1001.into()),

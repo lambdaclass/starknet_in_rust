@@ -17,10 +17,6 @@ pub(crate) const CONSUMED_MSG_TO_L2_ENCODED_DATA_SIZE: usize =
 pub(crate) const LOG_MSG_TO_L1_ENCODED_DATA_SIZE: usize =
     (L2_TO_L1_MSG_HEADER_SIZE + 1) - LOG_MSG_TO_L1_N_TOPICS;
 
-/// Fee factor used for the final fee calculation:
-/// actual_fee = min(max_fee, consumed_resources) * FEE_FACTOR
-pub(crate) const FEE_FACTOR: u128 = 1;
-
 /// The (empirical) L1 gas cost of each Cairo step.
 pub(crate) const N_STEPS_FEE_WEIGHT: f64 = 0.01;
 
@@ -113,4 +109,5 @@ lazy_static! {
     pub(crate) static ref QUERY_VERSION_0: Felt252 = Into::<Felt252>::into(0) + *QUERY_VERSION_BASE;
     pub(crate) static ref QUERY_VERSION_1: Felt252 = Into::<Felt252>::into(1) + *QUERY_VERSION_BASE;
     pub(crate) static ref QUERY_VERSION_2: Felt252 = Into::<Felt252>::into(2) + *QUERY_VERSION_BASE;
+    pub(crate) static ref QUERY_VERSION_3: Felt252 = Into::<Felt252>::into(3) + *QUERY_VERSION_BASE;
 }

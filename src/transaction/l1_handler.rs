@@ -1,6 +1,8 @@
 use super::Transaction;
 use crate::{
-    core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
+    core::transaction_hash::{
+        deprecated::deprecated_calculate_transaction_hash_common, TransactionHashPrefix,
+    },
     definitions::{
         block_context::{BlockContext, FeeType},
         constants::L1_HANDLER_VERSION,
@@ -57,7 +59,7 @@ impl L1Handler {
         chain_id: Felt252,
         paid_fee_on_l1: Option<Felt252>,
     ) -> Result<L1Handler, TransactionError> {
-        let hash_value = calculate_transaction_hash_common(
+        let hash_value = deprecated_calculate_transaction_hash_common(
             TransactionHashPrefix::L1Handler,
             L1_HANDLER_VERSION.into(),
             &contract_address,
@@ -82,7 +84,7 @@ impl L1Handler {
     /// # Safety
     ///
     /// `tx_hash` will be assumed to be the same as would result from calling
-    /// `calculate_transaction_hash_common`. Non-compliance will result in silent misbehavior.
+    /// `deprecated_calculate_transaction_hash_common`. Non-compliance will result in silent misbehavior.
     pub fn new_with_tx_hash(
         contract_address: Address,
         entry_point_selector: Felt252,
