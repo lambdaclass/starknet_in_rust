@@ -433,6 +433,8 @@ impl IsolatedExecutor {
             }
         }
     }
+
+    #[cfg(test)]
     pub(crate) fn kill(&mut self) {
         let _ = self.sender.send(Message::Kill.wrap().unwrap());
         let _ = self.proc.kill();
