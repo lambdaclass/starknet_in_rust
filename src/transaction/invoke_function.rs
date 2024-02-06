@@ -1,12 +1,13 @@
 use super::{
     check_account_tx_fields_version,
-    fee::{calculate_tx_fee, charge_fee, check_fee_bounds},
-    get_tx_version, ResourceBounds, Transaction, VersionSpecificAccountTxFields,
+    fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks},
+    get_tx_version, CurrentAccountTxFields, ResourceBounds, Transaction,
+    VersionSpecificAccountTxFields,
 };
 use crate::{
-    core::transaction_hash::{calculate_transaction_hash_common, TransactionHashPrefix},
+    core::transaction_hash::calculate_invoke_transaction_hash,
     definitions::{
-        block_context::{BlockContext, FeeType},
+        block_context::BlockContext,
         constants::{
             EXECUTE_ENTRY_POINT_SELECTOR, VALIDATE_ENTRY_POINT_SELECTOR, VALIDATE_RETDATA,
         },
@@ -31,6 +32,7 @@ use crate::{
 use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_api::transaction::Resource;
 use std::fmt::Debug;
 
 #[cfg(feature = "cairo-native")]
@@ -76,17 +78,14 @@ impl InvokeFunction {
         chain_id: Felt252,
         nonce: Option<Felt252>,
     ) -> Result<Self, TransactionError> {
-        let (entry_point_selector_field, additional_data) =
-            preprocess_invoke_function_fields(entry_point_selector, nonce, version)?;
-        let hash_value = calculate_transaction_hash_common(
-            TransactionHashPrefix::Invoke,
-            version,
-            &contract_address,
-            entry_point_selector_field,
-            &calldata,
-            account_tx_fields.max_fee(),
+        let hash_value = calculate_invoke_transaction_hash(
             chain_id,
-            &additional_data,
+            &contract_address,
+            entry_point_selector,
+            version,
+            nonce,
+            &calldata,
+            &account_tx_fields,
         )?;
 
         InvokeFunction::new_with_tx_hash(
@@ -141,13 +140,85 @@ impl InvokeFunction {
         tx: starknet_api::transaction::InvokeTransaction,
         tx_hash: Felt252,
     ) -> Result<Self, TransactionError> {
-        match tx {
-            starknet_api::transaction::InvokeTransaction::V0(v0) => convert_invoke_v0(v0, tx_hash),
-            starknet_api::transaction::InvokeTransaction::V1(v1) => convert_invoke_v1(v1, tx_hash),
-            starknet_api::transaction::InvokeTransaction::V3(_) => {
-                Err(TransactionError::UnsuportedV3Transaction)
+        let account_tx_fields = match &tx {
+            starknet_api::transaction::InvokeTransaction::V0(tx) => {
+                VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
             }
-        }
+            starknet_api::transaction::InvokeTransaction::V1(tx) => {
+                VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+            }
+            starknet_api::transaction::InvokeTransaction::V3(tx) => {
+                VersionSpecificAccountTxFields::Current(CurrentAccountTxFields {
+                    l1_resource_bounds: tx
+                        .resource_bounds
+                        .0
+                        .get(&Resource::L1Gas)
+                        .map(|r| r.into())
+                        .unwrap_or_default(),
+                    l2_resource_bounds: tx
+                        .resource_bounds
+                        .0
+                        .get(&Resource::L2Gas)
+                        .map(|r| r.into()),
+                    tip: tx.tip.0,
+                    nonce_data_availability_mode: tx.nonce_data_availability_mode.into(),
+                    fee_data_availability_mode: tx.fee_data_availability_mode.into(),
+                    paymaster_data: tx
+                        .paymaster_data
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                        .collect(),
+                    account_deployment_data: tx
+                        .account_deployment_data
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                        .collect(),
+                })
+            }
+        };
+        let entry_point_selector = match &tx {
+            starknet_api::transaction::InvokeTransaction::V0(tx) => {
+                Felt252::from_bytes_be_slice(tx.entry_point_selector.0.bytes())
+            }
+            starknet_api::transaction::InvokeTransaction::V1(_)
+            | starknet_api::transaction::InvokeTransaction::V3(_) => *EXECUTE_ENTRY_POINT_SELECTOR,
+        };
+        let contract_address = Address(Felt252::from_bytes_be_slice(
+            tx.sender_address().0.key().bytes(),
+        ));
+        let version = Felt252::from_bytes_be_slice(tx.version().0.bytes());
+        let nonce = if version.is_zero() {
+            None
+        } else {
+            Some(Felt252::from_bytes_be_slice(tx.nonce().0.bytes()))
+        };
+
+        let signature = tx
+            .signature()
+            .0
+            .iter()
+            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+            .collect();
+        let calldata = tx
+            .calldata()
+            .0
+            .as_ref()
+            .iter()
+            .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+            .collect();
+
+        InvokeFunction::new_with_tx_hash(
+            contract_address,
+            entry_point_selector,
+            account_tx_fields,
+            version,
+            calldata,
+            signature,
+            nonce,
+            tx_hash,
+        )
     }
 
     fn get_execution_context(
@@ -335,10 +406,7 @@ impl InvokeFunction {
             )?
         };
         let changes = state.count_actual_state_changes(Some((
-            (block_context
-                .starknet_os_config
-                .fee_token_address
-                .get_by_fee_type(&FeeType::Eth)),
+            (block_context.get_fee_token_address_by_fee_type(&self.account_tx_fields.fee_type())),
             &self.contract_address,
         )))?;
         let actual_resources = calculate_tx_resources(
@@ -383,11 +451,14 @@ impl InvokeFunction {
         >,
         #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::ONE && self.version != Felt252::ZERO {
+        if !(self.version == Felt252::ZERO
+            || self.version == Felt252::ONE
+            || self.version == Felt252::THREE)
+        {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Invoke".to_string(),
                 self.version,
-                vec![0, 1],
+                vec![0, 1, 3],
             ));
         }
 
@@ -428,54 +499,48 @@ impl InvokeFunction {
         }
         let mut tx_exec_info = tx_exec_info?;
 
-        let actual_fee =
-            calculate_tx_fee(&tx_exec_info.actual_resources, block_context, &FeeType::Eth)?;
+        let actual_fee = calculate_tx_fee(
+            &tx_exec_info.actual_resources,
+            block_context,
+            &self.account_tx_fields.fee_type(),
+        )?;
 
         if let Some(revert_error) = tx_exec_info.revert_error.clone() {
             // execution error
             tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if actual_fee > self.account_tx_fields.max_fee() {
-            // max_fee exceeded
-            tx_exec_info = tx_exec_info.to_revert_error(
-                format!(
-                    "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee,
-                    self.account_tx_fields.max_fee()
-                )
-                .as_str(),
-            );
         } else {
-            // Check if as a result of tx execution the sender's fee token balance is not enough to pay the actual_fee.
-            // If so, revert the transaction.
-            let (balance_low, balance_high) = transactional_state.get_fee_token_balance(
+            match run_post_execution_fee_checks(
+                &mut transactional_state,
+                &self.account_tx_fields,
                 block_context,
+                actual_fee,
+                &tx_exec_info.actual_resources,
                 self.contract_address(),
-                &FeeType::Eth,
-            )?;
-            // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-            if balance_high.is_zero()
-                && balance_low < Felt252::from(actual_fee)
-                && !self.skip_fee_transfer
-            {
-                tx_exec_info = tx_exec_info.to_revert_error("Insufficient fee token balance");
-            } else {
-                state.apply_state_update(&StateDiff::from_cached_state(
-                    transactional_state.cache(),
-                )?)?;
+                self.skip_fee_transfer,
+            ) {
+                Ok(_) => {
+                    state.apply_state_update(&StateDiff::from_cached_state(
+                        transactional_state.cache(),
+                    )?)?;
+                }
+                Err(TransactionError::FeeCheck(error)) => {
+                    tx_exec_info = tx_exec_info.to_revert_error(&error.to_string());
+                }
+                error => error?,
             }
         }
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps)?;
+
         let (fee_transfer_info, actual_fee) = charge_fee(
             state,
-            &tx_exec_info.actual_resources,
+            actual_fee,
             block_context,
-            self.account_tx_fields.max_fee(),
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
-            program_cache,
+            program_cache.clone(),
             #[cfg(feature = "cairo-native")]
             sandbox,
         )?;
@@ -595,121 +660,12 @@ pub fn verify_no_calls_to_other_contracts(
     Ok(call_info)
 }
 
-// Performs validation on fields related to function invocation transaction.
-// InvokeFunction transaction.
-// Deduces and returns fields required for hash calculation of
-
-pub(crate) fn preprocess_invoke_function_fields(
-    entry_point_selector: Felt252,
-    nonce: Option<Felt252>,
-    version: Felt252,
-) -> Result<(Felt252, Vec<Felt252>), TransactionError> {
-    if version.is_zero() {
-        match nonce {
-            Some(_) => Err(TransactionError::InvokeFunctionZeroHasNonce),
-            None => {
-                let additional_data = Vec::new();
-                let entry_point_selector_field = entry_point_selector;
-                Ok((entry_point_selector_field, additional_data))
-            }
-        }
-    } else {
-        match nonce {
-            Some(n) => {
-                let additional_data = vec![n];
-                let entry_point_selector_field = Felt252::ZERO;
-                Ok((entry_point_selector_field, additional_data))
-            }
-            None => Err(TransactionError::InvokeFunctionNonZeroMissingNonce),
-        }
-    }
-}
-
-// ----------------------------------
-//      Try from starknet api
-// ----------------------------------
-
-fn convert_invoke_v0(
-    value: starknet_api::transaction::InvokeTransactionV0,
-    tx_hash: Felt252,
-) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be_slice(
-        value.contract_address.0.key().bytes(),
-    ));
-    let max_fee = value.max_fee.0;
-    let entry_point_selector = Felt252::from_bytes_be_slice(value.entry_point_selector.0.bytes());
-    let nonce = None;
-
-    let signature = value
-        .signature
-        .0
-        .iter()
-        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-        .collect();
-    let calldata = value
-        .calldata
-        .0
-        .as_ref()
-        .iter()
-        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-        .collect();
-
-    InvokeFunction::new_with_tx_hash(
-        contract_address,
-        entry_point_selector,
-        VersionSpecificAccountTxFields::Deprecated(max_fee),
-        Felt252::from(0),
-        calldata,
-        signature,
-        nonce,
-        tx_hash,
-    )
-}
-
-fn convert_invoke_v1(
-    value: starknet_api::transaction::InvokeTransactionV1,
-    tx_hash: Felt252,
-) -> Result<InvokeFunction, TransactionError> {
-    let contract_address = Address(Felt252::from_bytes_be_slice(
-        value.sender_address.0.key().bytes(),
-    ));
-    let max_fee = value.max_fee.0;
-    let nonce = Felt252::from_bytes_be_slice(value.nonce.0.bytes());
-    let entry_point_selector = *EXECUTE_ENTRY_POINT_SELECTOR;
-
-    let signature = value
-        .signature
-        .0
-        .iter()
-        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-        .collect();
-    let calldata = value
-        .calldata
-        .0
-        .as_ref()
-        .iter()
-        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
-        .collect();
-
-    InvokeFunction::new_with_tx_hash(
-        contract_address,
-        entry_point_selector,
-        // TODO[0.13] Properly convert between V3 tx fields
-        VersionSpecificAccountTxFields::Deprecated(max_fee),
-        Felt252::ONE,
-        calldata,
-        signature,
-        Some(nonce),
-        tx_hash,
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
         definitions::block_context::GasPrices,
-        definitions::constants::{QUERY_VERSION_1, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
+        definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
@@ -1461,18 +1417,6 @@ mod tests {
     }
 
     #[test]
-    fn invoke_version_zero_with_non_zero_nonce_should_fail() {
-        let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
-                .unwrap(),
-            Some(1.into()),
-            0.into(),
-        )
-        .unwrap_err();
-        assert_matches!(expected_error, TransactionError::InvokeFunctionZeroHasNonce)
-    }
-
-    #[test]
     // the test should try to make verify_no_calls_to_other_contracts fail
     fn verify_no_calls_to_other_contracts_should_fail() {
         let mut call_info = CallInfo::default();
@@ -1491,50 +1435,6 @@ mod tests {
             expected_error.unwrap_err(),
             TransactionError::UnauthorizedActionOnValidate
         );
-    }
-
-    #[test]
-    fn preprocess_invoke_function_fields_nonce_is_none() {
-        let entry_point_selector =
-            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
-                .unwrap();
-        let result = preprocess_invoke_function_fields(entry_point_selector, None, 0.into());
-
-        let expected_additional_data: Vec<Felt252> = Vec::new();
-        let expected_entry_point_selector_field = entry_point_selector;
-        assert_eq!(
-            result.unwrap(),
-            (
-                expected_entry_point_selector_field,
-                expected_additional_data
-            )
-        )
-    }
-
-    #[test]
-    fn invoke_version_one_with_no_nonce_should_fail() {
-        let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
-                .unwrap(),
-            None,
-            1.into(),
-        );
-        assert!(expected_error.is_err());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::InvokeFunctionNonZeroMissingNonce
-        )
-    }
-
-    #[test]
-    fn invoke_version_one_with_no_nonce_with_query_base_should_fail() {
-        let expected_error = preprocess_invoke_function_fields(
-            Felt252::from_hex("0x112e35f48499939272000bd72eb840e502ca4c3aefa8800992e8defb746e0c9")
-                .unwrap(),
-            None,
-            *QUERY_VERSION_1,
-        );
-        assert!(expected_error.is_err());
     }
 
     #[test]
@@ -1658,6 +1558,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1]);
+        if tx == "Invoke" && ver == 2.into() && supp == vec![0, 1, 3]);
     }
 }

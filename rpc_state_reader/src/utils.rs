@@ -78,13 +78,24 @@ pub fn deserialize_transaction_json(
             "0x1" => Ok(Transaction::Invoke(InvokeTransaction::V1(
                 serde_json::from_value(transaction)?,
             ))),
+            "0x3" => Ok(Transaction::Invoke(InvokeTransaction::V3(
+                serde_json::from_value(transaction)?,
+            ))),
             x => Err(serde::de::Error::custom(format!(
                 "unimplemented invoke version: {x}"
             ))),
         },
-        "DEPLOY_ACCOUNT" => Ok(Transaction::DeployAccount(DeployAccountTransaction::V1(
-            serde_json::from_value(transaction)?,
-        ))),
+        "DEPLOY_ACCOUNT" => match tx_version.as_str() {
+            "0x1" => Ok(Transaction::DeployAccount(DeployAccountTransaction::V1(
+                serde_json::from_value(transaction)?,
+            ))),
+            "0x3" => Ok(Transaction::DeployAccount(DeployAccountTransaction::V3(
+                serde_json::from_value(transaction)?,
+            ))),
+            x => Err(serde::de::Error::custom(format!(
+                "unimplemented declare version: {x}"
+            ))),
+        },
         "DECLARE" => match tx_version.as_str() {
             "0x0" => Ok(Transaction::Declare(DeclareTransaction::V0(
                 serde_json::from_value(transaction)?,
@@ -93,6 +104,9 @@ pub fn deserialize_transaction_json(
                 serde_json::from_value(transaction)?,
             ))),
             "0x2" => Ok(Transaction::Declare(DeclareTransaction::V2(
+                serde_json::from_value(transaction)?,
+            ))),
+            "0x3" => Ok(Transaction::Declare(DeclareTransaction::V3(
                 serde_json::from_value(transaction)?,
             ))),
             x => Err(serde::de::Error::custom(format!(

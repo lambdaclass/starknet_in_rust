@@ -29,7 +29,6 @@ Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https
     - [How to manually install the script dependencies](#how-to-manually-install-the-script-dependencies)
 - [🚀 Usage](#-usage)
   - [Running simple contracts](#running-simple-contracts)
-  - [Using the CLI](#using-the-cli)
   - [Testing](#testing)
   - [Profiling](#profiling)
   - [Benchmarking](#benchmarking)
@@ -138,9 +137,6 @@ If you don't do this you will get a linker error when using AOT.
 ### Running simple contracts
 
 You can find a tutorial on running contracts [here](/examples/contract_execution/README.md).
-
-### Using the CLI
-You can find an example on how to use the CLI [here](/docs/CLI_USAGE_EXAMPLE.md)
 
 ### Customization
 

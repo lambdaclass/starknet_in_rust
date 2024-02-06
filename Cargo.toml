@@ -17,7 +17,6 @@ cairo-native = ["dep:ipc-channel", "dep:tracing-appender", "dep:cairo-native", "
 
 [workspace]
 members = [
-    "cli",
     "fuzzer",
     "rpc_state_reader",
     "replay",

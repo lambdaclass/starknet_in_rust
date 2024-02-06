@@ -1,14 +1,13 @@
-use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds};
+use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks};
 use super::{
-    check_account_tx_fields_version, get_tx_version, ResourceBounds, VersionSpecificAccountTxFields,
+    check_account_tx_fields_version, get_tx_version, CurrentAccountTxFields, ResourceBounds,
+    VersionSpecificAccountTxFields,
 };
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
-use crate::definitions::block_context::FeeType;
 use crate::definitions::constants::VALIDATE_RETDATA;
 use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::cached_state::CachedState;
-use crate::state::StateDiff;
 use crate::{
     core::{
         errors::state_errors::StateError,
@@ -41,6 +40,7 @@ use crate::{
 use cairo_vm::Felt252;
 use getset::Getters;
 use num_traits::Zero;
+use starknet_api::transaction::Resource;
 use std::fmt::Debug;
 
 #[cfg(feature = "cairo-native")]
@@ -104,13 +104,13 @@ impl DeployAccount {
 
         let hash_value = calculate_deploy_account_transaction_hash(
             version,
+            nonce,
             &contract_address,
+            contract_address_salt,
             Felt252::from_bytes_be(&class_hash.0),
             &constructor_calldata,
-            account_tx_fields.max_fee(),
-            nonce,
-            contract_address_salt,
             chain_id,
+            &account_tx_fields,
         )?;
 
         Ok(Self {
@@ -193,11 +193,11 @@ impl DeployAccount {
         >,
         #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if self.version != Felt252::ONE {
+        if !(self.version == Felt252::ONE || self.version == Felt252::THREE) {
             return Err(TransactionError::UnsupportedTxVersion(
                 "DeployAccount".to_string(),
                 self.version,
-                vec![1],
+                vec![1, 3],
             ));
         }
 
@@ -207,63 +207,38 @@ impl DeployAccount {
             self.check_fee_balance(state, block_context)?;
         }
 
-        let mut transactional_state = state.create_transactional()?;
-        let tx_exec_info = self.apply(
-            &mut transactional_state,
+        let mut tx_exec_info = self.apply(
+            state,
             block_context,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
             #[cfg(feature = "cairo-native")]
             sandbox,
-        );
-        #[cfg(feature = "replay_benchmark")]
-        // Add initial values to cache despite tx outcome
-        {
-            state.cache_mut().storage_initial_values_mut().extend(
-                transactional_state
-                    .cache()
-                    .storage_initial_values
-                    .clone()
-                    .into_iter(),
-            );
-            state.cache_mut().class_hash_initial_values_mut().extend(
-                transactional_state
-                    .cache()
-                    .class_hash_initial_values
-                    .clone()
-                    .into_iter(),
-            );
-        }
-        let mut tx_exec_info = tx_exec_info?;
-
-        let actual_fee =
-            calculate_tx_fee(&tx_exec_info.actual_resources, block_context, &FeeType::Eth)?;
-
-        if let Some(revert_error) = tx_exec_info.revert_error.clone() {
-            // execution error
-            tx_exec_info = tx_exec_info.to_revert_error(&revert_error);
-        } else if actual_fee > self.account_tx_fields.max_fee() {
-            // max_fee exceeded
-            tx_exec_info = tx_exec_info.to_revert_error(
-                format!(
-                    "Calculated fee ({}) exceeds max fee ({})",
-                    actual_fee,
-                    self.account_tx_fields.max_fee()
-                )
-                .as_str(),
-            );
-        } else {
-            state
-                .apply_state_update(&StateDiff::from_cached_state(transactional_state.cache())?)?;
-        }
+        )?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
-        let (fee_transfer_info, actual_fee) = charge_fee(
-            state,
+
+        let calculated_fee = calculate_tx_fee(
             &tx_exec_info.actual_resources,
             block_context,
-            self.account_tx_fields.max_fee(),
+            &tx_execution_context.account_tx_fields.fee_type(),
+        )?;
+
+        run_post_execution_fee_checks(
+            state,
+            &self.account_tx_fields,
+            block_context,
+            calculated_fee,
+            &tx_exec_info.actual_resources,
+            &self.contract_address,
+            self.skip_fee_transfer,
+        )?;
+
+        let (fee_transfer_info, actual_fee) = charge_fee(
+            state,
+            calculated_fee,
+            block_context,
             &mut tx_execution_context,
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
@@ -340,9 +315,7 @@ impl DeployAccount {
             TransactionType::DeployAccount,
             state.count_actual_state_changes(Some((
                 (block_context
-                    .starknet_os_config
-                    .fee_token_address
-                    .get_by_fee_type(&FeeType::Eth)),
+                    .get_fee_token_address_by_fee_type(&self.account_tx_fields.fee_type())),
                 &self.contract_address,
             )))?,
             None,
@@ -608,12 +581,37 @@ impl DeployAccount {
         value: starknet_api::transaction::DeployAccountTransaction,
         tx_hash: Felt252,
     ) -> Result<Self, TransactionError> {
-        let max_fee = match value {
-            starknet_api::transaction::DeployAccountTransaction::V1(ref tx) => tx.max_fee,
-            starknet_api::transaction::DeployAccountTransaction::V3(_) => {
-                return Err(TransactionError::UnsuportedV3Transaction)
+        let account_tx_fields = match &value {
+            starknet_api::transaction::DeployAccountTransaction::V1(tx) => {
+                VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+            }
+            starknet_api::transaction::DeployAccountTransaction::V3(tx) => {
+                VersionSpecificAccountTxFields::Current(CurrentAccountTxFields {
+                    l1_resource_bounds: tx
+                        .resource_bounds
+                        .0
+                        .get(&Resource::L1Gas)
+                        .map(|r| r.into())
+                        .unwrap_or_default(),
+                    l2_resource_bounds: tx
+                        .resource_bounds
+                        .0
+                        .get(&Resource::L2Gas)
+                        .map(|r| r.into()),
+                    tip: tx.tip.0,
+                    nonce_data_availability_mode: tx.nonce_data_availability_mode.into(),
+                    fee_data_availability_mode: tx.fee_data_availability_mode.into(),
+                    paymaster_data: tx
+                        .paymaster_data
+                        .0
+                        .iter()
+                        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                        .collect(),
+                    account_deployment_data: Default::default(),
+                })
             }
         };
+
         let version = Felt252::from_bytes_be_slice(value.version().0.bytes());
         let nonce = Felt252::from_bytes_be_slice(value.nonce().0.bytes());
         let class_hash: ClassHash = ClassHash(value.class_hash().0.bytes().try_into().unwrap());
@@ -636,8 +634,7 @@ impl DeployAccount {
 
         DeployAccount::new_with_tx_hash(
             class_hash,
-            // TODO[0.13] Properly convert between V3 tx fields
-            VersionSpecificAccountTxFields::Deprecated(max_fee.0),
+            account_tx_fields,
             version,
             nonce,
             constructor_calldata,
@@ -835,6 +832,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1]);
+        if tx == "DeployAccount" && ver == 2.into() && supp == vec![1,3]);
     }
 }
