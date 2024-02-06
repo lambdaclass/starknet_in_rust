@@ -34,6 +34,7 @@ use cairo_native::{
 };
 use cairo_vm::Felt252;
 use k256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use num_traits::ToBytes;
 use sec1::point::Coordinates;
 use sha3::digest::generic_array::GenericArray;
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -568,14 +569,53 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn secp256k1_mul(
         &mut self,
-        _p: Secp256k1Point,
-        _m: U256,
+        p: Secp256k1Point,
+        m: U256,
         _gas: &mut u128,
     ) -> SyscallResult<Secp256k1Point> {
-        // TODO: Find a way to "import" a scalar that doesn't involve:
-        //   hi * (2 ^ 64) + lo
+        let p = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p.x.hi.to_be_bytes().into_iter().chain(p.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p.y.hi.to_be_bytes().into_iter().chain(p.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+        let m: k256::Scalar = k256::elliptic_curve::ScalarPrimitive::from_slice(&{
+            let mut buf = [0u8; 32];
+            buf[0..16].copy_from_slice(&m.hi.to_be_bytes());
+            buf[16..32].copy_from_slice(&m.lo.to_be_bytes());
+            buf
+        })
+        .unwrap()
+        .into();
 
-        todo!()
+        let p = p * m;
+
+        let p = p.to_encoded_point(false);
+        let (x, y) = match p.coordinates() {
+            Coordinates::Uncompressed { x, y } => (x, y),
+            _ => unreachable!(),
+        };
+
+        let x: [u8; 32] = x.as_slice().try_into().unwrap();
+        let y: [u8; 32] = y.as_slice().try_into().unwrap();
+        Ok(Secp256k1Point {
+            x: U256 {
+                hi: u128::from_be_bytes(x[0..8].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[8..16].try_into().unwrap()),
+            },
+            y: U256 {
+                hi: u128::from_be_bytes(y[0..8].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[8..16].try_into().unwrap()),
+            },
+        })
     }
 
     fn secp256k1_get_point_from_x(
@@ -695,14 +735,53 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn secp256r1_mul(
         &mut self,
-        _p: Secp256r1Point,
-        _m: U256,
+        p: Secp256r1Point,
+        m: U256,
         _gas: &mut u128,
     ) -> SyscallResult<Secp256r1Point> {
-        // TODO: Find a way to "import" a scalar that doesn't involve:
-        //   hi * (2 ^ 64) + lo
+        let p = p256::ProjectivePoint::from_encoded_point(
+            &p256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p.x.hi.to_be_bytes().into_iter().chain(p.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p.y.hi.to_be_bytes().into_iter().chain(p.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+        let m: p256::Scalar = p256::elliptic_curve::ScalarPrimitive::from_slice(&{
+            let mut buf = [0u8; 32];
+            buf[0..16].copy_from_slice(&m.hi.to_be_bytes());
+            buf[16..32].copy_from_slice(&m.lo.to_be_bytes());
+            buf
+        })
+        .unwrap()
+        .into();
 
-        todo!()
+        let p = p * m;
+
+        let p = p.to_encoded_point(false);
+        let (x, y) = match p.coordinates() {
+            Coordinates::Uncompressed { x, y } => (x, y),
+            _ => unreachable!(),
+        };
+
+        let x: [u8; 32] = x.as_slice().try_into().unwrap();
+        let y: [u8; 32] = y.as_slice().try_into().unwrap();
+        Ok(Secp256r1Point {
+            x: U256 {
+                hi: u128::from_be_bytes(x[0..8].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[8..16].try_into().unwrap()),
+            },
+            y: U256 {
+                hi: u128::from_be_bytes(y[0..8].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[8..16].try_into().unwrap()),
+            },
+        })
     }
 
     fn secp256r1_get_point_from_x(
