@@ -123,7 +123,7 @@ $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 
-CAIRO_2_VERSION=2.5.3
+CAIRO_2_VERSION=2.2.0
 
 cairo-repo-2-dir = cairo2
 cairo-repo-2-dir-macos = cairo2-macos
@@ -202,10 +202,10 @@ test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra
 	$(MAKE) test-cairo-2
 
 test-cairo-1: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics,cairo-native
+	cargo nextest run --workspace --all-targets --no-fail-fast --features=cairo_1_tests,metrics,cairo-native
 
 test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --all-targets --features=metrics,cairo-native
+	cargo nextest run --workspace --all-targets --no-fail-fast --features=metrics,cairo-native
 
 test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --test cairo_native --features=cairo-native

@@ -18,7 +18,7 @@ mod ContractA {
         self.value.write(value_);
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl ContractA of super::IContractA<ContractState> {
         fn foo(ref self: ContractState, a: u128) -> u128 {
             let value = self.value.read();

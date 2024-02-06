@@ -22,7 +22,7 @@ mod SendMessages {
     struct Storage{
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl SendMessages of super::ISendMessages<ContractState> {
         fn send_sequential_messages(ref self: ContractState, to_address: felt252, message1: felt252, message2: felt252) {
             let address = contract_address_try_from_felt252(SEND_MESSAGES_CONTRACT_ADDRESS).unwrap();

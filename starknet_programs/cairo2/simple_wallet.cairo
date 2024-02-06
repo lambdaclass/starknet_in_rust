@@ -17,7 +17,7 @@ mod SimpleWallet {
         self.balance.write(initial_balance);
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
    impl SimpleWallet of super::ISimpleWallet<ContractState> {
         fn get_balance(ref self: ContractState) -> felt252 {
             self.balance.read()

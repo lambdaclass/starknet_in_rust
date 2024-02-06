@@ -10,7 +10,7 @@ mod Echo {
         self.balance.write(initial_balance);
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     fn echo(ref self: ContractState, value: felt252) -> felt252 {
         value
     }

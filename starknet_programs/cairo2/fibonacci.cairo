@@ -9,7 +9,7 @@ mod Fibonacci {
     struct Storage {
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl Fibonacci of super::IFibonacci<ContractState> {
         fn fib(self: @ContractState, a: felt252, b: felt252, n: felt252) -> felt252 {
             match n {

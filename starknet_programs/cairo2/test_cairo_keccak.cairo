@@ -13,7 +13,7 @@ mod Keccak {
     #[storage]
     struct Storage {}
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl Keccak of super::IKeccak<ContractState> {
         fn cairo_keccak_test(self: @ContractState) -> felt252 {
             let mut input = array![

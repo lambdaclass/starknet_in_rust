@@ -14,7 +14,7 @@ mod ReadStorage {
     struct Storage {
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl ReadStorage of super::IReadStorage<ContractState> {
         fn read_storage(self: @ContractState) -> felt252 {
             let address = storage_address_try_from_felt252(1).unwrap();

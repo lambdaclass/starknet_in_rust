@@ -45,7 +45,7 @@ mod Dispatcher {
     struct Storage {
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl Dispatcher of super::IDispatcher<ContractState> {
         fn fib(
             self: @ContractState, class_hash: felt252, selector: felt252, a: felt252, b: felt252, n: felt252

@@ -9,7 +9,7 @@ mod EchoCaller {
         balance: felt252,
     }
 
-     #[abi(embed_v0)]
+     #[external(v0)]
     fn call_echo_contract(ref self: ContractState, function_selector: felt252, value: felt252) ->  felt252 {
         let mut calldata: Array<felt252> = ArrayTrait::new();
         calldata.append(value);

@@ -21,7 +21,7 @@ mod EventTest {
     }
 
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl EventTest of super::IEventTest<ContractState> {
         fn trigger_events(ref self: ContractState) -> () {
             self.emit(Event::EmitEvent(EmitEvent { n: 1 }));

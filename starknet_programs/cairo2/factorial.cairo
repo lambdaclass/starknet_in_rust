@@ -9,7 +9,7 @@ mod Factorial {
     struct Storage {
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl Factorial of super::IFactorial<ContractState> {
         fn factorial(self: @ContractState, n: felt252) -> felt252 {
             match n {

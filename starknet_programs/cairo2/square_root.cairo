@@ -21,7 +21,7 @@ mod SquareRoot {
     struct Storage{
     }
     
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl SquareRoot of super::ISquareRoot<ContractState> {
         fn square_root(self: @ContractState, n: felt252, math_class_hash: ClassHash) -> felt252 {
             MathLibraryDispatcher {class_hash: math_class_hash}.square_root(n)

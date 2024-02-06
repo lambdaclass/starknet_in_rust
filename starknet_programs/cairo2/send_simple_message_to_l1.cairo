@@ -12,12 +12,12 @@ mod SendMessageToL1 {
     struct Storage {
     }
     
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl SendMessageToL1 of super::ISendMessageToL1<ContractState> {
         fn send_simple_message_to_l1(self: @ContractState, to_address: felt252, message: felt252) {
             let mut payload = array::array_new::<felt252>();
             payload.append(message);
-            let _x = send_message_to_l1_syscall(to_address, payload.span());
+            send_message_to_l1_syscall(to_address, payload.span());
         }
     }
 }

@@ -14,7 +14,7 @@ mod Math {
     struct Storage {
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl Math of super::IMath<ContractState> {
         fn square_root(self: @ContractState, n: felt252) -> felt252 {
             assert( 0 == 1 , 'Unimplemented');

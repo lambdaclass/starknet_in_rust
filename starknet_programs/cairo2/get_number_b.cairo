@@ -15,14 +15,14 @@ mod GetNumber {
     struct Storage {
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl GetNumber of super::IGetNumber<ContractState> {
         fn get_number(self: @ContractState) -> felt252 {
             17
         }
 
         fn upgrade(self: @ContractState, new_class_hash: ClassHash)  {
-            let _x = replace_class_syscall(new_class_hash);
+            replace_class_syscall(new_class_hash);
         }
     }
 }

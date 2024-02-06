@@ -10,12 +10,12 @@ mod Callee {
         self.balance.write(initial_balance);
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     fn return_42(ref self: ContractState) -> felt252 {
         42
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     fn return_44(ref self: ContractState) -> felt252 {
         44
     }

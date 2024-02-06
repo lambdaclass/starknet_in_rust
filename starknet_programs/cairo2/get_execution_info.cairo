@@ -17,7 +17,7 @@ mod GetExecutionInfo {
     struct Storage {
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl GetExecutionInfo of super::IGetExecutionInfo<ContractState> {
         fn get_info(self: @ContractState) -> (ContractAddress, ContractAddress, ContractAddress, ContractAddress) {
             let info = get_execution_info().unbox();

@@ -18,7 +18,7 @@ mod EventTest {
         n: u128, 
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     fn trigger_event(ref self: ContractState) -> felt252 {
         let mut keys = ArrayTrait::new();
         keys.append('n');

@@ -21,7 +21,7 @@ mod SquareRoot {
     struct Storage{
     }
     
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl SquareRoot of super::ISquareRoot<ContractState> {
         fn square_root(self: @ContractState, n: felt252, math_class_hash: ClassHash, n_iterations: u32) -> felt252 {
             square_root_recursive_inner(n, math_class_hash, n_iterations)

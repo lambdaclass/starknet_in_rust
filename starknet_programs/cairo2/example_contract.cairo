@@ -18,7 +18,7 @@ mod ExampleContract {
     fn constructor(ref self: ContractState) {
     }
 
-    #[abi(embed_v0)]
+    #[external(v0)]
     impl ExampleContract of super::IExampleContract<ContractState> {
         fn get_balance(ref self: ContractState) -> u128 {
             self.balance.read()
