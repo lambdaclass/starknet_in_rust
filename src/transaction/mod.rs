@@ -379,7 +379,25 @@ impl From<starknet_api::data_availability::DataAvailabilityMode> for DataAvailab
     }
 }
 
+impl From<DataAvailabilityMode> for Felt252 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => Felt252::ZERO,
+            DataAvailabilityMode::L2 => Felt252::ONE,
+        }
+    }
+}
+
 impl From<DataAvailabilityMode> for u64 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => 0,
+            DataAvailabilityMode::L2 => 1,
+        }
+    }
+}
+
+impl From<DataAvailabilityMode> for u32 {
     fn from(val: DataAvailabilityMode) -> Self {
         match val {
             DataAvailabilityMode::L1 => 0,
@@ -439,6 +457,13 @@ impl VersionSpecificAccountTxFields {
                 current.l1_resource_bounds.max_amount as u128
                     * current.l1_resource_bounds.max_price_per_unit
             }
+        }
+    }
+
+    pub(crate) fn max_fee_for_execution_info(&self) -> u128 {
+        match self {
+            Self::Deprecated(max_fee) => *max_fee,
+            Self::Current(_) => 0,
         }
     }
 
