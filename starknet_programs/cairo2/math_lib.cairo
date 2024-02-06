@@ -1,4 +1,4 @@
-#[starnet::interface]
+#[starknet::interface]
 trait IMath<TContractState> {
     fn square_root(ref self: TContractState, n: felt252) -> felt252;
 }
