@@ -15,7 +15,8 @@ use starknet_in_rust::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
     state::{
-        cached_state::CachedState, contract_class_cache::PermanentContractClassCache, in_memory_state_reader::InMemoryStateReader, state_api::State, ExecutionResourcesManager
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State, ExecutionResourcesManager,
     },
     transaction::{error::TransactionError, Address, Deploy},
     utils::{calculate_sn_keccak, ClassHash},

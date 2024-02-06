@@ -3,11 +3,17 @@ use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 
 use starknet_crypto::FieldElement;
 use starknet_in_rust::{
-    definitions::block_context::BlockContext, execution::{CallInfo, CallType}, services::api::contract_classes::deprecated_contract_class::ContractClass, state::{
+    definitions::block_context::BlockContext,
+    execution::{CallInfo, CallType},
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    state::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
         ExecutionResourcesManager,
-    }, transaction::Address, utils::calculate_sn_keccak, EntryPointType
+    },
+    transaction::Address,
+    utils::calculate_sn_keccak,
+    EntryPointType,
 };
 use std::{
     collections::{HashMap, HashSet},

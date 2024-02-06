@@ -80,6 +80,12 @@ impl From<&Address> for Felt252 {
     }
 }
 
+impl Address {
+    pub fn from_hex_string(hex_string: &str) -> Option<Self> {
+        Some(Self(Felt252::from_hex(hex_string).ok()?))
+    }
+}
+
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
 /// it can be one of:
