@@ -2,9 +2,10 @@ use cairo_vm::Felt252;
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
 use num_traits::ToPrimitive;
 
+use crate::transaction::Address;
 use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
-    utils::{get_big_int, get_integer, get_relocatable, Address},
+    utils::{get_big_int, get_integer, get_relocatable},
 };
 // TODO: maybe we could make FromPtr trait more general, making
 //   it "move" the pointer received like they do in cairo-lang

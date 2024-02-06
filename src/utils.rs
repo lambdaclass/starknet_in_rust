@@ -1,6 +1,7 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::state_api::{State, StateChangesCount};
+use crate::transaction::Address;
 use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
@@ -105,25 +106,6 @@ pub fn set_native_context(
 pub fn get_native_context() -> &'static cairo_native::context::NativeContext {
     use cairo_native::context::NativeContext;
     NATIVE_CONTEXT.get_or_init(NativeContext::new)
-}
-
-//* -------------------
-//*      Address
-//* -------------------
-
-#[derive(Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
-pub struct Address(pub Felt252);
-
-impl fmt::Display for Address {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl fmt::Debug for Address {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
-    }
 }
 
 //* -------------------
@@ -523,7 +505,7 @@ pub mod test_utils {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader, state_cache::StorageEntry, BlockInfo,
         },
-        utils::Address,
+        transaction::Address,
     };
     use cairo_vm::Felt252;
     use std::{collections::HashMap, sync::Arc};

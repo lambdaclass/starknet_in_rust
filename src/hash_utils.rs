@@ -1,5 +1,5 @@
 use crate::core::errors::hash_errors::HashError;
-use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, transaction::Address};
 use cairo_vm::Felt252;
 use starknet_crypto::{pedersen_hash, FieldElement};
 use std::vec;
@@ -32,7 +32,7 @@ use std::vec;
 /// # Examples
 ///
 /// ```
-/// use starknet_in_rust::{hash_utils::calculate_contract_address, utils::Address, Felt252};
+/// use starknet_in_rust::{hash_utils::calculate_contract_address, transaction::Address, Felt252};
 ///
 /// let salt = Felt252::from(123_u16);
 /// let class_hash = Felt252::from(456_u16);

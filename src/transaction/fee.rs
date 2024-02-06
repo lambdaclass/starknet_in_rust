@@ -23,7 +23,7 @@ use crate::{
         state_api::{State, StateChangesCount, StateReader},
         ExecutionResourcesManager,
     },
-    utils::Address,
+    transaction::Address,
 };
 use cairo_vm::Felt252;
 use num_traits::{ToPrimitive, Zero};

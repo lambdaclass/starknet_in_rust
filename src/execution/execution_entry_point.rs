@@ -21,10 +21,10 @@ use crate::{
         deprecated_syscall_handler::DeprecatedSyscallHintProcessor,
         syscall_handler::SyscallHintProcessor,
     },
-    transaction::error::TransactionError,
+    transaction::{error::TransactionError, Address},
     utils::{
         get_deployed_address_class_hash_at_address, parse_builtin_names,
-        validate_contract_deployed, Address, ClassHash,
+        validate_contract_deployed, ClassHash,
     },
 };
 use cairo_lang_sierra::program::Program as SierraProgram;

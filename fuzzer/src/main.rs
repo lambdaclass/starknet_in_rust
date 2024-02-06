@@ -21,7 +21,8 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader,
         ExecutionResourcesManager,
     },
-    utils::{calculate_sn_keccak, Address},
+    transaction::Address,
+    utils::calculate_sn_keccak,
 };
 use std::{
     collections::HashSet, fs, path::PathBuf, process::Command, sync::Arc, thread, time::Duration,

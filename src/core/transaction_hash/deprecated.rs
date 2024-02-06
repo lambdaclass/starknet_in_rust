@@ -3,7 +3,8 @@ use crate::transaction::error::TransactionError;
 use crate::{
     core::contract_address::compute_deprecated_class_hash,
     definitions::constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, hash_utils::compute_hash_on_elements,
-    services::api::contract_classes::deprecated_contract_class::ContractClass, utils::Address,
+    services::api::contract_classes::deprecated_contract_class::ContractClass,
+    transaction::Address,
 };
 use cairo_vm::Felt252;
 use num_traits::Zero;

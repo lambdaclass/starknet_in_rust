@@ -1,7 +1,7 @@
 use super::{
     check_account_tx_fields_version,
     fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks},
-    get_tx_version, CurrentAccountTxFields, ResourceBounds, Transaction,
+    get_tx_version, Address, CurrentAccountTxFields, ResourceBounds, Transaction,
     VersionSpecificAccountTxFields,
 };
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
         ExecutionResourcesManager, StateDiff,
     },
     transaction::error::TransactionError,
-    utils::{calculate_tx_resources, Address},
+    utils::calculate_tx_resources,
 };
 use cairo_vm::Felt252;
 use getset::Getters;

@@ -1,4 +1,4 @@
-use super::{Transaction, VersionSpecificAccountTxFields};
+use super::{Address, Transaction, VersionSpecificAccountTxFields};
 use crate::{
     core::{
         contract_address::compute_deprecated_class_hash, errors::hash_errors::HashError,
@@ -29,7 +29,7 @@ use crate::{
     },
     syscalls::syscall_handler_errors::SyscallHandlerError,
     transaction::error::TransactionError,
-    utils::{calculate_tx_resources, felt_to_hash, Address, ClassHash},
+    utils::{calculate_tx_resources, felt_to_hash, ClassHash},
 };
 use cairo_vm::Felt252;
 

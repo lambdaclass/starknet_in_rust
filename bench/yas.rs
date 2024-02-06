@@ -23,8 +23,8 @@ use starknet_in_rust::{
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
+    transaction::Address,
     transaction::{DeclareV2, InvokeFunction},
-    utils::Address,
 };
 use std::time::{Duration, Instant};
 use tracing::{debug, info};

@@ -23,7 +23,7 @@ use starknet_in_rust::{
     state::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
     },
-    utils::Address,
+    transaction::Address,
     Felt252,
 };
 #[cfg(feature = "benchmark")]

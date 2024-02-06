@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     core::contract_address::compute_casm_class_hash,
     definitions::block_context::BlockContext,
@@ -10,7 +12,6 @@ use crate::{
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
-    utils::Address,
 };
 pub use declare::Declare;
 pub use declare_v2::DeclareV2;
@@ -30,6 +31,7 @@ pub mod invoke_function;
 pub mod l1_handler;
 
 use cairo_vm::Felt252;
+use serde::{Deserialize, Serialize};
 use starknet_api::transaction::Resource;
 
 #[cfg(feature = "cairo-native")]
@@ -38,6 +40,21 @@ use {
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };
+
+#[derive(Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
+pub struct Address(pub Felt252);
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
 
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.

@@ -36,8 +36,8 @@ use crate::{
         state_api::{State, StateReader},
         BlockInfo, ExecutionResourcesManager,
     },
-    transaction::error::TransactionError,
-    utils::{calculate_sn_keccak, felt_to_hash, get_big_int, get_felt_range, Address, ClassHash},
+    transaction::{error::TransactionError, Address},
+    utils::{calculate_sn_keccak, felt_to_hash, get_big_int, get_felt_range, ClassHash},
 };
 use cairo_vm::Felt252;
 use cairo_vm::{
