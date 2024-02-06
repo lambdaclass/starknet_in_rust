@@ -12,7 +12,10 @@ use cairo_vm::{
 };
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::{
-    definitions::block_context::{BlockContext, StarknetChainId},
+    definitions::{
+        block_context::{BlockContext, StarknetChainId},
+        constants::TRANSACTION_VERSION,
+    },
     execution::{
         execution_entry_point::ExecutionEntryPoint, CallInfo, CallType, L2toL1MessageInfo,
         OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext,
@@ -27,8 +30,7 @@ use starknet_in_rust::{
         state_api::State,
         ExecutionResourcesManager,
     },
-    transaction::Address,
-    transaction::VersionSpecificAccountTxFields,
+    transaction::{Address, VersionSpecificAccountTxFields},
     utils::{calculate_sn_keccak, felt_to_hash, ClassHash},
     EntryPointType,
 };
