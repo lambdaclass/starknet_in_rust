@@ -451,21 +451,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             }
             keccak::f1600(&mut state)
         }
+        
         // state[0] and state[1] conform the hash_low (u128)
         // state[2] and state[3] conform the hash_high (u128)
-        let lo_bytes: [u8; 16] = [state[0].to_le_bytes(), state[1].to_le_bytes()]
-            .concat()
-            .try_into()
-            .unwrap();
-
-        let hi_bytes: [u8; 16] = [state[2].to_le_bytes(), state[3].to_le_bytes()]
-            .concat()
-            .try_into()
-            .unwrap();
-
         SyscallResult::Ok(U256 {
-            hi: u128::from_le_bytes(hi_bytes),
-            lo: u128::from_le_bytes(lo_bytes),
+            lo: state[2] as u128 | ((state[3] as u128) << 64),
+            hi: state[0] as u128 | ((state[1] as u128) << 64),
         })
     }
 
