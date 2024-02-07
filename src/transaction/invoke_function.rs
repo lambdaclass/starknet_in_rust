@@ -648,9 +648,16 @@ pub fn verify_no_calls_to_other_contracts(
 mod tests {
     use super::*;
     use crate::{
-        definitions::{block_context::GasPrices, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR}, services::api::contract_classes::{
+        definitions::{block_context::GasPrices, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
+        services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-        }, state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache, in_memory_state_reader::InMemoryStateReader}, transaction::ClassHash, utils::calculate_sn_keccak
+        },
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
+        transaction::ClassHash,
+        utils::calculate_sn_keccak,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 

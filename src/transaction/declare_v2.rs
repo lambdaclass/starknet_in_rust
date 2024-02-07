@@ -604,10 +604,13 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::transaction::error::TransactionError;
-    use crate::{state::{
+    use crate::{
+        state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
-        }, transaction::{Address, ClassHash}};
+        },
+        transaction::{Address, ClassHash},
+    };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::Felt252;
 

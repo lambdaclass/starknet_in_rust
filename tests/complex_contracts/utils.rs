@@ -18,7 +18,7 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::State, ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, Address, Deploy, ClassHash},
+    transaction::{error::TransactionError, Address, ClassHash, Deploy},
     utils::calculate_sn_keccak,
     ContractEntryPoint, EntryPointType,
 };

@@ -18,7 +18,7 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
     transaction::Address,
-    transaction::{DeclareV2, InvokeFunction, ClassHash},
+    transaction::{ClassHash, DeclareV2, InvokeFunction},
 };
 use tracing::info;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};

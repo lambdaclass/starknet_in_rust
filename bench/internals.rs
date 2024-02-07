@@ -18,8 +18,8 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
-    transaction::{declare::Declare, Address, Deploy, DeployAccount, InvokeFunction},
     transaction::ClassHash,
+    transaction::{declare::Declare, Address, Deploy, DeployAccount, InvokeFunction},
 };
 use std::{hint::black_box, sync::Arc};
 

@@ -33,9 +33,9 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 #[cfg(feature = "cairo-native")]
 use {
     cairo_native::cache::{AotProgramCache, JitProgramCache, ProgramCache},
+    starknet_in_rust::transaction::ClassHash,
     starknet_in_rust::utils::get_native_context,
     std::{cell::RefCell, rc::Rc},
-    starknet_in_rust::transaction::ClassHash,
 };
 
 const WARMUP_TIME: Duration = Duration::from_secs(3);
