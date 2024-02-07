@@ -17,16 +17,20 @@ use cairo_native::{
 };
 use cairo_vm::Felt252 as Felt;
 use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver, IpcSender};
-use starknet_in_rust::sandboxing::{Message, SyscallAnswer, SyscallRequest, WrappedMessage};
+use starknet_in_rust::{
+    sandboxing::{Message, SyscallAnswer, SyscallRequest, WrappedMessage},
+    utils::ClassHash,
+};
 use tracing::instrument;
 
 #[derive(Debug)]
-struct SyscallHandler {
+struct SyscallHandler<'a> {
     sender: IpcSender<WrappedMessage>,
     receiver: Rc<RefCell<IpcReceiver<WrappedMessage>>>,
+    cache: Rc<RefCell<JitProgramCache<'a, ClassHash>>>,
 }
 
-impl StarkNetSyscallHandler for SyscallHandler {
+impl<'a> StarkNetSyscallHandler for SyscallHandler<'a> {
     #[instrument(skip(self))]
     fn get_block_hash(&mut self, block_number: u64, gas: &mut u128) -> SyscallResult<Felt> {
         self.sender
@@ -158,28 +162,73 @@ impl StarkNetSyscallHandler for SyscallHandler {
                 .unwrap(),
             )
             .expect("failed to send");
-        let result = self
-            .receiver
-            .borrow()
-            .recv()
-            .on_err(|e| tracing::error!("error receiving: {:?}", e))
-            .unwrap()
-            .to_msg()
-            .unwrap();
 
-        if let Message::SyscallAnswer(SyscallAnswer::Deploy {
-            result,
-            remaining_gas,
-        }) = result
-        {
-            *gas = remaining_gas;
-            result
-        } else {
-            tracing::error!(
-                "wrong message received (expected SyscallAnswer::Deploy): {:?}",
-                result
-            );
-            panic!();
+        loop {
+            let result = self
+                .receiver
+                .borrow()
+                .recv()
+                .on_err(|e| tracing::error!("error receiving: {:?}", e))
+                .unwrap()
+                .to_msg()
+                .unwrap();
+
+            match result {
+                Message::SyscallAnswer(SyscallAnswer::Deploy {
+                    result,
+                    remaining_gas,
+                }) => {
+                    *gas = remaining_gas;
+                    return result;
+                }
+                Message::ExecuteProgram {
+                    id,
+                    class_hash: exec_class_hash,
+                    program,
+                    inputs,
+                    function_idx,
+                    gas: exec_gas,
+                } => {
+                    tracing::info!("Message: ExecuteProgram (inside deploy) with id {}", id);
+                    self.sender.send(Message::Ack(id).wrap().unwrap()).unwrap();
+                    tracing::info!("sent ack: {}", id);
+
+                    let program = program.into_v1().unwrap().program;
+                    let native_executor = self.cache.borrow_mut().compile_and_insert(
+                        exec_class_hash,
+                        &program,
+                        OptLevel::Default,
+                    );
+
+                    let entry_point_fn = find_entry_point_by_idx(&program, function_idx).unwrap();
+
+                    let fn_id = &entry_point_fn.id;
+
+                    let result = native_executor
+                        .invoke_contract_dynamic(
+                            fn_id,
+                            &inputs,
+                            exec_gas,
+                            Some(&SyscallHandlerMeta::new(self)),
+                        )
+                        .unwrap();
+
+                    tracing::info!("invoked with result: {:?}", result);
+
+                    self.sender
+                        .send(Message::ExecutionResult { id, result }.wrap().unwrap())
+                        .unwrap();
+
+                    tracing::info!("sent result msg");
+                }
+                msg => {
+                    tracing::error!(
+                        "wrong message received (expected Message::ExecuteProgram or SyscallAnswer::Deploy): {:?}",
+                        msg
+                    );
+                    panic!()
+                }
+            }
         }
     }
 
@@ -282,28 +331,76 @@ impl StarkNetSyscallHandler for SyscallHandler {
                 .unwrap(),
             )
             .expect("failed to send");
-        let result = self
-            .receiver
-            .borrow()
-            .recv()
-            .on_err(|e| tracing::error!("error receiving: {:?}", e))
-            .unwrap()
-            .to_msg()
-            .unwrap();
 
-        if let Message::SyscallAnswer(SyscallAnswer::CallContract {
-            result,
-            remaining_gas,
-        }) = result
-        {
-            *gas = remaining_gas;
-            result
-        } else {
-            tracing::error!(
-                "wrong message received (expected SyscallAnswer::CallContract): {:?}",
-                result
-            );
-            panic!();
+        loop {
+            let result = self
+                .receiver
+                .borrow()
+                .recv()
+                .on_err(|e| tracing::error!("error receiving: {:?}", e))
+                .unwrap()
+                .to_msg()
+                .unwrap();
+
+            match result {
+                Message::SyscallAnswer(SyscallAnswer::CallContract {
+                    result,
+                    remaining_gas,
+                }) => {
+                    *gas = remaining_gas;
+                    return result;
+                }
+                Message::ExecuteProgram {
+                    id,
+                    class_hash: exec_class_hash,
+                    program,
+                    inputs,
+                    function_idx,
+                    gas: exec_gas,
+                } => {
+                    tracing::info!(
+                        "Message: ExecuteProgram (inside call_contract) with id {}",
+                        id
+                    );
+                    self.sender.send(Message::Ack(id).wrap().unwrap()).unwrap();
+                    tracing::info!("sent ack: {}", id);
+
+                    let program = program.into_v1().unwrap().program;
+                    let native_executor = self.cache.borrow_mut().compile_and_insert(
+                        exec_class_hash,
+                        &program,
+                        OptLevel::Default,
+                    );
+
+                    let entry_point_fn = find_entry_point_by_idx(&program, function_idx).unwrap();
+
+                    let fn_id = &entry_point_fn.id;
+
+                    let result = native_executor
+                        .invoke_contract_dynamic(
+                            fn_id,
+                            &inputs,
+                            exec_gas,
+                            Some(&SyscallHandlerMeta::new(self)),
+                        )
+                        .unwrap();
+
+                    tracing::info!("invoked with result: {:?}", result);
+
+                    self.sender
+                        .send(Message::ExecutionResult { id, result }.wrap().unwrap())
+                        .unwrap();
+
+                    tracing::info!("sent result msg");
+                }
+                msg => {
+                    tracing::error!(
+                            "wrong message received (expected Message::ExecuteProgram or SyscallAnswer::CallContract): {:?}",
+                            msg
+                        );
+                    panic!()
+                }
+            }
         }
     }
 
@@ -698,13 +795,15 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let native_context = NativeContext::new();
     tracing::info!("initialized native context");
 
+    let cache = Rc::new(RefCell::new(JitProgramCache::new(&native_context)));
+    tracing::info!("initialized program cache");
+
     let mut syscall_handler = SyscallHandler {
         sender: sender.clone(),
         receiver: receiver.clone(),
+        cache: cache.clone(),
     };
-
-    let mut cache = JitProgramCache::new(&native_context);
-    tracing::info!("initialized program cache");
+    tracing::info!("initialized syscall handler");
 
     loop {
         tracing::info!("waiting for message");
@@ -726,7 +825,9 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let program = program.into_v1()?.program;
                 let native_executor =
-                    cache.compile_and_insert(class_hash, &program, OptLevel::Default);
+                    cache
+                        .borrow_mut()
+                        .compile_and_insert(class_hash, &program, OptLevel::Default);
 
                 let entry_point_fn = find_entry_point_by_idx(&program, function_idx).unwrap();
 
