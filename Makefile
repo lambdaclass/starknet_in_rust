@@ -123,7 +123,7 @@ $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 
-CAIRO_2_VERSION=2.2.0
+CAIRO_2_VERSION=2.4.2
 
 cairo-repo-2-dir = cairo2
 cairo-repo-2-dir-macos = cairo2-macos
@@ -217,7 +217,7 @@ coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-ca
 	$(MAKE) coverage-report
 
 coverage-report: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo +nightly llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
+	cargo llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
 
 heaptrack:
 	./scripts/heaptrack.sh
