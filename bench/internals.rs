@@ -18,7 +18,9 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
-    transaction::{declare_deprecated::DeclareDeprecated, Address, Deploy, DeployAccount, InvokeFunction},
+    transaction::{
+        declare_deprecated::DeclareDeprecated, Address, Deploy, DeployAccount, InvokeFunction,
+    },
     utils::ClassHash,
 };
 use std::{hint::black_box, sync::Arc};
