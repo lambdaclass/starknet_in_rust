@@ -1,4 +1,3 @@
-use crate::VersionSpecificAccountTxFields;
 use crate::{
     core::errors::state_errors::StateError,
     definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
@@ -22,14 +21,13 @@ use crate::{
     },
     transaction::error::TransactionError,
     utils::{felt_to_hash, Address, ClassHash},
-    ContractClassCache, EntryPointType,
+    ContractClassCache, EntryPointType, VersionSpecificAccountTxFields,
 };
-use cairo_native::starknet::{ResourceBounds, Secp256k1Point, Secp256r1Point, TxV2Info};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{
-        BlockInfo, ExecutionInfo, ExecutionInfoV2, StarkNetSyscallHandler, SyscallResult, TxInfo,
-        U256,
+        BlockInfo, ExecutionInfo, ExecutionInfoV2, ResourceBounds, Secp256k1Point, Secp256r1Point,
+        StarkNetSyscallHandler, SyscallResult, TxInfo, TxV2Info, U256,
     },
 };
 use cairo_vm::Felt252;
@@ -37,7 +35,7 @@ use k256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
 use sec1::point::Coordinates;
 use sha3::digest::generic_array::GenericArray;
 use starknet::core::utils::cairo_short_string_to_felt;
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, iter::once, rc::Rc};
 
 #[derive(Debug)]
 pub struct NativeSyscallHandler<'a, 'cache, S, C>
@@ -716,13 +714,42 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn secp256k1_get_point_from_x(
         &mut self,
-        _x: U256,
-        _y_parity: bool,
+        x: U256,
+        y_parity: bool,
         _gas: &mut u128,
     ) -> SyscallResult<Option<Secp256k1Point>> {
-        // TODO: Find a way to create a point from the x coordinate and y parity only.
+        let point = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_bytes(
+                k256::CompressedPoint::from_exact_iter(
+                    once(0x02 | y_parity as u8)
+                        .chain(x.hi.to_be_bytes())
+                        .chain(x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+            )
+            .unwrap(),
+        );
 
-        todo!()
+        if bool::from(point.is_some()) {
+            let p = point.unwrap();
+
+            let p = p.to_encoded_point(false);
+            let y = match p.coordinates() {
+                Coordinates::Uncompressed { y, .. } => y,
+                _ => unreachable!(),
+            };
+
+            let y: [u8; 32] = y.as_slice().try_into().unwrap();
+            Ok(Some(Secp256k1Point {
+                x,
+                y: U256 {
+                    hi: u128::from_be_bytes(y[0..8].try_into().unwrap()),
+                    lo: u128::from_be_bytes(y[8..16].try_into().unwrap()),
+                },
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     fn secp256k1_get_xy(
@@ -906,13 +933,42 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
 
     fn secp256r1_get_point_from_x(
         &mut self,
-        _x: U256,
-        _y_parity: bool,
+        x: U256,
+        y_parity: bool,
         _gas: &mut u128,
     ) -> SyscallResult<Option<Secp256r1Point>> {
-        // TODO: Find a way to create a point from the x coordinate and y parity only.
+        let point = p256::ProjectivePoint::from_encoded_point(
+            &p256::EncodedPoint::from_bytes(
+                p256::CompressedPoint::from_exact_iter(
+                    once(0x02 | y_parity as u8)
+                        .chain(x.hi.to_be_bytes())
+                        .chain(x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+            )
+            .unwrap(),
+        );
 
-        todo!()
+        if bool::from(point.is_some()) {
+            let p = point.unwrap();
+
+            let p = p.to_encoded_point(false);
+            let y = match p.coordinates() {
+                Coordinates::Uncompressed { y, .. } => y,
+                _ => unreachable!(),
+            };
+
+            let y: [u8; 32] = y.as_slice().try_into().unwrap();
+            Ok(Some(Secp256r1Point {
+                x,
+                y: U256 {
+                    hi: u128::from_be_bytes(y[0..8].try_into().unwrap()),
+                    lo: u128::from_be_bytes(y[8..16].try_into().unwrap()),
+                },
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     fn secp256r1_get_xy(
