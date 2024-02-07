@@ -10,8 +10,7 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader,
     },
-    transaction::{Address, InvokeFunction, Transaction},
-    utils::ClassHash,
+    transaction::{Address, ClassHash, InvokeFunction, Transaction},
 };
 use std::{path::PathBuf, sync::Arc};
 

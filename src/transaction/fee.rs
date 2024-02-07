@@ -31,7 +31,7 @@ use std::collections::HashMap;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::utils::ClassHash,
+    crate::transaction::ClassHash,
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };

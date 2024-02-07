@@ -5,7 +5,7 @@ extern crate honggfuzz;
 
 use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use starknet_in_rust::execution::execution_entry_point::ExecutionResult;
-use starknet_in_rust::utils::ClassHash;
+use starknet_in_rust::transaction::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},

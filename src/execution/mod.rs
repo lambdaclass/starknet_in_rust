@@ -8,8 +8,8 @@ use crate::{
     definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
     state::state_cache::StorageEntry,
     syscalls::syscall_handler_errors::SyscallHandlerError,
-    transaction::{error::TransactionError, Address},
-    utils::{get_big_int, get_integer, get_relocatable, ClassHash},
+    transaction::{error::TransactionError, Address, ClassHash},
+    utils::{get_big_int, get_integer, get_relocatable},
 };
 use cairo_vm::Felt252;
 use cairo_vm::{

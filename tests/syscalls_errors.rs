@@ -19,9 +19,10 @@ use starknet_in_rust::{
         ExecutionResourcesManager,
     },
     transaction::Address,
-    utils::{calculate_sn_keccak, felt_to_hash, ClassHash},
+    utils::{calculate_sn_keccak, felt_to_hash},
     EntryPointType,
 };
+use starknet_in_rust::transaction::ClassHash;
 use std::{path::Path, sync::Arc};
 
 #[allow(clippy::too_many_arguments)]

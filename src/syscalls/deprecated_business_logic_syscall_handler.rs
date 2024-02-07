@@ -30,7 +30,7 @@ use crate::{
         state_api::{State, StateReader},
         BlockInfo, ExecutionResourcesManager,
     },
-    transaction::{error::TransactionError, Address},
+    transaction::{error::TransactionError, Address, ClassHash},
     utils::*,
 };
 use crate::{

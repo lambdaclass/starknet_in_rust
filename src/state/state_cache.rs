@@ -1,7 +1,6 @@
 use crate::{
     core::errors::state_errors::StateError,
-    transaction::Address,
-    utils::{ClassHash, CompiledClassHash},
+    transaction::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};

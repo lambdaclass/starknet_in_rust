@@ -19,7 +19,7 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
     transaction::{declare::Declare, Address, Deploy, DeployAccount, InvokeFunction},
-    utils::ClassHash,
+    transaction::ClassHash,
 };
 use std::{hint::black_box, sync::Arc};
 
