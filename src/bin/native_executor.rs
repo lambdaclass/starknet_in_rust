@@ -1,3 +1,9 @@
+//! This binary is meant to be spawned by the `IsolatedExecutor` API.
+//!
+//! When it starts, it prints to stdout it's ipc handle, so a client can connect to it.
+//!
+//! After receiving a initial connection it loops waiting for messages.
+
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use cairo_lang_utils::ResultHelper;
