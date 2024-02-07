@@ -20,8 +20,8 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
-    transaction::{Declare, DeployAccount, InvokeFunction},
-    utils::{calculate_sn_keccak, felt_to_hash, Address},
+    transaction::{Address, Declare, DeployAccount, InvokeFunction},
+    utils::{calculate_sn_keccak, felt_to_hash},
     CasmContractClass, SierraContractClass,
 };
 use std::{fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc};

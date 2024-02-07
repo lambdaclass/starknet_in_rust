@@ -1,4 +1,4 @@
-use super::Transaction;
+use super::{Address, Transaction};
 use crate::{
     core::transaction_hash::{
         deprecated::deprecated_calculate_transaction_hash_common, TransactionHashPrefix,
@@ -20,7 +20,7 @@ use crate::{
         ExecutionResourcesManager,
     },
     transaction::{error::TransactionError, fee::calculate_tx_fee},
-    utils::{calculate_tx_resources, Address},
+    utils::calculate_tx_resources,
 };
 use cairo_vm::Felt252;
 use getset::Getters;
@@ -263,8 +263,8 @@ mod test {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader, state_api::State,
         },
-        transaction::l1_handler::L1Handler,
-        utils::{Address, ClassHash},
+        transaction::{l1_handler::L1Handler, Address},
+        utils::ClassHash,
     };
     use std::{
         collections::{HashMap, HashSet},

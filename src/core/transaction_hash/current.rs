@@ -1,9 +1,6 @@
 use std::str::FromStr;
 
-use crate::{
-    transaction::{DataAvailabilityMode, ResourceBounds},
-    utils::Address,
-};
+use crate::transaction::{Address, DataAvailabilityMode, ResourceBounds};
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use num_bigint::BigUint;

@@ -58,9 +58,10 @@ use starknet_in_rust::{
         BlockInfo,
     },
     transaction::{
-        error::TransactionError, invoke_function::InvokeFunction, DeclareDeprecated, DeployAccount,
+        error::TransactionError, invoke_function::InvokeFunction, Address, DeclareDeprecated,
+        DeployAccount,
     },
-    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
+    utils::{calculate_sn_keccak, felt_to_hash, ClassHash},
 };
 use std::{
     collections::{HashMap, HashSet},

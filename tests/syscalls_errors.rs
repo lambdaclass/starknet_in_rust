@@ -18,7 +18,8 @@ use starknet_in_rust::{
         state_api::State,
         ExecutionResourcesManager,
     },
-    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
+    transaction::Address,
+    utils::{calculate_sn_keccak, felt_to_hash, ClassHash},
     EntryPointType,
 };
 use std::{path::Path, sync::Arc};

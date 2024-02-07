@@ -15,7 +15,7 @@ use starknet_in_rust::{
         contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager,
     },
-    utils::Address,
+    transaction::Address,
     EntryPointType,
 };
 use std::{path::PathBuf, sync::Arc};

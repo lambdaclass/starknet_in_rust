@@ -4,8 +4,8 @@ use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 
 use crate::{
+    transaction::Address,
     transaction::{error::TransactionError, VersionSpecificAccountTxFields},
-    utils::Address,
 };
 
 use super::errors::hash_errors::HashError;

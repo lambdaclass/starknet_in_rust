@@ -30,8 +30,8 @@ use starknet_in_rust::{
         state_api::State,
         ExecutionResourcesManager,
     },
-    transaction::VersionSpecificAccountTxFields,
-    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
+    transaction::{Address, VersionSpecificAccountTxFields},
+    utils::{calculate_sn_keccak, felt_to_hash, ClassHash},
     EntryPointType,
 };
 use std::{

@@ -17,8 +17,8 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
-    transaction::DeployAccount,
-    utils::{Address, ClassHash},
+    transaction::{Address, DeployAccount},
+    utils::ClassHash,
     CasmContractClass,
 };
 use std::{collections::HashSet, sync::Arc};

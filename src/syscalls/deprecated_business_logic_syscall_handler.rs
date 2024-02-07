@@ -24,14 +24,13 @@ use crate::{
     services::api::{
         contract_class_errors::ContractClassError, contract_classes::compiled_class::CompiledClass,
     },
-    state::ExecutionResourcesManager,
     state::{
         contract_class_cache::ContractClassCache,
         contract_storage_state::ContractStorageState,
         state_api::{State, StateReader},
-        BlockInfo,
+        BlockInfo, ExecutionResourcesManager,
     },
-    transaction::error::TransactionError,
+    transaction::{error::TransactionError, Address},
     utils::*,
 };
 use crate::{
@@ -1072,7 +1071,8 @@ mod tests {
             in_memory_state_reader::InMemoryStateReader,
         },
         syscalls::syscall_handler_errors::SyscallHandlerError,
-        utils::{test_utils::*, Address},
+        transaction::Address,
+        utils::test_utils::*,
     };
     use cairo_vm::hint_processor::hint_processor_definition::HintProcessorLogic;
     use cairo_vm::Felt252;
