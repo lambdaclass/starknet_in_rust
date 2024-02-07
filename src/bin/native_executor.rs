@@ -194,11 +194,15 @@ impl<'a> StarkNetSyscallHandler for SyscallHandler<'a> {
                     tracing::info!("sent ack: {}", id);
 
                     let program = program.into_v1().unwrap().program;
-                    let native_executor = self.cache.borrow_mut().compile_and_insert(
-                        exec_class_hash,
-                        &program,
-                        OptLevel::Default,
-                    );
+                    let native_executor = {
+                        let mut cache = self.cache.borrow_mut();
+                        let cache = &mut *cache;
+                        if let Some(executor) = cache.get(&exec_class_hash) {
+                            executor
+                        } else {
+                            cache.compile_and_insert(exec_class_hash, &program, OptLevel::Default)
+                        }
+                    };
 
                     let entry_point_fn = find_entry_point_by_idx(&program, function_idx).unwrap();
 
@@ -366,11 +370,15 @@ impl<'a> StarkNetSyscallHandler for SyscallHandler<'a> {
                     tracing::info!("sent ack: {}", id);
 
                     let program = program.into_v1().unwrap().program;
-                    let native_executor = self.cache.borrow_mut().compile_and_insert(
-                        exec_class_hash,
-                        &program,
-                        OptLevel::Default,
-                    );
+                    let native_executor = {
+                        let mut cache = self.cache.borrow_mut();
+                        let cache = &mut *cache;
+                        if let Some(executor) = cache.get(&exec_class_hash) {
+                            executor
+                        } else {
+                            cache.compile_and_insert(exec_class_hash, &program, OptLevel::Default)
+                        }
+                    };
 
                     let entry_point_fn = find_entry_point_by_idx(&program, function_idx).unwrap();
 
@@ -824,10 +832,15 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                 tracing::info!("sent ack: {}", id);
 
                 let program = program.into_v1()?.program;
-                let native_executor =
-                    cache
-                        .borrow_mut()
-                        .compile_and_insert(class_hash, &program, OptLevel::Default);
+                let native_executor = {
+                    let mut cache = cache.borrow_mut();
+                    let cache = &mut *cache;
+                    if let Some(executor) = cache.get(&class_hash) {
+                        executor
+                    } else {
+                        cache.compile_and_insert(class_hash, &program, OptLevel::Default)
+                    }
+                };
 
                 let entry_point_fn = find_entry_point_by_idx(&program, function_idx).unwrap();
 
