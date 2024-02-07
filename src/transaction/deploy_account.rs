@@ -1,6 +1,6 @@
 use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks};
 use super::{
-    check_account_tx_fields_version, get_tx_version, Address, CurrentAccountTxFields,
+    check_account_tx_fields_version, get_tx_version, Address, ClassHash, CurrentAccountTxFields,
     ResourceBounds, VersionSpecificAccountTxFields,
 };
 use super::{invoke_function::verify_no_calls_to_other_contracts, Transaction};
@@ -35,7 +35,7 @@ use crate::{
         ExecutionResourcesManager,
     },
     transaction::error::TransactionError,
-    utils::{calculate_tx_resources, ClassHash},
+    utils::calculate_tx_resources,
 };
 use cairo_vm::Felt252;
 use getset::Getters;

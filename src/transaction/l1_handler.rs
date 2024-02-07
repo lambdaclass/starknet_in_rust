@@ -28,7 +28,7 @@ use num_traits::Zero;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::utils::ClassHash,
+    crate::transaction::ClassHash,
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };
@@ -263,8 +263,7 @@ mod test {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader, state_api::State,
         },
-        transaction::{l1_handler::L1Handler, Address},
-        utils::ClassHash,
+        transaction::{l1_handler::L1Handler, Address, ClassHash},
     };
     use std::{
         collections::{HashMap, HashSet},

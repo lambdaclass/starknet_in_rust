@@ -17,8 +17,8 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader,
         ExecutionResourcesManager,
     },
-    transaction::Address,
-    utils::{calculate_sn_keccak, felt_to_hash, ClassHash},
+    transaction::{Address, ClassHash},
+    utils::{calculate_sn_keccak, felt_to_hash},
     CasmContractClass, ContractClass as SierraContractClass, EntryPointType,
 };
 use std::{fs, path::Path, sync::Arc};

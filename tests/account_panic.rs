@@ -10,9 +10,8 @@ use starknet_in_rust::{
         contract_class_cache::{ContractClassCache, PermanentContractClassCache},
         in_memory_state_reader::InMemoryStateReader,
     },
-    transaction::Address,
-    transaction::{InvokeFunction, Transaction},
-    utils::{calculate_sn_keccak, ClassHash},
+    transaction::{Address, ClassHash, InvokeFunction, Transaction},
+    utils::calculate_sn_keccak,
     CasmContractClass,
 };
 

@@ -16,8 +16,8 @@ use starknet_in_rust::{
         state_cache::StorageEntry,
         ExecutionResourcesManager,
     },
-    transaction::Address,
-    utils::{calculate_sn_keccak, ClassHash},
+    transaction::{Address, ClassHash},
+    utils::calculate_sn_keccak,
     EntryPointType,
 };
 use std::sync::Arc;

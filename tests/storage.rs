@@ -2,8 +2,6 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use cairo_vm::Felt252;
 
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
-use starknet_in_rust::utils::ClassHash;
-use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -19,6 +17,7 @@ use starknet_in_rust::{
     transaction::Address,
     utils::calculate_sn_keccak,
 };
+use starknet_in_rust::{transaction::ClassHash, EntryPointType};
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 #[test]

@@ -6,7 +6,7 @@ use crate::{
     definitions::transaction_type::TransactionType,
     execution::os_usage::OsResources,
     syscalls::syscall_handler_errors::SyscallHandlerError,
-    utils::ClassHash,
+    transaction::ClassHash,
 };
 use cairo_vm::{
     types::{

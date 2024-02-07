@@ -269,26 +269,24 @@ fn get_syscall_ptr(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::api::contract_classes::compiled_class::CompiledClass;
-    use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
-    use crate::state::StateDiff;
-    use crate::transaction::VersionSpecificAccountTxFields;
-    use crate::utils::ClassHash;
     use crate::{
         add_segments, allocate_selector, any_box,
         definitions::{block_context::BlockContext, transaction_type::TransactionType},
         execution::{OrderedEvent, OrderedL2ToL1Message, TransactionExecutionContext},
         memory_insert,
-        services::api::contract_classes::deprecated_contract_class::ContractClass,
+        services::api::contract_classes::{
+            compiled_class::CompiledClass,
+            deprecated_contract_class::{ContractClass, EntryPointType},
+        },
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
-            in_memory_state_reader::InMemoryStateReader, state_api::State,
+            in_memory_state_reader::InMemoryStateReader, state_api::State, StateDiff,
         },
         syscalls::deprecated_syscall_request::{
             DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
             DeprecatedSyscallRequest,
         },
-        transaction::{Address, InvokeFunction},
+        transaction::{Address, ClassHash, InvokeFunction, VersionSpecificAccountTxFields},
         utils::{
             get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},

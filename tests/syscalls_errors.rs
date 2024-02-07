@@ -2,6 +2,7 @@
 
 use assert_matches::assert_matches;
 use cairo_vm::Felt252;
+use starknet_in_rust::transaction::ClassHash;
 use starknet_in_rust::{
     core::errors::state_errors::StateError,
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -19,7 +20,7 @@ use starknet_in_rust::{
         ExecutionResourcesManager,
     },
     transaction::Address,
-    utils::{calculate_sn_keccak, felt_to_hash, ClassHash},
+    utils::{calculate_sn_keccak, felt_to_hash},
     EntryPointType,
 };
 use std::{path::Path, sync::Arc};

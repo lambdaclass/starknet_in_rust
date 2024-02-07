@@ -7,10 +7,10 @@ use crate::{
     core::errors::state_errors::StateError,
     services::api::contract_classes::compiled_class::CompiledClass,
     state::StateDiff,
-    transaction::Address,
+    transaction::{Address, ClassHash},
     utils::{
         get_erc20_balance_var_addresses, subtract_mappings, subtract_mappings_keys,
-        to_cache_state_storage_mapping, ClassHash,
+        to_cache_state_storage_mapping,
     },
 };
 use cairo_vm::Felt252;

@@ -1,7 +1,7 @@
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 
-use starknet_in_rust::utils::ClassHash;
+use starknet_in_rust::transaction::ClassHash;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{

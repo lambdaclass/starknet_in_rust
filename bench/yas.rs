@@ -33,7 +33,8 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 #[cfg(feature = "cairo-native")]
 use {
     cairo_native::cache::{AotProgramCache, JitProgramCache, ProgramCache},
-    starknet_in_rust::utils::{get_native_context, ClassHash},
+    starknet_in_rust::transaction::ClassHash,
+    starknet_in_rust::utils::get_native_context,
     std::{cell::RefCell, rc::Rc},
 };
 
@@ -989,7 +990,7 @@ mod utils {
             in_memory_state_reader::InMemoryStateReader, state_api::State,
         },
         transaction::Address,
-        utils::ClassHash,
+        transaction::ClassHash,
         CasmContractClass, ContractClass as SierraContractClass,
     };
     use std::{fs, path::Path, sync::Arc};
