@@ -79,6 +79,12 @@ impl PartialEq<[u8; 32]> for ClassHash {
     }
 }
 
+impl ClassHash {
+    pub fn from_hex_string(hex_string: String) -> Option<Self> {
+        Some(Self(hex::decode(hex_string).ok()?.try_into().ok()?))
+    }
+}
+
 pub type CompiledClassHash = ClassHash;
 
 #[cfg(feature = "cairo-native")]
