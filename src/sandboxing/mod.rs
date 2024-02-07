@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use cairo_native::{
     execution_result::ContractExecutionResult,
-    starknet::{ExecutionInfo, StarkNetSyscallHandler, SyscallResult},
+    starknet::{ExecutionInfo, ExecutionInfoV2, StarkNetSyscallHandler, SyscallResult},
 };
 use thiserror::Error;
 
@@ -31,7 +31,7 @@ pub enum SandboxError {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Message {
-    ExecuteJIT {
+    ExecuteProgram {
         id: Uuid,
         class_hash: ClassHash,
         program: VersionedProgram,
@@ -57,6 +57,9 @@ pub enum SyscallRequest {
         gas: u128,
     },
     GetExecutionInfo {
+        gas: u128,
+    },
+    GetExecutionInfoV2 {
         gas: u128,
     },
     Deploy {
@@ -118,6 +121,10 @@ pub enum SyscallAnswer {
     },
     GetExecutionInfo {
         result: SyscallResult<ExecutionInfo>,
+        remaining_gas: u128,
+    },
+    GetExecutionInfoV2 {
+        result: SyscallResult<ExecutionInfoV2>,
         remaining_gas: u128,
     },
     Deploy {
@@ -235,7 +242,7 @@ impl IsolatedExecutor {
         tracing::debug!("running program");
         let id = Uuid::new_v4();
 
-        let msg = Message::ExecuteJIT {
+        let msg = Message::ExecuteProgram {
             id,
             class_hash,
             program: program.into_artifact(),
@@ -248,7 +255,7 @@ impl IsolatedExecutor {
         loop {
             let msg = self.receiver.recv()?.to_msg()?;
             match msg {
-                Message::ExecuteJIT { .. } => unreachable!(),
+                Message::ExecuteProgram { .. } => unreachable!(),
                 Message::ExecutionResult {
                     id: recv_id,
                     result,
@@ -279,6 +286,16 @@ impl IsolatedExecutor {
                         let result = handler.get_execution_info(&mut gas);
                         self.sender.send(
                             Message::SyscallAnswer(SyscallAnswer::GetExecutionInfo {
+                                result,
+                                remaining_gas: gas,
+                            })
+                            .wrap()?,
+                        )?;
+                    }
+                    SyscallRequest::GetExecutionInfoV2 { mut gas } => {
+                        let result = handler.get_execution_info_v2(&mut gas);
+                        self.sender.send(
+                            Message::SyscallAnswer(SyscallAnswer::GetExecutionInfoV2 {
                                 result,
                                 remaining_gas: gas,
                             })

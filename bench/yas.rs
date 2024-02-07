@@ -20,6 +20,7 @@ use starknet_in_rust::{
         block_context::{BlockContext, StarknetChainId},
         constants::EXECUTE_ENTRY_POINT_SELECTOR,
     },
+    sandboxing::IsolatedExecutor,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
@@ -50,6 +51,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "cairo-native")]
     let mut jit_run: bool = true;
     #[cfg(feature = "cairo-native")]
+    let mut sandboxed: bool = true;
+    #[cfg(feature = "cairo-native")]
     let args: Vec<String> = std::env::args().collect();
     #[cfg(feature = "cairo-native")]
     if args.len() < 2 {
@@ -59,9 +62,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "jit" => {
                 info!("Running in JIT mode");
             }
+            "jit-sandbox" => {
+                info!("Running in JIT Sandboxed mode");
+                sandboxed = true;
+            }
             "aot" => {
                 info!("Running in AOT mode");
                 jit_run = false;
+            }
+            "aot-sandbox" => {
+                info!("Running in AOT Sandboxed mode");
+                jit_run = false;
+                sandboxed = true;
             }
             arg => {
                 info!("Invalid mode {}, running in JIT mode", arg);
@@ -85,6 +97,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     #[cfg(feature = "cairo-native")]
     let program_cache = Rc::new(RefCell::new(cache));
+    #[cfg(feature = "cairo-native")]
+    let sandbox = if sandboxed {
+        Some(
+            starknet_in_rust::sandboxing::IsolatedExecutor::new(
+                std::env::var("CAIRO_NATIVE_EXECUTOR_PATH")
+                    .map(std::path::PathBuf::from)
+                    .unwrap_or_else(|_| {
+                        std::env::current_dir()
+                            .unwrap()
+                            .join("target/release/cairo_native_executor")
+                    })
+                    .as_path(),
+            )
+            .unwrap(),
+        )
+    } else {
+        None
+    };
 
     // Declare ERC20, YASFactory, YASPool and YASRouter contracts.
     info!("Declaring the ERC20 contract.");
@@ -92,24 +122,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
     )?;
     info!("Declaring the YASFactory contract.");
     let yas_factory_class_hash = declare_yas_factory(
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
     )?;
     info!("Declaring the YASRouter contract.");
     let yas_router_class_hash = declare_yas_router(
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
     )?;
     info!("Declaring the YASPool contract.");
     let yas_pool_class_hash = declare_yas_pool(
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
     )?;
 
     // Deploy two ERC20 contracts.
@@ -118,6 +156,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &erc20_class_hash,
         "TYAS0",
         "$YAS0",
@@ -129,6 +169,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &erc20_class_hash,
         "TYAS1",
         "$YAS1",
@@ -142,6 +184,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &yas_factory_class_hash,
         *OWNER_ADDRESS,
         yas_pool_class_hash,
@@ -153,6 +197,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &yas_router_class_hash,
     )?;
 
@@ -162,6 +208,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &yas_pool_class_hash,
         yas_factory_address,
         yas0_token_address,
@@ -176,6 +224,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &yas_pool_address,
         (79_228_162_514_264_337_593_543_950_336, 0),
         false,
@@ -187,6 +237,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &yas0_token_address,
             *OWNER_ADDRESS
         )?
@@ -197,6 +249,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &yas1_token_address,
             *OWNER_ADDRESS
         )?
@@ -208,6 +262,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &ACCOUNT_ADDRESS,
         yas0_token_address,
         yas_router_address,
@@ -216,6 +272,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &ACCOUNT_ADDRESS,
         yas1_token_address,
         yas_router_address,
@@ -227,6 +285,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &yas0_token_address,
             *OWNER_ADDRESS
         )?
@@ -237,6 +297,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &yas1_token_address,
             *OWNER_ADDRESS
         )?
@@ -248,6 +310,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &mut state,
         #[cfg(feature = "cairo-native")]
         program_cache.clone(),
+        #[cfg(feature = "cairo-native")]
+        sandbox.as_ref(),
         &ACCOUNT_ADDRESS,
         yas_router_address,
         yas_pool_address,
@@ -263,6 +327,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &yas0_token_address,
             *OWNER_ADDRESS
         )?
@@ -273,6 +339,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &yas1_token_address,
             *OWNER_ADDRESS
         )?
@@ -293,6 +361,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &ACCOUNT_ADDRESS,
             yas_router_address,
             yas_pool_address,
@@ -337,6 +407,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &yas0_token_address,
             *OWNER_ADDRESS
         )?
@@ -347,6 +419,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &mut state,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox.as_ref(),
             &yas1_token_address,
             *OWNER_ADDRESS
         )?
@@ -358,6 +432,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn declare_erc20<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
@@ -386,7 +461,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -401,6 +476,7 @@ where
 fn declare_yas_factory<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
@@ -429,7 +505,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -444,6 +520,7 @@ where
 fn declare_yas_router<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
@@ -472,7 +549,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -487,6 +564,7 @@ where
 fn declare_yas_pool<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
     S: StateReader,
@@ -515,7 +593,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -527,9 +605,11 @@ where
     Ok(casm_class_hash)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn deploy_erc20<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     erc20_class_hash: &Felt252,
     name: &str,
     symbol: &str,
@@ -569,7 +649,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -584,6 +664,7 @@ where
 fn deploy_yas_factory<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     yas_factory_class_hash: &Felt252,
     owner_address: Felt252,
     pool_class_hash: Felt252,
@@ -618,7 +699,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -633,6 +714,7 @@ where
 fn deploy_yas_router<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     yas_router_class_hash: &Felt252,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
 where
@@ -659,7 +741,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -675,6 +757,7 @@ where
 fn deploy_yas_pool<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     yas_pool_class_hash: &Felt252,
     yas_factory_address: Felt252,
     yas0_token_address: Felt252,
@@ -716,7 +799,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -731,6 +814,7 @@ where
 fn initialize_pool<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     yas_pool_address: &Felt252,
     price_sqrt: (u128, u128),
     sign: bool,
@@ -769,7 +853,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -784,6 +868,7 @@ where
 fn approve_max<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     account_address: &Felt252,
     token_address: Felt252,
     wallet_address: Felt252,
@@ -820,7 +905,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -836,6 +921,7 @@ where
 fn mint<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     account_address: &Felt252,
     yas_router_address: Felt252,
     yas_pool_address: Felt252,
@@ -880,7 +966,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -896,6 +982,7 @@ where
 fn swap<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     account_address: &Felt252,
     yas_router_address: Felt252,
     yas_pool_address: Felt252,
@@ -942,7 +1029,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.
@@ -957,6 +1044,7 @@ where
 fn balance_of<S, C>(
     state: &mut CachedState<S, C>,
     #[cfg(feature = "cairo-native")] program_cache: Rc<RefCell<ProgramCache<ClassHash>>>,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     token_address: &Felt252,
     wallet_address: Felt252,
 ) -> Result<Felt252, Box<dyn std::error::Error>>
@@ -992,7 +1080,7 @@ where
         #[cfg(feature = "cairo-native")]
         Some(program_cache),
         #[cfg(feature = "cairo-native")]
-        None,
+        sandbox,
     )?;
 
     // Ensure the execution was successful.

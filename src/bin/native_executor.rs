@@ -56,7 +56,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::GetBlockHash): {:?}",
+                result
+            );
             panic!();
         }
     }
@@ -90,16 +93,48 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::GetExecutionInfo): {:?}",
+                result
+            );
             panic!();
         }
     }
 
     fn get_execution_info_v2(
         &mut self,
-        _remaining_gas: &mut u128,
+        gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::ExecutionInfoV2> {
-        todo!()
+        self.sender
+            .send(
+                Message::SyscallRequest(SyscallRequest::GetExecutionInfo { gas: *gas })
+                    .wrap()
+                    .unwrap(),
+            )
+            .expect("failed to send");
+        let result = self
+            .receiver
+            .borrow()
+            .recv()
+            .on_err(|e| tracing::error!("error receiving: {:?}", e))
+            .unwrap()
+            .to_msg()
+            .unwrap();
+
+        if let Message::SyscallAnswer(SyscallAnswer::GetExecutionInfoV2 {
+            result,
+            remaining_gas,
+        }) = result
+        {
+            *gas = remaining_gas;
+            result
+        } else {
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::GetExecutionInfoV2): {:?}",
+                result
+            );
+            panic!();
+        }
     }
 
     fn deploy(
@@ -140,7 +175,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::Deploy): {:?}",
+                result
+            );
             panic!();
         }
     }
@@ -173,7 +211,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::ReplaceClass): {:?}",
+                result
+            );
             panic!();
         }
     }
@@ -214,7 +255,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::LibraryCall): {:?}",
+                result
+            );
             panic!();
         }
     }
@@ -255,7 +299,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::CallContract): {:?}",
+                result
+            );
             panic!();
         }
     }
@@ -294,7 +341,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::StorageRead): {:?}",
+                result
+            );
             panic!();
         }
     }
@@ -335,7 +385,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::StorageWrite ): {:#?}",
+                result
+            );
             panic!();
         }
     }
@@ -369,7 +422,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::EmitEvent): {:#?}",
+                result
+            );
             panic!();
         }
     }
@@ -408,7 +464,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallRequest::SendMessageToL1): {:#?}",
+                result
+            );
             panic!();
         }
     }
@@ -445,7 +504,10 @@ impl StarkNetSyscallHandler for SyscallHandler {
             *gas = remaining_gas;
             result
         } else {
-            tracing::error!("wrong message received: {:#?}", result);
+            tracing::error!(
+                "wrong message received (expected SyscallAnswer::Keccak): {:#?}",
+                result
+            );
             panic!();
         }
     }
@@ -456,6 +518,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _p1: cairo_native::starknet::Secp256k1Point,
         _remaining_gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::Secp256k1Point> {
+        tracing::error!("todo: secp256k1_add");
         todo!()
     }
 
@@ -465,6 +528,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _y_parity: bool,
         _gas: &mut u128,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        tracing::error!("todo: secp256k1_get_point_from_x");
         todo!()
     }
 
@@ -473,6 +537,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _p: cairo_native::starknet::Secp256k1Point,
         _gas: &mut u128,
     ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
+        tracing::error!("todo: secp256k1_get_xy");
         todo!()
     }
 
@@ -482,6 +547,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _m: cairo_native::starknet::U256,
         _remaining_gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::Secp256k1Point> {
+        tracing::error!("todo: secp256k1_mul");
         todo!()
     }
 
@@ -491,6 +557,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _y: cairo_native::starknet::U256,
         _gas: &mut u128,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
+        tracing::error!("todo: secp256k1_new");
         todo!()
     }
 
@@ -500,6 +567,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _p1: cairo_native::starknet::Secp256r1Point,
         _remaining_gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::Secp256r1Point> {
+        tracing::error!("todo: secp256r1_add");
         todo!()
     }
 
@@ -509,6 +577,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _y_parity: bool,
         _remaining_gas: &mut u128,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256r1Point>> {
+        tracing::error!("todo: secp256r1_get_point_from_x");
         todo!()
     }
 
@@ -517,6 +586,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _p: cairo_native::starknet::Secp256r1Point,
         _gas: &mut u128,
     ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
+        tracing::error!("todo: secp256r1_get_xy");
         todo!()
     }
 
@@ -526,6 +596,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _m: cairo_native::starknet::U256,
         _remaining_gas: &mut u128,
     ) -> SyscallResult<cairo_native::starknet::Secp256r1Point> {
+        tracing::error!("todo: secp256r1_mul");
         todo!()
     }
 
@@ -535,6 +606,7 @@ impl StarkNetSyscallHandler for SyscallHandler {
         _y: cairo_native::starknet::U256,
         _remaining_gas: &mut u128,
     ) -> SyscallResult<Option<cairo_native::starknet::Secp256r1Point>> {
+        tracing::error!("todo: secp256r1_new");
         todo!()
     }
 
@@ -640,7 +712,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         let message: Message = receiver.borrow().recv()?.to_msg()?;
 
         match message {
-            Message::ExecuteJIT {
+            Message::ExecuteProgram {
                 id,
                 class_hash,
                 program,
@@ -648,7 +720,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                 function_idx,
                 gas,
             } => {
-                tracing::info!("Message: ExecuteJIT with id {}", id);
+                tracing::info!("Message: ExecuteProgram with id {}", id);
                 sender.send(Message::Ack(id).wrap()?)?;
                 tracing::info!("sent ack: {}", id);
 
