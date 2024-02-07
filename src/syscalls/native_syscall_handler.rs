@@ -25,6 +25,7 @@ use crate::{
     utils::{felt_to_hash, Address, ClassHash},
     ContractClassCache, EntryPointType,
 };
+use cairo_native::starknet::{ExecutionInfoV2, ResourceBounds, TxV2Info};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{BlockInfo, ExecutionInfo, StarkNetSyscallHandler, SyscallResult, TxInfo, U256},
@@ -123,7 +124,10 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             tx_info: TxInfo {
                 version: self.tx_execution_context.version,
                 account_contract_address: self.tx_execution_context.account_contract_address.0,
-                max_fee: self.tx_execution_context.account_tx_fields.max_fee(),
+                max_fee: self
+                    .tx_execution_context
+                    .account_tx_fields
+                    .max_fee_for_execution_info(),
                 signature: self.tx_execution_context.signature.clone(),
                 transaction_hash: self.tx_execution_context.transaction_hash,
                 chain_id: self.block_context.starknet_os_config.chain_id,
@@ -133,13 +137,6 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             contract_address: self.contract_address.0,
             entry_point_selector: self.entry_point_selector,
         })
-    }
-
-    fn get_execution_info_v2(
-        &mut self,
-        _remaining_gas: &mut u128,
-    ) -> SyscallResult<cairo_native::starknet::ExecutionInfoV2> {
-        todo!()
     }
 
     fn deploy(
@@ -464,6 +461,83 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         SyscallResult::Ok(U256 {
             lo: state[2] as u128 | ((state[3] as u128) << 64),
             hi: state[0] as u128 | ((state[1] as u128) << 64),
+        })
+    }
+
+    fn get_execution_info_v2(
+        &mut self,
+        gas: &mut u128,
+    ) -> Result<ExecutionInfoV2, Vec<cairo_vm::Felt252>> {
+        tracing::debug!("Called `get_execution_info_v2()` from Cairo Native");
+
+        self.handle_syscall_request(gas, "get_execution_info")?;
+
+        lazy_static::lazy_static! {
+            static ref L1_GAS: Felt252 = Felt252::from_hex(
+                "0x00000000000000000000000000000000000000000000000000004c315f474153"
+            )
+            .unwrap();
+            static ref L2_GAS: Felt252 = Felt252::from_hex(
+                "0x00000000000000000000000000000000000000000000000000004c325f474153"
+            )
+            .unwrap();
+        }
+
+        let mut resource_bounds = vec![];
+        let mut tip = 0;
+        let mut paymaster_data = vec![];
+        let mut nonce_data_availability_mode: u32 = 0;
+        let mut fee_data_availability_mode: u32 = 0;
+        let mut account_deployment_data = vec![];
+        if let VersionSpecificAccountTxFields::Current(fields) =
+            &self.tx_execution_context.account_tx_fields
+        {
+            resource_bounds.push(ResourceBounds {
+                resource: *L1_GAS,
+                max_amount: fields.l1_resource_bounds.max_amount,
+                max_price_per_unit: fields.l1_resource_bounds.max_price_per_unit,
+            });
+            if let Some(bounds) = &fields.l2_resource_bounds {
+                resource_bounds.push(ResourceBounds {
+                    resource: *L2_GAS,
+                    max_amount: bounds.max_amount,
+                    max_price_per_unit: bounds.max_price_per_unit,
+                });
+            }
+            tip = fields.tip as u128;
+            paymaster_data = fields.paymaster_data.clone();
+            account_deployment_data = fields.account_deployment_data.clone();
+            nonce_data_availability_mode = fields.nonce_data_availability_mode.into();
+            fee_data_availability_mode = fields.fee_data_availability_mode.into();
+        }
+
+        Ok(ExecutionInfoV2 {
+            block_info: BlockInfo {
+                block_number: self.block_context.block_info.block_number,
+                block_timestamp: self.block_context.block_info.block_timestamp,
+                sequencer_address: self.block_context.block_info.sequencer_address.0,
+            },
+            tx_info: TxV2Info {
+                version: self.tx_execution_context.version,
+                account_contract_address: self.tx_execution_context.account_contract_address.0,
+                max_fee: self
+                    .tx_execution_context
+                    .account_tx_fields
+                    .max_fee_for_execution_info(),
+                signature: self.tx_execution_context.signature.clone(),
+                transaction_hash: self.tx_execution_context.transaction_hash,
+                chain_id: self.block_context.starknet_os_config.chain_id,
+                nonce: self.tx_execution_context.nonce,
+                resource_bounds,
+                tip,
+                paymaster_data,
+                nonce_data_availability_mode,
+                fee_data_availability_mode,
+                account_deployment_data,
+            },
+            caller_address: self.caller_address.0,
+            contract_address: self.contract_address.0,
+            entry_point_selector: self.entry_point_selector,
         })
     }
 

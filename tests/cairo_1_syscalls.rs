@@ -1404,12 +1404,12 @@ fn test_get_execution_info() {
     ];
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_n_steps = 213;
+    let expected_n_steps = 205;
     #[cfg(feature = "cairo_1_tests")]
     let expected_n_steps = 268;
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_gas_consumed = 22980;
+    let expected_gas_consumed = 22180;
     #[cfg(feature = "cairo_1_tests")]
     let expected_gas_consumed = 28580;
 
@@ -3982,4 +3982,131 @@ fn call_contract_storage_write_read_recursive_100_calls() {
         )
         .unwrap();
     assert_eq!(call_info.call_info.unwrap().retdata, [125.into()])
+}
+
+#[test]
+#[cfg(not(feature = "cairo_1_tests"))]
+fn test_get_execution_info_v2() {
+    //  Create program and entry point types for contract class
+    use starknet_in_rust::transaction::{
+        CurrentAccountTxFields, DataAvailabilityMode, ResourceBounds,
+        VersionSpecificAccountTxFields,
+    };
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let program_data = include_bytes!("../starknet_programs/cairo2/get_execution_info_v2.casm");
+    let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
+    let entrypoints = contract_class.clone().entry_points_by_type;
+    let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+
+    // Create state reader with class hash data
+    let contract_class_cache = PermanentContractClassCache::default();
+
+    let address = Address(1111.into());
+    let class_hash: ClassHash = ClassHash([1; 32]);
+    let nonce = Felt252::ZERO;
+
+    contract_class_cache.set_contract_class(
+        class_hash,
+        CompiledClass::Casm {
+            casm: Arc::new(contract_class),
+            sierra: None,
+        },
+    );
+    let mut state_reader = InMemoryStateReader::default();
+    state_reader
+        .address_to_class_hash_mut()
+        .insert(address.clone(), class_hash);
+    state_reader
+        .address_to_nonce_mut()
+        .insert(address.clone(), nonce);
+
+    // Create state from the state_reader and contract cache.
+    let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
+
+    let account_tx_fields = VersionSpecificAccountTxFields::Current(CurrentAccountTxFields {
+        l1_resource_bounds: ResourceBounds {
+            max_amount: 30,
+            max_price_per_unit: 15,
+        },
+        l2_resource_bounds: Some(ResourceBounds {
+            max_amount: 10,
+            max_price_per_unit: 5,
+        }),
+        tip: 3,
+        nonce_data_availability_mode: DataAvailabilityMode::L1,
+        fee_data_availability_mode: DataAvailabilityMode::L2,
+        paymaster_data: vec![6.into(), 17.into()],
+        account_deployment_data: vec![7.into(), 18.into()],
+    });
+
+    let block_context = BlockContext::default();
+    let mut tx_execution_context = TransactionExecutionContext::new(
+        Address(0.into()),
+        Felt252::ZERO,
+        vec![22.into(), 33.into()],
+        account_tx_fields,
+        10.into(),
+        block_context.invoke_tx_max_n_steps(),
+        *TRANSACTION_VERSION,
+    );
+
+    let mut resources_manager = ExecutionResourcesManager::default();
+
+    // RUN GET_INFO
+    // Create an execution entry point
+    let get_info_exec_entry_point = create_execute_extrypoint(
+        address.clone(),
+        class_hash,
+        external_entrypoint_selector,
+        vec![],
+        EntryPointType::External,
+    );
+
+    // Run send_msg entrypoint
+    let call_info = get_info_exec_entry_point
+        .execute(
+            &mut state,
+            &block_context,
+            &mut resources_manager,
+            &mut tx_execution_context,
+            false,
+            block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
+            #[cfg(feature = "cairo-native")]
+            None,
+        )
+        .unwrap();
+
+    let expected_ret_data = vec![
+        block_context.block_info().sequencer_address.0,
+        0.into(),
+        0.into(),
+        address.0,
+    ];
+
+    let expected_n_steps = 441;
+
+    let expected_gas_consumed = 48480;
+
+    let expected_execution_resources = ExecutionResources {
+        n_steps: expected_n_steps,
+        n_memory_holes: 14,
+        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 14)]),
+    };
+
+    let expected_call_info = CallInfo {
+        caller_address: Address(0.into()),
+        call_type: Some(CallType::Delegate),
+        contract_address: address,
+        class_hash: Some(class_hash),
+        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_type: Some(EntryPointType::External),
+        retdata: expected_ret_data,
+        execution_resources: Some(expected_execution_resources),
+        gas_consumed: expected_gas_consumed,
+        ..Default::default()
+    };
+
+    assert_eq!(call_info.call_info.unwrap(), expected_call_info);
 }
