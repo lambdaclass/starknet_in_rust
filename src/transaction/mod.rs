@@ -1,10 +1,12 @@
 use crate::{
+    core::contract_address::compute_casm_class_hash,
     definitions::block_context::BlockContext,
     definitions::{
         block_context::FeeType,
-        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2},
+        constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2, QUERY_VERSION_3},
     },
     execution::TransactionExecutionInfo,
+    services::api::contract_classes::compiled_class::CompiledClass,
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
@@ -28,6 +30,7 @@ pub mod invoke_function;
 pub mod l1_handler;
 
 use cairo_vm::Felt252;
+use starknet_api::transaction::Resource;
 
 #[cfg(feature = "cairo-native")]
 use {
@@ -185,7 +188,8 @@ fn get_tx_version(version: Felt252) -> Felt252 {
     match version {
         version if version == *QUERY_VERSION_0 => Felt252::ZERO,
         version if version == *QUERY_VERSION_1 => Felt252::ONE,
-        version if version == *QUERY_VERSION_2 => 2.into(),
+        version if version == *QUERY_VERSION_2 => Felt252::TWO,
+        version if version == *QUERY_VERSION_3 => Felt252::THREE,
         version => version,
     }
 }
@@ -206,17 +210,168 @@ fn check_account_tx_fields_version(
     }
 }
 
-#[derive(Clone, Debug, Default)]
+/// Creates a `Declare or DeclareV2` from a starknet api `DeclareTransaction`.
+pub fn declare_tx_from_sn_api_transaction(
+    tx: starknet_api::transaction::DeclareTransaction,
+    tx_hash: Felt252,
+    contract_class: CompiledClass,
+) -> Result<Transaction, TransactionError> {
+    let account_tx_fields = match &tx {
+        starknet_api::transaction::DeclareTransaction::V0(tx) => {
+            VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+        }
+        starknet_api::transaction::DeclareTransaction::V1(tx) => {
+            VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+        }
+        starknet_api::transaction::DeclareTransaction::V2(tx) => {
+            VersionSpecificAccountTxFields::Deprecated(tx.max_fee.0)
+        }
+        starknet_api::transaction::DeclareTransaction::V3(tx) => {
+            VersionSpecificAccountTxFields::Current(CurrentAccountTxFields {
+                l1_resource_bounds: tx
+                    .resource_bounds
+                    .0
+                    .get(&Resource::L1Gas)
+                    .map(|r| r.into())
+                    .unwrap_or_default(),
+                l2_resource_bounds: tx.resource_bounds.0.get(&Resource::L2Gas).map(|r| r.into()),
+                tip: tx.tip.0,
+                nonce_data_availability_mode: tx.nonce_data_availability_mode.into(),
+                fee_data_availability_mode: tx.fee_data_availability_mode.into(),
+                paymaster_data: tx
+                    .paymaster_data
+                    .0
+                    .iter()
+                    .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                    .collect(),
+                account_deployment_data: tx
+                    .account_deployment_data
+                    .0
+                    .iter()
+                    .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+                    .collect(),
+            })
+        }
+    };
+    let sender_address = Address(Felt252::from_bytes_be_slice(
+        tx.sender_address().0.key().bytes(),
+    ));
+    let version = Felt252::from_bytes_be_slice(tx.version().0.bytes());
+    let nonce = Felt252::from_bytes_be_slice(tx.nonce().0.bytes());
+
+    let signature = tx
+        .signature()
+        .0
+        .iter()
+        .map(|f| Felt252::from_bytes_be_slice(f.bytes()))
+        .collect();
+
+    if version < Felt252::TWO {
+        // Create Declare tx
+        let contract_class = match contract_class {
+            CompiledClass::Deprecated(cc) => cc.as_ref().clone(),
+            _ => return Err(TransactionError::DeclareV2NoSierraOrCasm),
+        };
+
+        Declare::new_with_tx_hash(
+            contract_class,
+            sender_address,
+            account_tx_fields.max_fee(),
+            version,
+            signature,
+            nonce,
+            tx_hash,
+        )
+        .map(Transaction::Declare)
+    } else {
+        let contract_class = match contract_class {
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
+            _ => return Err(TransactionError::DeclareV2NoSierraOrCasm),
+        };
+
+        let compiled_class_hash = compute_casm_class_hash(&contract_class).unwrap();
+
+        DeclareV2::new_with_sierra_class_hash_and_tx_hash(
+            None,
+            Felt252::from_bytes_be_slice(tx.class_hash().0.bytes()),
+            Some(contract_class),
+            compiled_class_hash,
+            sender_address,
+            account_tx_fields,
+            version,
+            signature,
+            nonce,
+            tx_hash,
+        )
+        .map(|d| Transaction::DeclareV2(Box::new(d)))
+    }
+}
+
+#[derive(Clone, Debug, Default, Copy)]
 pub enum DataAvailabilityMode {
     #[default]
     L1,
     L2,
 }
 
+impl From<DataAvailabilityMode> for starknet_api::data_availability::DataAvailabilityMode {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => starknet_api::data_availability::DataAvailabilityMode::L1,
+            DataAvailabilityMode::L2 => starknet_api::data_availability::DataAvailabilityMode::L2,
+        }
+    }
+}
+
+impl From<starknet_api::data_availability::DataAvailabilityMode> for DataAvailabilityMode {
+    fn from(value: starknet_api::data_availability::DataAvailabilityMode) -> Self {
+        match value {
+            starknet_api::data_availability::DataAvailabilityMode::L1 => Self::L1,
+            starknet_api::data_availability::DataAvailabilityMode::L2 => Self::L2,
+        }
+    }
+}
+
+impl From<DataAvailabilityMode> for Felt252 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => Felt252::ZERO,
+            DataAvailabilityMode::L2 => Felt252::ONE,
+        }
+    }
+}
+
+impl From<DataAvailabilityMode> for u64 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => 0,
+            DataAvailabilityMode::L2 => 1,
+        }
+    }
+}
+
+impl From<DataAvailabilityMode> for u32 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => 0,
+            DataAvailabilityMode::L2 => 1,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct ResourceBounds {
     pub max_amount: u64,
     pub max_price_per_unit: u128,
+}
+
+impl From<&starknet_api::transaction::ResourceBounds> for ResourceBounds {
+    fn from(value: &starknet_api::transaction::ResourceBounds) -> Self {
+        Self {
+            max_amount: value.max_amount,
+            max_price_per_unit: value.max_price_per_unit,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -255,6 +410,13 @@ impl VersionSpecificAccountTxFields {
                 current.l1_resource_bounds.max_amount as u128
                     * current.l1_resource_bounds.max_price_per_unit
             }
+        }
+    }
+
+    pub(crate) fn max_fee_for_execution_info(&self) -> u128 {
+        match self {
+            Self::Deprecated(max_fee) => *max_fee,
+            Self::Current(_) => 0,
         }
     }
 

@@ -16,7 +16,6 @@ replay_benchmark = []
 
 [workspace]
 members = [
-    "cli",
     "fuzzer",
     "rpc_state_reader",
     "replay",

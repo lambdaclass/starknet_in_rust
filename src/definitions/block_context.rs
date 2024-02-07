@@ -220,6 +220,12 @@ impl BlockContext {
     pub fn get_gas_price_by_fee_type(&self, fee_type: &FeeType) -> u128 {
         self.starknet_os_config.gas_price.get_by_fee_type(fee_type)
     }
+
+    pub fn get_fee_token_address_by_fee_type(&self, fee_type: &FeeType) -> &Address {
+        self.starknet_os_config
+            .fee_token_address
+            .get_by_fee_type(fee_type)
+    }
 }
 
 impl Default for BlockContext {
