@@ -30,6 +30,7 @@ STARKNET_SIERRA_COMPILE_CAIRO_2:=cairo2/bin/starknet-sierra-compile
 usage:
 	@echo 'Usage:'
 	@echo '    build:           Builds the Rust code'
+	@echo '    build-native:    Builds the Rust code with the cairo-native feature'
 	@echo '    check:           Runs cargo check'
 	@echo '    deps:            Installs dependencies'
 	@echo '    deps-macos:      Installs depedencies for MacOS'
@@ -155,6 +156,9 @@ cairo-%.tar:
 
 build: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo build --release --workspace
+
+build-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
+	cargo build --release --workspace --features cairo-native
 
 check: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo check --workspace --all-targets

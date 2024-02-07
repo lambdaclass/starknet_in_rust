@@ -256,7 +256,7 @@ pub fn execute_tx_configurable_with_state(
     #[cfg(not(feature = "cairo-native"))]
     let sir_execution = tx.execute(state, &block_context, u128::MAX)?;
     #[cfg(feature = "cairo-native")]
-    let sir_execution = tx.execute(state, &block_context, u128::MAX, None)?;
+    let sir_execution = tx.execute(state, &block_context, u128::MAX, None, None)?;
 
     Ok(sir_execution)
 }

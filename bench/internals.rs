@@ -115,6 +115,8 @@ pub fn deploy_account(
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 Some(program_cache.clone()),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
         })
         .unwrap();
@@ -157,6 +159,8 @@ pub fn declare(
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 Some(program_cache.clone()),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
         })
         .unwrap();
@@ -206,6 +210,8 @@ pub fn deploy(
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 Some(program_cache.clone()),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
         })
         .unwrap();
@@ -253,6 +259,8 @@ pub fn invoke(
             block_context,
             #[cfg(feature = "cairo-native")]
             Some(program_cache.clone()),
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -281,6 +289,8 @@ pub fn invoke(
                 2_000_000,
                 #[cfg(feature = "cairo-native")]
                 Some(program_cache.clone()),
+                #[cfg(feature = "cairo-native")]
+                None,
             )
         })
         .unwrap();

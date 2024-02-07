@@ -254,6 +254,7 @@ impl InvokeFunction {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<Option<CallInfo>, TransactionError> {
         if self.version.is_zero() || self.skip_validation {
             return Ok(None);
@@ -279,6 +280,8 @@ impl InvokeFunction {
             block_context.validate_max_n_steps,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         // Validate the return data
@@ -321,6 +324,7 @@ impl InvokeFunction {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<ExecutionResult, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -341,6 +345,8 @@ impl InvokeFunction {
             block_context.invoke_tx_max_n_steps,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )
     }
 
@@ -358,6 +364,7 @@ impl InvokeFunction {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let mut resources_manager = ExecutionResourcesManager::default();
         let validate_info = if self.skip_validation {
@@ -370,6 +377,8 @@ impl InvokeFunction {
                 remaining_gas,
                 #[cfg(feature = "cairo-native")]
                 program_cache.clone(),
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
 
@@ -392,6 +401,8 @@ impl InvokeFunction {
                 remaining_gas,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
         let changes = state.count_actual_state_changes(Some((
@@ -422,7 +433,7 @@ impl InvokeFunction {
     /// - state: A state that implements the [`State`] and [`StateReader`] traits.
     /// - block_context: The block's execution context.
     /// - remaining_gas: The amount of gas that the transaction disposes.
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache, sandbox), fields(
         tx_type = ?TransactionType::InvokeFunction,
         self.version = ?self.version,
         self.hash_value = ?self.hash_value,
@@ -438,6 +449,7 @@ impl InvokeFunction {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if !(self.version == Felt252::ZERO
             || self.version == Felt252::ONE
@@ -464,6 +476,8 @@ impl InvokeFunction {
             remaining_gas,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         );
         #[cfg(feature = "replay_benchmark")]
         // Add initial values to cache despite tx outcome
@@ -527,6 +541,8 @@ impl InvokeFunction {
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
@@ -792,6 +808,8 @@ mod tests {
                 0,
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
         state
@@ -872,6 +890,8 @@ mod tests {
                 0,
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
 
@@ -946,6 +966,8 @@ mod tests {
             0,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         assert!(expected_error.is_err());
@@ -1013,6 +1035,8 @@ mod tests {
                 &mut transactional,
                 &BlockContext::default(),
                 0,
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             )
@@ -1093,6 +1117,8 @@ mod tests {
             0,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         );
 
         assert!(expected_error.is_err());
@@ -1161,6 +1187,8 @@ mod tests {
             0,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         );
         assert!(result.is_err());
         assert_matches!(
@@ -1227,6 +1255,8 @@ mod tests {
                 &mut state,
                 &block_context,
                 0,
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             )
@@ -1299,6 +1329,8 @@ mod tests {
                 0,
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
 
@@ -1306,6 +1338,8 @@ mod tests {
             &mut state,
             &BlockContext::default(),
             0,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );
@@ -1372,6 +1406,8 @@ mod tests {
             &mut state,
             &BlockContext::default(),
             0,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );
@@ -1461,6 +1497,8 @@ mod tests {
                 0,
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
 
@@ -1511,6 +1549,8 @@ mod tests {
             &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
             u128::MAX,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );

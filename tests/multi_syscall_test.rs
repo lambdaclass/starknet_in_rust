@@ -261,6 +261,8 @@ fn test_syscall(
             block_context.invoke_tx_max_n_steps(),
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()
         .call_info

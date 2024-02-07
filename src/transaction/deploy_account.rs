@@ -175,7 +175,7 @@ impl DeployAccount {
         }
     }
 
-    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
+    #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache, sandbox), fields(
         tx_type = ?TransactionType::DeployAccount,
         self.version = ?self.version,
         self.class_hash = ?self.class_hash,
@@ -191,6 +191,7 @@ impl DeployAccount {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         if !(self.version == Felt252::ONE || self.version == Felt252::THREE) {
             return Err(TransactionError::UnsupportedTxVersion(
@@ -211,6 +212,8 @@ impl DeployAccount {
             block_context,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         let mut tx_execution_context =
@@ -240,6 +243,8 @@ impl DeployAccount {
             self.skip_fee_transfer,
             #[cfg(feature = "cairo-native")]
             program_cache,
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
@@ -272,6 +277,7 @@ impl DeployAccount {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         let contract_class = state.get_contract_class(&self.class_hash)?;
 
@@ -285,6 +291,8 @@ impl DeployAccount {
             &mut resources_manager,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
 
         let validate_info = if self.skip_validate {
@@ -296,6 +304,8 @@ impl DeployAccount {
                 &mut resources_manager,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
 
@@ -332,6 +342,7 @@ impl DeployAccount {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<CallInfo, TransactionError> {
         if self.constructor_entry_points_empty(contract_class)? {
             if !self.constructor_calldata.is_empty() {
@@ -350,6 +361,8 @@ impl DeployAccount {
                 resources_manager,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )
         }
     }
@@ -411,6 +424,7 @@ impl DeployAccount {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<CallInfo, TransactionError> {
         let entry_point = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -435,6 +449,8 @@ impl DeployAccount {
                 block_context.validate_max_n_steps,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
 
@@ -463,6 +479,7 @@ impl DeployAccount {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
     ) -> Result<Option<CallInfo>, TransactionError> {
         let call = ExecutionEntryPoint::new(
             self.contract_address.clone(),
@@ -493,6 +510,8 @@ impl DeployAccount {
                 block_context.validate_max_n_steps,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
+                #[cfg(feature = "cairo-native")]
+                sandbox,
             )?
         };
 
@@ -722,6 +741,8 @@ mod tests {
                 &block_context,
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
         assert_matches!(
@@ -729,6 +750,8 @@ mod tests {
                 .execute(
                     &mut state,
                     &block_context,
+                    #[cfg(feature = "cairo-native")]
+                    None,
                     #[cfg(feature = "cairo-native")]
                     None,
                 )
@@ -775,6 +798,8 @@ mod tests {
                 &block_context,
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
     }
@@ -798,6 +823,8 @@ mod tests {
         let result = internal_declare.execute(
             &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         );

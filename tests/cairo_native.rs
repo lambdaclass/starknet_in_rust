@@ -980,6 +980,8 @@ impl TestState {
             block_context.invoke_tx_max_n_steps(),
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )?;
         // Overwrite the execution result's execution_resources as native doesn't output it
         if let Some(callinfo) = execution_result_vm.call_info.as_mut() {
@@ -1014,6 +1016,8 @@ impl TestState {
             ),
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )?;

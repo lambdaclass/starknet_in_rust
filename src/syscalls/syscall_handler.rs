@@ -78,6 +78,8 @@ impl<'a, S: StateReader, C: ContractClassCache> HintProcessorLogic
                                 // TODO: Get the program_cache somehow.
                                 #[cfg(feature = "cairo-native")]
                                 None,
+                                #[cfg(feature = "cairo-native")]
+                                None,
                             )
                             .map_err(|err| {
                                 HintError::CustomHint(

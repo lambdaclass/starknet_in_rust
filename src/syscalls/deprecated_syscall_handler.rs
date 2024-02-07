@@ -88,6 +88,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
                     // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
                     None,
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
             }
             EMIT_EVENT_CODE => {
@@ -118,6 +120,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
                     // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
                     None,
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
             }
             LIBRARY_CALL_L1_HANDLER => {
@@ -128,6 +132,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
                     // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
                     None,
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
             }
             CALL_CONTRACT => {
@@ -136,6 +142,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
                     vm,
                     syscall_ptr,
                     // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
                     #[cfg(feature = "cairo-native")]
                     None,
                 )
@@ -172,6 +180,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
                     // TODO: Get the program_cache somehow.
                     #[cfg(feature = "cairo-native")]
                     None,
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
             }
             DELEGATE_L1_HANDLER => {
@@ -180,6 +190,8 @@ impl<'a, S: StateReader, C: ContractClassCache> DeprecatedSyscallHintProcessor<'
                     vm,
                     syscall_ptr,
                     // TODO: Get the program_cache somehow.
+                    #[cfg(feature = "cairo-native")]
+                    None,
                     #[cfg(feature = "cairo-native")]
                     None,
                 )
@@ -1249,6 +1261,8 @@ mod tests {
                 &mut transactional,
                 &BlockContext::default(),
                 0,
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             )

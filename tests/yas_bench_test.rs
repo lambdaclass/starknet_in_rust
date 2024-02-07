@@ -328,7 +328,7 @@ where
         vec![],
         nonce,
     )?
-    .execute(state, &BlockContext::default(), program_cache)?;
+    .execute(state, &BlockContext::default(), program_cache, None)?;
 
     // Ensure the execution was successful.
     let validate_info = tx_execution_info.validate_info.unwrap();
@@ -364,7 +364,7 @@ where
         vec![],
         nonce,
     )?
-    .execute(state, &BlockContext::default(), program_cache)?;
+    .execute(state, &BlockContext::default(), program_cache, None)?;
 
     // Ensure the execution was successful.
     let validate_info = tx_execution_info.validate_info.unwrap();
@@ -400,7 +400,7 @@ where
         vec![],
         nonce,
     )?
-    .execute(state, &BlockContext::default(), program_cache)?;
+    .execute(state, &BlockContext::default(), program_cache, None)?;
 
     // Ensure the execution was successful.
     let validate_info = tx_execution_info.validate_info.unwrap();
@@ -436,7 +436,7 @@ where
         vec![],
         nonce,
     )?
-    .execute(state, &BlockContext::default(), program_cache)?;
+    .execute(state, &BlockContext::default(), program_cache, None)?;
 
     // Ensure the execution was successful.
     let validate_info = tx_execution_info.validate_info.unwrap();
@@ -487,6 +487,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -533,6 +534,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -571,6 +573,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -625,6 +628,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -675,6 +679,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -723,6 +728,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -780,6 +786,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -839,6 +846,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.
@@ -886,6 +894,7 @@ where
         &BlockContext::default(),
         u64::MAX.into(),
         program_cache,
+        None,
     )?;
 
     // Ensure the execution was successful.

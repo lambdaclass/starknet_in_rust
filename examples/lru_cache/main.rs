@@ -70,6 +70,8 @@ fn run_contract(
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -86,6 +88,8 @@ fn run_contract(
         .execute(
             &mut state,
             &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -111,6 +115,8 @@ fn run_contract(
             &mut state,
             &block_context,
             0,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )

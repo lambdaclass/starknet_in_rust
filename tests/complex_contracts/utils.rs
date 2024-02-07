@@ -136,6 +136,8 @@ pub fn execute_entry_point(
         call_config.block_context.invoke_tx_max_n_steps(),
         #[cfg(feature = "cairo-native")]
         None,
+        #[cfg(feature = "cairo-native")]
+        None,
     )?;
 
     Ok(call_info.unwrap())
@@ -175,6 +177,8 @@ pub fn deploy(
     let tx_execution_info = internal_deploy.apply(
         state,
         block_context,
+        #[cfg(feature = "cairo-native")]
+        None,
         #[cfg(feature = "cairo-native")]
         None,
     )?;

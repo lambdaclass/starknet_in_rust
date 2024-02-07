@@ -61,6 +61,8 @@ fn main() {
             0,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }

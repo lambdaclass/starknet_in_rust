@@ -381,6 +381,8 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
                     false,
                     block_context.invoke_tx_max_n_steps(),
                     Some(program_cache.clone()),
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
                 .unwrap();
 
@@ -462,6 +464,8 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
                     false,
                     block_context.invoke_tx_max_n_steps(),
                     Some(program_cache.clone()),
+                    #[cfg(feature = "cairo-native")]
+                    None,
                 )
                 .unwrap();
 
@@ -529,7 +533,12 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
     // this will create the account and after that,
     // we can extract its address.
     let account1_address = account1_deploy_tx
-        .execute(&mut state, &Default::default(), Some(program_cache.clone()))
+        .execute(
+            &mut state,
+            &Default::default(),
+            Some(program_cache.clone()),
+            None,
+        )
         .expect("failed to execute the deployment of account 1")
         .validate_info
         .expect("validate_info missing")
@@ -559,7 +568,12 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
 
     // execute the deploy_account transaction and retrieve the deployed account address.
     let _account2_address = account2_deploy_tx
-        .execute(&mut state, &Default::default(), Some(program_cache.clone()))
+        .execute(
+            &mut state,
+            &Default::default(),
+            Some(program_cache.clone()),
+            None,
+        )
         .expect("failed to execute the deployment of account 2")
         .validate_info
         .expect("validate_info missing")
@@ -632,6 +646,7 @@ fn execute(
             false,
             block_context.invoke_tx_max_n_steps(),
             Some(program_cache),
+            None,
         )
         .unwrap()
         .call_info

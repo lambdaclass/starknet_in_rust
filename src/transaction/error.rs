@@ -8,6 +8,7 @@ use crate::{
     syscalls::syscall_handler_errors::SyscallHandlerError,
     utils::ClassHash,
 };
+
 use cairo_vm::{
     types::{
         errors::{math_errors::MathError, program_errors::ProgramError},
@@ -166,6 +167,9 @@ pub enum TransactionError {
     DeprecatedAccountTxFieldsVInV3TX,
     #[error("Non V3 Transactions can't be created with non deprecated account tx fields")]
     CurrentAccountTxFieldsInNonV3TX,
+    #[cfg(feature = "cairo-native")]
+    #[error("sandbox error {0}")]
+    SandboxError(#[from] crate::sandboxing::SandboxError),
     // Variant used to detect revert errors in revertible transactions
     #[error(transparent)]
     FeeCheck(#[from] FeeCheckError),

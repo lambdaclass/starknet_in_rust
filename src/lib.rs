@@ -48,6 +48,8 @@ pub mod execution;
 pub mod hash_utils;
 pub mod parser_errors;
 pub mod runner;
+#[cfg(feature = "cairo-native")]
+pub mod sandboxing;
 pub mod serde_structs;
 pub mod services;
 pub mod state;
@@ -70,6 +72,7 @@ pub fn simulate_transaction<S: StateReader, C: ContractClassCache>(
     #[cfg(feature = "cairo-native")] program_cache: Option<
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
 ) -> Result<Vec<TransactionExecutionInfo>, TransactionError> {
     let mut cache_state = CachedState::new(Arc::new(state), contract_class_cache);
     let mut result = Vec::with_capacity(transactions.len());
@@ -87,6 +90,8 @@ pub fn simulate_transaction<S: StateReader, C: ContractClassCache>(
             remaining_gas,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
         result.push(tx_result);
     }
@@ -102,6 +107,7 @@ pub fn estimate_fee<T, C>(
     #[cfg(feature = "cairo-native")] program_cache: Option<
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
 ) -> Result<Vec<(u128, usize)>, TransactionError>
 where
     T: StateReader,
@@ -122,6 +128,8 @@ where
             100_000_000,
             #[cfg(feature = "cairo-native")]
             program_cache.clone(),
+            #[cfg(feature = "cairo-native")]
+            sandbox,
         )?;
         if let Some(gas_usage) = transaction_result.actual_resources.get("l1_gas_usage") {
             result.push((transaction_result.actual_fee, *gas_usage));
@@ -135,6 +143,7 @@ where
     Ok(result)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn call_contract<T: StateReader, C: ContractClassCache>(
     contract_address: Felt252,
     entrypoint_selector: Felt252,
@@ -145,6 +154,7 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
     #[cfg(feature = "cairo-native")] program_cache: Option<
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
 ) -> Result<Vec<Felt252>, TransactionError> {
     let contract_address = Address(contract_address);
     let class_hash = state.get_class_hash_at(&contract_address)?;
@@ -187,6 +197,8 @@ pub fn call_contract<T: StateReader, C: ContractClassCache>(
         block_context.invoke_tx_max_n_steps,
         #[cfg(feature = "cairo-native")]
         program_cache,
+        #[cfg(feature = "cairo-native")]
+        sandbox,
     )?;
 
     let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
@@ -201,6 +213,7 @@ pub fn estimate_message_fee<T, C>(
     #[cfg(feature = "cairo-native")] program_cache: Option<
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
 ) -> Result<(u128, usize), TransactionError>
 where
     T: StateReader,
@@ -216,6 +229,8 @@ where
         1_000_000,
         #[cfg(feature = "cairo-native")]
         program_cache,
+        #[cfg(feature = "cairo-native")]
+        sandbox,
     )?;
     let tx_fee = calculate_tx_fee(
         &transaction_result.actual_resources,
@@ -237,6 +252,7 @@ pub fn execute_transaction<S: StateReader, C: ContractClassCache>(
     #[cfg(feature = "cairo-native")] program_cache: Option<
         Rc<RefCell<ProgramCache<'_, ClassHash>>>,
     >,
+    #[cfg(feature = "cairo-native")] sandbox: Option<&crate::sandboxing::IsolatedExecutor>,
 ) -> Result<TransactionExecutionInfo, TransactionError> {
     tx.execute(
         state,
@@ -244,6 +260,8 @@ pub fn execute_transaction<S: StateReader, C: ContractClassCache>(
         remaining_gas,
         #[cfg(feature = "cairo-native")]
         program_cache,
+        #[cfg(feature = "cairo-native")]
+        sandbox,
     )
 }
 
@@ -340,6 +358,8 @@ mod test {
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
         assert_eq!(estimated_fee[0], (2483, 2448));
@@ -388,6 +408,8 @@ mod test {
             &mut state,
             BlockContext::default(),
             Address(0.into()),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -447,6 +469,8 @@ mod test {
             &l1_handler,
             state,
             &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -515,6 +539,8 @@ mod test {
                 &block_context,
                 &mut ExecutionResourcesManager::default(),
                 1000000,
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             )
@@ -645,6 +671,8 @@ mod test {
             false,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -754,6 +782,8 @@ mod test {
             false,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -807,6 +837,8 @@ mod test {
             false,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -850,6 +882,8 @@ mod test {
             false,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -891,6 +925,8 @@ mod test {
                 &block_context,
                 #[cfg(feature = "cairo-native")]
                 None,
+                #[cfg(feature = "cairo-native")]
+                None,
             )
             .unwrap();
 
@@ -922,6 +958,8 @@ mod test {
             false,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -973,6 +1011,8 @@ mod test {
             false,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -1019,6 +1059,8 @@ mod test {
             true,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -1090,6 +1132,8 @@ mod test {
             false,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     }
@@ -1150,6 +1194,8 @@ mod test {
             false,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -1158,6 +1204,8 @@ mod test {
                 &[deploy, invoke_tx],
                 state,
                 block_context,
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             )
@@ -1180,6 +1228,8 @@ mod test {
                 &mut state,
                 &block_context,
                 INITIAL_GAS_COST,
+                #[cfg(feature = "cairo-native")]
+                None,
                 #[cfg(feature = "cairo-native")]
                 None,
             )
@@ -1292,6 +1342,8 @@ mod test {
             false,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap()[0]
             .actual_fee;
@@ -1307,6 +1359,8 @@ mod test {
             true,
             false,
             false,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )

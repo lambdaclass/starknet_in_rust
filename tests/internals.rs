@@ -966,6 +966,8 @@ fn test_declare_tx() {
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     // Check ContractClass is set after the declare_tx
@@ -1061,6 +1063,8 @@ fn test_declarev2_tx() {
         .execute(
             &mut state,
             &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -1351,6 +1355,8 @@ fn test_invoke_tx() {
             0,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
     let expected_execution_info = expected_transaction_execution_info(block_context);
@@ -1379,6 +1385,8 @@ fn test_invoke_tx_exceeded_max_fee() {
             state,
             block_context,
             0,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -1476,6 +1484,8 @@ fn test_invoke_tx_state() {
             0,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -1551,6 +1561,8 @@ fn test_invoke_with_declarev2_tx() {
             block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -1560,6 +1572,8 @@ fn test_invoke_with_declarev2_tx() {
         .execute(
             state,
             block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -1582,6 +1596,8 @@ fn test_invoke_with_declarev2_tx() {
             state,
             block_context,
             expected_gas_consumed,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -1639,6 +1655,8 @@ fn test_deploy_account() {
         .execute(
             &mut state,
             &block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -1923,6 +1941,8 @@ fn test_state_for_declare_tx() {
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .is_ok());
     assert_eq!(
@@ -2111,6 +2131,8 @@ fn test_invoke_tx_wrong_call_data() {
         0,
         #[cfg(feature = "cairo-native")]
         None,
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     // Assert error
@@ -2156,6 +2178,8 @@ fn test_invoke_tx_wrong_entrypoint() {
         0,
         #[cfg(feature = "cairo-native")]
         None,
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     // Assert error
@@ -2189,6 +2213,8 @@ fn test_deploy_undeclared_account() {
         &block_context,
         #[cfg(feature = "cairo-native")]
         None,
+        #[cfg(feature = "cairo-native")]
+        None,
     );
 
     // Execute transaction
@@ -2210,6 +2236,8 @@ fn test_library_call_with_declare_v2() {
             block_context,
             #[cfg(feature = "cairo-native")]
             None,
+            #[cfg(feature = "cairo-native")]
+            None,
         )
         .unwrap();
 
@@ -2219,6 +2247,8 @@ fn test_library_call_with_declare_v2() {
         .execute(
             state,
             block_context,
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )
@@ -2320,6 +2350,8 @@ fn test_library_call_with_declare_v2() {
             &mut tx_execution_context,
             false,
             block_context.invoke_tx_max_n_steps(),
+            #[cfg(feature = "cairo-native")]
+            None,
             #[cfg(feature = "cairo-native")]
             None,
         )

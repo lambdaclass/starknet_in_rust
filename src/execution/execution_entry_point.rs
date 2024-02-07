@@ -46,6 +46,7 @@ use cairo_vm::{
 use std::sync::Arc;
 #[cfg(feature = "cairo-native")]
 use {
+    crate::sandboxing::IsolatedExecutor,
     crate::state::StateDiff,
     cairo_native::cache::{JitProgramCache, ProgramCache},
     cairo_native::OptLevel,
@@ -116,6 +117,7 @@ impl ExecutionEntryPoint {
         #[cfg(feature = "cairo-native")] program_cache: Option<
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
+        #[cfg(feature = "cairo-native")] sandbox: Option<&IsolatedExecutor>,
     ) -> Result<ExecutionResult, TransactionError>
     where
         T: StateReader,
@@ -174,6 +176,7 @@ impl ExecutionEntryPoint {
                     block_context,
                     &class_hash,
                     program_cache,
+                    sandbox,
                 ) {
                     Ok(call_info) => {
                         state.apply_state_update(&StateDiff::from_cached_state(
@@ -684,6 +687,7 @@ impl ExecutionEntryPoint {
         block_context: &BlockContext,
         class_hash: &ClassHash,
         program_cache: Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        sandbox: Option<&IsolatedExecutor>,
     ) -> Result<CallInfo, TransactionError> {
         use cairo_native::{
             executor::NativeExecutor, metadata::syscall_handler::SyscallHandlerMeta,
@@ -717,26 +721,6 @@ impl ExecutionEntryPoint {
         .iter()
         .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
         .unwrap();
-        let native_executor: NativeExecutor = {
-            let mut cache = program_cache.borrow_mut();
-            let cache = &mut *cache;
-            match cache {
-                ProgramCache::Aot(cache) => {
-                    NativeExecutor::Aot(if let Some(executor) = cache.get(class_hash) {
-                        executor
-                    } else {
-                        cache.compile_and_insert(*class_hash, sierra_program, OptLevel::Default)
-                    })
-                }
-                ProgramCache::Jit(cache) => {
-                    NativeExecutor::Jit(if let Some(executor) = cache.get(class_hash) {
-                        executor
-                    } else {
-                        cache.compile_and_insert(*class_hash, sierra_program, OptLevel::Default)
-                    })
-                }
-            }
-        };
 
         let contract_storage_state =
             ContractStorageState::new(state, self.contract_address.clone());
@@ -753,33 +737,66 @@ impl ExecutionEntryPoint {
             block_context: block_context.clone(),
             program_cache: program_cache.clone(),
             resources_manager: Default::default(),
+            sandbox,
         };
 
-        let syscall_meta = SyscallHandlerMeta::new(&mut syscall_handler);
-
-        let entry_point_fn = &sierra_program
-            .funcs
-            .iter()
-            .find(|x| x.id.id == (entry_point.function_idx as u64))
-            .unwrap();
-
-        let entry_point_id = &entry_point_fn.id;
-
-        let value = match native_executor {
-            NativeExecutor::Aot(executor) => executor.invoke_contract_dynamic(
-                entry_point_id,
-                &self.calldata,
+        let value = if let Some(sandbox) = sandbox {
+            sandbox.run_program(
+                *class_hash,
+                sierra_program.clone(),
+                self.calldata.clone(),
                 Some(self.initial_gas),
-                Some(&syscall_meta),
-            ),
-            NativeExecutor::Jit(executor) => executor.invoke_contract_dynamic(
-                entry_point_id,
-                &self.calldata,
-                Some(self.initial_gas),
-                Some(&syscall_meta),
-            ),
-        }
-        .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?;
+                entry_point.function_idx,
+                &mut syscall_handler,
+            )?
+        } else {
+            let native_executor: NativeExecutor = {
+                let mut cache = program_cache.borrow_mut();
+                let cache = &mut *cache;
+                match cache {
+                    ProgramCache::Aot(cache) => {
+                        NativeExecutor::Aot(if let Some(executor) = cache.get(class_hash) {
+                            executor
+                        } else {
+                            cache.compile_and_insert(*class_hash, sierra_program, OptLevel::Default)
+                        })
+                    }
+                    ProgramCache::Jit(cache) => {
+                        NativeExecutor::Jit(if let Some(executor) = cache.get(class_hash) {
+                            executor
+                        } else {
+                            cache.compile_and_insert(*class_hash, sierra_program, OptLevel::Default)
+                        })
+                    }
+                }
+            };
+
+            let syscall_meta = SyscallHandlerMeta::new(&mut syscall_handler);
+
+            let entry_point_fn = &sierra_program
+                .funcs
+                .iter()
+                .find(|x| x.id.id == (entry_point.function_idx as u64))
+                .unwrap();
+
+            let entry_point_id = &entry_point_fn.id;
+
+            match native_executor {
+                NativeExecutor::Aot(executor) => executor.invoke_contract_dynamic(
+                    entry_point_id,
+                    &self.calldata,
+                    Some(self.initial_gas),
+                    Some(&syscall_meta),
+                ),
+                NativeExecutor::Jit(executor) => executor.invoke_contract_dynamic(
+                    entry_point_id,
+                    &self.calldata,
+                    Some(self.initial_gas),
+                    Some(&syscall_meta),
+                ),
+            }
+            .map_err(|e| TransactionError::CustomError(format!("cairo-native error: {:?}", e)))?
+        };
 
         Ok(CallInfo {
             caller_address: self.caller_address.clone(),
