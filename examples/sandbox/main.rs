@@ -1,3 +1,5 @@
+//! This example shows how to use the `IsolatedExecutor` cairo-native sandbox with starknet in rust.
+
 use std::{
     fs,
     path::{Path, PathBuf},
