@@ -16,11 +16,10 @@ use starknet_in_rust::{
     },
     state::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
-        state_api::State,
+        in_memory_state_reader::InMemoryStateReader, state_api::State, ExecutionResourcesManager,
     },
-    state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    transaction::{error::TransactionError, Deploy},
-    utils::{calculate_sn_keccak, Address, ClassHash},
+    transaction::{error::TransactionError, Address, Deploy},
+    utils::{calculate_sn_keccak, ClassHash},
     ContractEntryPoint, EntryPointType,
 };
 use std::{

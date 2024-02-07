@@ -13,8 +13,9 @@ use starknet_in_rust::{
     state::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
     },
+    transaction::Address,
     transaction::{InvokeFunction, VersionSpecificAccountTxFields},
-    utils::{Address, ClassHash},
+    utils::ClassHash,
 };
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 

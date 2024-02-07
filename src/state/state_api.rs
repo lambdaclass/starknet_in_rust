@@ -4,7 +4,8 @@ use crate::{
     definitions::block_context::{BlockContext, FeeType},
     services::api::contract_classes::compiled_class::CompiledClass,
     state::StateDiff,
-    utils::{get_erc20_balance_var_addresses, Address, ClassHash, CompiledClassHash},
+    transaction::Address,
+    utils::{get_erc20_balance_var_addresses, ClassHash, CompiledClassHash},
 };
 use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_vm::Felt252;

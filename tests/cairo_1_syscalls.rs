@@ -24,7 +24,8 @@ use starknet_in_rust::{
         state_api::StateReader,
         ExecutionResourcesManager,
     },
-    utils::{Address, ClassHash},
+    transaction::Address,
+    utils::ClassHash,
     EntryPointType,
 };
 use std::{

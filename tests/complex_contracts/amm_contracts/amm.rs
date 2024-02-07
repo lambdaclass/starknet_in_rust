@@ -16,8 +16,8 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader, state_api::StateReader,
         ExecutionResourcesManager,
     },
-    transaction::error::TransactionError,
-    utils::{calculate_sn_keccak, Address},
+    transaction::{error::TransactionError, Address},
+    utils::calculate_sn_keccak,
     EntryPointType,
 };
 use std::collections::{HashMap, HashSet};

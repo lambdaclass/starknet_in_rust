@@ -16,7 +16,7 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader,
         ExecutionResourcesManager,
     },
-    utils::Address,
+    transaction::Address,
 };
 use std::{path::PathBuf, sync::Arc};
 

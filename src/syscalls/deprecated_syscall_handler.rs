@@ -288,11 +288,10 @@ mod tests {
             DeprecatedDeployRequest, DeprecatedSendMessageToL1SysCallRequest,
             DeprecatedSyscallRequest,
         },
-        transaction::InvokeFunction,
+        transaction::{Address, InvokeFunction},
         utils::{
             get_big_int, get_integer, get_relocatable,
             test_utils::{ids_data, vm},
-            Address,
         },
     };
     use cairo_vm::relocatable;

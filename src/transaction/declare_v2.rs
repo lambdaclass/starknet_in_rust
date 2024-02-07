@@ -1,6 +1,6 @@
 use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks};
 use super::{
-    check_account_tx_fields_version, get_tx_version, ResourceBounds, Transaction,
+    check_account_tx_fields_version, get_tx_version, Address, ResourceBounds, Transaction,
     VersionSpecificAccountTxFields,
 };
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
@@ -26,7 +26,7 @@ use crate::{
     state::state_api::{State, StateReader},
     state::ExecutionResourcesManager,
     transaction::{error::TransactionError, invoke_function::verify_no_calls_to_other_contracts},
-    utils::{calculate_tx_resources, Address},
+    utils::calculate_tx_resources,
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
@@ -607,7 +607,7 @@ mod tests {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
         },
-        utils::Address,
+        transaction::Address,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::Felt252;
