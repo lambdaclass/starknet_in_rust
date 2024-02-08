@@ -1,3 +1,15 @@
+/*
+Usage:
+    With cairo-native feature enabled:
+        * Running the bench by itself will default to JIT mode
+        * You can choose to run either in JIT (Just in time) or AOT (Ahead of time) mode
+        by passing either "jit" or "aot" as an argument when running the bench
+        * Example:
+            `cargo bench --features cairo-native --bench internals aot`
+    Without cairo-native feature enababled:
+        * Runs the bench using cairo_vm, no customization args
+*/
+
 #![deny(warnings)]
 #[cfg(feature = "cairo-native")]
 use cairo_native::cache::{JitProgramCache, ProgramCache};
@@ -18,8 +30,10 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
-    transaction::ClassHash,
-    transaction::{declare::Declare, Address, Deploy, DeployAccount, InvokeFunction},
+    transaction::{
+        declare::Declare, Address, ClassHash, Deploy, DeployAccount,
+        InvokeFunction,
+    },
 };
 use std::{hint::black_box, sync::Arc};
 
@@ -53,19 +67,52 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // We don't use the cargo test harness because it uses
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
-    // TODO: If this test won't run unless `cairo-native` is active, why not gate the entire bench
-    //   behind `#[cfg(feature = "cairo-native")]`?
     #[cfg(feature = "cairo-native")]
-    {
-        let program_cache = Rc::new(RefCell::new(ProgramCache::Jit(JitProgramCache::new(
-            starknet_in_rust::utils::get_native_context(),
-        ))));
-
-        deploy_account(program_cache.clone());
-        declare(program_cache.clone());
-        deploy(program_cache.clone());
-        invoke(program_cache.clone());
+    let mut jit_run: bool = true;
+    #[cfg(feature = "cairo-native")]
+    let args: Vec<String> = std::env::args().collect();
+    #[cfg(feature = "cairo-native")]
+    if args.len() < 2 {
+        info!("No mode selected, running in JIT mode");
+    } else {
+        match &*args[1] {
+            "jit" => {
+                info!("Running in JIT mode");
+            }
+            "aot" => {
+                info!("Running in AOT mode");
+                jit_run = false;
+            }
+            arg => {
+                info!("Invalid mode {}, running in JIT mode", arg);
+            }
+        }
     }
+    #[cfg(feature = "cairo-native")]
+    let cache = if jit_run {
+        ProgramCache::from(JitProgramCache::new(get_native_context()))
+    } else {
+        ProgramCache::from(AotProgramCache::new(get_native_context()))
+    };
+    #[cfg(feature = "cairo-native")]
+    let program_cache = Rc::new(RefCell::new(cache));
+
+    deploy_account(
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+    );
+    declare(
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+    );
+    deploy(
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+    );
+    invoke(
+        #[cfg(feature = "cairo-native")]
+        program_cache.clone(),
+    );
 
     // The black_box ensures there's no tail-call optimization.
     // If not, the flamegraph ends up less nice.
