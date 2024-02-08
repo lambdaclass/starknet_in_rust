@@ -13,7 +13,7 @@ Usage:
 #![deny(warnings)]
 #[cfg(feature = "cairo-native")]
 use {
-    cairo_native::cache::{JitProgramCache, AotProgramCache,  ProgramCache},
+    cairo_native::cache::{AotProgramCache, JitProgramCache, ProgramCache},
     starknet_in_rust::utils::get_native_context,
     tracing::info,
 };
@@ -69,34 +69,32 @@ fn scope<T>(f: impl FnOnce() -> T) -> T {
 // FnOnce calls for each test, that are merged in the flamegraph.
 fn main() {
     #[cfg(feature = "cairo-native")]
-    let mut jit_run: bool = true;
-    #[cfg(feature = "cairo-native")]
-    let args: Vec<String> = std::env::args().collect();
-    #[cfg(feature = "cairo-native")]
-    if args.len() < 2 {
-        info!("No mode selected, running in JIT mode");
-    } else {
-        match &*args[1] {
-            "jit" => {
-                info!("Running in JIT mode");
-            }
-            "aot" => {
-                info!("Running in AOT mode");
-                jit_run = false;
-            }
-            arg => {
-                info!("Invalid mode {}, running in JIT mode", arg);
+    let program_cache = {
+        let mut jit_run: bool = true;
+        let args: Vec<String> = std::env::args().collect();
+        if args.len() < 2 {
+            info!("No mode selected, running in JIT mode");
+        } else {
+            match &*args[1] {
+                "jit" => {
+                    info!("Running in JIT mode");
+                }
+                "aot" => {
+                    info!("Running in AOT mode");
+                    jit_run = false;
+                }
+                arg => {
+                    info!("Invalid mode {}, running in JIT mode", arg);
+                }
             }
         }
-    }
-    #[cfg(feature = "cairo-native")]
-    let cache = if jit_run {
-        ProgramCache::from(JitProgramCache::new(get_native_context()))
-    } else {
-        ProgramCache::from(AotProgramCache::new(get_native_context()))
+        let cache = if jit_run {
+            ProgramCache::from(JitProgramCache::new(get_native_context()))
+        } else {
+            ProgramCache::from(AotProgramCache::new(get_native_context()))
+        };
+        Rc::new(RefCell::new(cache))
     };
-    #[cfg(feature = "cairo-native")]
-    let program_cache = Rc::new(RefCell::new(cache));
 
     deploy_account(
         #[cfg(feature = "cairo-native")]
