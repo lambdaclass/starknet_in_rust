@@ -12,7 +12,11 @@ Usage:
 
 #![deny(warnings)]
 #[cfg(feature = "cairo-native")]
-use cairo_native::cache::{JitProgramCache, ProgramCache};
+use {
+    cairo_native::cache::{JitProgramCache, AotProgramCache,  ProgramCache},
+    starknet_in_rust::utils::get_native_context,
+    tracing::info,
+};
 
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
