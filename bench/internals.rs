@@ -19,9 +19,9 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
     transaction::{
-        declare_deprecated::DeclareDeprecated, Address, Deploy, DeployAccount, InvokeFunction,
+        declare_deprecated::DeclareDeprecated, Address, ClassHash, Deploy, DeployAccount,
+        InvokeFunction,
     },
-    utils::ClassHash,
 };
 use std::{hint::black_box, sync::Arc};
 

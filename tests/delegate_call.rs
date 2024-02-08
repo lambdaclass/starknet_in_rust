@@ -2,7 +2,7 @@
 
 use cairo_vm::Felt252;
 use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledClass;
-use starknet_in_rust::utils::ClassHash;
+use starknet_in_rust::transaction::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},

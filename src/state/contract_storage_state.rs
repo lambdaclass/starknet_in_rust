@@ -3,7 +3,10 @@ use super::{
     contract_class_cache::ContractClassCache,
     state_api::{State, StateReader},
 };
-use crate::{core::errors::state_errors::StateError, transaction::Address, utils::ClassHash};
+use crate::{
+    core::errors::state_errors::StateError,
+    transaction::{Address, ClassHash},
+};
 use cairo_vm::Felt252;
 use std::collections::HashSet;
 

@@ -23,8 +23,8 @@ use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledC
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::ExecutionResourcesManager;
 use starknet_in_rust::transaction::fee::calculate_tx_fee;
+use starknet_in_rust::transaction::CompiledClassHash;
 use starknet_in_rust::transaction::{Declare, Deploy};
-use starknet_in_rust::utils::CompiledClassHash;
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -58,10 +58,10 @@ use starknet_in_rust::{
         BlockInfo,
     },
     transaction::{
-        error::TransactionError, invoke_function::InvokeFunction, Address, DeclareDeprecated,
-        DeployAccount,
+        error::TransactionError, invoke_function::InvokeFunction, Address, ClassHash,
+        DeclareDeprecated, DeployAccount,
     },
-    utils::{calculate_sn_keccak, felt_to_hash, ClassHash},
+    utils::{calculate_sn_keccak, felt_to_hash},
 };
 use std::{
     collections::{HashMap, HashSet},

@@ -7,7 +7,9 @@
 //! cache. It also contains a method to extend the shared cache from an iterator so that it can be
 //! used with the private caches.
 
-use crate::{services::api::contract_classes::compiled_class::CompiledClass, utils::ClassHash};
+use crate::{
+    services::api::contract_classes::compiled_class::CompiledClass, transaction::ClassHash,
+};
 use std::{collections::HashMap, sync::RwLock};
 
 /// The contract class cache trait, which must be implemented by all caches.

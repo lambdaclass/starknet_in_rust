@@ -1,7 +1,7 @@
 use crate::core::errors::hash_errors::HashError;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
 use crate::state::state_api::{State, StateChangesCount};
-use crate::transaction::Address;
+use crate::transaction::{Address, ClassHash};
 use crate::{
     definitions::transaction_type::TransactionType,
     execution::{
@@ -15,9 +15,7 @@ use crate::{
 use cairo_vm::vm::runners::builtin_runner::SEGMENT_ARENA_BUILTIN_NAME;
 use cairo_vm::{serde::deserialize_program::BuiltinName, vm::runners::builtin_runner, Felt252};
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine};
-use core::fmt;
 use num_traits::ToPrimitive;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha3::{Digest, Keccak256, Keccak256Core};
 use starknet::core::types::FromByteArrayError;
@@ -27,66 +25,6 @@ use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
 };
-
-#[derive(Clone, PartialEq, Hash, Default, Serialize, Deserialize, Copy)]
-pub struct ClassHash(pub [u8; 32]);
-
-impl ClassHash {
-    pub fn new(bytes: [u8; 32]) -> Self {
-        ClassHash(bytes)
-    }
-
-    pub fn to_bytes_be(&self) -> &[u8] {
-        &self.0
-    }
-
-    pub fn as_slice(&self) -> [u8; 32] {
-        self.0
-    }
-}
-
-impl fmt::Display for ClassHash {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let hex_string = hex::encode(self.0);
-        let trimmed_hex_string = hex_string.trim_start_matches('0');
-        write!(f, "0x{}", trimmed_hex_string)?;
-        Ok(())
-    }
-}
-
-impl fmt::Debug for ClassHash {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
-impl From<Felt252> for ClassHash {
-    fn from(felt: Felt252) -> Self {
-        felt_to_hash(&felt)
-    }
-}
-
-impl From<[u8; 32]> for ClassHash {
-    fn from(bytes: [u8; 32]) -> Self {
-        ClassHash(bytes)
-    }
-}
-
-impl Eq for ClassHash {}
-
-impl PartialEq<[u8; 32]> for ClassHash {
-    fn eq(&self, other: &[u8; 32]) -> bool {
-        &self.0 == other
-    }
-}
-
-impl ClassHash {
-    pub fn from_hex_string(hex_string: String) -> Option<Self> {
-        Some(Self(hex::decode(hex_string).ok()?.try_into().ok()?))
-    }
-}
-
-pub type CompiledClassHash = ClassHash;
 
 #[cfg(feature = "cairo-native")]
 pub(crate) static NATIVE_CONTEXT: std::sync::OnceLock<cairo_native::context::NativeContext> =
