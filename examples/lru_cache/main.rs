@@ -12,8 +12,8 @@ use starknet_in_rust::{
         contract_class_cache::{ContractClassCache, PermanentContractClassCache},
         in_memory_state_reader::InMemoryStateReader,
     },
-    transaction::{Declare, Deploy, InvokeFunction},
-    utils::{calculate_sn_keccak, Address, ClassHash},
+    transaction::{Address, ClassHash, Declare, Deploy, InvokeFunction},
+    utils::calculate_sn_keccak,
 };
 use std::{
     num::NonZeroUsize,

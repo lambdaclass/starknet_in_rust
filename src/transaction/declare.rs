@@ -17,10 +17,7 @@ use crate::{
     },
     state::ExecutionResourcesManager,
     transaction::error::TransactionError,
-    utils::{
-        calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts, Address,
-        ClassHash,
-    },
+    utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts},
 };
 use cairo_vm::Felt252;
 use num_traits::Zero;
@@ -28,7 +25,7 @@ use num_traits::Zero;
 use super::fee::{
     calculate_tx_fee, charge_fee, estimate_minimal_l1_gas, run_post_execution_fee_checks,
 };
-use super::{get_tx_version, Transaction};
+use super::{get_tx_version, Address, ClassHash, Transaction};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -464,9 +461,12 @@ mod tests {
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
-        state::in_memory_state_reader::InMemoryStateReader,
-        state::{cached_state::CachedState, contract_class_cache::PermanentContractClassCache},
-        utils::{felt_to_hash, Address},
+        state::{
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+            in_memory_state_reader::InMemoryStateReader,
+        },
+        transaction::Address,
+        utils::felt_to_hash,
     };
     use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 

@@ -23,7 +23,7 @@ use crate::{
         state_api::{State, StateChangesCount, StateReader},
         ExecutionResourcesManager,
     },
-    utils::Address,
+    transaction::Address,
 };
 use cairo_vm::Felt252;
 use num_traits::{ToPrimitive, Zero};
@@ -31,7 +31,7 @@ use std::collections::HashMap;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::utils::ClassHash,
+    crate::transaction::ClassHash,
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };

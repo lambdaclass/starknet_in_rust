@@ -17,15 +17,15 @@ use starknet_in_rust::{
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
-    transaction::{DeclareV2, InvokeFunction},
-    utils::Address,
+    transaction::Address,
+    transaction::{ClassHash, DeclareV2, InvokeFunction},
 };
 use tracing::info;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use {
     cairo_native::cache::{JitProgramCache, ProgramCache},
-    starknet_in_rust::utils::{get_native_context, ClassHash},
+    starknet_in_rust::utils::get_native_context,
     std::{cell::RefCell, rc::Rc},
 };
 
@@ -907,7 +907,8 @@ mod utils {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader, state_api::State,
         },
-        utils::{Address, ClassHash},
+        transaction::Address,
+        transaction::ClassHash,
         CasmContractClass, ContractClass as SierraContractClass,
     };
     use std::{fs, path::Path, sync::Arc};

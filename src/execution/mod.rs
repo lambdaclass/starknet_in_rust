@@ -8,8 +8,8 @@ use crate::{
     definitions::{constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR, transaction_type::TransactionType},
     state::state_cache::StorageEntry,
     syscalls::syscall_handler_errors::SyscallHandlerError,
-    transaction::error::TransactionError,
-    utils::{get_big_int, get_integer, get_relocatable, Address, ClassHash},
+    transaction::{error::TransactionError, Address, ClassHash},
+    utils::{get_big_int, get_integer, get_relocatable},
 };
 use cairo_vm::Felt252;
 use cairo_vm::{
@@ -689,7 +689,7 @@ impl L2toL1MessageInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::{string_to_hash, Address};
+    use crate::utils::string_to_hash;
 
     #[test]
     fn test_get_sorted_single_event() {

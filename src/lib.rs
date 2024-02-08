@@ -14,8 +14,8 @@ use crate::{
         state_api::{State, StateReader},
         ExecutionResourcesManager,
     },
+    transaction::Address,
     transaction::{error::TransactionError, fee::calculate_tx_fee, L1Handler, Transaction},
-    utils::Address,
 };
 pub use cairo_vm::Felt252;
 use definitions::block_context::FeeType;
@@ -37,7 +37,7 @@ pub use cairo_lang_starknet::{
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::utils::ClassHash,
+    crate::transaction::ClassHash,
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };
@@ -273,8 +273,8 @@ mod test {
             ExecutionResourcesManager,
         },
         transaction::{
-            Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction, L1Handler, Transaction,
-            VersionSpecificAccountTxFields,
+            Address, ClassHash, Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction,
+            L1Handler, Transaction, VersionSpecificAccountTxFields,
         },
         utils::{
             felt_to_hash,
@@ -282,7 +282,6 @@ mod test {
                 create_account_tx_test_state, TEST_ACCOUNT_CONTRACT_ADDRESS,
                 TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
             },
-            Address, ClassHash,
         },
     };
     use cairo_lang_starknet::{

@@ -1,5 +1,5 @@
 use super::block_context::{StarknetChainId, StarknetOsConfig};
-use crate::utils::Address;
+use crate::transaction::Address;
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 

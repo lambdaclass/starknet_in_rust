@@ -1,7 +1,7 @@
 use super::{
     check_account_tx_fields_version,
     fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks},
-    get_tx_version, CurrentAccountTxFields, ResourceBounds, Transaction,
+    get_tx_version, Address, CurrentAccountTxFields, ResourceBounds, Transaction,
     VersionSpecificAccountTxFields,
 };
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
         ExecutionResourcesManager, StateDiff,
     },
     transaction::error::TransactionError,
-    utils::{calculate_tx_resources, Address},
+    utils::calculate_tx_resources,
 };
 use cairo_vm::Felt252;
 use getset::Getters;
@@ -37,7 +37,7 @@ use std::fmt::Debug;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::utils::ClassHash,
+    crate::transaction::ClassHash,
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };
@@ -648,17 +648,16 @@ pub fn verify_no_calls_to_other_contracts(
 mod tests {
     use super::*;
     use crate::{
-        definitions::block_context::GasPrices,
-        definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
+        definitions::{block_context::GasPrices, constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
         services::api::contract_classes::{
             compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
         },
-        state::cached_state::CachedState,
         state::{
-            contract_class_cache::PermanentContractClassCache,
+            cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
         },
-        utils::{calculate_sn_keccak, ClassHash},
+        transaction::ClassHash,
+        utils::calculate_sn_keccak,
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 

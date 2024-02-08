@@ -4,7 +4,7 @@ use crate::{
     state::{
         cached_state::UNINITIALIZED_CLASS_HASH, state_api::StateReader, state_cache::StorageEntry,
     },
-    utils::{Address, ClassHash, CompiledClassHash},
+    transaction::{Address, ClassHash, CompiledClassHash},
 };
 use cairo_vm::Felt252;
 use getset::{Getters, MutGetters};

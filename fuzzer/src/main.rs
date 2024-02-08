@@ -5,7 +5,7 @@ extern crate honggfuzz;
 
 use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use starknet_in_rust::execution::execution_entry_point::ExecutionResult;
-use starknet_in_rust::utils::ClassHash;
+use starknet_in_rust::transaction::ClassHash;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
@@ -21,7 +21,8 @@ use starknet_in_rust::{
         in_memory_state_reader::InMemoryStateReader,
         ExecutionResourcesManager,
     },
-    utils::{calculate_sn_keccak, Address},
+    transaction::Address,
+    utils::calculate_sn_keccak,
 };
 use std::{
     collections::HashSet, fs, path::PathBuf, process::Command, sync::Arc, thread, time::Duration,

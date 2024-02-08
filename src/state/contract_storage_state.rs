@@ -5,7 +5,7 @@ use super::{
 };
 use crate::{
     core::errors::state_errors::StateError,
-    utils::{Address, ClassHash},
+    transaction::{Address, ClassHash},
 };
 use cairo_vm::Felt252;
 use std::collections::HashSet;

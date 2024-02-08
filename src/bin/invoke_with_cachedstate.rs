@@ -9,12 +9,11 @@ use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::in_memory_state_reader::InMemoryStateReader,
     state::{
-        cached_state::CachedState, contract_class_cache::PermanentContractClassCache, BlockInfo,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, BlockInfo,
     },
-    transaction::{InvokeFunction, VersionSpecificAccountTxFields},
-    utils::{Address, ClassHash},
+    transaction::{Address, ClassHash, InvokeFunction, VersionSpecificAccountTxFields},
 };
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 

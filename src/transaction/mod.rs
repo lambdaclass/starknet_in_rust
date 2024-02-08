@@ -1,8 +1,9 @@
+use core::fmt;
+
 use crate::{
     core::contract_address::compute_casm_class_hash,
-    definitions::block_context::BlockContext,
     definitions::{
-        block_context::FeeType,
+        block_context::{BlockContext, FeeType},
         constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2, QUERY_VERSION_3},
     },
     execution::TransactionExecutionInfo,
@@ -10,7 +11,7 @@ use crate::{
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
-    utils::Address,
+    utils::felt_to_hash,
 };
 pub use declare::Declare;
 pub use declare_v2::DeclareV2;
@@ -30,14 +31,119 @@ pub mod invoke_function;
 pub mod l1_handler;
 
 use cairo_vm::Felt252;
+use serde::{Deserialize, Serialize};
 use starknet_api::transaction::Resource;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::utils::ClassHash,
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };
+
+#[derive(Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
+pub struct Address(pub Felt252);
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl From<Felt252> for Address {
+    fn from(value: Felt252) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&Felt252> for Address {
+    fn from(value: &Felt252) -> Self {
+        Self(*value)
+    }
+}
+
+impl From<Address> for Felt252 {
+    fn from(value: Address) -> Self {
+        value.0
+    }
+}
+
+impl From<&Address> for Felt252 {
+    fn from(value: &Address) -> Self {
+        value.0
+    }
+}
+
+impl Address {
+    pub fn from_hex_string(hex_string: &str) -> Option<Self> {
+        Some(Self(Felt252::from_hex(hex_string).ok()?))
+    }
+}
+
+#[derive(Clone, PartialEq, Hash, Default, Serialize, Deserialize, Copy)]
+pub struct ClassHash(pub [u8; 32]);
+
+impl ClassHash {
+    pub fn new(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+
+    pub fn to_bytes_be(&self) -> &[u8] {
+        &self.0
+    }
+
+    pub fn as_slice(&self) -> [u8; 32] {
+        self.0
+    }
+}
+
+impl fmt::Display for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let hex_string = hex::encode(self.0);
+        let trimmed_hex_string = hex_string.trim_start_matches('0');
+        write!(f, "0x{}", trimmed_hex_string)?;
+        Ok(())
+    }
+}
+
+impl fmt::Debug for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl From<Felt252> for ClassHash {
+    fn from(felt: Felt252) -> Self {
+        felt_to_hash(&felt)
+    }
+}
+
+impl From<[u8; 32]> for ClassHash {
+    fn from(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+}
+
+impl Eq for ClassHash {}
+
+impl PartialEq<[u8; 32]> for ClassHash {
+    fn eq(&self, other: &[u8; 32]) -> bool {
+        &self.0 == other
+    }
+}
+
+impl ClassHash {
+    pub fn from_hex_string(hex_string: String) -> Option<Self> {
+        Some(Self(hex::decode(hex_string).ok()?.try_into().ok()?))
+    }
+}
+
+pub type CompiledClassHash = ClassHash;
 
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.

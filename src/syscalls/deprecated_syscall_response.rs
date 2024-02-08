@@ -5,7 +5,7 @@ use super::deprecated_syscall_request::{
     DeprecatedGetSequencerAddressRequest, DeprecatedGetTxInfoRequest,
     DeprecatedGetTxSignatureRequest, DeprecatedStorageReadRequest,
 };
-use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, utils::Address};
+use crate::{syscalls::syscall_handler_errors::SyscallHandlerError, transaction::Address};
 use cairo_vm::{types::relocatable::Relocatable, vm::vm_core::VirtualMachine, Felt252};
 
 /// Trait to write the response of a deprecated system call

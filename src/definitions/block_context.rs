@@ -2,7 +2,7 @@
 //!
 //! This module contains structs representing the context of a specific Starknet block.
 
-use crate::{state::BlockInfo, utils::Address};
+use crate::{state::BlockInfo, transaction::Address};
 use cairo_vm::Felt252;
 use core::fmt;
 use getset::{CopyGetters, Getters, MutGetters};
