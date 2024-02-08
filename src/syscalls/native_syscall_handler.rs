@@ -1,4 +1,3 @@
-use crate::VersionSpecificAccountTxFields;
 use crate::{
     core::errors::state_errors::StateError,
     definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
@@ -22,19 +21,21 @@ use crate::{
     },
     transaction::{error::TransactionError, Address, ClassHash},
     utils::felt_to_hash,
-    ContractClassCache, EntryPointType,
+    ContractClassCache, EntryPointType, VersionSpecificAccountTxFields,
 };
-use cairo_native::starknet::{ResourceBounds, TxV2Info};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{
-        BlockInfo, ExecutionInfo, ExecutionInfoV2, StarkNetSyscallHandler, SyscallResult, TxInfo,
-        U256,
+        BlockInfo, ExecutionInfo, ExecutionInfoV2, ResourceBounds, Secp256k1Point, Secp256r1Point,
+        StarkNetSyscallHandler, SyscallResult, TxInfo, TxV2Info, U256,
     },
 };
 use cairo_vm::Felt252;
+use k256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use sec1::point::Coordinates;
+use sha3::digest::generic_array::GenericArray;
 use starknet::core::utils::cairo_short_string_to_felt;
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, iter::once, rc::Rc};
 
 #[derive(Debug)]
 pub struct NativeSyscallHandler<'a, 'cache, S, C>
@@ -77,6 +78,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
         Ok(())
     }
 }
+
 impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     for NativeSyscallHandler<'a, 'cache, S, C>
 {
@@ -454,17 +456,13 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
             }
             keccak::f1600(&mut state)
         }
-        // state[0] and state[1] conform the hash_low (u128)
-        // state[2] and state[3] conform the hash_high (u128)
-        let hash = [
-            state[0].to_le_bytes(),
-            state[1].to_le_bytes(),
-            state[2].to_le_bytes(),
-            state[3].to_le_bytes(),
-        ]
-        .concat();
 
-        SyscallResult::Ok(U256(hash[0..32].try_into().unwrap()))
+        // state[0] and state[1] conform the hash_high (u128)
+        // state[2] and state[3] conform the hash_low (u128)
+        SyscallResult::Ok(U256 {
+            lo: state[2] as u128 | ((state[3] as u128) << 64),
+            hi: state[0] as u128 | ((state[1] as u128) << 64),
+        })
     }
 
     fn get_execution_info_v2(
@@ -544,92 +542,453 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         })
     }
 
+    fn secp256k1_new(
+        &mut self,
+        x: U256,
+        y: U256,
+        _gas: &mut u128,
+    ) -> SyscallResult<Option<Secp256k1Point>> {
+        // The following unwraps should be unreachable because the iterator we provide has the
+        // expected number of bytes.
+        let point = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    x.hi.to_be_bytes().into_iter().chain(x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    y.hi.to_be_bytes().into_iter().chain(y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        );
+
+        if bool::from(point.is_some()) {
+            Ok(Some(Secp256k1Point { x, y }))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn secp256k1_add(
         &mut self,
-        _p0: cairo_native::starknet::Secp256k1Point,
-        _p1: cairo_native::starknet::Secp256k1Point,
+        p0: Secp256k1Point,
+        p1: Secp256k1Point,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
-    }
+    ) -> SyscallResult<Secp256k1Point> {
+        // The inner unwraps should be unreachable because the iterator we provide has the expected
+        // number of bytes. The outer unwraps depend on the felt values, which should be valid since
+        // they'll be provided by secp256 syscalls.
+        let p0 = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p0.x.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p0.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p0.y.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p0.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+        let p1 = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p1.x.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p1.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p1.y.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p1.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
 
-    fn secp256k1_get_point_from_x(
-        &self,
-        _x: cairo_native::starknet::U256,
-        _y_parity: bool,
-        _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
-    }
+        let p = p0 + p1;
 
-    fn secp256k1_get_xy(
-        &self,
-        _p: cairo_native::starknet::Secp256k1Point,
-        _gas: &mut u128,
-    ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
-        todo!()
+        let p = p.to_encoded_point(false);
+        let (x, y) = match p.coordinates() {
+            Coordinates::Uncompressed { x, y } => (x, y),
+            _ => {
+                // This should be unreachable because we explicitly asked for the uncompressed
+                // encoding.
+                unreachable!()
+            }
+        };
+
+        // The following two unwraps should be safe because the array always has 32 bytes. The other
+        // four are definitely safe because the slicing guarantees its length to be the right one.
+        let x: [u8; 32] = x.as_slice().try_into().unwrap();
+        let y: [u8; 32] = y.as_slice().try_into().unwrap();
+        Ok(Secp256k1Point {
+            x: U256 {
+                hi: u128::from_be_bytes(x[0..16].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[16..32].try_into().unwrap()),
+            },
+            y: U256 {
+                hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+            },
+        })
     }
 
     fn secp256k1_mul(
-        &self,
-        _p: cairo_native::starknet::Secp256k1Point,
-        _m: cairo_native::starknet::U256,
+        &mut self,
+        p: Secp256k1Point,
+        m: U256,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
+    ) -> SyscallResult<Secp256k1Point> {
+        // The inner unwrap should be unreachable because the iterator we provide has the expected
+        // number of bytes. The outer unwrap depends on the felt values, which should be valid since
+        // they'll be provided by secp256 syscalls.
+        let p = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p.x.hi.to_be_bytes().into_iter().chain(p.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p.y.hi.to_be_bytes().into_iter().chain(p.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+        let m: k256::Scalar = k256::elliptic_curve::ScalarPrimitive::from_slice(&{
+            let mut buf = [0u8; 32];
+            buf[0..16].copy_from_slice(&m.hi.to_be_bytes());
+            buf[16..32].copy_from_slice(&m.lo.to_be_bytes());
+            buf
+        })
+        .map_err(|_| {
+            vec![Felt252::from_bytes_be(
+                b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0invalid scalar",
+            )]
+        })?
+        .into();
+
+        let p = p * m;
+
+        let p = p.to_encoded_point(false);
+        let (x, y) = match p.coordinates() {
+            Coordinates::Uncompressed { x, y } => (x, y),
+            _ => {
+                // This should be unreachable because we explicitly asked for the uncompressed
+                // encoding.
+                unreachable!()
+            }
+        };
+
+        // The following two unwraps should be safe because the array always has 32 bytes. The other
+        // four are definitely safe because the slicing guarantees its length to be the right one.
+        let x: [u8; 32] = x.as_slice().try_into().unwrap();
+        let y: [u8; 32] = y.as_slice().try_into().unwrap();
+        Ok(Secp256k1Point {
+            x: U256 {
+                hi: u128::from_be_bytes(x[0..16].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[16..32].try_into().unwrap()),
+            },
+            y: U256 {
+                hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+            },
+        })
     }
 
-    fn secp256k1_new(
-        &self,
-        _x: cairo_native::starknet::U256,
-        _y: cairo_native::starknet::U256,
+    fn secp256k1_get_point_from_x(
+        &mut self,
+        x: U256,
+        y_parity: bool,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
+    ) -> SyscallResult<Option<Secp256k1Point>> {
+        // The inner unwrap should be unreachable because the iterator we provide has the expected
+        // number of bytes. The outer unwrap depends on the encoding format, which should be valid
+        // since it's hardcoded..
+        let point = k256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_bytes(
+                k256::CompressedPoint::from_exact_iter(
+                    once(0x02 | y_parity as u8)
+                        .chain(x.hi.to_be_bytes())
+                        .chain(x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+            )
+            .unwrap(),
+        );
+
+        if bool::from(point.is_some()) {
+            // This unwrap has already been checked in the `if` expression's condition.
+            let p = point.unwrap();
+
+            let p = p.to_encoded_point(false);
+            let y = match p.coordinates() {
+                Coordinates::Uncompressed { y, .. } => y,
+                _ => {
+                    // This should be unreachable because we explicitly asked for the uncompressed
+                    // encoding.
+                    unreachable!()
+                }
+            };
+
+            // The following unwrap should be safe because the array always has 32 bytes. The other
+            // two are definitely safe because the slicing guarantees its length to be the right
+            // one.
+            let y: [u8; 32] = y.as_slice().try_into().unwrap();
+            Ok(Some(Secp256k1Point {
+                x,
+                y: U256 {
+                    hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                    lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+                },
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
-    fn secp256r1_add(
-        &self,
-        _p0: cairo_native::starknet::Secp256k1Point,
-        _p1: cairo_native::starknet::Secp256k1Point,
+    fn secp256k1_get_xy(
+        &mut self,
+        p: Secp256k1Point,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
-    }
-
-    fn secp256r1_get_point_from_x(
-        &self,
-        _x: cairo_native::starknet::U256,
-        _y_parity: bool,
-        _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
-    }
-
-    fn secp256r1_get_xy(
-        &self,
-        _p: cairo_native::starknet::Secp256k1Point,
-        _gas: &mut u128,
-    ) -> SyscallResult<(cairo_native::starknet::U256, cairo_native::starknet::U256)> {
-        todo!()
-    }
-
-    fn secp256r1_mul(
-        &self,
-        _p: cairo_native::starknet::Secp256k1Point,
-        _m: cairo_native::starknet::U256,
-        _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
+    ) -> SyscallResult<(U256, U256)> {
+        Ok((p.x, p.y))
     }
 
     fn secp256r1_new(
         &mut self,
-        _x: cairo_native::starknet::U256,
-        _y: cairo_native::starknet::U256,
+        x: U256,
+        y: U256,
         _gas: &mut u128,
-    ) -> SyscallResult<Option<cairo_native::starknet::Secp256k1Point>> {
-        todo!()
+    ) -> SyscallResult<Option<Secp256r1Point>> {
+        // The following unwraps should be unreachable because the iterator we provide has the
+        // expected number of bytes.
+        let point = p256::ProjectivePoint::from_encoded_point(
+            &k256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    x.hi.to_be_bytes().into_iter().chain(x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    y.hi.to_be_bytes().into_iter().chain(y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        );
+
+        if bool::from(point.is_some()) {
+            Ok(Some(Secp256r1Point { x, y }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn secp256r1_add(
+        &mut self,
+        p0: Secp256r1Point,
+        p1: Secp256r1Point,
+        _gas: &mut u128,
+    ) -> SyscallResult<Secp256r1Point> {
+        // The inner unwraps should be unreachable because the iterator we provide has the expected
+        // number of bytes. The outer unwraps depend on the felt values, which should be valid since
+        // they'll be provided by secp256 syscalls.
+        let p0 = p256::ProjectivePoint::from_encoded_point(
+            &p256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p0.x.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p0.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p0.y.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p0.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+        let p1 = p256::ProjectivePoint::from_encoded_point(
+            &p256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p1.x.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p1.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p1.y.hi
+                        .to_be_bytes()
+                        .into_iter()
+                        .chain(p1.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+
+        let p = p0 + p1;
+
+        let p = p.to_encoded_point(false);
+        let (x, y) = match p.coordinates() {
+            Coordinates::Uncompressed { x, y } => (x, y),
+            _ => {
+                // This should be unreachable because we explicitly asked for the uncompressed
+                // encoding.
+                unreachable!()
+            }
+        };
+
+        // The following two unwraps should be safe because the array always has 32 bytes. The other
+        // four are definitely safe because the slicing guarantees its length to be the right one.
+        let x: [u8; 32] = x.as_slice().try_into().unwrap();
+        let y: [u8; 32] = y.as_slice().try_into().unwrap();
+        Ok(Secp256r1Point {
+            x: U256 {
+                hi: u128::from_be_bytes(x[0..16].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[16..32].try_into().unwrap()),
+            },
+            y: U256 {
+                hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+            },
+        })
+    }
+
+    fn secp256r1_mul(
+        &mut self,
+        p: Secp256r1Point,
+        m: U256,
+        _gas: &mut u128,
+    ) -> SyscallResult<Secp256r1Point> {
+        // The inner unwrap should be unreachable because the iterator we provide has the expected
+        // number of bytes. The outer unwrap depends on the felt values, which should be valid since
+        // they'll be provided by secp256 syscalls.
+        let p = p256::ProjectivePoint::from_encoded_point(
+            &p256::EncodedPoint::from_affine_coordinates(
+                &GenericArray::from_exact_iter(
+                    p.x.hi.to_be_bytes().into_iter().chain(p.x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                &GenericArray::from_exact_iter(
+                    p.y.hi.to_be_bytes().into_iter().chain(p.y.lo.to_be_bytes()),
+                )
+                .unwrap(),
+                false,
+            ),
+        )
+        .unwrap();
+        let m: p256::Scalar = p256::elliptic_curve::ScalarPrimitive::from_slice(&{
+            let mut buf = [0u8; 32];
+            buf[0..16].copy_from_slice(&m.hi.to_be_bytes());
+            buf[16..32].copy_from_slice(&m.lo.to_be_bytes());
+            buf
+        })
+        .map_err(|_| {
+            vec![Felt252::from_bytes_be(
+                b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0invalid scalar",
+            )]
+        })?
+        .into();
+
+        let p = p * m;
+
+        let p = p.to_encoded_point(false);
+        let (x, y) = match p.coordinates() {
+            Coordinates::Uncompressed { x, y } => (x, y),
+            _ => {
+                // This should be unreachable because we explicitly asked for the uncompressed
+                // encoding.
+                unreachable!()
+            }
+        };
+
+        // The following two unwraps should be safe because the array always has 32 bytes. The other
+        // four are definitely safe because the slicing guarantees its length to be the right one.
+        let x: [u8; 32] = x.as_slice().try_into().unwrap();
+        let y: [u8; 32] = y.as_slice().try_into().unwrap();
+        Ok(Secp256r1Point {
+            x: U256 {
+                hi: u128::from_be_bytes(x[0..16].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[16..32].try_into().unwrap()),
+            },
+            y: U256 {
+                hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+            },
+        })
+    }
+
+    fn secp256r1_get_point_from_x(
+        &mut self,
+        x: U256,
+        y_parity: bool,
+        _gas: &mut u128,
+    ) -> SyscallResult<Option<Secp256r1Point>> {
+        let point = p256::ProjectivePoint::from_encoded_point(
+            &p256::EncodedPoint::from_bytes(
+                p256::CompressedPoint::from_exact_iter(
+                    once(0x02 | y_parity as u8)
+                        .chain(x.hi.to_be_bytes())
+                        .chain(x.lo.to_be_bytes()),
+                )
+                .unwrap(),
+            )
+            .unwrap(),
+        );
+
+        if bool::from(point.is_some()) {
+            let p = point.unwrap();
+
+            let p = p.to_encoded_point(false);
+            let y = match p.coordinates() {
+                Coordinates::Uncompressed { y, .. } => y,
+                _ => unreachable!(),
+            };
+
+            let y: [u8; 32] = y.as_slice().try_into().unwrap();
+            Ok(Some(Secp256r1Point {
+                x,
+                y: U256 {
+                    hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                    lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+                },
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn secp256r1_get_xy(
+        &mut self,
+        p: Secp256r1Point,
+        _gas: &mut u128,
+    ) -> SyscallResult<(U256, U256)> {
+        Ok((p.x, p.y))
     }
 
     fn pop_log(&mut self) {
@@ -848,5 +1207,338 @@ impl From<SyscallHandlerError> for Vec<Felt252> {
 
             felts
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::state::{
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader,
+    };
+    use cairo_native::{cache::JitProgramCache, context::NativeContext};
+
+    #[derive(Default)]
+    struct TestContext {
+        pub native_context: NativeContext,
+        pub cached_state: CachedState<InMemoryStateReader, PermanentContractClassCache>,
+    }
+
+    impl TestContext {
+        pub fn new_syscall_handler(
+            &mut self,
+        ) -> NativeSyscallHandler<InMemoryStateReader, PermanentContractClassCache> {
+            NativeSyscallHandler {
+                starknet_storage_state: ContractStorageState::new(
+                    &mut self.cached_state,
+                    Address::default(),
+                ),
+                contract_address: Address::default(),
+                caller_address: Address::default(),
+                entry_point_selector: Felt252::default(),
+                events: Vec::new(),
+                l2_to_l1_messages: Vec::new(),
+                resources_manager: ExecutionResourcesManager::default(),
+                tx_execution_context: TransactionExecutionContext::default(),
+                block_context: BlockContext::default(),
+                internal_calls: Vec::new(),
+                program_cache: Rc::new(RefCell::new(ProgramCache::Jit(JitProgramCache::new(
+                    &self.native_context,
+                )))),
+            }
+        }
+    }
+
+    #[test]
+    fn secp256k1_new() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let p = syscall_handler
+            .secp256k1_new(
+                U256 {
+                    hi: 0,
+                    lo: 0x6d921cc3a0edd,
+                },
+                U256 {
+                    hi: 0xb7f551d9700e05d0979e993163abc1e2,
+                    lo: 0xa46c825e7de30402be99422be4d4032a,
+                },
+                &mut gas,
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(p.x.hi, 0);
+        assert_eq!(p.x.lo, 0x6d921cc3a0edd);
+        assert_eq!(p.y.hi, 0xb7f551d9700e05d0979e993163abc1e2);
+        assert_eq!(p.y.lo, 0xa46c825e7de30402be99422be4d4032a);
+    }
+
+    #[test]
+    fn secp256k1_add() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let p = syscall_handler
+            .secp256k1_add(
+                Secp256k1Point {
+                    x: U256 {
+                        hi: 0,
+                        lo: 0x6d921cc3a0edd,
+                    },
+                    y: U256 {
+                        hi: 0xb7f551d9700e05d0979e993163abc1e2,
+                        lo: 0xa46c825e7de30402be99422be4d4032a,
+                    },
+                },
+                Secp256k1Point {
+                    x: U256 {
+                        hi: 0,
+                        lo: 0x6d921cc3a0edd,
+                    },
+                    y: U256 {
+                        hi: 0xb7f551d9700e05d0979e993163abc1e2,
+                        lo: 0xa46c825e7de30402be99422be4d4032a,
+                    },
+                },
+                &mut gas,
+            )
+            .unwrap();
+
+        assert_eq!(p.x.hi, 0x517455bb91f3fa3e97fa7bc38c922808);
+        assert_eq!(p.x.lo, 0xd00aff7b006af92bf118ae3ca4565898);
+        assert_eq!(p.y.hi, 0x783f0ba4eff238a1d67b4afc0f203095);
+        assert_eq!(p.y.lo, 0x4a67fed3709e9a8fc799fd55b8701b0c);
+    }
+
+    #[test]
+    fn secp256k1_mul() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let p = syscall_handler
+            .secp256k1_mul(
+                Secp256k1Point {
+                    x: U256 {
+                        hi: 0,
+                        lo: 0x6d921cc3a0edd,
+                    },
+                    y: U256 {
+                        hi: 0xb7f551d9700e05d0979e993163abc1e2,
+                        lo: 0xa46c825e7de30402be99422be4d4032a,
+                    },
+                },
+                U256 {
+                    hi: 0,
+                    lo: 0xa46c825e7de30402be99422be4d4032a,
+                },
+                &mut gas,
+            )
+            .unwrap();
+
+        assert_eq!(p.x.hi, 0xf040ddde809857907bfd2f0236a0aca7);
+        assert_eq!(p.x.lo, 0x43a58b0924199ac714383765c011812c);
+        assert_eq!(p.y.hi, 0xaae02eaf3c58415a5daeccdeea05bd6a);
+        assert_eq!(p.y.lo, 0xf27938618d56e68e01b4d473b3ebff63);
+    }
+
+    #[test]
+    fn secp256k1_get_point_from_x() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let p = syscall_handler
+            .secp256k1_get_point_from_x(
+                U256 {
+                    hi: 0,
+                    lo: 0x6d921cc3a0edd,
+                },
+                false,
+                &mut gas,
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(p.x.hi, 0);
+        assert_eq!(p.x.lo, 0x6d921cc3a0edd);
+        assert_eq!(p.y.hi, 0xb7f551d9700e05d0979e993163abc1e2);
+        assert_eq!(p.y.lo, 0xa46c825e7de30402be99422be4d4032a);
+    }
+
+    #[test]
+    fn secp256k1_get_xy() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let (x, y) = syscall_handler
+            .secp256k1_get_xy(
+                Secp256k1Point {
+                    x: U256 {
+                        hi: 0,
+                        lo: 0x6d921cc3a0edd,
+                    },
+                    y: U256 {
+                        hi: 0xb7f551d9700e05d0979e993163abc1e2,
+                        lo: 0xa46c825e7de30402be99422be4d4032a,
+                    },
+                },
+                &mut gas,
+            )
+            .unwrap();
+        assert_eq!(x.hi, 0);
+        assert_eq!(x.lo, 0x6d921cc3a0edd);
+        assert_eq!(y.hi, 0xb7f551d9700e05d0979e993163abc1e2);
+        assert_eq!(y.lo, 0xa46c825e7de30402be99422be4d4032a);
+    }
+
+    #[test]
+    fn secp256r1_new() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let p = syscall_handler
+            .secp256r1_new(
+                U256 {
+                    hi: 0,
+                    lo: 0x6d921cc3a0edd,
+                },
+                U256 {
+                    hi: 0xd9119d47792367d7d9333941abd39cd5,
+                    lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                },
+                &mut gas,
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(p.x.hi, 0);
+        assert_eq!(p.x.lo, 0x6d921cc3a0edd);
+        assert_eq!(p.y.hi, 0xd9119d47792367d7d9333941abd39cd5);
+        assert_eq!(p.y.lo, 0xe6152655e4230f0cb905fd549eb5f7d2);
+    }
+
+    #[test]
+    fn secp256r1_add() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let p = syscall_handler
+            .secp256r1_add(
+                Secp256r1Point {
+                    x: U256 {
+                        hi: 0,
+                        lo: 0x6d921cc3a0edd,
+                    },
+                    y: U256 {
+                        hi: 0xd9119d47792367d7d9333941abd39cd5,
+                        lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                    },
+                },
+                Secp256r1Point {
+                    x: U256 {
+                        hi: 0,
+                        lo: 0x6d921cc3a0edd,
+                    },
+                    y: U256 {
+                        hi: 0xd9119d47792367d7d9333941abd39cd5,
+                        lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                    },
+                },
+                &mut gas,
+            )
+            .unwrap();
+
+        assert_eq!(p.x.hi, 0x9fe25a0c399b16a4709557a5031fb25c);
+        assert_eq!(p.x.lo, 0x8fb69432718f1933ef8b61c5b57c3e57);
+        assert_eq!(p.y.hi, 0x5ba485aea97f150919109745af2bf644);
+        assert_eq!(p.y.lo, 0x1d00013db17f1f1862ef5462d62f7fe8);
+    }
+
+    #[test]
+    fn secp256r1_mul() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let p = syscall_handler
+            .secp256r1_mul(
+                Secp256r1Point {
+                    x: U256 {
+                        hi: 0,
+                        lo: 0x6d921cc3a0edd,
+                    },
+                    y: U256 {
+                        hi: 0xd9119d47792367d7d9333941abd39cd5,
+                        lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                    },
+                },
+                U256 {
+                    hi: 0,
+                    lo: 0xa46c825e7de30402be99422be4d4032a,
+                },
+                &mut gas,
+            )
+            .unwrap();
+
+        assert_eq!(p.x.hi, 0x4b34ef65707b6a8e369879aaee576c2c);
+        assert_eq!(p.x.lo, 0x3f1579c6bb240409fcd7b96311e81b07);
+        assert_eq!(p.y.hi, 0xf3bf5221ac6f4363287f9c34c706026f);
+        assert_eq!(p.y.lo, 0x4458cbd0a9af49eb5526765ba31fad15);
+    }
+
+    #[test]
+    fn secp256r1_get_point_from_x() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let p = syscall_handler
+            .secp256r1_get_point_from_x(
+                U256 {
+                    hi: 0,
+                    lo: 0x6d921cc3a0edd,
+                },
+                false,
+                &mut gas,
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(p.x.hi, 0);
+        assert_eq!(p.x.lo, 0x6d921cc3a0edd);
+        assert_eq!(p.y.hi, 0xd9119d47792367d7d9333941abd39cd5);
+        assert_eq!(p.y.lo, 0xe6152655e4230f0cb905fd549eb5f7d2);
+    }
+
+    #[test]
+    fn secp256r1_get_xy() {
+        let mut test_ctx = TestContext::default();
+        let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut gas = 0;
+
+        let (x, y) = syscall_handler
+            .secp256r1_get_xy(
+                Secp256r1Point {
+                    x: U256 {
+                        hi: 0,
+                        lo: 0x6d921cc3a0edd,
+                    },
+                    y: U256 {
+                        hi: 0xd9119d47792367d7d9333941abd39cd5,
+                        lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                    },
+                },
+                &mut gas,
+            )
+            .unwrap();
+        assert_eq!(x.hi, 0);
+        assert_eq!(x.lo, 0x6d921cc3a0edd);
+        assert_eq!(y.hi, 0xd9119d47792367d7d9333941abd39cd5);
+        assert_eq!(y.lo, 0xe6152655e4230f0cb905fd549eb5f7d2);
     }
 }
