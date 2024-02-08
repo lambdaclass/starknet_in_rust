@@ -1,31 +1,41 @@
-use crate::core::contract_address::compute_deprecated_class_hash;
-use crate::core::transaction_hash::deprecated::deprecated_calculate_declare_transaction_hash;
-use crate::definitions::block_context::{BlockContext, FeeType};
-use crate::definitions::constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
-use crate::definitions::transaction_type::TransactionType;
+use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks};
+use super::{
+    check_account_tx_fields_version, get_tx_version, ResourceBounds, Transaction,
+    VersionSpecificAccountTxFields,
+};
+use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
+use crate::definitions::constants::VALIDATE_RETDATA;
+use crate::execution::execution_entry_point::ExecutionResult;
 use crate::services::api::contract_classes::deprecated_contract_class::EntryPointType;
+
+use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
 use crate::state::contract_class_cache::ContractClassCache;
-use crate::state::state_api::{State, StateReader};
 use crate::{
+    core::transaction_hash::calculate_declare_transaction_hash,
+    definitions::{
+        block_context::BlockContext,
+        constants::{INITIAL_GAS_COST, VALIDATE_DECLARE_ENTRY_POINT_SELECTOR},
+        transaction_type::TransactionType,
+    },
     execution::{
-        execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
-        CallInfo, TransactionExecutionContext, TransactionExecutionInfo,
+        execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
+        TransactionExecutionInfo,
     },
-    services::api::contract_classes::{
-        compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
+    state::{
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
     },
-    state::ExecutionResourcesManager,
-    transaction::error::TransactionError,
-    utils::{calculate_tx_resources, felt_to_hash, verify_no_calls_to_other_contracts},
+    transaction::{
+        error::TransactionError, invoke_function::verify_no_calls_to_other_contracts, Address,
+        ClassHash,
+    },
+    utils::calculate_tx_resources,
 };
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::Felt252;
 use num_traits::Zero;
-
-use super::fee::{
-    calculate_tx_fee, charge_fee, estimate_minimal_l1_gas, run_post_execution_fee_checks,
-};
-use super::{get_tx_version, Address, ClassHash, Transaction};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -35,266 +45,246 @@ use {
     std::{cell::RefCell, rc::Rc},
 };
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-///  Represents an internal transaction in the StarkNet network that is a declaration of a Cairo
-///  contract class.
+/// Represents a declare transaction in the starknet network.
+/// Declare creates a blueprint of a contract class that is used to deploy instances of the contract
+/// Declare is meant to be used with the new cairo contract syntax, starting from Cairo1.
 #[derive(Debug, Clone)]
 pub struct Declare {
-    pub class_hash: ClassHash,
     pub sender_address: Address,
     pub validate_entry_point_selector: Felt252,
     pub version: Felt252,
-    pub max_fee: u128,
+    pub account_tx_fields: VersionSpecificAccountTxFields,
     pub signature: Vec<Felt252>,
     pub nonce: Felt252,
+    // maybe change this for ClassHash
+    pub compiled_class_hash: Felt252,
+    pub sierra_contract_class: Option<SierraContractClass>,
+    pub sierra_class_hash: Felt252,
     pub hash_value: Felt252,
-    pub contract_class: ContractClass,
+    pub casm_class: Option<CasmContractClass>,
     pub skip_validate: bool,
     pub skip_execute: bool,
     pub skip_fee_transfer: bool,
     pub skip_nonce_check: bool,
 }
 
-// ------------------------------------------------------------
-//                        Functions
-// ------------------------------------------------------------
 impl Declare {
+    /// Creates a new instance of a [Declare].
+    /// It will calculate the sierra class hash and the transaction hash.
+    /// ## Parameters:
+    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
+    /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
+    /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
+    /// - sender_address: The address of the account declaring the contract.
+    /// - max_fee: refers to max amount of fee that a declare takes.
+    /// - version: The version of cairo contract being declare.
+    /// - signature: Array of felts with the signatures of the contract.
+    /// - nonce: The nonce of the contract.
     #[allow(clippy::too_many_arguments)]
-    /// Constructor creates a new Declare instance.
     pub fn new(
-        contract_class: ContractClass,
+        sierra_contract_class: &SierraContractClass,
+        casm_contract_class: Option<CasmContractClass>,
+        compiled_class_hash: Felt252,
         chain_id: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
     ) -> Result<Self, TransactionError> {
-        let version = get_tx_version(version);
-        let hash = compute_deprecated_class_hash(&contract_class)?;
-        let class_hash = felt_to_hash(&hash);
+        let sierra_class_hash = compute_sierra_class_hash(sierra_contract_class)?;
 
-        let hash_value = deprecated_calculate_declare_transaction_hash(
-            &contract_class,
-            chain_id,
-            &sender_address,
-            max_fee,
+        let hash_value = calculate_declare_transaction_hash(
+            sierra_class_hash,
+            compiled_class_hash,
             version,
             nonce,
+            &sender_address,
+            chain_id,
+            &account_tx_fields,
         )?;
 
-        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
-
-        let internal_declare = Declare {
-            class_hash,
+        Self::new_with_sierra_class_hash_and_tx_hash(
+            Some(sierra_contract_class.clone()),
+            sierra_class_hash,
+            casm_contract_class,
+            compiled_class_hash,
             sender_address,
-            validate_entry_point_selector,
+            account_tx_fields,
             version,
-            max_fee,
             signature,
             nonce,
             hash_value,
-            contract_class,
+        )
+    }
+
+    /// Creates a new instance of a declare with a precomputed sierra class hash and transaction hash.
+    /// ## Parameters:
+    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - sierra_class_hash: The precomputed hash for the sierra contract
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
+    /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
+    /// - sender_address: The address of the account declaring the contract.
+    /// - max_fee: refers to max amount of fee that a declare takes.
+    /// - version: The version of cairo contract being declare.
+    /// - signature: Array of felts with the signatures of the contract.
+    /// - nonce: The nonce of the contract.
+    /// - hash_value: The transaction hash_value.
+    /// SAFETY: if `sierra_class_hash` doesn't correspond to the `sierra_contract_class` invariants
+    /// may not hold.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_sierra_class_hash_and_tx_hash(
+        sierra_contract_class: Option<SierraContractClass>,
+        sierra_class_hash: Felt252,
+        casm_contract_class: Option<CasmContractClass>,
+        compiled_class_hash: Felt252,
+        sender_address: Address,
+        account_tx_fields: VersionSpecificAccountTxFields,
+        version: Felt252,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
+        hash_value: Felt252,
+    ) -> Result<Self, TransactionError> {
+        let version = get_tx_version(version);
+        check_account_tx_fields_version(&account_tx_fields, version)?;
+        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
+
+        let declare = Declare {
+            sierra_contract_class: sierra_contract_class.to_owned(),
+            sierra_class_hash,
+            sender_address,
+            validate_entry_point_selector,
+            version,
+            account_tx_fields,
+            signature,
+            nonce,
+            compiled_class_hash,
+            hash_value,
+            casm_class: casm_contract_class,
             skip_execute: false,
             skip_validate: false,
             skip_fee_transfer: false,
             skip_nonce_check: false,
         };
 
-        Ok(internal_declare)
+        Ok(declare)
     }
 
-    /// Creates a new Declare instance with a given transaction hash.
+    // creates a new instance of a declare but without the computation of the transaction hash.
+    /// ## Parameters:
+    /// - sierra_contract_class: The sierra contract class of the contract to declare.
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
+    /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
+    /// - sender_address: The address of the account declaring the contract.
+    /// - max_fee: refers to max amount of fee that a declare takes.
+    /// - version: The version of cairo contract being declare.
+    /// - signature: Array of felts with the signatures of the contract.
+    /// - nonce: The nonce of the contract.
+    /// - hash_value: The transaction hash.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_tx_hash(
-        contract_class: ContractClass,
+        sierra_contract_class: &SierraContractClass,
+        casm_contract_class: Option<CasmContractClass>,
+        compiled_class_hash: Felt252,
         sender_address: Address,
-        max_fee: u128,
+        account_tx_fields: VersionSpecificAccountTxFields,
         version: Felt252,
         signature: Vec<Felt252>,
         nonce: Felt252,
         hash_value: Felt252,
     ) -> Result<Self, TransactionError> {
-        let version = get_tx_version(version);
+        let sierra_class_hash = compute_sierra_class_hash(sierra_contract_class)?;
 
-        let hash = compute_deprecated_class_hash(&contract_class)?;
-        let class_hash = felt_to_hash(&hash);
-
-        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
-
-        let internal_declare = Declare {
-            class_hash,
+        Self::new_with_sierra_class_hash_and_tx_hash(
+            Some(sierra_contract_class.clone()),
+            sierra_class_hash,
+            casm_contract_class,
+            compiled_class_hash,
             sender_address,
-            validate_entry_point_selector,
+            account_tx_fields,
             version,
-            max_fee,
             signature,
             nonce,
             hash_value,
-            contract_class,
-            skip_execute: false,
-            skip_validate: false,
-            skip_fee_transfer: false,
-            skip_nonce_check: false,
-        };
-
-        Ok(internal_declare)
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn new_with_tx_and_class_hash(
-        contract_class: ContractClass,
-        sender_address: Address,
-        max_fee: u128,
-        version: Felt252,
-        signature: Vec<Felt252>,
-        nonce: Felt252,
-        hash_value: Felt252,
-        class_hash: ClassHash,
-    ) -> Result<Self, TransactionError> {
-        let version = get_tx_version(version);
-        let validate_entry_point_selector = *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR;
-
-        let internal_declare = Declare {
-            class_hash,
-            sender_address,
-            validate_entry_point_selector,
-            version,
-            max_fee,
-            signature,
-            nonce,
-            hash_value,
-            contract_class,
-            skip_execute: false,
-            skip_validate: false,
-            skip_fee_transfer: false,
-            skip_nonce_check: false,
-        };
-
-        Ok(internal_declare)
-    }
-
-    /// Returns the calldata.
-    pub fn get_calldata(&self) -> Vec<Felt252> {
-        let bytes = Felt252::from_bytes_be(&self.class_hash.0);
-        Vec::from([bytes])
-    }
-
-    /// Executes a call to the cairo-vm using the accounts_validation.cairo contract to validate
-    /// the contract that is being declared. Then it returns the transaction execution info of the run.
-    pub fn apply<S: StateReader, C: ContractClassCache>(
-        &self,
-        state: &mut CachedState<S, C>,
-        block_context: &BlockContext,
-        #[cfg(feature = "cairo-native")] program_cache: Option<
-            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
-        >,
-    ) -> Result<TransactionExecutionInfo, TransactionError> {
-        // validate transaction
-        let mut resources_manager = ExecutionResourcesManager::default();
-        let validate_info = if self.skip_validate {
-            None
-        } else {
-            self.run_validate_entrypoint(
-                state,
-                block_context,
-                &mut resources_manager,
-                #[cfg(feature = "cairo-native")]
-                program_cache,
-            )?
-        };
-        let changes = state.count_actual_state_changes(Some((
-            (block_context.get_fee_token_address_by_fee_type(&FeeType::Eth)),
-            &self.sender_address,
-        )))?;
-        let actual_resources = calculate_tx_resources(
-            resources_manager,
-            &vec![validate_info.clone()],
-            TransactionType::Declare,
-            changes,
-            None,
-            0,
         )
-        .map_err(|_| TransactionError::ResourcesCalculation)?;
+    }
 
-        Ok(TransactionExecutionInfo::new_without_fee_info(
-            validate_info,
-            None,
-            None,
-            actual_resources,
-            Some(TransactionType::Declare),
-        ))
+    /// Creates a new instance of a [Declare] but without the computation of the sierra class hash.
+    /// ## Parameters:
+    /// - sierra_contract_class: The sierra contract class of the contract to declare
+    /// - sierra_class_hash: The precomputed hash for the sierra contract
+    /// - casm_contract_class: The casm contract class of the contract to declare. This is optional.
+    /// - compiled_class_hash: the class hash of the contract compiled with Cairo1 or newer.
+    /// - chain_id: Id of the network where is going to be declare, those can be: Mainnet, Testnet.
+    /// - sender_address: The address of the account declaring the contract.
+    /// - max_fee: refers to max amount of fee that a declare takes.
+    /// - version: The version of cairo contract being declare.
+    /// - signature: Array of felts with the signatures of the contract.
+    /// - nonce: The nonce of the contract.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_sierra_class_hash(
+        sierra_contract_class: Option<SierraContractClass>,
+        sierra_class_hash: Felt252,
+        casm_contract_class: Option<CasmContractClass>,
+        compiled_class_hash: Felt252,
+        chain_id: Felt252,
+        sender_address: Address,
+        account_tx_fields: VersionSpecificAccountTxFields,
+        version: Felt252,
+        signature: Vec<Felt252>,
+        nonce: Felt252,
+    ) -> Result<Self, TransactionError> {
+        let hash_value = calculate_declare_transaction_hash(
+            sierra_class_hash,
+            compiled_class_hash,
+            version,
+            nonce,
+            &sender_address,
+            chain_id,
+            &account_tx_fields,
+        )?;
+
+        Self::new_with_sierra_class_hash_and_tx_hash(
+            sierra_contract_class,
+            sierra_class_hash,
+            casm_contract_class,
+            compiled_class_hash,
+            sender_address,
+            account_tx_fields,
+            version,
+            signature,
+            nonce,
+            hash_value,
+        )
     }
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    // Internal Account Functions
+    //  Account Functions
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    /// Return the transaction execution context.
+    /// creates the a new TransactionExecutionContexts which represent the state of the net after executing the contract.
+    /// ## Parameter:
+    /// n_steps: the number of steps that are required to execute the contract.
     pub fn get_execution_context(&self, n_steps: u64) -> TransactionExecutionContext {
         TransactionExecutionContext::new(
             self.sender_address.clone(),
             self.hash_value,
             self.signature.clone(),
-            super::VersionSpecificAccountTxFields::new_deprecated(self.max_fee),
+            self.account_tx_fields.clone(),
             self.nonce,
             n_steps,
             self.version,
         )
     }
 
-    /// Runs the validation entry point for the contract that is being declared.
-    pub fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
-        &self,
-        state: &mut CachedState<S, C>,
-        block_context: &BlockContext,
-        resources_manager: &mut ExecutionResourcesManager,
-        #[cfg(feature = "cairo-native")] program_cache: Option<
-            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
-        >,
-    ) -> Result<Option<CallInfo>, TransactionError> {
-        if self.version.is_zero() {
-            return Ok(None);
-        }
-
-        let calldata = self.get_calldata();
-
-        let entry_point = ExecutionEntryPoint::new(
-            self.sender_address.clone(),
-            calldata,
-            self.validate_entry_point_selector,
-            Address(Felt252::ZERO),
-            EntryPointType::External,
-            None,
-            None,
-            0,
-        );
-
-        let ExecutionResult { call_info, .. } = entry_point.execute(
-            state,
-            block_context,
-            resources_manager,
-            &mut self.get_execution_context(block_context.invoke_tx_max_n_steps),
-            false,
-            block_context.validate_max_n_steps,
-            #[cfg(feature = "cairo-native")]
-            program_cache,
-        )?;
-
-        let call_info = call_info.ok_or(TransactionError::CallInfoIsNone)?;
-
-        verify_no_calls_to_other_contracts(&call_info)
-            .map_err(|_| TransactionError::UnauthorizedActionOnValidate)?;
-
-        Ok(Some(call_info))
+    /// returns the calldata with which the contract is executed
+    pub fn get_calldata(&self) -> Vec<Felt252> {
+        let bytes = self.compiled_class_hash;
+        Vec::from([bytes])
     }
 
-    /// Handles the nonce value, verifies that the transaction nonce is correct.
     fn handle_nonce<S: State + StateReader>(&self, state: &mut S) -> Result<(), TransactionError> {
-        if self.version.is_zero() {
-            return Ok(());
-        }
-
         let contract_address = &self.sender_address;
         let current_nonce = state.get_nonce_at(contract_address)?;
         if current_nonce != self.nonce && !self.skip_nonce_check {
@@ -314,24 +304,25 @@ impl Declare {
         state: &mut S,
         block_context: &BlockContext,
     ) -> Result<(), TransactionError> {
-        if self.max_fee.is_zero() {
+        if self.account_tx_fields.max_fee().is_zero() {
             return Ok(());
         }
-        let minimal_l1_gas_amount =
-            estimate_minimal_l1_gas(block_context, super::fee::AccountTxType::Declare)?;
-        let minimal_fee =
-            minimal_l1_gas_amount * block_context.get_gas_price_by_fee_type(&FeeType::Eth);
         // Check max fee is at least the estimated constant overhead.
-        if self.max_fee < minimal_fee {
-            return Err(TransactionError::MaxFeeTooLow(self.max_fee, minimal_fee));
-        }
+        check_fee_bounds(
+            &self.account_tx_fields,
+            block_context,
+            super::fee::AccountTxType::Declare,
+        )?;
         // Check that the current balance is high enough to cover the max_fee
-        let (balance_low, balance_high) =
-            state.get_fee_token_balance(block_context, &self.sender_address, &FeeType::Eth)?;
+        let (balance_low, balance_high) = state.get_fee_token_balance(
+            block_context,
+            &self.sender_address,
+            &self.account_tx_fields.fee_type(),
+        )?;
         // The fee is at most 128 bits, while balance is 256 bits (split into two 128 bit words).
-        if balance_high.is_zero() && balance_low < Felt252::from(self.max_fee) {
+        if balance_high.is_zero() && balance_low < Felt252::from(self.account_tx_fields.max_fee()) {
             return Err(TransactionError::MaxFeeExceedsBalance(
-                self.max_fee,
+                self.account_tx_fields.max_fee(),
                 balance_low,
                 balance_high,
             ));
@@ -339,12 +330,15 @@ impl Declare {
         Ok(())
     }
 
-    /// Calculates actual fee used by the transaction using the execution
-    /// info returned by apply(), then updates the transaction execution info with the data of the fee.
+    /// Execute the validation of the contract in the cairo-vm. Returns a TransactionExecutionInfo if succesful.
+    /// ## Parameter:
+    /// - state: An state that implements the State and StateReader traits.
+    /// - block_context: The block that contains the execution context
     #[tracing::instrument(level = "debug", ret, err, skip(self, state, block_context, program_cache), fields(
         tx_type = ?TransactionType::Declare,
         self.version = ?self.version,
-        self.class_hash = ?self.class_hash,
+        self.sierra_class_hash = ?self.sierra_class_hash,
+        self.compiled_class_hash = ?self.compiled_class_hash,
         self.hash_value = ?self.hash_value,
         self.sender_address = ?self.sender_address,
         self.nonce = ?self.nonce,
@@ -357,11 +351,11 @@ impl Declare {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        if !(self.version == Felt252::ZERO || self.version == Felt252::ONE) {
+        if !(self.version == Felt252::TWO || self.version == Felt252::THREE) {
             return Err(TransactionError::UnsupportedTxVersion(
                 "Declare".to_string(),
                 self.version,
-                vec![0, 1],
+                vec![2, 3],
             ));
         }
 
@@ -371,28 +365,51 @@ impl Declare {
             self.check_fee_balance(state, block_context)?;
         }
 
-        let mut tx_exec_info = self.apply(
-            state,
+        let mut resources_manager = ExecutionResourcesManager::default();
+
+        let execution_result = if self.skip_validate {
+            ExecutionResult::default()
+        } else {
+            self.run_validate_entrypoint(
+                state,
+                block_context,
+                &mut resources_manager,
+                INITIAL_GAS_COST,
+                #[cfg(feature = "cairo-native")]
+                program_cache.clone(),
+            )?
+        };
+        self.compile_and_store_casm_class(state)?;
+
+        let storage_changes = state.count_actual_state_changes(Some((
+            (block_context.get_fee_token_address_by_fee_type(&self.account_tx_fields.fee_type())),
+            &self.sender_address,
+        )))?;
+
+        let actual_resources = calculate_tx_resources(
+            resources_manager,
+            &[execution_result.call_info.clone()],
+            TransactionType::Declare,
+            storage_changes,
+            None,
+            execution_result.n_reverted_steps,
+        )?;
+
+        let calculated_fee = calculate_tx_fee(
+            &actual_resources,
             block_context,
-            #[cfg(feature = "cairo-native")]
-            program_cache.clone(),
+            &self.account_tx_fields.fee_type(),
         )?;
 
         let mut tx_execution_context =
             self.get_execution_context(block_context.invoke_tx_max_n_steps);
 
-        let calculated_fee = calculate_tx_fee(
-            &tx_exec_info.actual_resources,
-            block_context,
-            &tx_execution_context.account_tx_fields.fee_type(),
-        )?;
-
         run_post_execution_fee_checks(
             state,
-            &tx_execution_context.account_tx_fields,
+            &self.account_tx_fields,
             block_context,
             calculated_fee,
-            &tx_exec_info.actual_resources,
+            &actual_resources,
             &self.sender_address,
             self.skip_fee_transfer,
         )?;
@@ -407,17 +424,144 @@ impl Declare {
             program_cache,
         )?;
 
-        state.set_contract_class(
-            &self.class_hash,
-            &CompiledClass::Deprecated(Arc::new(self.contract_class.clone())),
-        )?;
-
+        let mut tx_exec_info = TransactionExecutionInfo::new_without_fee_info(
+            execution_result.call_info,
+            None,
+            None,
+            actual_resources,
+            Some(TransactionType::Declare),
+        );
         tx_exec_info.set_fee_info(actual_fee, fee_transfer_info);
 
         Ok(tx_exec_info)
     }
 
-    /// Creates a transaction for simulation.
+    pub(crate) fn compile_and_store_casm_class<S: State + StateReader>(
+        &self,
+        state: &mut S,
+    ) -> Result<(), TransactionError> {
+        let casm_class = match &self.casm_class {
+            None => CasmContractClass::from_contract_class(
+                self.sierra_contract_class
+                    .clone()
+                    .ok_or(TransactionError::DeclareNoSierraOrCasm)?,
+                true,
+            )
+            .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?,
+            Some(casm_contract_class) => casm_contract_class.clone(),
+        };
+
+        let casm_class_hash = compute_casm_class_hash(&casm_class)?;
+        if casm_class_hash != self.compiled_class_hash {
+            return Err(TransactionError::InvalidCompiledClassHash(
+                casm_class_hash.to_string(),
+                self.compiled_class_hash.to_string(),
+            ));
+        }
+        state
+            .set_compiled_class_hash(&self.sierra_class_hash, &self.compiled_class_hash.clone())?;
+
+        let compiled_contract_class = ClassHash::from(self.compiled_class_hash);
+        state.set_contract_class(
+            &compiled_contract_class,
+            &CompiledClass::Casm {
+                casm: Arc::new(casm_class),
+                sierra: self
+                    .sierra_contract_class
+                    .as_ref()
+                    .map(|contract_class| {
+                        Result::<_, TransactionError>::Ok(Arc::new((
+                            contract_class.extract_sierra_program().map_err(|e| {
+                                TransactionError::CustomError(format!(
+                                    "Sierra program extraction failed: {e}"
+                                ))
+                            })?,
+                            contract_class.entry_points_by_type.clone(),
+                        )))
+                    })
+                    .transpose()?,
+            },
+        )?;
+
+        Ok(())
+    }
+
+    fn run_validate_entrypoint<S: StateReader, C: ContractClassCache>(
+        &self,
+        state: &mut CachedState<S, C>,
+        block_context: &BlockContext,
+        resources_manager: &mut ExecutionResourcesManager,
+        remaining_gas: u128,
+        #[cfg(feature = "cairo-native")] program_cache: Option<
+            Rc<RefCell<ProgramCache<'_, ClassHash>>>,
+        >,
+    ) -> Result<ExecutionResult, TransactionError> {
+        let calldata = [self.compiled_class_hash].to_vec();
+
+        let entry_point = ExecutionEntryPoint {
+            contract_address: self.sender_address.clone(),
+            entry_point_selector: self.validate_entry_point_selector,
+            initial_gas: remaining_gas,
+            entry_point_type: EntryPointType::External,
+            calldata,
+            caller_address: Address(Felt252::ZERO),
+            code_address: None,
+            class_hash: None,
+            call_type: CallType::Call,
+        };
+
+        let mut tx_execution_context =
+            self.get_execution_context(block_context.validate_max_n_steps);
+
+        let execution_result = if self.skip_execute {
+            ExecutionResult::default()
+        } else {
+            entry_point.execute(
+                state,
+                block_context,
+                resources_manager,
+                &mut tx_execution_context,
+                true,
+                block_context.validate_max_n_steps,
+                #[cfg(feature = "cairo-native")]
+                program_cache,
+            )?
+        };
+
+        // Validate the return data
+        let class_hash = state.get_class_hash_at(&self.sender_address.clone())?;
+        let contract_class = state
+            .get_contract_class(&class_hash)
+            .map_err(|_| TransactionError::MissingCompiledClass)?;
+        if matches!(
+            contract_class,
+            CompiledClass::Casm {
+                sierra: Some(_),
+                ..
+            }
+        ) {
+            // The account contract class is a Cairo 1.0 contract; the `validate` entry point should
+            // return `VALID`.
+            if !execution_result
+                .call_info
+                .as_ref()
+                .map(|ci| ci.retdata == vec![*VALIDATE_RETDATA])
+                .unwrap_or_default()
+            {
+                return Err(TransactionError::WrongValidateRetdata);
+            }
+        }
+
+        if execution_result.call_info.is_some() {
+            verify_no_calls_to_other_contracts(&execution_result.call_info)?;
+        }
+
+        Ok(execution_result)
+    }
+
+    // ---------------
+    //   Simulation
+    // ---------------
     pub fn create_for_simulation(
         &self,
         skip_validate: bool,
@@ -430,583 +574,409 @@ impl Declare {
             skip_validate,
             skip_execute,
             skip_fee_transfer,
-            // Keep the max_fee value for V0 for validation
-            max_fee: if ignore_max_fee && !self.version.is_zero() {
-                u128::MAX
+            account_tx_fields: if ignore_max_fee {
+                if let VersionSpecificAccountTxFields::Current(current) = &self.account_tx_fields {
+                    let mut current_fields = current.clone();
+                    current_fields.l1_resource_bounds = ResourceBounds {
+                        max_amount: u64::MAX,
+                        max_price_per_unit: u128::MAX,
+                    };
+                    VersionSpecificAccountTxFields::Current(current_fields)
+                } else {
+                    VersionSpecificAccountTxFields::new_deprecated(u128::MAX)
+                }
             } else {
-                self.max_fee
+                self.account_tx_fields.clone()
             },
             skip_nonce_check,
             ..self.clone()
         };
 
-        Transaction::Declare(tx)
+        Transaction::Declare(Box::new(tx))
     }
 }
 
-// ---------------
-//     Tests
-// ---------------
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Declare;
+    use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
+    use crate::definitions::block_context::{BlockContext, StarknetChainId};
+    use crate::definitions::constants::QUERY_VERSION_2;
+    use crate::services::api::contract_classes::compiled_class::CompiledClass;
+    use crate::state::state_api::StateReader;
+    use crate::transaction::error::TransactionError;
     use crate::{
-        definitions::{
-            block_context::{BlockContext, GasPrices, StarknetChainId},
-            constants::VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
-            transaction_type::TransactionType,
-        },
-        execution::CallType,
-        services::api::contract_classes::{
-            compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
-        },
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
         },
-        transaction::Address,
-        utils::felt_to_hash,
+        transaction::{Address, ClassHash},
     };
-    use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
+    use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+    use cairo_vm::Felt252;
 
-    use std::{collections::HashMap, path::PathBuf, sync::Arc};
+    use std::{fs::File, io::BufReader, path::PathBuf, sync::Arc};
 
-    /// This test verifies the declaration of a Fibonacci contract.
     #[test]
-    fn declare_fibonacci() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let contract_class =
-            ContractClass::from_path("starknet_programs/account_without_validation.json").unwrap();
+    fn create_declare_v2_without_casm_contract_class_test() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
 
-        // Instantiate CachedState
-        let contract_class_cache = PermanentContractClassCache::default();
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
 
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = ClassHash::from(hash);
-
-        contract_class_cache.set_contract_class(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class.clone())),
-        );
-
-        // store sender_address
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
         let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::ONE);
+        // create declare
 
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
-        // declare tx
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::ONE),
-            0,
-            1.into(),
-            Vec::new(),
+        let declare = Declare::new_with_tx_hash(
+            &sierra_contract_class,
+            None,
+            casm_class_hash,
+            sender_address,
+            Default::default(),
+            version,
+            [1.into()].to_vec(),
             Felt252::ZERO,
-        )
-        .unwrap();
-
-        //* ---------------------------------------
-        //              Expected result
-        //* ---------------------------------------
-
-        // Value generated from selector _validate_declare_
-        let entry_point_selector = Some(*VALIDATE_DECLARE_ENTRY_POINT_SELECTOR);
-
-        let class_hash_felt = compute_deprecated_class_hash(&contract_class).unwrap();
-        let expected_class_hash = felt_to_hash(&class_hash_felt);
-
-        // Calldata is the class hash represented as a Felt252
-        let calldata = [Felt252::from_dec_str(
-            "151449101692423517761547521693863750221386499114738230243355039033913267347",
-        )
-        .unwrap()]
-        .to_vec();
-
-        let validate_info = Some(CallInfo {
-            caller_address: Address(0.into()),
-            call_type: Some(CallType::Call),
-            contract_address: Address(Felt252::ONE),
-            entry_point_selector,
-            entry_point_type: Some(EntryPointType::External),
-            calldata,
-            class_hash: Some(expected_class_hash),
-            execution_resources: Some(ExecutionResources {
-                n_steps: 12,
-                ..Default::default()
-            }),
-            ..Default::default()
-        });
-
-        let actual_resources = HashMap::from([
-            ("n_steps".to_string(), 2715),
-            ("l1_gas_usage".to_string(), 1224),
-            ("range_check_builtin".to_string(), 63),
-            ("pedersen_builtin".to_string(), 15),
-        ]);
-        let transaction_exec_info = TransactionExecutionInfo {
-            validate_info,
-            call_info: None,
-            revert_error: None,
-            fee_transfer_info: None,
-            actual_fee: 0,
-            actual_resources,
-            tx_type: Some(TransactionType::Declare),
-        };
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        assert_eq!(
-            internal_declare
-                .apply(
-                    &mut state,
-                    &BlockContext::default(),
-                    #[cfg(feature = "cairo-native")]
-                    None,
-                )
-                .unwrap(),
-            transaction_exec_info
-        );
-    }
-
-    /// This test checks that redeclaring a contract class that has already been declared succeed.
-    #[test]
-    fn execute_class_already_declared_should_redeclare() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let contract_class_cache = PermanentContractClassCache::default();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.set_contract_class(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::ZERO);
-
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
-        // Declare same class twice
-        let internal_declare = Declare::new(
-            fib_contract_class.clone(),
-            chain_id,
-            Address(Felt252::ONE),
-            0,
-            1.into(),
-            Vec::new(),
-            Felt252::ZERO,
-        )
-        .unwrap();
-
-        let second_internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::ONE),
-            0,
-            1.into(),
-            Vec::new(),
             Felt252::ONE,
         )
         .unwrap();
 
-        internal_declare
-            .execute(
-                &mut state,
-                &BlockContext::default(),
-                #[cfg(feature = "cairo-native")]
-                None,
-            )
-            .unwrap();
-
-        assert!(state.get_contract_class(&class_hash).is_ok());
-
-        second_internal_declare
-            .execute(
-                &mut state,
-                &BlockContext::default(),
-                #[cfg(feature = "cairo-native")]
-                None,
-            )
-            .unwrap();
-
-        assert!(state.get_contract_class(&class_hash).is_ok());
-    }
-
-    /// This test verifies that executing the same transaction twice should fail.
-    #[test]
-    fn execute_transaction_twice_should_fail() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let contract_class_cache = PermanentContractClassCache::default();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.set_contract_class(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::ZERO);
-
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
-        // Declare same class twice
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::ONE),
-            0,
-            1.into(),
-            Vec::new(),
-            Felt252::ZERO,
-        )
-        .unwrap();
-
-        internal_declare
-            .execute(
-                &mut state,
-                &BlockContext::default(),
-                #[cfg(feature = "cairo-native")]
-                None,
-            )
-            .unwrap();
-
-        let expected_error = internal_declare.execute(
-            &mut state,
-            &BlockContext::default(),
-            #[cfg(feature = "cairo-native")]
-            None,
-        );
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-
-        assert!(expected_error.is_err());
-        assert_matches!(
-            expected_error.unwrap_err(),
-            TransactionError::InvalidTransactionNonce(..)
-        )
-    }
-
-    /// This test checks that a contract declaration should fail if there are no account contracts in the state.
-    #[test]
-    fn validate_transaction_should_fail() {
-        // Instantiate CachedState
-        let contract_class_cache = PermanentContractClassCache::default();
-
+        // crate state to store casm contract class
+        let casm_contract_class_cache = PermanentContractClassCache::default();
         let state_reader = Arc::new(InMemoryStateReader::default());
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
 
-        let mut state = CachedState::new(state_reader, Arc::new(contract_class_cache));
+        // call compile and store
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
 
-        // There are no account contracts in the state, so the transaction should fail
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::ONE),
-            0,
-            1.into(),
-            Vec::new(),
-            Felt252::ZERO,
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            declare.sierra_contract_class.unwrap().clone(),
+            true,
         )
         .unwrap();
-
-        let internal_declare_error = internal_declare.execute(
-            &mut state,
-            &BlockContext::default(),
-            #[cfg(feature = "cairo-native")]
-            None,
-        );
-
-        assert!(internal_declare_error.is_err());
-        assert_matches!(
-            internal_declare_error.unwrap_err(),
-            TransactionError::NotDeployedContract(..)
-        );
-    }
-
-    // This test verifies that a contract declaration should fail if the fee token contract is not set up.
-    #[test]
-    fn execute_transaction_charge_fee_should_fail() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let path = PathBuf::from("starknet_programs/account_without_validation.json");
-        let contract_class = ContractClass::from_path(path).unwrap();
-
-        // Instantiate CachedState
-        let contract_class_cache = PermanentContractClassCache::default();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = felt_to_hash(&hash);
-
-        contract_class_cache.set_contract_class(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address, Felt252::ZERO);
-
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
-        // Use non-zero value so that the actual fee calculation is done
-        let internal_declare = Declare::new(
-            fib_contract_class,
-            chain_id,
-            Address(Felt252::ONE),
-            10,
-            1.into(),
-            Vec::new(),
-            Felt252::ZERO,
-        )
-        .unwrap();
-
-        // We expect a fee transfer failure because the fee token contract is not set up
-        assert_matches!(
-            internal_declare.execute(
-                &mut state,
-                &BlockContext::default(),
-                #[cfg(feature = "cairo-native")]
-                None,
-            ),
-            Err(TransactionError::MaxFeeExceedsBalance(_, _, _))
-        );
-    }
-
-    #[test]
-    fn declare_v1_with_validation_fee_higher_than_no_validation() {
-        // accounts contract class must be stored before running declaration of fibonacci
-        let contract_class = ContractClass::from_path("starknet_programs/Account.json").unwrap();
-
-        // Instantiate CachedState
-        let contract_class_cache = PermanentContractClassCache::default();
-
-        //  ------------ contract data --------------------
-        let hash = compute_deprecated_class_hash(&contract_class).unwrap();
-        let class_hash = ClassHash::from(hash);
-
-        contract_class_cache.set_contract_class(
-            class_hash,
-            CompiledClass::Deprecated(Arc::new(contract_class)),
-        );
-
-        // store sender_address
-        let sender_address = Address(1.into());
-        // this is not conceptually correct as the sender address would be an
-        // Account contract (not the contract that we are currently declaring)
-        // but for testing reasons its ok
-
-        let mut state_reader = InMemoryStateReader::default();
-        state_reader
-            .address_to_class_hash_mut()
-            .insert(sender_address.clone(), class_hash);
-        state_reader
-            .address_to_nonce_mut()
-            .insert(sender_address.clone(), Felt252::ONE);
-
-        let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
-        // Insert pubkey storage var to pass validation
-        let storage_entry = &(
-            sender_address,
-            Felt252::from_dec_str(
-                "1672321442399497129215646424919402195095307045612040218489019266998007191460",
-            )
+        let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
+        let casm_class = match state
+            .get_contract_class(&declare_compiled_class_hash)
             .unwrap()
-            .to_bytes_be(),
+        {
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_with_casm_contract_class_test() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
+
+        // create declare
+
+        let declare = Declare::new_with_tx_hash(
+            &sierra_contract_class,
+            Some(casm_class),
+            casm_class_hash,
+            sender_address,
+            Default::default(),
+            version,
+            [1.into()].to_vec(),
+            Felt252::ZERO,
+            Felt252::ONE,
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = PermanentContractClassCache::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
+
+        // call compile and store
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class =
+            CasmContractClass::from_contract_class(declare.sierra_contract_class.unwrap(), true)
+                .unwrap();
+        let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
+        let casm_class = match state
+            .get_contract_class(&declare_compiled_class_hash)
+            .unwrap()
+        {
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_test_with_version_query() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = *QUERY_VERSION_2;
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = *QUERY_VERSION_2;
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
+        let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
+
+        // create declare tx
+
+        let declare = Declare::new_with_sierra_class_hash_and_tx_hash(
+            Some(sierra_contract_class),
+            sierra_class_hash,
+            Some(casm_class),
+            casm_class_hash,
+            sender_address,
+            Default::default(),
+            version,
+            vec![],
+            Felt252::ZERO,
+            Felt252::ZERO,
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = PermanentContractClassCache::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
+
+        // call compile and store
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class =
+            CasmContractClass::from_contract_class(declare.sierra_contract_class.unwrap(), true)
+                .unwrap();
+        let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
+        let casm_class = match state
+            .get_contract_class(&declare_compiled_class_hash)
+            .unwrap()
+        {
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_with_casm_contract_class_none_test() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
+
+        // create declare tx
+
+        let declare = Declare::new_with_tx_hash(
+            &sierra_contract_class,
+            None,
+            casm_class_hash,
+            sender_address,
+            Default::default(),
+            version,
+            [1.into()].to_vec(),
+            Felt252::ZERO,
+            Felt252::ONE,
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = PermanentContractClassCache::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
+
+        // call compile and store
+        assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
+
+        // test we  can retreive the data
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            declare.sierra_contract_class.unwrap().clone(),
+            true,
+        )
+        .unwrap();
+        let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
+        let casm_class = match state
+            .get_contract_class(&declare_compiled_class_hash)
+            .unwrap()
+        {
+            CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
+            _ => unreachable!(),
+        };
+
+        assert_eq!(expected_casm_class, casm_class);
+    }
+
+    #[test]
+    fn create_declare_v2_wrong_casm_class_hash_test() {
+        // read file to create sierra contract class
+        let version;
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            version = Felt252::from(2);
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            version = Felt252::from(1);
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
+        let sender_address = Address(1.into());
+        let casm_class =
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
+        let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
+
+        let sended_class_hash = Felt252::from(5);
+        // create declare
+
+        let declare = Declare::new_with_tx_hash(
+            &sierra_contract_class,
+            None,
+            sended_class_hash,
+            sender_address,
+            Default::default(),
+            version,
+            [1.into()].to_vec(),
+            Felt252::ZERO,
+            Felt252::ONE,
+        )
+        .unwrap();
+
+        // crate state to store casm contract class
+        let casm_contract_class_cache = PermanentContractClassCache::default();
+        let state_reader = Arc::new(InMemoryStateReader::default());
+        let mut state = CachedState::new(state_reader, Arc::new(casm_contract_class_cache));
+
+        let expected_err = format!(
+            "Invalid compiled class, expected class hash: {}, but received: {}",
+            casm_class_hash, sended_class_hash
         );
-        state.set_storage_at(
-            storage_entry,
-            Felt252::from_dec_str(
-                "1735102664668487605176656616876767369909409133946409161569774794110049207117",
-            )
-            .unwrap(),
-        );
-
-        //* ---------------------------------------
-        //*    Test declare with previous data
-        //* ---------------------------------------
-
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
-
-        let chain_id = StarknetChainId::TestNet.to_felt();
-
-        // declare tx
-        // Signature & tx hash values are hand-picked for account validations to pass
-        let mut declare =
-            Declare::new(
-                fib_contract_class,
-                chain_id,
-                Address(Felt252::ONE),
-                60000,
-                1.into(),
-                vec![
-                Felt252::from_dec_str(
-                    "3086480810278599376317923499561306189851900463386393948998357832163236918254"
-                ).unwrap(),
-                Felt252::from_dec_str(
-                    "598673427589502599949712887611119751108407514580626464031881322743364689811"
-                ).unwrap(),
-            ],
-                Felt252::ONE,
-            )
-            .unwrap();
-        declare.skip_fee_transfer = true;
-        declare.hash_value = Felt252::from_dec_str("2718").unwrap();
-
-        let simulate_declare = declare
-            .clone()
-            .create_for_simulation(true, false, true, false, false);
-
-        // ---------------------
-        //      Comparison
-        // ---------------------
-        let mut state_copy = state.clone_for_testing();
-        let mut bock_context = BlockContext::default();
-        bock_context.starknet_os_config.gas_price = GasPrices::new(12, 0);
-        assert!(
+        assert_eq!(
             declare
-                .execute(
-                    &mut state,
-                    &bock_context,
-                    #[cfg(feature = "cairo-native")]
-                    None,
-                )
-                .unwrap()
-                .actual_fee
-                > simulate_declare
-                    .execute(
-                        &mut state_copy,
-                        &bock_context,
-                        0,
-                        #[cfg(feature = "cairo-native")]
-                        None,
-                    )
-                    .unwrap()
-                    .actual_fee,
+                .compile_and_store_casm_class(&mut state)
+                .unwrap_err()
+                .to_string(),
+            expected_err
         );
     }
 
     #[test]
-    fn declare_wrong_version() {
-        let fib_contract_class =
-            ContractClass::from_path("starknet_programs/fibonacci.json").unwrap();
+    fn declarev2_wrong_version() {
+        let path;
+        #[cfg(not(feature = "cairo_1_tests"))]
+        {
+            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
+        }
+
+        #[cfg(feature = "cairo_1_tests")]
+        {
+            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
+        }
+
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+        let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            serde_json::from_reader(reader).unwrap();
 
         let chain_id = StarknetChainId::TestNet.to_felt();
 
         // declare tx
-        let internal_declare = Declare::new(
-            fib_contract_class,
+        let declare = Declare::new(
+            &sierra_contract_class,
+            None,
+            Felt252::ONE,
             chain_id,
             Address(Felt252::ONE),
-            0,
-            2.into(),
+            Default::default(),
+            1.into(),
             Vec::new(),
             Felt252::ZERO,
         )
         .unwrap();
-        let result = internal_declare.execute(
+        let result = declare.execute(
             &mut CachedState::<InMemoryStateReader, PermanentContractClassCache>::default(),
             &BlockContext::default(),
             #[cfg(feature = "cairo-native")]
@@ -1016,6 +986,6 @@ mod tests {
         assert_matches!(
         result,
         Err(TransactionError::UnsupportedTxVersion(tx, ver, supp))
-        if tx == "Declare" && ver == 2.into() && supp == vec![0, 1]);
+        if tx == "Declare" && ver == 1.into() && supp == vec![2, 3]);
     }
 }
