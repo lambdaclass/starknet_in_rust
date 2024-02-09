@@ -14,13 +14,14 @@ use starknet_in_rust::{
     services::api::contract_classes::{
         compiled_class::CompiledClass, deprecated_contract_class::ContractClass,
     },
-    state::{cached_state::CachedState, state_api::State},
     state::{
-        contract_class_cache::PermanentContractClassCache,
-        in_memory_state_reader::InMemoryStateReader,
+        cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
+        in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
-    transaction::{declare::Declare, Deploy, DeployAccount, InvokeFunction},
-    utils::{Address, ClassHash},
+    transaction::{
+        declare_deprecated::DeclareDeprecated, Address, ClassHash, Deploy, DeployAccount,
+        InvokeFunction,
+    },
 };
 use std::{hint::black_box, sync::Arc};
 
@@ -142,7 +143,7 @@ pub fn declare(
         let address = CONTRACT_ADDRESS.clone();
         scope(|| {
             // new consumes more execution time than raw struct instantiation
-            let declare_tx = Declare::new(
+            let declare_tx = DeclareDeprecated::new(
                 class,
                 StarknetChainId::TestNet.to_felt(),
                 address,

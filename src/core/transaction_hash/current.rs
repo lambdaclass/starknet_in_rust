@@ -1,9 +1,6 @@
 use std::str::FromStr;
 
-use crate::{
-    transaction::{DataAvailabilityMode, ResourceBounds},
-    utils::Address,
-};
+use crate::transaction::{Address, DataAvailabilityMode, ResourceBounds};
 use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 use num_bigint::BigUint;
@@ -166,7 +163,7 @@ pub(super) fn calculate_deploy_account_transaction_hash(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn calculate_declare_v2_transaction_hash(
+pub(super) fn calculate_declare_transaction_hash(
     sierra_class_hash: Felt252,
     compiled_class_hash: Felt252,
     chain_id: Felt252,

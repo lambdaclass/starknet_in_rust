@@ -1,8 +1,9 @@
+use core::fmt;
+
 use crate::{
     core::contract_address::compute_casm_class_hash,
-    definitions::block_context::BlockContext,
     definitions::{
-        block_context::FeeType,
+        block_context::{BlockContext, FeeType},
         constants::{QUERY_VERSION_0, QUERY_VERSION_1, QUERY_VERSION_2, QUERY_VERSION_3},
     },
     execution::TransactionExecutionInfo,
@@ -10,10 +11,10 @@ use crate::{
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
-    utils::Address,
+    utils::felt_to_hash,
 };
 pub use declare::Declare;
-pub use declare_v2::DeclareV2;
+pub use declare_deprecated::DeclareDeprecated;
 pub use deploy::Deploy;
 pub use deploy_account::DeployAccount;
 use error::TransactionError;
@@ -21,7 +22,7 @@ pub use invoke_function::InvokeFunction;
 pub use l1_handler::L1Handler;
 
 pub mod declare;
-pub mod declare_v2;
+pub mod declare_deprecated;
 pub mod deploy;
 pub mod deploy_account;
 pub mod error;
@@ -30,29 +31,134 @@ pub mod invoke_function;
 pub mod l1_handler;
 
 use cairo_vm::Felt252;
+use serde::{Deserialize, Serialize};
 use starknet_api::transaction::Resource;
 
 #[cfg(feature = "cairo-native")]
 use {
-    crate::utils::ClassHash,
     cairo_native::cache::ProgramCache,
     std::{cell::RefCell, rc::Rc},
 };
 
+#[derive(Clone, PartialEq, Hash, Eq, Default, Serialize, Deserialize)]
+pub struct Address(pub Felt252);
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl From<Felt252> for Address {
+    fn from(value: Felt252) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&Felt252> for Address {
+    fn from(value: &Felt252) -> Self {
+        Self(*value)
+    }
+}
+
+impl From<Address> for Felt252 {
+    fn from(value: Address) -> Self {
+        value.0
+    }
+}
+
+impl From<&Address> for Felt252 {
+    fn from(value: &Address) -> Self {
+        value.0
+    }
+}
+
+impl Address {
+    pub fn from_hex_string(hex_string: &str) -> Option<Self> {
+        Some(Self(Felt252::from_hex(hex_string).ok()?))
+    }
+}
+
+#[derive(Clone, PartialEq, Hash, Default, Serialize, Deserialize, Copy)]
+pub struct ClassHash(pub [u8; 32]);
+
+impl ClassHash {
+    pub fn new(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+
+    pub fn to_bytes_be(&self) -> &[u8] {
+        &self.0
+    }
+
+    pub fn as_slice(&self) -> [u8; 32] {
+        self.0
+    }
+}
+
+impl fmt::Display for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let hex_string = hex::encode(self.0);
+        let trimmed_hex_string = hex_string.trim_start_matches('0');
+        write!(f, "0x{}", trimmed_hex_string)?;
+        Ok(())
+    }
+}
+
+impl fmt::Debug for ClassHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl From<Felt252> for ClassHash {
+    fn from(felt: Felt252) -> Self {
+        felt_to_hash(&felt)
+    }
+}
+
+impl From<[u8; 32]> for ClassHash {
+    fn from(bytes: [u8; 32]) -> Self {
+        ClassHash(bytes)
+    }
+}
+
+impl Eq for ClassHash {}
+
+impl PartialEq<[u8; 32]> for ClassHash {
+    fn eq(&self, other: &[u8; 32]) -> bool {
+        &self.0 == other
+    }
+}
+
+impl ClassHash {
+    pub fn from_hex_string(hex_string: String) -> Option<Self> {
+        Some(Self(hex::decode(hex_string).ok()?.try_into().ok()?))
+    }
+}
+
+pub type CompiledClassHash = ClassHash;
+
 /// Represents a transaction inside the starknet network.
 /// The transaction are actions that may modified the state of the network.
 /// it can be one of:
+/// - DeclareDeprecated
 /// - Declare
-/// - DeclareV2
 /// - Deploy
 /// - DeployAccount
 /// - InvokeFunction
 /// - L1Handler
 pub enum Transaction {
+    /// A deprecated declare transaction.
+    DeclareDeprecated(DeclareDeprecated),
     /// A declare transaction.
-    Declare(Declare),
-    /// A declare transaction.
-    DeclareV2(Box<DeclareV2>),
+    Declare(Box<Declare>),
     /// A deploy transaction.
     Deploy(Deploy),
     /// A deploy account transaction.
@@ -69,8 +175,8 @@ impl Transaction {
         match self {
             Transaction::Deploy(tx) => tx.contract_address.clone(),
             Transaction::InvokeFunction(tx) => tx.contract_address().clone(),
+            Transaction::DeclareDeprecated(tx) => tx.sender_address.clone(),
             Transaction::Declare(tx) => tx.sender_address.clone(),
-            Transaction::DeclareV2(tx) => tx.sender_address.clone(),
             Transaction::DeployAccount(tx) => tx.contract_address().clone(),
             Transaction::L1Handler(tx) => tx.contract_address().clone(),
         }
@@ -91,13 +197,13 @@ impl Transaction {
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
         match self {
-            Transaction::Declare(tx) => tx.execute(
+            Transaction::DeclareDeprecated(tx) => tx.execute(
                 state,
                 block_context,
                 #[cfg(feature = "cairo-native")]
                 program_cache,
             ),
-            Transaction::DeclareV2(tx) => tx.execute(
+            Transaction::Declare(tx) => tx.execute(
                 state,
                 block_context,
                 #[cfg(feature = "cairo-native")]
@@ -146,14 +252,14 @@ impl Transaction {
         skip_nonce_check: bool,
     ) -> Self {
         match self {
-            Transaction::Declare(tx) => tx.create_for_simulation(
+            Transaction::DeclareDeprecated(tx) => tx.create_for_simulation(
                 skip_validate,
                 skip_execute,
                 skip_fee_transfer,
                 ignore_max_fee,
                 skip_nonce_check,
             ),
-            Transaction::DeclareV2(tx) => tx.create_for_simulation(
+            Transaction::Declare(tx) => tx.create_for_simulation(
                 skip_validate,
                 skip_execute,
                 skip_fee_transfer,
@@ -210,7 +316,7 @@ fn check_account_tx_fields_version(
     }
 }
 
-/// Creates a `Declare or DeclareV2` from a starknet api `DeclareTransaction`.
+/// Creates a `DeclareDeprecated or Declare` from a starknet api `DeclareTransaction`.
 pub fn declare_tx_from_sn_api_transaction(
     tx: starknet_api::transaction::DeclareTransaction,
     tx_hash: Felt252,
@@ -270,10 +376,10 @@ pub fn declare_tx_from_sn_api_transaction(
         // Create Declare tx
         let contract_class = match contract_class {
             CompiledClass::Deprecated(cc) => cc.as_ref().clone(),
-            _ => return Err(TransactionError::DeclareV2NoSierraOrCasm),
+            _ => return Err(TransactionError::DeclareNoSierraOrCasm),
         };
 
-        Declare::new_with_tx_hash(
+        DeclareDeprecated::new_with_tx_hash(
             contract_class,
             sender_address,
             account_tx_fields.max_fee(),
@@ -282,16 +388,16 @@ pub fn declare_tx_from_sn_api_transaction(
             nonce,
             tx_hash,
         )
-        .map(Transaction::Declare)
+        .map(Transaction::DeclareDeprecated)
     } else {
         let contract_class = match contract_class {
             CompiledClass::Casm { casm, .. } => casm.as_ref().clone(),
-            _ => return Err(TransactionError::DeclareV2NoSierraOrCasm),
+            _ => return Err(TransactionError::DeclareNoSierraOrCasm),
         };
 
         let compiled_class_hash = compute_casm_class_hash(&contract_class).unwrap();
 
-        DeclareV2::new_with_sierra_class_hash_and_tx_hash(
+        Declare::new_with_sierra_class_hash_and_tx_hash(
             None,
             Felt252::from_bytes_be_slice(tx.class_hash().0.bytes()),
             Some(contract_class),
@@ -303,7 +409,7 @@ pub fn declare_tx_from_sn_api_transaction(
             nonce,
             tx_hash,
         )
-        .map(|d| Transaction::DeclareV2(Box::new(d)))
+        .map(|d| Transaction::Declare(Box::new(d)))
     }
 }
 
@@ -332,7 +438,25 @@ impl From<starknet_api::data_availability::DataAvailabilityMode> for DataAvailab
     }
 }
 
+impl From<DataAvailabilityMode> for Felt252 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => Felt252::ZERO,
+            DataAvailabilityMode::L2 => Felt252::ONE,
+        }
+    }
+}
+
 impl From<DataAvailabilityMode> for u64 {
+    fn from(val: DataAvailabilityMode) -> Self {
+        match val {
+            DataAvailabilityMode::L1 => 0,
+            DataAvailabilityMode::L2 => 1,
+        }
+    }
+}
+
+impl From<DataAvailabilityMode> for u32 {
     fn from(val: DataAvailabilityMode) -> Self {
         match val {
             DataAvailabilityMode::L1 => 0,
@@ -392,6 +516,13 @@ impl VersionSpecificAccountTxFields {
                 current.l1_resource_bounds.max_amount as u128
                     * current.l1_resource_bounds.max_price_per_unit
             }
+        }
+    }
+
+    pub(crate) fn max_fee_for_execution_info(&self) -> u128 {
+        match self {
+            Self::Deprecated(max_fee) => *max_fee,
+            Self::Current(_) => 0,
         }
     }
 

@@ -22,8 +22,8 @@ use starknet_in_rust::services::api::contract_classes::compiled_class::CompiledC
 use starknet_in_rust::services::api::contract_classes::deprecated_contract_class::ContractClass;
 use starknet_in_rust::state::ExecutionResourcesManager;
 use starknet_in_rust::transaction::fee::calculate_tx_fee;
-use starknet_in_rust::transaction::{DeclareV2, Deploy};
-use starknet_in_rust::utils::CompiledClassHash;
+use starknet_in_rust::transaction::CompiledClassHash;
+use starknet_in_rust::transaction::{Declare, Deploy};
 use starknet_in_rust::CasmContractClass;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
@@ -57,9 +57,10 @@ use starknet_in_rust::{
         BlockInfo,
     },
     transaction::{
-        error::TransactionError, invoke_function::InvokeFunction, Declare, DeployAccount,
+        error::TransactionError, invoke_function::InvokeFunction, Address, ClassHash,
+        DeclareDeprecated, DeployAccount,
     },
-    utils::{calculate_sn_keccak, felt_to_hash, Address, ClassHash},
+    utils::{calculate_sn_keccak, felt_to_hash},
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -761,8 +762,8 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
     }
 }
 
-fn declare_tx() -> Declare {
-    Declare {
+fn declare_tx() -> DeclareDeprecated {
+    DeclareDeprecated {
         contract_class: ContractClass::from_path(TEST_EMPTY_CONTRACT_PATH).unwrap(),
         class_hash: *TEST_EMPTY_CONTRACT_CLASS_HASH,
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
@@ -779,7 +780,7 @@ fn declare_tx() -> Declare {
     }
 }
 
-fn declarev2_tx() -> DeclareV2 {
+fn declarev2_tx() -> Declare {
     #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../starknet_programs/raw_contract_classes/fibonacci.sierra");
     #[cfg(feature = "cairo_1_tests")]
@@ -790,7 +791,7 @@ fn declarev2_tx() -> DeclareV2 {
         CasmContractClass::from_contract_class(sierra_contract_class.clone(), true).unwrap();
     let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
-    DeclareV2 {
+    Declare {
         sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
         validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
         version: 2.into(),

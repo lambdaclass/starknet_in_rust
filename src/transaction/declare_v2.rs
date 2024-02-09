@@ -1,6 +1,6 @@
 use super::fee::{calculate_tx_fee, charge_fee, check_fee_bounds, run_post_execution_fee_checks};
 use super::{
-    check_account_tx_fields_version, get_tx_version, ResourceBounds, Transaction,
+    check_account_tx_fields_version, get_tx_version, Address, ResourceBounds, Transaction,
     VersionSpecificAccountTxFields,
 };
 use crate::core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash};
@@ -11,7 +11,6 @@ use crate::services::api::contract_classes::deprecated_contract_class::EntryPoin
 use crate::services::api::contract_classes::compiled_class::CompiledClass;
 use crate::state::cached_state::CachedState;
 use crate::state::contract_class_cache::ContractClassCache;
-use crate::utils::ClassHash;
 use crate::{
     core::transaction_hash::calculate_declare_v2_transaction_hash,
     definitions::{
@@ -23,10 +22,14 @@ use crate::{
         execution_entry_point::ExecutionEntryPoint, CallType, TransactionExecutionContext,
         TransactionExecutionInfo,
     },
-    state::state_api::{State, StateReader},
-    state::ExecutionResourcesManager,
-    transaction::{error::TransactionError, invoke_function::verify_no_calls_to_other_contracts},
-    utils::{calculate_tx_resources, Address},
+    state::{
+        state_api::{State, StateReader},
+        ExecutionResourcesManager,
+    },
+    transaction::{
+        error::TransactionError, invoke_function::verify_no_calls_to_other_contracts, ClassHash,
+    },
+    utils::calculate_tx_resources,
 };
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
@@ -601,13 +604,12 @@ mod tests {
     use crate::services::api::contract_classes::compiled_class::CompiledClass;
     use crate::state::state_api::StateReader;
     use crate::transaction::error::TransactionError;
-    use crate::utils::ClassHash;
     use crate::{
         state::{
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader,
         },
-        utils::Address,
+        transaction::{Address, ClassHash},
     };
     use cairo_lang_starknet::casm_contract_class::CasmContractClass;
     use cairo_vm::Felt252;

@@ -17,15 +17,14 @@ use starknet_in_rust::{
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
-    transaction::{DeclareV2, InvokeFunction},
-    utils::Address,
+    transaction::{Address, ClassHash, Declare, InvokeFunction},
 };
 use tracing::info;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use {
     cairo_native::cache::{JitProgramCache, ProgramCache},
-    starknet_in_rust::utils::{get_native_context, ClassHash},
+    starknet_in_rust::utils::get_native_context,
     std::{cell::RefCell, rc::Rc},
 };
 
@@ -317,7 +316,7 @@ where
     let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
-    let tx_execution_info = DeclareV2::new(
+    let tx_execution_info = Declare::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash,
@@ -353,7 +352,7 @@ where
     let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
-    let tx_execution_info = DeclareV2::new(
+    let tx_execution_info = Declare::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash,
@@ -389,7 +388,7 @@ where
     let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
-    let tx_execution_info = DeclareV2::new(
+    let tx_execution_info = Declare::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash,
@@ -425,7 +424,7 @@ where
     let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
-    let tx_execution_info = DeclareV2::new(
+    let tx_execution_info = Declare::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash,
@@ -907,7 +906,8 @@ mod utils {
             cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
             in_memory_state_reader::InMemoryStateReader, state_api::State,
         },
-        utils::{Address, ClassHash},
+        transaction::Address,
+        transaction::ClassHash,
         CasmContractClass, ContractClass as SierraContractClass,
     };
     use std::{fs, path::Path, sync::Arc};

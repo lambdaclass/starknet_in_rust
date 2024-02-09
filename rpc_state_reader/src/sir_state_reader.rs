@@ -28,10 +28,9 @@ use starknet_in_rust::{
         BlockInfo,
     },
     transaction::{
-        declare_tx_from_sn_api_transaction, error::TransactionError, DeployAccount, InvokeFunction,
-        L1Handler,
+        declare_tx_from_sn_api_transaction, error::TransactionError, Address, ClassHash,
+        DeployAccount, InvokeFunction, L1Handler,
     },
-    utils::{Address, ClassHash},
 };
 
 use crate::{

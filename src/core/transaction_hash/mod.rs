@@ -4,8 +4,8 @@ use cairo_vm::Felt252;
 use lazy_static::lazy_static;
 
 use crate::{
+    transaction::Address,
     transaction::{error::TransactionError, VersionSpecificAccountTxFields},
-    utils::Address,
 };
 
 use super::errors::hash_errors::HashError;
@@ -92,7 +92,7 @@ pub fn calculate_deploy_account_transaction_hash(
 
 /// Calculate the hash for a Declare transaction of version 2+.
 /// Uses the older pedersen version for deprecated account tx fields and the newer poseidon version for current account tx fields
-pub fn calculate_declare_v2_transaction_hash(
+pub fn calculate_declare_transaction_hash(
     sierra_class_hash: Felt252,
     compiled_class_hash: Felt252,
     version: Felt252,
@@ -103,7 +103,7 @@ pub fn calculate_declare_v2_transaction_hash(
 ) -> Result<Felt252, HashError> {
     match account_tx_fields {
         VersionSpecificAccountTxFields::Deprecated(max_fee) => {
-            deprecated::deprecated_calculate_declare_v2_transaction_hash(
+            deprecated::deprecated_calculate_declare_transaction_hash(
                 sierra_class_hash,
                 compiled_class_hash,
                 chain_id,
@@ -114,7 +114,7 @@ pub fn calculate_declare_v2_transaction_hash(
             )
         }
         VersionSpecificAccountTxFields::Current(fields) => {
-            Ok(current::calculate_declare_v2_transaction_hash(
+            Ok(current::calculate_declare_transaction_hash(
                 sierra_class_hash,
                 compiled_class_hash,
                 chain_id,

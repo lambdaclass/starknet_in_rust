@@ -31,7 +31,7 @@ use starknet_in_rust::{
     },
     state::cached_state::CachedState,
     state::{in_memory_state_reader::InMemoryStateReader, ExecutionResourcesManager},
-    utils::{Address, ClassHash},
+    transaction::{Address, ClassHash},
 };
 use std::cell::RefCell;
 use std::rc::Rc;

@@ -5,11 +5,8 @@ use self::{
 use crate::{
     core::errors::state_errors::StateError,
     definitions::block_context::GasPrices,
-    transaction::error::TransactionError,
-    utils::{
-        get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping, Address,
-        ClassHash, CompiledClassHash,
-    },
+    transaction::{error::TransactionError, Address, ClassHash, CompiledClassHash},
+    utils::{get_keys, to_cache_state_storage_mapping, to_state_diff_storage_mapping},
 };
 use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use getset::Getters;
@@ -250,7 +247,7 @@ mod test {
             state_api::StateReader,
             state_cache::{StateCache, StorageEntry},
         },
-        utils::{Address, ClassHash},
+        transaction::{Address, ClassHash},
     };
     use cairo_vm::Felt252;
     use std::{collections::HashMap, sync::Arc};

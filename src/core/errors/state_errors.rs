@@ -1,7 +1,7 @@
 use crate::{
     services::api::contract_class_errors::ContractClassError,
     state::state_cache::StorageEntry,
-    utils::{Address, ClassHash},
+    transaction::{Address, ClassHash},
 };
 use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
