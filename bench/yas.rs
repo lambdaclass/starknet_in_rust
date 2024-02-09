@@ -23,8 +23,7 @@ use starknet_in_rust::{
     state::{
         cached_state::CachedState, contract_class_cache::ContractClassCache, state_api::StateReader,
     },
-    transaction::Address,
-    transaction::{DeclareV2, InvokeFunction},
+    transaction::{Address, Declare, InvokeFunction},
 };
 use std::time::{Duration, Instant};
 use tracing::{debug, info};
@@ -370,7 +369,7 @@ where
     let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
-    let tx_execution_info = DeclareV2::new(
+    let tx_execution_info = Declare::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash,
@@ -411,7 +410,7 @@ where
     let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
-    let tx_execution_info = DeclareV2::new(
+    let tx_execution_info = Declare::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash,
@@ -452,7 +451,7 @@ where
     let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
-    let tx_execution_info = DeclareV2::new(
+    let tx_execution_info = Declare::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash,
@@ -493,7 +492,7 @@ where
     let sender_address = Address(*ACCOUNT_ADDRESS);
     let nonce = state.get_nonce_at(&sender_address).unwrap();
 
-    let tx_execution_info = DeclareV2::new(
+    let tx_execution_info = Declare::new(
         &sierra_contract_class,
         Some(casm_contract_class),
         casm_class_hash,

@@ -273,7 +273,7 @@ mod test {
             ExecutionResourcesManager,
         },
         transaction::{
-            Address, ClassHash, Declare, DeclareV2, Deploy, DeployAccount, InvokeFunction,
+            Address, ClassHash, Declare, DeclareDeprecated, Deploy, DeployAccount, InvokeFunction,
             L1Handler, Transaction, VersionSpecificAccountTxFields,
         },
         utils::{
@@ -823,8 +823,8 @@ mod test {
         let class = CONTRACT_CLASS.clone();
         let address = CONTRACT_ADDRESS.clone();
         // new consumes more execution time than raw struct instantiation
-        let declare_tx = Transaction::Declare(
-            Declare::new(
+        let declare_tx = Transaction::DeclareDeprecated(
+            DeclareDeprecated::new(
                 class,
                 StarknetChainId::TestNet.to_felt(),
                 address,
@@ -976,14 +976,14 @@ mod test {
         .unwrap();
     }
 
-    fn declarev2_tx() -> DeclareV2 {
+    fn declarev2_tx() -> Declare {
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
         let sierra_contract_class: SierraContractClass =
             serde_json::from_slice(program_data).unwrap();
 
         let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
 
-        DeclareV2 {
+        Declare {
             sender_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             validate_entry_point_selector: *VALIDATE_DECLARE_ENTRY_POINT_SELECTOR,
             version: 2.into(),
@@ -1005,7 +1005,7 @@ mod test {
     #[test]
     fn test_simulate_declare_v2() {
         let (block_context, state) = create_account_tx_test_state().unwrap();
-        let declare_tx = Transaction::DeclareV2(Box::new(declarev2_tx()));
+        let declare_tx = Transaction::Declare(Box::new(declarev2_tx()));
 
         simulate_transaction(
             &[&declare_tx],
@@ -1172,7 +1172,7 @@ mod test {
         let real_casm_class_hash = declare_v2.compiled_class_hash;
         let wrong_casm_class_hash = Felt252::from(1);
         declare_v2.compiled_class_hash = wrong_casm_class_hash;
-        let declare_tx = Transaction::DeclareV2(Box::new(declare_v2));
+        let declare_tx = Transaction::Declare(Box::new(declare_v2));
 
         let err = declare_tx
             .execute(
@@ -1254,7 +1254,7 @@ mod test {
         // declare tx
         // Signature & tx hash values are hand-picked for account validations to pass
         let mut declare =
-            Declare::new(
+            DeclareDeprecated::new(
                 fib_contract_class,
                 chain_id,
                 Address(Felt252::ONE),
@@ -1276,7 +1276,7 @@ mod test {
         let mut block_context = BlockContext::default();
         block_context.starknet_os_config_mut().gas_price = GasPrices::new(12, 0);
 
-        let declare_tx = Transaction::Declare(declare);
+        let declare_tx = Transaction::DeclareDeprecated(declare);
 
         let without_validate_fee = simulate_transaction(
             &[&declare_tx],

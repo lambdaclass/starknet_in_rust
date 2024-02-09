@@ -12,7 +12,7 @@ use starknet_in_rust::{
         contract_class_cache::{ContractClassCache, PermanentContractClassCache},
         in_memory_state_reader::InMemoryStateReader,
     },
-    transaction::{Address, ClassHash, Declare, Deploy, InvokeFunction},
+    transaction::{Address, ClassHash, DeclareDeprecated, Deploy, InvokeFunction},
     utils::calculate_sn_keccak,
 };
 use std::{
@@ -53,7 +53,7 @@ fn run_contract(
 
     let contract_class = ContractClass::from_path(contract_path.as_ref()).unwrap();
 
-    let declare_tx = Declare::new(
+    let declare_tx = DeclareDeprecated::new(
         contract_class.clone(),
         chain_id,
         sender_address,

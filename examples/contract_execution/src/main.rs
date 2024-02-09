@@ -20,7 +20,7 @@ use starknet_in_rust::{
         cached_state::CachedState, contract_class_cache::PermanentContractClassCache,
         in_memory_state_reader::InMemoryStateReader, state_api::State,
     },
-    transaction::{Address, DeclareV2, DeployAccount, InvokeFunction},
+    transaction::{Address, Declare, DeployAccount, InvokeFunction},
     utils::{calculate_sn_keccak, felt_to_hash},
     CasmContractClass, SierraContractClass,
 };
@@ -159,7 +159,7 @@ fn test_contract(
     //* --------------------------------------------
     //*        Declare new contract class
     //* --------------------------------------------
-    let declare_tx = DeclareV2::new_with_tx_hash(
+    let declare_tx = Declare::new_with_tx_hash(
         &sierra_contract_class,
         Some(casm_class),
         compiled_class_hash,
