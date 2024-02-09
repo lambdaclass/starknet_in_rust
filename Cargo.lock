@@ -1086,11 +1086,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-<<<<<<< HEAD
 source = "git+https://github.com/lambdaclass/cairo_native?rev=8babd0e9577236cf85f10be8af00e4cc01209f0d#8babd0e9577236cf85f10be8af00e4cc01209f0d"
-=======
-source = "git+https://github.com/lambdaclass/cairo_native?rev=66d16af0db37ba6769d4576a49e12a40af14f565#66d16af0db37ba6769d4576a49e12a40af14f565"
->>>>>>> main
 dependencies = [
  "cairo-lang-runner",
  "lazy_static",

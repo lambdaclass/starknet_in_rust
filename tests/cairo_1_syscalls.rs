@@ -4007,7 +4007,7 @@ fn test_get_execution_info_v2() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: Some(expected_execution_resources),
