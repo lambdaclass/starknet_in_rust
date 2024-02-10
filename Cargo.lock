@@ -1047,7 +1047,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=8babd0e9577236cf85f10be8af00e4cc01209f0d#8babd0e9577236cf85f10be8af00e4cc01209f0d"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=95c2b13cf73aaf21f3a5231598dcfc5f3601e9ac#95c2b13cf73aaf21f3a5231598dcfc5f3601e9ac"
 dependencies = [
  "bumpalo",
  "cairo-lang-compiler",
@@ -1086,7 +1086,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=8babd0e9577236cf85f10be8af00e4cc01209f0d#8babd0e9577236cf85f10be8af00e4cc01209f0d"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=95c2b13cf73aaf21f3a5231598dcfc5f3601e9ac#95c2b13cf73aaf21f3a5231598dcfc5f3601e9ac"
 dependencies = [
  "cairo-lang-runner",
  "lazy_static",
@@ -1130,7 +1130,7 @@ dependencies = [
 [[package]]
 name = "cairo-vm"
 version = "1.0.0-rc0"
-source = "git+https://github.com/lambdaclass/cairo-vm?rev=ecd4de21ad404a14d535165b6ca760bdce51d42c#ecd4de21ad404a14d535165b6ca760bdce51d42c"
+source = "git+https://github.com/lambdaclass/cairo-vm?rev=1f98feff566dd2da016e439f5e8db912c6e39872#1f98feff566dd2da016e439f5e8db912c6e39872"
 dependencies = [
  "anyhow",
  "ark-ff",
