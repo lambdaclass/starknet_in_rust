@@ -23,7 +23,6 @@ use crate::{
     utils::felt_to_hash,
     ContractClassCache, EntryPointType, VersionSpecificAccountTxFields,
 };
-use cairo_native::starknet::{Secp256k1Point, Secp256r1Point};
 use cairo_native::{
     cache::ProgramCache,
     starknet::{
