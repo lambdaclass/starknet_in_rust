@@ -14,8 +14,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  bench-hyperfine:
-    name: Hyperfine
+  bench-yas:
+    name: YAS benchmark
     runs-on: ubuntu-latest
     env:
       CAIRO_NATIVE_RUNTIME_LIBDIR: ${{ github.workspace }}/target/release
