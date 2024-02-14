@@ -221,7 +221,7 @@ pub(crate) fn check_fee_bounds(
         VersionSpecificAccountTxFields::Current(fields) => {
             // Check l1_gas amount
             if (fields.l1_resource_bounds.max_amount as u128) < minimal_l1_gas_amount {
-                return Err(TransactionError::MaxL1GasAmountTooLow(
+                Err(TransactionError::MaxL1GasAmountTooLow(
                     fields.l1_resource_bounds.max_amount,
                     minimal_l1_gas_amount,
                 ))?;
@@ -230,7 +230,7 @@ pub(crate) fn check_fee_bounds(
             let actual_gas_price =
                 block_context.get_gas_price_by_fee_type(&account_tx_fields.fee_type());
             if fields.l1_resource_bounds.max_price_per_unit < actual_gas_price {
-                return Err(TransactionError::MaxL1GasPriceTooLow(
+                Err(TransactionError::MaxL1GasPriceTooLow(
                     fields.l1_resource_bounds.max_price_per_unit,
                     actual_gas_price,
                 ))?;
