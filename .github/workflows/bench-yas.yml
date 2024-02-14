@@ -46,6 +46,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.72.1
         with:
           components: clippy
+      - name: Python3 Build
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
       - uses: Swatinem/rust-cache@v2
       - name: add llvm deb repository
         uses: myci-actions/add-deb-repo@10
