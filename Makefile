@@ -208,7 +208,7 @@ test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-
 	cargo nextest run --workspace --all-targets --features=metrics,cairo-native
 
 test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --test cairo_native --features=cairo-native
+	cargo nextest run --workspace --test tests --features=cairo-native integration_tests::cairo_native
 
 test-doctests:
 	cargo test --workspace --doc
