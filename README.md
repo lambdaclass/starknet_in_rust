@@ -50,7 +50,7 @@ It makes use of [cairo-vm](https://github.com/lambdaclass/cairo-vm), the Rust im
 ## 🌅 Getting Started
 
 ### Dependencies
-- Rust 1.70
+- Rust 1.74.1
 - A working installation of cairo-lang 0.12 (for compiling the cairo files)
 - [Optional, for testing purposes] Heaptrack
 
