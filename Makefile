@@ -166,7 +166,7 @@ deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	-pyenv && pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
-	cargo install cargo-nextest --version 0.9.49
+	cargo install cargo-nextest --version 0.9.49 --locked
 
 deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
 	cargo install flamegraph --version 0.6.2
@@ -175,7 +175,7 @@ deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-comp
 	-pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
-	cargo install cargo-nextest
+	cargo install cargo-nextest --locked
 
 clean:
 	-rm -rf starknet-venv/
