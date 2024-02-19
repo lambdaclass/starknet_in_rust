@@ -288,7 +288,7 @@ mod test {
         casm_contract_class::CasmContractClass,
         contract_class::ContractClass as SierraContractClass,
     };
-    use cairo_vm::{utils::biguint_to_felt, Felt252};
+    use cairo_vm::Felt252;
     use lazy_static::lazy_static;
 
     use pretty_assertions_sorted::assert_eq;
@@ -353,8 +353,7 @@ mod test {
 
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let entrypoints = contract_class.clone().entry_points_by_type;
-        let entrypoint_selector =
-            biguint_to_felt(&entrypoints.external.get(0).unwrap().selector).unwrap();
+        let entrypoint_selector = Felt252::from(&entrypoints.external.get(0).unwrap().selector);
 
         let contract_class_cache = PermanentContractClassCache::default();
 
@@ -461,8 +460,7 @@ mod test {
         let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let entrypoints = contract_class.clone().entry_points_by_type;
-        let entrypoint_selector =
-            biguint_to_felt(&entrypoints.external.get(0).unwrap().selector).unwrap();
+        let entrypoint_selector = Felt252::from(&entrypoints.external.get(0).unwrap().selector);
 
         let contract_class_cache = PermanentContractClassCache::default();
 

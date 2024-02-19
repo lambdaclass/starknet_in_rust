@@ -1,6 +1,5 @@
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    utils::biguint_to_felt,
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
     Felt252,
 };
@@ -42,7 +41,7 @@ fn create_execute_extrypoint(
     ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(selector).unwrap(),
+        Felt252::from(selector),
         Address(0000.into()),
         entry_point_type,
         Some(CallType::Delegate),
@@ -278,7 +277,7 @@ fn library_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -320,7 +319,7 @@ fn library_call() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(biguint_to_felt(entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [5.into()].to_vec(),
@@ -472,7 +471,7 @@ fn call_contract_storage_write_read() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            biguint_to_felt(selector).unwrap(),
+            Felt252::from(selector),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -628,7 +627,7 @@ fn emit_event() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -757,7 +756,7 @@ fn deploy_cairo1_from_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -868,7 +867,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -980,7 +979,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1092,7 +1091,7 @@ fn deploy_cairo0_and_invoke() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1280,7 +1279,7 @@ fn test_send_message_to_l1_syscall() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         l2_to_l1_messages,
         execution_resources: Some(expected_execution_resources),
@@ -1392,7 +1391,7 @@ fn test_get_execution_info() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: Some(expected_execution_resources),
@@ -1466,7 +1465,7 @@ fn replace_class_internal() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(upgrade_selector).unwrap(),
+        Felt252::from(upgrade_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1624,7 +1623,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(get_number_entrypoint_selector).unwrap(),
+        Felt252::from(get_number_entrypoint_selector),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1653,7 +1652,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(upgrade_entrypoint_selector).unwrap(),
+        Felt252::from(upgrade_entrypoint_selector),
         caller_address.clone(),
         entry_point_type,
         Some(CallType::Delegate),
@@ -1681,7 +1680,7 @@ fn replace_class_contract_call() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(get_number_entrypoint_selector).unwrap(),
+        Felt252::from(get_number_entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1815,7 +1814,7 @@ fn replace_class_contract_call_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
+        Felt252::from(get_numbers_entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -1946,7 +1945,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
+        Felt252::from(get_numbers_entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2075,7 +2074,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
+        Felt252::from(get_numbers_entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2197,7 +2196,7 @@ fn call_contract_replace_class_cairo_0() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(get_numbers_entrypoint_selector).unwrap(),
+        Felt252::from(get_numbers_entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2268,7 +2267,7 @@ fn test_out_of_gas_failure() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2354,7 +2353,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2457,7 +2456,7 @@ fn deploy_syscall_failure_in_constructor() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2810,7 +2809,7 @@ fn library_call_failure() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -2935,7 +2934,7 @@ fn send_messages_to_l1_different_contract_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3063,7 +3062,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address.clone(),
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3406,7 +3405,7 @@ fn library_call_recursive_50_calls() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata,
-        biguint_to_felt(entrypoint_selector).unwrap(),
+        Felt252::from(entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -3574,7 +3573,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            biguint_to_felt(selector).unwrap(),
+            Felt252::from(selector),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -3789,7 +3788,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
         ExecutionEntryPoint::new(
             address,
             calldata,
-            biguint_to_felt(selector).unwrap(),
+            Felt252::from(selector),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -4020,7 +4019,7 @@ fn test_get_execution_info_v2() {
         call_type: Some(CallType::Delegate),
         contract_address: address,
         class_hash: Some(class_hash),
-        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         retdata: expected_ret_data,
         execution_resources: Some(expected_execution_resources),
