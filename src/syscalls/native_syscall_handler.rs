@@ -86,7 +86,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
         &mut self,
         block_number: u64,
         gas: &mut u128,
-    ) -> SyscallResult<cairo_vm::Felt252> {
+    ) -> Result<Felt252, Vec<Felt252>> {
         tracing::debug!("Called `get_block_hash({block_number})` from Cairo Native");
         self.handle_syscall_request(gas, "get_block_hash")?;
 

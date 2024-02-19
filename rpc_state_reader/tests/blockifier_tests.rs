@@ -48,7 +48,7 @@ pub struct RpcStateReader(RpcState);
 impl StateReader for RpcStateReader {
     fn get_storage_at(
         &mut self,
-        contract_address: ContractAddress,
+        contract_address: starknet_api::core::ContractAddress,
         key: StorageKey,
     ) -> StateResult<StarkFelt> {
         Ok(self.0.get_storage_at(&contract_address, &key))

@@ -3,7 +3,6 @@
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    utils::biguint_to_felt,
     vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
     Felt252,
 };
@@ -188,7 +187,7 @@ fn integration_test_cairo1() {
     let exec_entry_point = ExecutionEntryPoint::new(
         address,
         calldata.clone(),
-        biguint_to_felt(fib_entrypoint_selector).unwrap(),
+        Felt252::from(fib_entrypoint_selector),
         caller_address,
         entry_point_type,
         Some(CallType::Delegate),
@@ -214,7 +213,7 @@ fn integration_test_cairo1() {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: Address(1111.into()),
-        entry_point_selector: Some(biguint_to_felt(fib_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(fib_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         calldata,
         retdata: [144.into()].to_vec(),

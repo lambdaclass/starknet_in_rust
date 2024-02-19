@@ -5,7 +5,6 @@ use cairo_lang_casm::{
     hints::{Hint, StarknetHint},
     operand::{CellRef, DerefOrImmediate, Register, ResOperand},
 };
-use cairo_vm::utils::bigint_to_felt;
 use cairo_vm::vm::runners::cairo_runner::{ResourceTracker, RunResources};
 use cairo_vm::{
     hint_processor::{
@@ -164,7 +163,7 @@ fn extract_buffer(buffer: &ResOperand) -> Result<(&CellRef, Felt252), HintError>
             if let DerefOrImmediate::Immediate(val) = &bin_op.b {
                 // TODO
                 // Remove this unwrap()
-                (&bin_op.a, bigint_to_felt(&val.value).unwrap())
+                (&bin_op.a, Felt252::from(&val.value))
             } else {
                 return Err(HintError::CustomHint("Failed to extract buffer, expected ResOperand of BinOp type to have Inmediate b value".to_owned().into_boxed_str()));
             }

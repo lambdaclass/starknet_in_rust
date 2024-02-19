@@ -34,7 +34,6 @@ use cairo_vm::{
         program::Program,
         relocatable::{MaybeRelocatable, Relocatable},
     },
-    utils::felt_to_biguint,
     vm::{
         errors::runner_errors::RunnerError,
         runners::cairo_runner::{CairoArg, CairoRunner, ExecutionResources, RunResources},
@@ -290,11 +289,11 @@ impl ExecutionEntryPoint {
         let entry_point = entry_points
             .iter()
             .filter(|x| {
-                if x.selector == felt_to_biguint(*DEFAULT_ENTRY_POINT_SELECTOR) {
+                if x.selector == DEFAULT_ENTRY_POINT_SELECTOR.to_biguint() {
                     default_entry_point = Some(*x);
                 }
 
-                x.selector == felt_to_biguint(self.entry_point_selector)
+                x.selector == self.entry_point_selector.to_biguint()
             })
             .try_fold(None, |acc, x| match acc {
                 None => Ok(Some(x)),

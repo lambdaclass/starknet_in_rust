@@ -2,7 +2,6 @@
 use assert_matches::assert_matches;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::{
-    utils::biguint_to_felt,
     vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
     vm::{
         errors::{
@@ -2267,7 +2266,7 @@ fn test_library_call_with_declare_v2() {
         ExecutionEntryPoint::new(
             address.clone(),
             calldata,
-            biguint_to_felt(selector).unwrap(),
+            Felt252::from(selector),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -2342,7 +2341,7 @@ fn test_library_call_with_declare_v2() {
         call_type: Some(CallType::Delegate),
         contract_address: address.clone(),
         class_hash: Some(casm_contract_hash),
-        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
         gas_consumed: 29680,
@@ -2366,7 +2365,7 @@ fn test_library_call_with_declare_v2() {
         call_type: Some(CallType::Delegate),
         contract_address: address.clone(),
         class_hash: Some(class_hash),
-        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
         gas_consumed: 111690,
