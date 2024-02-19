@@ -6,7 +6,7 @@ Usage:
         by passing either "jit" or "aot" as an argument when running the bench
         * Example:
             `cargo bench --features cairo-native --bench yas aot`
-    Without cairo-native feature enababled:
+    Without cairo-native feature enabled:
         * Runs the bench using cairo_vm, no customization args
 */
 #![deny(warnings)]
