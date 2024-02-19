@@ -142,9 +142,9 @@ fn internal_deploy_account_cairo1() {
     );
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/hello_world_account.casm");
+    let program_data = include_bytes!("../../starknet_programs/cairo2/hello_world_account.casm");
     #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/hello_world_account.casm");
+    let program_data = include_bytes!("../../starknet_programs/cairo1/hello_world_account.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     state
