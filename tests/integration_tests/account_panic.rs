@@ -17,8 +17,8 @@ use starknet_in_rust::{
 
 #[test]
 fn account_panic() {
-    let account_data = include_bytes!("../starknet_programs/cairo2/account_panic.casm");
-    let contract_data = include_bytes!("../starknet_programs/cairo2/contract_a.casm");
+    let account_data = include_bytes!("../../starknet_programs/cairo2/account_panic.casm");
+    let contract_data = include_bytes!("../../starknet_programs/cairo2/contract_a.casm");
 
     let account_contract_class: CasmContractClass = serde_json::from_slice(account_data).unwrap();
     let account_class_hash = ClassHash(

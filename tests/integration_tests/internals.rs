@@ -783,9 +783,10 @@ fn declare_tx() -> DeclareDeprecated {
 
 fn declarev2_tx() -> Declare {
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/raw_contract_classes/fibonacci.sierra");
+    let program_data =
+        include_bytes!("../../starknet_programs/raw_contract_classes/fibonacci.sierra");
     #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
+    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
     let casm_class =
@@ -813,9 +814,9 @@ fn declarev2_tx() -> Declare {
 
 fn deploy_fib_syscall() -> Deploy {
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
+    let program_data = include_bytes!("../../starknet_programs/cairo2/fibonacci.sierra");
     #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
+    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let casm_class = CasmContractClass::from_contract_class(sierra_contract_class, true).unwrap();
     let contract_class = CompiledClass::Casm {
@@ -2227,9 +2228,9 @@ fn test_library_call_with_declare_v2() {
 
     //  Create program and entry point types for contract class
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci_dispatcher.casm");
+    let program_data = include_bytes!("../../starknet_programs/cairo2/fibonacci_dispatcher.casm");
     #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci_dispatcher.casm");
+    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci_dispatcher.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;

@@ -1,4 +1,4 @@
-use crate::complex_contracts::utils::*;
+use crate::integration_tests::complex_contracts::utils::*;
 use assert_matches::assert_matches;
 use cairo_vm::{
     vm::runners::{
