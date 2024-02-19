@@ -1,4 +1,4 @@
-use crate::complex_contracts::utils::*;
+use crate::integration_tests::complex_contracts::utils::*;
 use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 
 use starknet_crypto::FieldElement;

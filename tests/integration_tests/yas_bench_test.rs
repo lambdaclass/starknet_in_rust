@@ -897,7 +897,7 @@ where
 }
 
 mod utils {
-    use crate::ACCOUNT_ADDRESS;
+    use crate::integration_tests::yas_bench_test::ACCOUNT_ADDRESS;
     use cairo_vm::Felt252;
     use starknet_in_rust::{
         core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash},

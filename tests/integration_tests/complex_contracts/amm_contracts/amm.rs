@@ -1,4 +1,5 @@
-use crate::complex_contracts::utils::*;
+use crate::integration_tests::complex_contracts::utils::get_accessed_keys;
+use crate::integration_tests::complex_contracts::utils::*;
 use cairo_vm::{
     vm::runners::{
         builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},

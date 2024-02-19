@@ -20,11 +20,11 @@ use std::sync::Arc;
 fn test_erc20_cairo2() {
     // data to deploy
     let erc20_class_hash: ClassHash = ClassHash([2; 32]);
-    let test_data = include_bytes!("../../starknet_programs/cairo2/erc20.casm");
+    let test_data = include_bytes!("../../../starknet_programs/cairo2/erc20.casm");
     let test_contract_class: CasmContractClass = serde_json::from_slice(test_data).unwrap();
 
     // Create the deploy contract class
-    let program_data = include_bytes!("../../starknet_programs/cairo2/deploy_erc20.casm");
+    let program_data = include_bytes!("../../../starknet_programs/cairo2/deploy_erc20.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -128,7 +128,7 @@ fn test_erc20_cairo2() {
 
     // ACCOUNT 1
     let program_data_account =
-        include_bytes!("../../starknet_programs/cairo2/hello_world_account.casm");
+        include_bytes!("../../../starknet_programs/cairo2/hello_world_account.casm");
     let contract_class_account: CasmContractClass =
         serde_json::from_slice(program_data_account).unwrap();
 
@@ -188,7 +188,7 @@ fn test_erc20_cairo2() {
 
     // ACCOUNT 2
     let program_data_account =
-        include_bytes!("../../starknet_programs/cairo2/hello_world_account.casm");
+        include_bytes!("../../../starknet_programs/cairo2/hello_world_account.casm");
     let contract_class_account: CasmContractClass =
         serde_json::from_slice(program_data_account).unwrap();
 

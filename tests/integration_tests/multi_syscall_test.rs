@@ -23,7 +23,7 @@ use std::{sync::Arc, vec};
 #[test]
 fn test_multiple_syscall() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../starknet_programs/cairo1/multi_syscall_test.casm");
+    let program_data = include_bytes!("../../starknet_programs/cairo1/multi_syscall_test.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
