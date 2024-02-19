@@ -160,22 +160,22 @@ check: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierr
 	cargo check --workspace --all-targets
 
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
-	cargo install flamegraph --version 0.6.2
-	cargo install cargo-llvm-cov --version 0.5.14
+	cargo install flamegraph --version 0.6.2 --locked
+	cargo install cargo-llvm-cov --version 0.5.14 --locked
 	-pyenv && pyenv install -s pypy3.9-7.3.9
 	-pyenv && pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
-	cargo install cargo-nextest --version 0.9.49
+	cargo install cargo-nextest --version 0.9.49 --locked
 
 deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
-	cargo install flamegraph --version 0.6.2
-	cargo install cargo-llvm-cov --version 0.5.14
+	cargo install flamegraph --version 0.6.2 --locked
+	cargo install cargo-llvm-cov --version 0.5.14 --locked
 	-pyenv install -s pypy3.9-7.3.9
 	-pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
-	cargo install cargo-nextest
+	cargo install cargo-nextest --locked
 
 clean:
 	-rm -rf starknet-venv/
@@ -208,7 +208,7 @@ test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-
 	cargo nextest run --workspace --all-targets --features=metrics,cairo-native
 
 test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --test cairo_native --features=cairo-native
+	cargo nextest run --workspace --test tests --features=cairo-native integration_tests::cairo_native
 
 test-doctests:
 	cargo test --workspace --doc

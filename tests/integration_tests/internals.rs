@@ -2,7 +2,6 @@
 use assert_matches::assert_matches;
 use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::{
-    utils::biguint_to_felt,
     vm::runners::builtin_runner::{HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
     vm::{
         errors::{
@@ -783,9 +782,10 @@ fn declare_tx() -> DeclareDeprecated {
 
 fn declarev2_tx() -> Declare {
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/raw_contract_classes/fibonacci.sierra");
+    let program_data =
+        include_bytes!("../../starknet_programs/raw_contract_classes/fibonacci.sierra");
     #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
+    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
     let casm_class =
@@ -813,9 +813,9 @@ fn declarev2_tx() -> Declare {
 
 fn deploy_fib_syscall() -> Deploy {
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
+    let program_data = include_bytes!("../../starknet_programs/cairo2/fibonacci.sierra");
     #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
+    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let casm_class = CasmContractClass::from_contract_class(sierra_contract_class, true).unwrap();
     let contract_class = CompiledClass::Casm {
@@ -2227,9 +2227,9 @@ fn test_library_call_with_declare_v2() {
 
     //  Create program and entry point types for contract class
     #[cfg(not(feature = "cairo_1_tests"))]
-    let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci_dispatcher.casm");
+    let program_data = include_bytes!("../../starknet_programs/cairo2/fibonacci_dispatcher.casm");
     #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci_dispatcher.casm");
+    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci_dispatcher.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2266,7 +2266,7 @@ fn test_library_call_with_declare_v2() {
         ExecutionEntryPoint::new(
             address.clone(),
             calldata,
-            biguint_to_felt(selector).unwrap(),
+            Felt252::from(selector),
             Address(0000.into()),
             entry_point_type,
             Some(CallType::Delegate),
@@ -2341,7 +2341,7 @@ fn test_library_call_with_declare_v2() {
         call_type: Some(CallType::Delegate),
         contract_address: address.clone(),
         class_hash: Some(casm_contract_hash),
-        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
         gas_consumed: 29680,
@@ -2365,7 +2365,7 @@ fn test_library_call_with_declare_v2() {
         call_type: Some(CallType::Delegate),
         contract_address: address.clone(),
         class_hash: Some(class_hash),
-        entry_point_selector: Some(biguint_to_felt(external_entrypoint_selector).unwrap()),
+        entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
         gas_consumed: 111690,

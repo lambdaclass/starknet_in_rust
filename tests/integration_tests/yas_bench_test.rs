@@ -234,12 +234,6 @@ fn compare_yas_bench() -> Result<(), Box<dyn std::error::Error>> {
     // Execute swaps
 
     for _ in 0..5 {
-        let yas_router_address_jit = yas_router_address_jit;
-        let yas_pool_address_jit = yas_pool_address_jit;
-
-        let yas_router_address_vm = yas_router_address_vm;
-        let yas_pool_address_vm = yas_pool_address_vm;
-
         swap(
             &mut state_jit,
             program_cache_jit.clone(),
@@ -897,7 +891,7 @@ where
 }
 
 mod utils {
-    use crate::ACCOUNT_ADDRESS;
+    use crate::integration_tests::yas_bench_test::ACCOUNT_ADDRESS;
     use cairo_vm::Felt252;
     use starknet_in_rust::{
         core::contract_address::{compute_casm_class_hash, compute_sierra_class_hash},

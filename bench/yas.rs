@@ -283,9 +283,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut state = loop {
         let mut state = state.clone();
 
-        let yas_router_address = yas_router_address;
-        let yas_pool_address = yas_pool_address;
-
         // Swap (invoke).
         info!("Swapping tokens.");
         let t0 = Instant::now();
