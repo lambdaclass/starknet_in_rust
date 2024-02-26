@@ -14,7 +14,7 @@ mod Deploy {
     struct Storage {
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl Deploy of super::IDeploy<ContractState> {
         fn deploy_no_args(self: @ContractState, class_hash: ClassHash) -> felt252 {
             let calldata = ArrayTrait::new();

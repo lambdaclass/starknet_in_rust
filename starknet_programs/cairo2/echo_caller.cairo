@@ -9,12 +9,12 @@ mod EchoCaller {
         balance: felt252,
     }
 
-     #[external(v0)]
+    #[abi(embed_v0)]
     fn call_echo_contract(ref self: ContractState, function_selector: felt252, value: felt252) ->  felt252 {
         let mut calldata: Array<felt252> = ArrayTrait::new();
         calldata.append(value);
         let callee_addr = starknet::get_contract_address();
         let return_data =  call_contract_syscall(callee_addr, function_selector, calldata.span()).unwrap();
         *return_data.get(0_usize).unwrap().unbox()
-    }  
+    }
 }

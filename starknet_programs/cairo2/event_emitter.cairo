@@ -15,10 +15,10 @@ mod EventTest {
 
     #[derive(Drop, starknet::Event)]
     struct EmitEvent {
-        n: u128, 
+        n: u128,
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn trigger_event(ref self: ContractState) -> felt252 {
         let mut keys = ArrayTrait::new();
         keys.append('n');

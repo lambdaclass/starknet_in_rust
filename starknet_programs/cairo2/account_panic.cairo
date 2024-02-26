@@ -11,9 +11,15 @@ trait IAccount<T> {
   fn is_valid_signature(self: @T, hash: felt252, signature: Array<felt252>) -> felt252;
   fn supports_interface(self: @T, interface_id: felt252) -> bool;
   fn public_key(self: @T) -> felt252;
+  fn __validate__(ref self: T, calls: Array<Call>) -> felt252;
+    fn __execute__(ref self: T, calls: Array<Call>) -> Array<Span<felt252>>;
+    fn __validate_declare__(self: @T, class_hash: felt252) -> felt252;
+    fn __validate_deploy__(
+        self: @T, class_hash: felt252, salt: felt252, public_key: felt252,
+    ) -> felt252;
 }
 
-#[starknet::contract]
+#[starknet::contract(account)]
 mod Account {
   use super::{Call, IAccount, SUPPORTED_TX_VERSION};
   use starknet::{get_caller_address, call_contract_syscall, get_tx_info, VALIDATED};
@@ -36,7 +42,7 @@ mod Account {
     self.public_key.write(public_key);
   }
 
-  #[external(v0)]
+  #[abi(embed_v0)]
   impl AccountImpl of IAccount<ContractState> {
     fn is_valid_signature(self: @ContractState, hash: felt252, signature: Array<felt252>) -> felt252 {
       let is_valid = self.is_valid_signature_bool(hash, signature.span());
@@ -50,11 +56,7 @@ mod Account {
     fn public_key(self: @ContractState) -> felt252 {
       self.public_key.read()
     }
-  }
 
-  #[external(v0)]
-  #[generate_trait]
-  impl ProtocolImpl of ProtocolTrait {
     fn __execute__(ref self: ContractState, calls: Array<Call>) -> Array<Span<felt252>> {
       let arr = ArrayTrait::new();
       panic_with_felt252('panic');
@@ -64,7 +66,7 @@ mod Account {
       // self.execute_multiple_calls(calls)
     }
 
-    fn __validate__(self: @ContractState, calls: Array<Call>) -> felt252 {
+    fn __validate__(ref self: ContractState, calls: Array<Call>) -> felt252 {
       panic_with_felt252('panic');
       0
 //      self.only_protocol();
@@ -116,7 +118,7 @@ mod Account {
 
     fn execute_single_call(self: @ContractState, call: Call) -> Span<felt252> {
       let Call{to, selector, calldata} = call;
-      call_contract_syscall(to, selector, calldata.span()).unwrap()
+      call_contract_syscall(to, selector, calldata).unwrap()
     }
 
     fn execute_multiple_calls(self: @ContractState, mut calls: Array<Call>) -> Array<Span<felt252>> {

@@ -17,7 +17,7 @@ mod GetExecutionInfo {
     struct Storage {
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl GetExecutionInfo of super::IGetExecutionInfo<ContractState> {
         fn get_info(self: @ContractState) -> (ContractAddress, ContractAddress, ContractAddress, ContractAddress) {
             let info = get_execution_info().unbox();
@@ -51,7 +51,7 @@ mod GetExecutionInfo {
             assert(*signature.at(0) == 22, 9);
             assert(*signature.at(1) == 33, 10);
             assert(signature.len() == 2, 11);
-            
+
             return (
                 sequencer_address,
                 account_contract_address,

@@ -20,12 +20,12 @@ mod ContractWithEvent {
     use starknet::info::get_contract_address;
     #[storage]
     struct Storage {
-        value: u128, 
+        value: u128,
     }
 
     #[derive(Copy, Drop, PartialEq, starknet::Event)]
     struct IncrementalEvent {
-        value: u128, 
+        value: u128,
     }
 
     #[derive(Copy, Drop, PartialEq, starknet::Event)]
@@ -43,7 +43,7 @@ mod ContractWithEvent {
         self.value.write(0);
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     fn emit_event(ref self: ContractState, incremental: bool) {
         if incremental {
             self.emit(Event::IncrementalEvent(IncrementalEvent { value: self.value.read() }));

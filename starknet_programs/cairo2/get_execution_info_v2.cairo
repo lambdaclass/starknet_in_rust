@@ -17,7 +17,7 @@ mod GetExecutionInfo {
     struct Storage {
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl GetExecutionInfo of super::IGetExecutionInfo<ContractState> {
         fn get_info(self: @ContractState) -> (ContractAddress, ContractAddress, ContractAddress, ContractAddress) {
             let info = get_execution_info().unbox();
@@ -75,7 +75,7 @@ mod GetExecutionInfo {
             assert(*account_deployment_data.at(0) == 7, 'Wrong Acc. Deployment Data');
             assert(*account_deployment_data.at(1) == 18, 'Wrong Acc. Deployment Data');
             assert(account_deployment_data.len() == 2, 'Wrong Acc. Deployment Data len');
-            
+
             return (
                 sequencer_address,
                 account_contract_address,

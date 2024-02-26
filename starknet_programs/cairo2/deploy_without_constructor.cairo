@@ -19,7 +19,7 @@ mod DeployTest {
     struct Storage {
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl DeployWithoutConstructorTest of super::IDeployWithoutConstructorTest<ContractState> {
         fn deploy_test(self: @ContractState, class_hash: felt252, contract_address_salt: felt252) -> ContractAddress {
             let mut calldata = ArrayTrait::new();
