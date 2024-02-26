@@ -29,8 +29,8 @@ cairo-lang-starknet = "=2.5.4"
 cairo-lang-utils = "=2.5.4"
 cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "3547089579dd74f815edbc2d1caa91e00fc8a2f7", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
-starknet = "0.5.0"
-starknet_api = {version = "0.7.0-dev.0"}
+starknet = "0.7.0" # todo: update to 0.9.0+ once cairo-lang is 2.6.0+
+starknet_api = "0.7.0-dev.0" # todo: update to 0.9.0+ once cairo-lang is 2.6.0+
 thiserror = "1.0.32"
 
 [dependencies]

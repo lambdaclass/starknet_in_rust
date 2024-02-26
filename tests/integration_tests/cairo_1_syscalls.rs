@@ -299,7 +299,7 @@ fn library_call() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 247,
+        n_steps: 238,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 259,
         n_memory_holes: 8,
@@ -307,7 +307,7 @@ fn library_call() {
     };
     let expected_execution_resources_internal_call = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 80,
+        n_steps: 78,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
         n_memory_holes: 5,
@@ -349,7 +349,7 @@ fn library_call() {
         storage_read_values: vec![],
         accessed_storage_keys: HashSet::new(),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 78250,
+        gas_consumed: 77550,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 78980,
         ..Default::default()
@@ -3325,7 +3325,7 @@ fn keccak_syscall() {
     let call_info = call_info.call_info.unwrap();
 
     assert_eq!(call_info.retdata[0], Felt252::ONE);
-    assert_eq!(call_info.gas_consumed, 545370);
+    assert_eq!(call_info.gas_consumed, 509590);
 }
 
 #[test]
