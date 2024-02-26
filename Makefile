@@ -160,6 +160,8 @@ check: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierr
 	cargo check --workspace --all-targets
 
 deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
+	cargo install flamegraph --version 0.6.2 --locked
+	cargo install cargo-llvm-cov --version 0.5.14 --locked
 	-pyenv && pyenv install -s pypy3.9-7.3.9
 	-pyenv && pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv

@@ -1,3 +1,9 @@
+#[starknet::interface]
+trait IContractTrait<TContractState> {
+    fn trigger_event(ref self: TContractState) -> felt252;
+}
+
+
 #[starknet::contract]
 mod EventTest {
     use starknet::syscalls::emit_event_syscall;
@@ -19,12 +25,14 @@ mod EventTest {
     }
 
     #[abi(embed_v0)]
-    fn trigger_event(ref self: ContractState) -> felt252 {
-        let mut keys = ArrayTrait::new();
-        keys.append('n');
-        let mut values = ArrayTrait::new();
-        values.append(1);
-        emit_event_syscall(keys.span(), values.span()).unwrap();
-        1234
+    impl IContractTrait of super::IContractTrait<ContractState> {
+        fn trigger_event(ref self: ContractState) -> felt252 {
+            let mut keys = ArrayTrait::new();
+            keys.append('n');
+            let mut values = ArrayTrait::new();
+            values.append(1);
+            emit_event_syscall(keys.span(), values.span()).unwrap();
+            1234
+        }
     }
 }

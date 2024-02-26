@@ -1,3 +1,8 @@
+#[starknet::interface]
+trait IEcho<TContractState> {
+    fn echo(ref self: TContractState, value: felt252) -> felt252;
+}
+
 #[starknet::contract]
 mod Echo {
     #[storage]
@@ -11,7 +16,10 @@ mod Echo {
     }
 
     #[abi(embed_v0)]
-    fn echo(ref self: ContractState, value: felt252) -> felt252 {
-        value
+    impl IEcho of super::IEcho<ContractState> {
+        #[abi(per_item)]
+        fn echo(ref self: ContractState, value: felt252) -> felt252 {
+            value
+        }
     }
 }
