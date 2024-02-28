@@ -1371,12 +1371,12 @@ fn test_get_execution_info() {
     ];
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_n_steps = 205;
+    let expected_n_steps = 202;
     #[cfg(feature = "cairo_1_tests")]
     let expected_n_steps = 268;
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_gas_consumed = 22180;
+    let expected_gas_consumed = 21880;
     #[cfg(feature = "cairo_1_tests")]
     let expected_gas_consumed = 28580;
 
@@ -4004,9 +4004,9 @@ fn test_get_execution_info_v2() {
         address.0,
     ];
 
-    let expected_n_steps = 441;
+    let expected_n_steps = 438;
 
-    let expected_gas_consumed = 48480;
+    let expected_gas_consumed = 48180;
 
     let expected_execution_resources = ExecutionResources {
         n_steps: expected_n_steps,
