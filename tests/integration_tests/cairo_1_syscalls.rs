@@ -1259,18 +1259,23 @@ fn test_send_message_to_l1_syscall() {
     }];
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_n_steps = 46;
+    let expected_n_steps = 69;
     #[cfg(feature = "cairo_1_tests")]
     let expected_n_steps = 50;
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_gas_consumed = 9640;
+    let expected_gas_consumed = 12040;
     #[cfg(feature = "cairo_1_tests")]
     let expected_gas_consumed = 10040;
 
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_n_memory_holes = 1;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_n_memory_holes = 0;
+
     let expected_execution_resources = ExecutionResources {
         n_steps: expected_n_steps,
-        n_memory_holes: 0,
+        n_memory_holes: expected_n_memory_holes,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
     };
 
