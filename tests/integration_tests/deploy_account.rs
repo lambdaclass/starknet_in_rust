@@ -208,7 +208,7 @@ fn internal_deploy_account_cairo1() {
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3921;
+        n_steps = 3918;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
@@ -224,7 +224,7 @@ fn internal_deploy_account_cairo1() {
                 contract_address: Address(Felt252::from_dec_str("397149464972449753182583229366244826403270781177748543857889179957856017275").unwrap()),
                 code_address: None,
                 #[cfg(not(feature="cairo_1_tests"))]
-                gas_consumed: 15540,
+                gas_consumed: 15340,
                 #[cfg(feature="cairo_1_tests")]
                 gas_consumed: 16770,
                 class_hash: Some(ClassHash([
