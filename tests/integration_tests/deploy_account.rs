@@ -1,5 +1,6 @@
 use cairo_vm::{vm::runners::cairo_runner::ExecutionResources, Felt252};
 use lazy_static::lazy_static;
+use pretty_assertions_sorted::assert_eq;
 use starknet_in_rust::EntryPointType;
 use starknet_in_rust::{
     core::contract_address::compute_deprecated_class_hash,
@@ -242,7 +243,7 @@ fn internal_deploy_account_cairo1() {
                 retdata: vec![Felt252::from_dec_str("370462705988").unwrap()],
                 execution_resources: Some(ExecutionResources {
                     #[cfg(not(feature="cairo_1_tests"))]
-                    n_steps: 144,
+                    n_steps: 142,
                     #[cfg(feature="cairo_1_tests")]
                     n_steps: 155,
                     n_memory_holes: 2,
@@ -267,14 +268,14 @@ fn internal_deploy_account_cairo1() {
                 entry_point_selector: Some(Felt252::from_dec_str("1159040026212278395030414237414753050475174923702621880048416706425641521556").unwrap()),
                 entry_point_type: Some(EntryPointType::Constructor),
                 #[cfg(not(feature="cairo_1_tests"))]
-                gas_consumed: 13840,
+                gas_consumed: 13740,
                 #[cfg(feature="cairo_1_tests")]
                 gas_consumed: 14350,
                 calldata: vec![2.into()],
                 accessed_storage_keys: keys,
                 execution_resources: Some(ExecutionResources {
                     #[cfg(not(feature="cairo_1_tests"))]
-                    n_steps: 88,
+                    n_steps: 87,
                     #[cfg(feature="cairo_1_tests")]
                     n_steps: 93,
                     n_memory_holes: 0,
