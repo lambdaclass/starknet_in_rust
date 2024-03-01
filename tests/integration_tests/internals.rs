@@ -459,22 +459,34 @@ fn expected_fee_transfer_call_info(
         class_hash: Some(*TEST_ERC20_CONTRACT_CLASS_HASH),
         call_type: Some(CallType::Call),
         accessed_storage_keys: HashSet::from([
-            ClassHash([
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ]),
-            ClassHash([
-                5, 158, 221, 96, 243, 245, 236, 116, 233, 4, 68, 137, 231, 149, 207, 133, 23, 150,
-                101, 24, 93, 212, 49, 126, 49, 102, 131, 144, 118, 15, 48, 18,
-            ]),
-            ClassHash([
-                5, 158, 221, 96, 243, 245, 236, 116, 233, 4, 68, 137, 231, 149, 207, 133, 23, 150,
-                101, 24, 93, 212, 49, 126, 49, 102, 131, 144, 118, 15, 48, 17,
-            ]),
-            ClassHash([
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ]),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x59edd60f3f5ec74e9044489e795cf85179665185dd4317e31668390760f3012",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658813",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658812",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x59edd60f3f5ec74e9044489e795cf85179665185dd4317e31668390760f3011",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
         ]),
         storage_read_values: vec![
             *INITIAL_BALANCE,
@@ -678,22 +690,34 @@ fn expected_fee_transfer_info(fee: u128) -> CallInfo {
             Felt252::ZERO,
         ],
         accessed_storage_keys: HashSet::from([
-            ClassHash([
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ]),
-            ClassHash([
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
-            ]),
-            ClassHash([
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ]),
-            ClassHash([
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ]),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658813",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x2a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080dec",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658812",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x2a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080deb",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
         ]),
     }
 }
@@ -742,22 +766,34 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             Felt252::ZERO,
         ],
         accessed_storage_keys: HashSet::from([
-            ClassHash([
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ]),
-            ClassHash([
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ]),
-            ClassHash([
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
-            ]),
-            ClassHash([
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ]),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658813",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x2a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080dec",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658812",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x2a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080deb",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
         ]),
     }
 }
@@ -880,22 +916,34 @@ fn expected_declare_fee_transfer_info(fee: u128) -> CallInfo {
             Felt252::ZERO,
         ],
         accessed_storage_keys: HashSet::from([
-            ClassHash([
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 19,
-            ]),
-            ClassHash([
-                7, 35, 151, 50, 8, 99, 155, 120, 57, 206, 41, 143, 127, 254, 166, 30, 63, 149, 51,
-                135, 45, 239, 215, 171, 219, 145, 2, 61, 180, 101, 136, 18,
-            ]),
-            ClassHash([
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 236,
-            ]),
-            ClassHash([
-                2, 162, 196, 156, 77, 186, 13, 145, 179, 79, 42, 222, 133, 212, 29, 9, 86, 31, 154,
-                119, 136, 76, 21, 186, 42, 176, 242, 36, 27, 8, 13, 235,
-            ]),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658813",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x2a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080dec",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x723973208639b7839ce298f7ffea61e3f9533872defd7abdb91023db4658812",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
+            ClassHash(
+                Felt252::from_hex(
+                    "0x2a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080deb",
+                )
+                .unwrap()
+                .to_bytes_be(),
+            ),
         ]),
 
         execution_resources: Some(ExecutionResources {
@@ -1194,7 +1242,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
         retdata: vec![Felt252::from(42)],
         execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 153,
+            n_steps: 148,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 160,
             n_memory_holes: 0,
@@ -1215,12 +1263,12 @@ fn expected_fib_execute_call_info() -> CallInfo {
             contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
             code_address: None,
             #[cfg(not(feature = "cairo_1_tests"))]
-            gas_consumed: 3980,
+            gas_consumed: 2980,
             #[cfg(feature = "cairo_1_tests")]
             gas_consumed: 4710,
             execution_resources: Some(ExecutionResources {
                 #[cfg(not(feature = "cairo_1_tests"))]
-                n_steps: 114,
+                n_steps: 109,
                 #[cfg(feature = "cairo_1_tests")]
                 n_steps: 121,
                 n_memory_holes: 0,
@@ -1307,7 +1355,7 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 4227;
+        n_steps = 4222;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
@@ -1700,7 +1748,7 @@ fn test_deploy_account() {
         resources,
         TransactionType::DeployAccount.into(),
     );
-    assert_eq!(tx_info, expected_execution_info);
+    assert_eq_sorted!(tx_info, expected_execution_info);
 
     let nonce_from_state = state
         .get_nonce_at(deploy_account_tx.contract_address())
@@ -2344,14 +2392,14 @@ fn test_library_call_with_declare_v2() {
         entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 29680,
+        gas_consumed: 19680,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 30410,
         calldata: vec![1.into(), 1.into(), 10.into()],
         retdata: vec![89.into()], // fib(10)
         execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 364,
+            n_steps: 269,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 371,
             n_memory_holes: 0,
@@ -2368,14 +2416,14 @@ fn test_library_call_with_declare_v2() {
         entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 111690,
+        gas_consumed: 100490,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 113480,
         calldata,
         retdata: vec![89.into()], // fib(10)
         execution_resources: Some(ExecutionResources {
             #[cfg(not(feature = "cairo_1_tests"))]
-            n_steps: 570,
+            n_steps: 463,
             #[cfg(feature = "cairo_1_tests")]
             n_steps: 587,
             n_memory_holes: 1,
