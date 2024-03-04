@@ -299,7 +299,7 @@ fn library_call() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 247,
+        n_steps: 238,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 259,
         n_memory_holes: 8,
@@ -307,7 +307,7 @@ fn library_call() {
     };
     let expected_execution_resources_internal_call = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 80,
+        n_steps: 78,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
         n_memory_holes: 5,
@@ -349,7 +349,7 @@ fn library_call() {
         storage_read_values: vec![],
         accessed_storage_keys: HashSet::new(),
         #[cfg(not(feature = "cairo_1_tests"))]
-        gas_consumed: 78250,
+        gas_consumed: 77550,
         #[cfg(feature = "cairo_1_tests")]
         gas_consumed: 78980,
         ..Default::default()
@@ -1259,18 +1259,23 @@ fn test_send_message_to_l1_syscall() {
     }];
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_n_steps = 46;
+    let expected_n_steps = 69;
     #[cfg(feature = "cairo_1_tests")]
     let expected_n_steps = 50;
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_gas_consumed = 9640;
+    let expected_gas_consumed = 12040;
     #[cfg(feature = "cairo_1_tests")]
     let expected_gas_consumed = 10040;
 
+    #[cfg(not(feature = "cairo_1_tests"))]
+    let expected_n_memory_holes = 1;
+    #[cfg(feature = "cairo_1_tests")]
+    let expected_n_memory_holes = 0;
+
     let expected_execution_resources = ExecutionResources {
         n_steps: expected_n_steps,
-        n_memory_holes: 0,
+        n_memory_holes: expected_n_memory_holes,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
     };
 
@@ -1371,12 +1376,12 @@ fn test_get_execution_info() {
     ];
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_n_steps = 205;
+    let expected_n_steps = 202;
     #[cfg(feature = "cairo_1_tests")]
     let expected_n_steps = 268;
 
     #[cfg(not(feature = "cairo_1_tests"))]
-    let expected_gas_consumed = 22180;
+    let expected_gas_consumed = 21880;
     #[cfg(feature = "cairo_1_tests")]
     let expected_gas_consumed = 28580;
 
@@ -3325,7 +3330,7 @@ fn keccak_syscall() {
     let call_info = call_info.call_info.unwrap();
 
     assert_eq!(call_info.retdata[0], Felt252::ONE);
-    assert_eq!(call_info.gas_consumed, 545370);
+    assert_eq!(call_info.gas_consumed, 509590);
 }
 
 #[test]
@@ -3427,7 +3432,7 @@ fn library_call_recursive_50_calls() {
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources_internal_call = ExecutionResources {
         #[cfg(not(feature = "cairo_1_tests"))]
-        n_steps: 80,
+        n_steps: 78,
         #[cfg(feature = "cairo_1_tests")]
         n_steps: 85,
         n_memory_holes: 5,
@@ -4004,9 +4009,9 @@ fn test_get_execution_info_v2() {
         address.0,
     ];
 
-    let expected_n_steps = 441;
+    let expected_n_steps = 438;
 
-    let expected_gas_consumed = 48480;
+    let expected_gas_consumed = 48180;
 
     let expected_execution_resources = ExecutionResources {
         n_steps: expected_n_steps,

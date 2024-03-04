@@ -13,15 +13,15 @@ trait ISquareRoot<TContractState> {
 
 #[starknet::contract]
 mod SquareRoot {
-    use super::MathDispatcherTrait; 
+    use super::MathDispatcherTrait;
     use super::MathLibraryDispatcher;
     use starknet::ClassHash;
 
     #[storage]
     struct Storage{
     }
-    
-    #[external(v0)]
+
+    #[abi(embed_v0)]
     impl SquareRoot of super::ISquareRoot<ContractState> {
         fn square_root(self: @ContractState, n: felt252, math_class_hash: ClassHash) -> felt252 {
             MathLibraryDispatcher {class_hash: math_class_hash}.square_root(n)

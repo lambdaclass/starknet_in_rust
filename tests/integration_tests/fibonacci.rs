@@ -7,6 +7,7 @@ use cairo_vm::{
     Felt252,
 };
 
+use pretty_assertions_sorted::assert_eq;
 use starknet_in_rust::{
     definitions::{block_context::BlockContext, constants::TRANSACTION_VERSION},
     execution::{
@@ -218,12 +219,12 @@ fn integration_test_cairo1() {
         calldata,
         retdata: [144.into()].to_vec(),
         execution_resources: Some(ExecutionResources {
-            n_steps: 414,
+            n_steps: 301,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
         }),
         class_hash: Some(class_hash),
-        gas_consumed: 34820,
+        gas_consumed: 23020,
         ..Default::default()
     };
 

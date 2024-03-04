@@ -23,7 +23,7 @@ trait IAccount<TContractState> {
 }
 
 // Define the Account contract
-#[starknet::contract]
+#[starknet::contract(account)]
 mod Account {
     use array::ArrayTrait;
     use array::SpanTrait;
@@ -62,7 +62,7 @@ mod Account {
         starknet::VALIDATED // Return validation status
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl Account of super::IAccount<ContractState> {
         fn deploy(self: @ContractState, class_hash: felt252, contract_address_salt: felt252, name_: felt252, symbol_: felt252, decimals: felt252, initial_supply: felt252, recipient: felt252) -> (ContractAddress, core::array::Span::<core::felt252>) {
             let mut calldata = ArrayTrait::new();

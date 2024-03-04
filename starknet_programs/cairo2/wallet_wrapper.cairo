@@ -13,7 +13,7 @@ trait IWalletWrapper<TContractState> {
 
 #[starknet::contract]
 mod WalletWrapper {
-    use super::SimpleWalletDispatcherTrait; 
+    use super::SimpleWalletDispatcherTrait;
     use super::SimpleWalletDispatcher;
     use starknet::ContractAddress;
 
@@ -21,7 +21,7 @@ mod WalletWrapper {
     struct Storage{
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl WalletWrapper of super::IWalletWrapper<ContractState> {
         fn get_balance(self: @ContractState, simple_wallet_contract_address: ContractAddress) -> felt252 {
             SimpleWalletDispatcher {contract_address: simple_wallet_contract_address}.get_balance()

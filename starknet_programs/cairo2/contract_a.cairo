@@ -10,7 +10,7 @@ mod ContractA {
 
     #[storage]
     struct Storage {
-        value: u128, 
+        value: u128,
     }
 
     #[constructor]
@@ -18,7 +18,7 @@ mod ContractA {
         self.value.write(value_);
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl ContractA of super::IContractA<ContractState> {
         fn foo(ref self: ContractState, a: u128) -> u128 {
             let value = self.value.read();

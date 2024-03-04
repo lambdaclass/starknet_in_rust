@@ -10,7 +10,7 @@ mod GetBlockHashBasic {
     #[storage]
     struct Storage {}
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl GetBlockHashBasic of super::IGetBlockHashBasic<ContractState> {
         fn get_block_hash(self: @ContractState, block_number: u64) -> felt252 {
             get_block_hash_syscall(block_number).unwrap()

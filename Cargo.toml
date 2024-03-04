@@ -23,24 +23,24 @@ members = [
 ]
 
 [workspace.dependencies]
-cairo-lang-casm = "=2.5.3"
-cairo-lang-sierra = "=2.5.3"
-cairo-lang-starknet = "=2.5.3"
-cairo-lang-utils = "=2.5.3"
-cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "1f98feff566dd2da016e439f5e8db912c6e39872", features = ["cairo-1-hints"] }
+cairo-lang-casm = "=2.5.4"
+cairo-lang-sierra = "=2.5.4"
+cairo-lang-starknet = "=2.5.4"
+cairo-lang-utils = "=2.5.4"
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "3547089579dd74f815edbc2d1caa91e00fc8a2f7", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
-starknet = "0.5.0"
-starknet_api = {version = "0.7.0-dev.0"}
+starknet = "0.7.0" # todo: update to 0.9.0+ once cairo-lang is 2.6.0+
+starknet_api = "0.7.0-dev.0" # todo: update to 0.9.0+ once cairo-lang is 2.6.0+
 thiserror = "1.0.32"
 
 [dependencies]
-anyhow = "1.0.66"
+anyhow = "1.0"
 base64 = { version = "0.21.0", default-features = false, features = ["alloc"] }
 cairo-lang-casm = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "96ea3a37180a194ba14c3b21788b09e76bb634fd", optional = true }
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "baf57d2dde0036ac4848fc40c672826fb7ffcde4", optional = true }
 k256 = "0.13.3"
 p256 = "0.13.2"
 sec1 = "0.7.3"

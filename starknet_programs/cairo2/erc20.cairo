@@ -1,3 +1,5 @@
+// source: https://github.com/starkware-libs/cairo/blob/main/crates/cairo-lang-starknet/cairo_level_tests/contracts/erc20.cairo
+
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -80,7 +82,7 @@ mod erc_20 {
             );
     }
 
-    #[external(v0)]
+    #[abi(embed_v0)]
     impl IERC20Impl of super::IERC20<ContractState> {
         fn get_name(self: @ContractState) -> felt252 {
             self.name.read()
@@ -168,8 +170,8 @@ mod erc_20 {
         fn spend_allowance(
             ref self: ContractState, owner: ContractAddress, spender: ContractAddress, amount: felt252
         ) {
-            let current_allowance = self.allowances.read((owner, spender));
-            let ONES_MASK = 0xffffffffffffffffffffffffffffffff_u128;
+            let _current_allowance = self.allowances.read((owner, spender));
+            let _ONES_MASK = 0xffffffffffffffffffffffffffffffff_u128;
             // let is_unlimited_allowance = current_allowance.low == ONES_MASK
             //     && current_allowance.high == ONES_MASK;
             // if !is_unlimited_allowance {

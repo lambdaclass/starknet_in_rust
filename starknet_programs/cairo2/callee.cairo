@@ -1,3 +1,9 @@
+#[starknet::interface]
+trait IContractTrait<TContractState> {
+    fn return_42(ref self: TContractState) -> felt252;
+    fn return_44(ref self: TContractState) -> felt252;
+}
+
 #[starknet::contract]
 mod Callee {
     #[storage]
@@ -10,13 +16,14 @@ mod Callee {
         self.balance.write(initial_balance);
     }
 
-    #[external(v0)]
-    fn return_42(ref self: ContractState) -> felt252 {
-        42
-    }
+    #[abi(embed_v0)]
+    impl IContractTrait of super::IContractTrait<ContractState> {
+        fn return_42(ref self: ContractState) -> felt252 {
+            42
+        }
 
-    #[external(v0)]
-    fn return_44(ref self: ContractState) -> felt252 {
-        44
+        fn return_44(ref self: ContractState) -> felt252 {
+            44
+        }
     }
 }
