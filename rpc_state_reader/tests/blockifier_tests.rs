@@ -601,7 +601,7 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
             execution_resources,
             ..
         } = call_info.unwrap();
-        (actual_fee, execution_resources.unwrap())
+        (actual_fee, execution_resources)
     };
 
     #[cfg_attr(feature = "cairo-native", allow(unused_variables))]
@@ -619,6 +619,7 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
     assert_eq!(sir_fee, blockifier_fee);
     #[cfg(not(feature = "cairo-native"))]
     {
+        let sir_resources = sir_resources.unwrap();
         assert_eq!(sir_resources.n_steps, blockifier_resources.n_steps);
         assert_eq!(
             sir_resources.n_memory_holes,
