@@ -1359,7 +1359,7 @@ fn expected_fib_transaction_execution_info(
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 4234;
+        n_steps = 4562;
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),

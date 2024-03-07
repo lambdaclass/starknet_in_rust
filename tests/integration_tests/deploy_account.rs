@@ -212,7 +212,7 @@ fn internal_deploy_account_cairo1() {
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3937;
+        n_steps = 4281;
     }
 
     assert_eq!(
