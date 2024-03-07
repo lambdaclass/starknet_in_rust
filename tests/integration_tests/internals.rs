@@ -1021,10 +1021,10 @@ fn test_declare_tx() {
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 2715),
+        ("n_steps".to_string(), 2921),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 1652),
     ]);
     let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
 
@@ -1120,10 +1120,10 @@ fn test_declarev2_tx() {
         .is_ok());
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 2715),
+        ("n_steps".to_string(), 2921),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 3672),
+        ("l1_gas_usage".to_string(), 2754),
     ]);
     let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
 
@@ -1332,10 +1332,10 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
 
 fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
     let resources = HashMap::from([
-        ("n_steps".to_string(), 4135),
+        ("n_steps".to_string(), 4463),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 2448),
-        ("range_check_builtin".to_string(), 101),
+        ("l1_gas_usage".to_string(), 1652),
+        ("range_check_builtin".to_string(), 102),
     ]);
     let fee = calculate_tx_fee(&resources, block_context, &FeeType::Eth).unwrap();
     TransactionExecutionInfo::new(
@@ -1355,7 +1355,7 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 4222;
+        n_steps = 4550;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
@@ -1363,9 +1363,9 @@ fn expected_fib_transaction_execution_info(
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 6732),
+        ("l1_gas_usage".to_string(), 5197),
         ("pedersen_builtin".to_string(), 16),
-        ("range_check_builtin".to_string(), 104),
+        ("range_check_builtin".to_string(), 105),
     ]);
     let fee = calculate_tx_fee(&resources, block_context, &FeeType::Eth).unwrap();
     TransactionExecutionInfo::new(
@@ -1417,8 +1417,8 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
-    let max_fee = 2483;
-    let actual_fee = 2490;
+    let max_fee = 1000;
+    let actual_fee = 1697;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
