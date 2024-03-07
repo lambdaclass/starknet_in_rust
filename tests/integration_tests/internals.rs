@@ -1966,14 +1966,16 @@ fn test_state_for_declare_tx() {
         .unwrap()
         .is_zero());
     // Execute declare_tx
-    assert!(declare_tx
+    let fee = declare_tx
         .execute(
             &mut state,
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
         )
-        .is_ok());
+        .unwrap()
+        .actual_fee
+        .into();
     assert_eq!(
         state.get_nonce_at(&declare_tx.sender_address).unwrap(),
         Felt252::ONE
@@ -2034,8 +2036,6 @@ fn test_state_for_declare_tx() {
     //         ),
     //     ])
     // );
-
-    let fee = Felt252::from(2476);
 
     // Check state.cache
     assert_eq!(

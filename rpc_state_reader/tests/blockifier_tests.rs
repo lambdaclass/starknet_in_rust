@@ -494,7 +494,6 @@ fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChai
     }
 }
 
-
 // Tests comparing SIR vs Blockifier execution results
 // As the blockifier version used can vary from tx to tx depending on when it was executed, we can not expect to get the same result as the network
 // In order to have more exact tests we compare sir results to those obtained from the blockifier version sir is compatible with
@@ -586,7 +585,8 @@ fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChai
 )]
 fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcChain) {
     // Execute using sir
-    let (sir_tx_info, _, _) = rpc_state_reader::execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
+    let (sir_tx_info, _, _) =
+        rpc_state_reader::execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
     // Execute using blockifier
     let (blockifier_tx_info, _, _) = execute_tx(hash, chain, BlockNumber(block_number));
 
@@ -609,16 +609,19 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
             execute_call_info,
             ..
         } = blockifier_tx_info;
-        let CallInfo {
-            vm_resources,
-            ..
-        } = execute_call_info.unwrap();
+        let CallInfo { vm_resources, .. } = execute_call_info.unwrap();
         (actual_fee.0, vm_resources)
     };
 
     // Compare sir vs blockifier fee & resources
     assert_eq!(sir_fee, blockifier_fee);
     assert_eq!(sir_resources.n_steps, blockifier_resources.n_steps);
-    assert_eq!(sir_resources.n_memory_holes, blockifier_resources.n_memory_holes);
-    assert_eq!(sir_resources.builtin_instance_counter, blockifier_resources.builtin_instance_counter);
+    assert_eq!(
+        sir_resources.n_memory_holes,
+        blockifier_resources.n_memory_holes
+    );
+    assert_eq!(
+        sir_resources.builtin_instance_counter,
+        blockifier_resources.builtin_instance_counter
+    );
 }
