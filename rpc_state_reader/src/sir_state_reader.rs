@@ -135,7 +135,6 @@ pub fn execute_tx_configurable(
         gas_price,
         sequencer_address,
     };
-
     let sir_exec_info = execute_tx_configurable_with_state(
         &tx_hash,
         tx,
