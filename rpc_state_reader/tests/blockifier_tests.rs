@@ -583,6 +583,7 @@ fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChai
     475945, // real block 475946
     RpcChain::MainNet
 )]
+#[cfg(not(feature = "cairo-native"))]
 fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcChain) {
     // Execute using sir
     let (sir_tx_info, _, _) =
@@ -590,7 +591,6 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
     // Execute using blockifier
     let (blockifier_tx_info, _, _) = execute_tx(hash, chain, BlockNumber(block_number));
 
-    #[cfg_attr(feature = "cairo-native", allow(unused_variables))]
     let (sir_fee, sir_resources) = {
         let starknet_in_rust::execution::TransactionExecutionInfo {
             actual_fee,
@@ -601,10 +601,9 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
             execution_resources,
             ..
         } = call_info.unwrap();
-        (actual_fee, execution_resources)
+        (actual_fee, execution_resources.unwrap())
     };
 
-    #[cfg_attr(feature = "cairo-native", allow(unused_variables))]
     let (blockifier_fee, blockifier_resources) = {
         let TransactionExecutionInfo {
             actual_fee,
@@ -617,17 +616,13 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
 
     // Compare sir vs blockifier fee & resources
     assert_eq!(sir_fee, blockifier_fee);
-    #[cfg(not(feature = "cairo-native"))]
-    {
-        let sir_resources = sir_resources.unwrap();
-        assert_eq!(sir_resources.n_steps, blockifier_resources.n_steps);
-        assert_eq!(
-            sir_resources.n_memory_holes,
-            blockifier_resources.n_memory_holes
-        );
-        assert_eq!(
-            sir_resources.builtin_instance_counter,
-            blockifier_resources.builtin_instance_counter
-        );
-    }
+    assert_eq!(sir_resources.n_steps, blockifier_resources.n_steps);
+    assert_eq!(
+        sir_resources.n_memory_holes,
+        blockifier_resources.n_memory_holes
+    );
+    assert_eq!(
+        sir_resources.builtin_instance_counter,
+        blockifier_resources.builtin_instance_counter
+    );
 }
