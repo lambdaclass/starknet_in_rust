@@ -43,8 +43,8 @@ pub fn calculate_tx_gas_usage(
     // Calculate the effect of the transaction on the output data availability segment.
     let residual_onchain_data_cost = get_onchain_data_cost(state_changes);
 
-    let sharp_gas_usage = (residual_message_segment_length * SHARP_GAS_PER_MEMORY_WORD)
-        + residual_onchain_data_cost;
+    let sharp_gas_usage =
+        (residual_message_segment_length * SHARP_GAS_PER_MEMORY_WORD) + residual_onchain_data_cost;
 
     starknet_gas_usage + sharp_gas_usage
 }
