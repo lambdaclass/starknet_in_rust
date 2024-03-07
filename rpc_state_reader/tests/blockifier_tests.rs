@@ -590,6 +590,7 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
     // Execute using blockifier
     let (blockifier_tx_info, _, _) = execute_tx(hash, chain, BlockNumber(block_number));
 
+    #[cfg_attr(feature = "cairo-native", allow(unused_variables))]
     let (sir_fee, sir_resources) = {
         let starknet_in_rust::execution::TransactionExecutionInfo {
             actual_fee,
@@ -603,6 +604,7 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
         (actual_fee, execution_resources.unwrap())
     };
 
+    #[cfg_attr(feature = "cairo-native", allow(unused_variables))]
     let (blockifier_fee, blockifier_resources) = {
         let TransactionExecutionInfo {
             actual_fee,
@@ -615,13 +617,16 @@ fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcCh
 
     // Compare sir vs blockifier fee & resources
     assert_eq!(sir_fee, blockifier_fee);
-    assert_eq!(sir_resources.n_steps, blockifier_resources.n_steps);
-    assert_eq!(
-        sir_resources.n_memory_holes,
-        blockifier_resources.n_memory_holes
-    );
-    assert_eq!(
-        sir_resources.builtin_instance_counter,
-        blockifier_resources.builtin_instance_counter
-    );
+    #[cfg(not(feature = "cairo-native"))]
+    {
+        assert_eq!(sir_resources.n_steps, blockifier_resources.n_steps);
+        assert_eq!(
+            sir_resources.n_memory_holes,
+            blockifier_resources.n_memory_holes
+        );
+        assert_eq!(
+            sir_resources.builtin_instance_counter,
+            blockifier_resources.builtin_instance_counter
+        );
+    }
 }
