@@ -334,10 +334,10 @@ fn get_additional_os_resources_test() {
 
     let additional_os_resources = get_additional_os_resources(syscall_counter, &tx_type).unwrap();
     let expected_additional_os_resources = ExecutionResources {
-        n_steps: 3589,
-        n_memory_holes: 0,
+        n_steps: 3990,
+        n_memory_holes: 68,
         builtin_instance_counter: HashMap::from([
-            ("range_check_builtin".to_string(), 80),
+            ("range_check_builtin".to_string(), 85),
             ("pedersen_builtin".to_string(), 16),
         ]),
     };
