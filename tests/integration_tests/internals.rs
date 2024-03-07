@@ -1644,7 +1644,7 @@ fn test_invoke_with_declarev2_tx() {
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let expected_fee = 3097;
+    let expected_fee = 2242;
 
     let deploy_account_tx = DeployAccount::new(
         *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
@@ -1727,10 +1727,10 @@ fn test_deploy_account() {
     );
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3625),
+        ("n_steps".to_string(), 3893),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 3060),
+        ("l1_gas_usage".to_string(), 2203),
     ]);
 
     let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
@@ -1769,7 +1769,7 @@ fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader, PermanentContractClassCache>,
     CachedState<InMemoryStateReader, PermanentContractClassCache>,
 ) {
-    let fee = Felt252::from(3097);
+    let fee = Felt252::from(2242);
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([
