@@ -756,13 +756,13 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            *INITIAL_BALANCE - Felt252::from(3700),
+            *INITIAL_BALANCE - Felt252::from(2784),
             Felt252::ZERO,
-            *INITIAL_BALANCE - Felt252::from(3700),
+            *INITIAL_BALANCE - Felt252::from(2784),
             Felt252::ZERO,
-            Felt252::from(3700),
+            Felt252::from(2784),
             Felt252::ZERO,
-            Felt252::from(3700),
+            Felt252::from(2784),
             Felt252::ZERO,
         ],
         accessed_storage_keys: HashSet::from([
