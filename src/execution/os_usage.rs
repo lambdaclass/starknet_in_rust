@@ -4,7 +4,7 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 
 use crate::{definitions::transaction_type::TransactionType, transaction::error::TransactionError};
 
-// Values compatible with blockifier version 0.4.0
+// Values compatible with blockifier version 0.5.0-dev.0
 pub(crate) const ESTIMATED_INVOKE_FUNCTION_STEPS: usize = 3549;
 pub(crate) const ESTIMATED_DECLARE_STEPS: usize = 2843;
 pub(crate) const ESTIMATED_DEPLOY_STEPS: usize = 0;
