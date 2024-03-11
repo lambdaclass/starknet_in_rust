@@ -2926,7 +2926,7 @@ fn send_messages_to_l1_different_contract_calls() {
         .insert(send_msg_address.clone(), send_msg_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(send_msg_address, send_msg_nonce);
+        .insert(send_msg_address.clone(), send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
@@ -2977,6 +2977,7 @@ fn send_messages_to_l1_different_contract_calls() {
         .unwrap()
         .get_sorted_l2_to_l1_messages()
         .unwrap();
+
     assert_eq!(
         l1_to_l2_messages,
         vec![
@@ -2986,7 +2987,7 @@ fn send_messages_to_l1_different_contract_calls() {
                     to_address: Address(25.into()),
                     payload: vec![50.into()]
                 },
-                address.clone()
+                send_msg_address.clone()
             ),
             L2toL1MessageInfo::new(
                 OrderedL2ToL1Message {
@@ -2994,7 +2995,7 @@ fn send_messages_to_l1_different_contract_calls() {
                     to_address: Address(25.into()),
                     payload: vec![75.into()]
                 },
-                address
+                send_msg_address
             )
         ],
     )
@@ -3054,7 +3055,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
         .insert(send_msg_address.clone(), send_msg_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(send_msg_address, send_msg_nonce);
+        .insert(send_msg_address.clone(), send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
@@ -3114,7 +3115,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
                     to_address: Address(25.into()),
                     payload: vec![50.into()]
                 },
-                address.clone()
+                send_msg_address.clone()
             ),
             L2toL1MessageInfo::new(
                 OrderedL2ToL1Message {
@@ -3122,7 +3123,7 @@ fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
                     to_address: Address(25.into()),
                     payload: vec![75.into()]
                 },
-                address
+                send_msg_address
             )
         ],
     )
@@ -3182,7 +3183,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
         .insert(send_msg_address.clone(), send_msg_class_hash);
     state_reader
         .address_to_nonce_mut()
-        .insert(send_msg_address, send_msg_nonce);
+        .insert(send_msg_address.clone(), send_msg_nonce);
 
     // Create state from the state_reader and contract cache.
     let mut state = CachedState::new(Arc::new(state_reader), Arc::new(contract_class_cache));
@@ -3242,7 +3243,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
                     to_address: Address(25.into()),
                     payload: vec![50.into()]
                 },
-                address.clone()
+                send_msg_address.clone()
             ),
             L2toL1MessageInfo::new(
                 OrderedL2ToL1Message {
@@ -3250,7 +3251,7 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
                     to_address: Address(25.into()),
                     payload: vec![75.into()]
                 },
-                address
+                send_msg_address
             )
         ],
     )

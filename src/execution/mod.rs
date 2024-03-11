@@ -174,7 +174,7 @@ impl CallInfo {
         for call in calls {
             for ordered_msg in call.l2_to_l1_messages {
                 let l2tol1msg =
-                    L2toL1MessageInfo::new(ordered_msg.clone(), call.caller_address.clone());
+                    L2toL1MessageInfo::new(ordered_msg.clone(), call.contract_address.clone());
                 starknet_events.remove(ordered_msg.order);
                 starknet_events.insert(ordered_msg.order, Some(l2tol1msg));
             }
