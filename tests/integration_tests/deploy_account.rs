@@ -121,10 +121,10 @@ fn internal_deploy_account() {
             None,
             0,
             [
-                ("n_steps", 3625),
+                ("n_steps", 3893),
                 ("pedersen_builtin", 23),
                 ("range_check_builtin", 83),
-                ("l1_gas_usage", 3060)
+                ("l1_gas_usage", 2203)
             ]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
@@ -208,11 +208,11 @@ fn internal_deploy_account_cairo1() {
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 3918;
+        n_steps = 4262;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 3937;
+        n_steps = 4281;
     }
 
     assert_eq!(
@@ -295,8 +295,8 @@ fn internal_deploy_account_cairo1() {
             [
                 ("n_steps", n_steps),
                 ("pedersen_builtin", 23),
-                ("range_check_builtin", 87),
-                ("l1_gas_usage", 5508)
+                ("range_check_builtin", 89),
+                ("l1_gas_usage", 4407)
             ]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))

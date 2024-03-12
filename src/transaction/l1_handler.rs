@@ -382,10 +382,10 @@ mod test {
             fee_transfer_info: None,
             actual_fee: 0,
             actual_resources: HashMap::from([
-                ("n_steps".to_string(), 1319),
+                ("n_steps".to_string(), 1494),
                 ("pedersen_builtin".to_string(), 13),
-                ("range_check_builtin".to_string(), 23),
-                ("l1_gas_usage".to_string(), 18471),
+                ("range_check_builtin".to_string(), 25),
+                ("l1_gas_usage".to_string(), 17675),
             ]),
             tx_type: Some(TransactionType::L1Handler),
         }

@@ -341,7 +341,7 @@ mod test {
             None,
         )
         .unwrap();
-        assert_eq!(estimated_fee[0], (2483, 2448));
+        assert_eq!(estimated_fee[0], (1689, 1652));
     }
 
     #[test]
@@ -449,7 +449,7 @@ mod test {
             None,
         )
         .unwrap();
-        assert_eq!(estimated_fee, (18485, 18471));
+        assert_eq!(estimated_fee, (17690, 17675));
     }
 
     #[test]
@@ -1159,7 +1159,7 @@ mod test {
                 None,
             )
             .unwrap(),
-            [(0, 1836), (0, 2448)]
+            [(0, 1101), (0, 1652)]
         );
     }
 
