@@ -113,6 +113,6 @@ lazy_static! {
 }
 
 // Event Limits
-pub(crate) const EVENT_MAX_DATA_LENGTH : usize =  300;
-pub(crate) const EVENT_MAX_KEYS_LENGTH: usize =  50;
+pub(crate) const EVENT_MAX_DATA_LENGTH: usize = 300;
+pub(crate) const EVENT_MAX_KEYS_LENGTH: usize = 50;
 pub(crate) const MAX_N_EMITTED_EVENTS: u64 = 1000;

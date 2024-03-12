@@ -15,7 +15,10 @@ use crate::{
     core::errors::state_errors::StateError,
     definitions::{
         block_context::BlockContext,
-        constants::{BLOCK_HASH_CONTRACT_ADDRESS, CONSTRUCTOR_ENTRY_POINT_SELECTOR, EVENT_MAX_DATA_LENGTH, EVENT_MAX_KEYS_LENGTH, MAX_N_EMITTED_EVENTS},
+        constants::{
+            BLOCK_HASH_CONTRACT_ADDRESS, CONSTRUCTOR_ENTRY_POINT_SELECTOR, EVENT_MAX_DATA_LENGTH,
+            EVENT_MAX_KEYS_LENGTH, MAX_N_EMITTED_EVENTS,
+        },
     },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
@@ -656,13 +659,21 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let data: Vec<Felt252> = get_felt_range(vm, request.data_start, request.data_end)?;
         // Check event limits
         if order >= MAX_N_EMITTED_EVENTS {
-            return Err(SyscallHandlerError::MaxNumberOfEmittedEventsExceeded(MAX_N_EMITTED_EVENTS))
+            return Err(SyscallHandlerError::MaxNumberOfEmittedEventsExceeded(
+                MAX_N_EMITTED_EVENTS,
+            ));
         }
         if keys.len() > EVENT_MAX_KEYS_LENGTH {
-            return Err(SyscallHandlerError::EventMaxKeysLengthExceeded(keys.len(), EVENT_MAX_KEYS_LENGTH))
+            return Err(SyscallHandlerError::EventMaxKeysLengthExceeded(
+                keys.len(),
+                EVENT_MAX_KEYS_LENGTH,
+            ));
         }
         if data.len() > EVENT_MAX_DATA_LENGTH {
-            return Err(SyscallHandlerError::EventMaxKeysLengthExceeded(data.len(), EVENT_MAX_DATA_LENGTH))
+            return Err(SyscallHandlerError::EventMaxKeysLengthExceeded(
+                data.len(),
+                EVENT_MAX_DATA_LENGTH,
+            ));
         }
         self.events.push(OrderedEvent::new(order, keys, data));
 

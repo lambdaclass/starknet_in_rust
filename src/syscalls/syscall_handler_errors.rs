@@ -73,17 +73,10 @@ pub enum SyscallHandlerError {
     UnsupportedAddressDomain(String),
     #[error("{0:?}")]
     CustomError(String),
-    #[error(
-        "Event exceeded the maximum keys length, keys length: {0}, max keys length: {1}."
-    )]
+    #[error("Event exceeded the maximum keys length, keys length: {0}, max keys length: {1}.")]
     EventMaxKeysLengthExceeded(usize, usize),
-    #[error(
-        "Event exceeded the maximum data length, data length: {0}, max data length: {1}."
-    )]
+    #[error("Event exceeded the maximum data length, data length: {0}, max data length: {1}.")]
     EventMaxDataLengthExceeded(usize, usize),
-    #[error(
-        "Maximum number of events reached: {0}, can't emit another event."
-    )]
+    #[error("Maximum number of events reached: {0}, can't emit another event.")]
     MaxNumberOfEmittedEventsExceeded(u64),
-
 }
