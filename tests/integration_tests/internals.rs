@@ -756,13 +756,13 @@ fn expected_fib_fee_transfer_info(fee: u128) -> CallInfo {
             ],
         }],
         storage_read_values: vec![
-            *INITIAL_BALANCE - Felt252::from(3700),
+            *INITIAL_BALANCE - Felt252::from(2784),
             Felt252::ZERO,
-            *INITIAL_BALANCE - Felt252::from(3700),
+            *INITIAL_BALANCE - Felt252::from(2784),
             Felt252::ZERO,
-            Felt252::from(3700),
+            Felt252::from(2784),
             Felt252::ZERO,
-            Felt252::from(3700),
+            Felt252::from(2784),
             Felt252::ZERO,
         ],
         accessed_storage_keys: HashSet::from([
@@ -1021,10 +1021,10 @@ fn test_declare_tx() {
     assert!(state.get_contract_class(&declare_tx.class_hash).is_ok());
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 2715),
+        ("n_steps".to_string(), 2921),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 2448),
+        ("l1_gas_usage".to_string(), 1652),
     ]);
     let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
 
@@ -1120,10 +1120,10 @@ fn test_declarev2_tx() {
         .is_ok());
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 2715),
+        ("n_steps".to_string(), 2921),
         ("range_check_builtin".to_string(), 63),
         ("pedersen_builtin".to_string(), 15),
-        ("l1_gas_usage".to_string(), 3672),
+        ("l1_gas_usage".to_string(), 2754),
     ]);
     let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
 
@@ -1332,10 +1332,10 @@ fn expected_fib_validate_call_info_2() -> CallInfo {
 
 fn expected_transaction_execution_info(block_context: &BlockContext) -> TransactionExecutionInfo {
     let resources = HashMap::from([
-        ("n_steps".to_string(), 4135),
+        ("n_steps".to_string(), 4463),
         ("pedersen_builtin".to_string(), 16),
-        ("l1_gas_usage".to_string(), 2448),
-        ("range_check_builtin".to_string(), 101),
+        ("l1_gas_usage".to_string(), 1652),
+        ("range_check_builtin".to_string(), 102),
     ]);
     let fee = calculate_tx_fee(&resources, block_context, &FeeType::Eth).unwrap();
     TransactionExecutionInfo::new(
@@ -1355,17 +1355,17 @@ fn expected_fib_transaction_execution_info(
     let n_steps;
     #[cfg(not(feature = "cairo_1_tests"))]
     {
-        n_steps = 4222;
+        n_steps = 4550;
     }
     #[cfg(feature = "cairo_1_tests")]
     {
-        n_steps = 4234;
+        n_steps = 4562;
     }
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
-        ("l1_gas_usage".to_string(), 6732),
+        ("l1_gas_usage".to_string(), 5197),
         ("pedersen_builtin".to_string(), 16),
-        ("range_check_builtin".to_string(), 104),
+        ("range_check_builtin".to_string(), 105),
     ]);
     let fee = calculate_tx_fee(&resources, block_context, &FeeType::Eth).unwrap();
     TransactionExecutionInfo::new(
@@ -1417,8 +1417,8 @@ fn test_invoke_tx_exceeded_max_fee() {
         Felt252::from(1),                                               // CONTRACT_CALLDATA LEN
         Felt252::from(2),                                               // CONTRACT_CALLDATA
     ];
-    let max_fee = 2483;
-    let actual_fee = 2490;
+    let max_fee = 1000;
+    let actual_fee = 1697;
     let invoke_tx = invoke_tx(calldata, max_fee);
 
     // Extract invoke transaction fields for testing, as it is consumed when creating an account
@@ -1644,7 +1644,7 @@ fn test_invoke_with_declarev2_tx() {
 fn test_deploy_account() {
     let (block_context, mut state) = create_account_tx_test_state().unwrap();
 
-    let expected_fee = 3097;
+    let expected_fee = 2242;
 
     let deploy_account_tx = DeployAccount::new(
         *TEST_ACCOUNT_CONTRACT_CLASS_HASH,
@@ -1727,10 +1727,10 @@ fn test_deploy_account() {
     );
 
     let resources = HashMap::from([
-        ("n_steps".to_string(), 3625),
+        ("n_steps".to_string(), 3893),
         ("range_check_builtin".to_string(), 83),
         ("pedersen_builtin".to_string(), 23),
-        ("l1_gas_usage".to_string(), 3060),
+        ("l1_gas_usage".to_string(), 2203),
     ]);
 
     let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
@@ -1769,7 +1769,7 @@ fn expected_deploy_account_states() -> (
     CachedState<InMemoryStateReader, PermanentContractClassCache>,
     CachedState<InMemoryStateReader, PermanentContractClassCache>,
 ) {
-    let fee = Felt252::from(3097);
+    let fee = Felt252::from(2242);
     let mut state_before = CachedState::new(
         Arc::new(InMemoryStateReader::new(
             HashMap::from([
@@ -1966,14 +1966,16 @@ fn test_state_for_declare_tx() {
         .unwrap()
         .is_zero());
     // Execute declare_tx
-    assert!(declare_tx
+    let fee = declare_tx
         .execute(
             &mut state,
             &block_context,
             #[cfg(feature = "cairo-native")]
             None,
         )
-        .is_ok());
+        .unwrap()
+        .actual_fee
+        .into();
     assert_eq!(
         state.get_nonce_at(&declare_tx.sender_address).unwrap(),
         Felt252::ONE
@@ -2034,8 +2036,6 @@ fn test_state_for_declare_tx() {
     //         ),
     //     ])
     // );
-
-    let fee = Felt252::from(2476);
 
     // Check state.cache
     assert_eq!(

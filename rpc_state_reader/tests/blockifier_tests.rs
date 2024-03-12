@@ -493,3 +493,136 @@ fn blockifier_test_case_declare_tx(hash: &str, block_number: u64, chain: RpcChai
         }
     }
 }
+
+// Tests comparing SIR vs Blockifier execution results
+// As the blockifier version used can vary from tx to tx depending on when it was executed, we can not expect to get the same result as the network
+// In order to have more exact tests we compare sir results to those obtained from the blockifier version sir is compatible with
+#[test_case(
+    "0x014640564509873cf9d24a311e1207040c8b60efd38d96caef79855f0b0075d5",
+    90006,
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x025844447697eb7d5df4d8268b23aef6c11de4087936048278c2559fc35549eb",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x00164bfc80755f62de97ae7c98c9d67c1767259427bcf4ccfcc9683d44d54676",
+    197000,
+    RpcChain::MainNet
+)]
+#[test_case(
+        "0x05d200ef175ba15d676a68b36f7a7b72c17c17604eda4c1efc2ed5e4973e2c91",
+        169928, // real block 169929
+        RpcChain::MainNet
+    )]
+#[test_case(
+        "0x0528ec457cf8757f3eefdf3f0728ed09feeecc50fd97b1e4c5da94e27e9aa1d6",
+        169928, // real block 169929
+        RpcChain::MainNet
+    )]
+#[test_case(
+        "0x0737677385a30ec4cbf9f6d23e74479926975b74db3d55dc5e46f4f8efee41cf",
+        169928, // real block 169929
+        RpcChain::MainNet
+    )]
+#[test_case(
+        "0x026c17728b9cd08a061b1f17f08034eb70df58c1a96421e73ee6738ad258a94c",
+        169928, // real block 169929
+        RpcChain::MainNet
+    )]
+#[test_case(
+        // review later
+        "0x0743092843086fa6d7f4a296a226ee23766b8acf16728aef7195ce5414dc4d84",
+        186548, // real block     186549
+        RpcChain::MainNet
+    )]
+#[test_case(
+        // fails in blockifier
+        "0x00724fc4a84f489ed032ebccebfc9541eb8dc64b0e76b933ed6fc30cd6000bd1",
+        186551, // real block     186552
+        RpcChain::MainNet
+    )]
+#[test_case(
+    "0x176a92e8df0128d47f24eebc17174363457a956fa233cc6a7f8561bfbd5023a",
+    317092, // real block 317093
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x04db9b88e07340d18d53b8b876f28f449f77526224afb372daaf1023c8b08036",
+    398051, // real block 398052
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x5a5de1f42f6005f3511ea6099daed9bcbcf9de334ee714e8563977e25f71601",
+    281513, // real block 281514
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x26be3e906db66973de1ca5eec1ddb4f30e3087dbdce9560778937071c3d3a83",
+    351268, // real block 351269
+    RpcChain::MainNet
+)]
+#[test_case(
+    "0x4f552c9430bd21ad300db56c8f4cae45d554a18fac20bf1703f180fac587d7e",
+    351225, // real block 351226
+    RpcChain::MainNet
+)]
+// DeployAccount for different account providers:
+
+// OpenZeppelin (v0.7.0)
+#[test_case(
+    "0x04df8a364233d995c33c7f4666a776bf458631bec2633e932b433a783db410f8",
+    422881, // real block 422882
+    RpcChain::MainNet
+)]
+// Argent X (v5.7.0)
+#[test_case(
+    "0x039683c034f8e67cfb4af6e3109cefb3c170ee15ceacf07ee2d926915c4620e5",
+    475945, // real block 475946
+    RpcChain::MainNet
+)]
+#[cfg(not(feature = "cairo-native"))]
+fn starknet_in_rust_vs_blockifier_tx(hash: &str, block_number: u64, chain: RpcChain) {
+    // Execute using sir
+    let (sir_tx_info, _, _) =
+        rpc_state_reader::execute_tx(hash, chain, BlockNumber(block_number)).unwrap();
+    // Execute using blockifier
+    let (blockifier_tx_info, _, _) = execute_tx(hash, chain, BlockNumber(block_number));
+
+    let (sir_fee, sir_resources) = {
+        let starknet_in_rust::execution::TransactionExecutionInfo {
+            actual_fee,
+            call_info,
+            ..
+        } = sir_tx_info;
+        let starknet_in_rust::execution::CallInfo {
+            execution_resources,
+            ..
+        } = call_info.unwrap();
+        (actual_fee, execution_resources.unwrap())
+    };
+
+    let (blockifier_fee, blockifier_resources) = {
+        let TransactionExecutionInfo {
+            actual_fee,
+            execute_call_info,
+            ..
+        } = blockifier_tx_info;
+        let CallInfo { vm_resources, .. } = execute_call_info.unwrap();
+        (actual_fee.0, vm_resources)
+    };
+
+    // Compare sir vs blockifier fee & resources
+    assert_eq!(sir_fee, blockifier_fee);
+    assert_eq!(sir_resources.n_steps, blockifier_resources.n_steps);
+    assert_eq!(
+        sir_resources.n_memory_holes,
+        blockifier_resources.n_memory_holes
+    );
+    assert_eq!(
+        sir_resources.builtin_instance_counter,
+        blockifier_resources.builtin_instance_counter
+    );
+}
