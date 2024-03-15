@@ -269,7 +269,9 @@ impl ExecutionEntryPoint {
         entry_point
             .or(default_entry_point)
             .cloned()
-            .ok_or(TransactionError::EntryPointNotFound)
+            .ok_or(TransactionError::EntryPointNotFound(
+                self.entry_point_selector,
+            ))
     }
 
     // Returns the entry point with selector corresponding with self.entry_point_selector, or the
@@ -302,7 +304,9 @@ impl ExecutionEntryPoint {
         entry_point
             .or(default_entry_point)
             .cloned()
-            .ok_or(TransactionError::EntryPointNotFound)
+            .ok_or(TransactionError::EntryPointNotFound(
+                self.entry_point_selector,
+            ))
     }
 
     /// Constructs a CallInfo object for deprecated contract classes.

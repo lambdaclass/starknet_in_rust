@@ -2208,7 +2208,7 @@ fn test_invoke_tx_wrong_entrypoint() {
     );
 
     // Assert error
-    assert_matches!(result, Err(TransactionError::EntryPointNotFound));
+    assert_matches!(result, Err(TransactionError::EntryPointNotFound(_)));
 }
 
 #[test]
