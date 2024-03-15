@@ -111,3 +111,8 @@ lazy_static! {
     pub(crate) static ref QUERY_VERSION_2: Felt252 = Into::<Felt252>::into(2) + *QUERY_VERSION_BASE;
     pub(crate) static ref QUERY_VERSION_3: Felt252 = Into::<Felt252>::into(3) + *QUERY_VERSION_BASE;
 }
+
+// Event Limits
+pub(crate) const EVENT_MAX_DATA_LENGTH: usize = 300;
+pub(crate) const EVENT_MAX_KEYS_LENGTH: usize = 50;
+pub(crate) const MAX_N_EMITTED_EVENTS: u64 = 1000;

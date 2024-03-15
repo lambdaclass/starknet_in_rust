@@ -1,6 +1,12 @@
 use crate::{
     core::errors::state_errors::StateError,
-    definitions::{block_context::BlockContext, constants::CONSTRUCTOR_ENTRY_POINT_SELECTOR},
+    definitions::{
+        block_context::BlockContext,
+        constants::{
+            CONSTRUCTOR_ENTRY_POINT_SELECTOR, EVENT_MAX_DATA_LENGTH, EVENT_MAX_KEYS_LENGTH,
+            MAX_N_EMITTED_EVENTS,
+        },
+    },
     execution::{
         execution_entry_point::{ExecutionEntryPoint, ExecutionResult},
         CallInfo, CallResult, CallType, OrderedEvent, OrderedL2ToL1Message,
@@ -391,6 +397,22 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
     ) -> SyscallResult<()> {
         let order = self.tx_execution_context.n_emitted_events;
         tracing::debug!("Called `emit_event(KEYS: {keys:?}, DATA: {data:?})` from Cairo Native");
+        // Check event limits
+        if order >= MAX_N_EMITTED_EVENTS {
+            return Err(vec![Felt252::from_bytes_be_slice(
+                "Max number of emitted events reached".as_bytes(),
+            )]);
+        }
+        if keys.len() > EVENT_MAX_KEYS_LENGTH {
+            return Err(vec![Felt252::from_bytes_be_slice(
+                "Event max keys length exceeded".as_bytes(),
+            )]);
+        }
+        if data.len() > EVENT_MAX_DATA_LENGTH {
+            return Err(vec![Felt252::from_bytes_be_slice(
+                "Event data keys length exceeded".as_bytes(),
+            )]);
+        }
 
         self.handle_syscall_request(gas, "emit_event")?;
 
