@@ -950,7 +950,7 @@ mod tests {
         assert!(expected_error.is_err());
         assert_matches!(
             expected_error.unwrap_err(),
-            TransactionError::EntryPointNotFound
+            TransactionError::EntryPointNotFound(_)
         );
     }
 
@@ -1402,9 +1402,11 @@ mod tests {
 
     #[test]
     fn test_reverted_transaction_wrong_entry_point() {
+        let entry_point_selector = Felt252::from_bytes_be(&calculate_sn_keccak(b"factorial_"));
+
         let internal_invoke_function = InvokeFunction {
             contract_address: Address(0.into()),
-            entry_point_selector: Felt252::from_bytes_be(&calculate_sn_keccak(b"factorial_")),
+            entry_point_selector,
             entry_point_type: EntryPointType::External,
             calldata: vec![],
             tx_type: TransactionType::InvokeFunction,
@@ -1466,7 +1468,9 @@ mod tests {
         assert!(result.call_info.is_none());
         assert_eq!(
             result.revert_error,
-            Some("Requested entry point was not found".to_string())
+            Some(format!(
+                "Requested entry point with selector {entry_point_selector:#x} was not found"
+            ))
         );
         assert_eq_sorted!(
             state.cache.class_hash_writes,

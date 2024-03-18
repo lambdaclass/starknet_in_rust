@@ -80,8 +80,8 @@ pub enum TransactionError {
     NotDeployedContract(ClassHash),
     #[error("Non-unique entry points are not possible in a ContractClass object")]
     NonUniqueEntryPoint,
-    #[error("Requested entry point was not found")]
-    EntryPointNotFound,
+    #[error("Requested entry point with selector {0:#x} was not found")]
+    EntryPointNotFound(Felt252),
     #[error("Ptr result diverges after calculating final stacks")]
     OsContextPtrNotEqual,
     #[error("Empty OS context")]
