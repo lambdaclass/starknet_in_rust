@@ -30,8 +30,8 @@ cairo-lang-starknet-classes = "=2.6.3"
 cairo-lang-utils = "=2.6.3"
 cairo-vm = { git = "https://github.com/glihm/cairo-vm", branch = "feat/bump-cairo-263", features = ["cairo-1-hints"] }
 num-traits = "0.2.15"
-starknet = "0.9.0" # todo: update to 0.9.0+ once cairo-lang is 2.6.0+
-starknet_api = "0.10.0" # todo: update to 0.9.0+ once cairo-lang is 2.6.0+
+starknet = "0.9.0"
+starknet_api = "0.10.0"
 thiserror = "1.0.32"
 
 [dependencies]
