@@ -40,7 +40,7 @@ cairo-lang-casm = { workspace = true }
 cairo-lang-sierra = { workspace = true }
 cairo-lang-starknet = { workspace = true }
 cairo-lang-utils = { workspace = true }
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "0f104b644f38b4cafa2a598055efc48b5b53bd62", optional = true }
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev = "8f7602cb2a13682345547867a6c91b085a344da6", optional = true }
 k256 = "0.13.3"
 p256 = "0.13.2"
 sec1 = "0.7.3"

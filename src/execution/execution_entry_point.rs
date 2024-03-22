@@ -433,7 +433,7 @@ impl ExecutionEntryPoint {
             );
 
         // fetch syscall_ptr
-        let initial_syscall_ptr: Relocatable = match os_context.get(0) {
+        let initial_syscall_ptr: Relocatable = match os_context.first() {
             Some(MaybeRelocatable::RelocatableValue(ptr)) => ptr.to_owned(),
             _ => return Err(TransactionError::NotARelocatableValue),
         };
