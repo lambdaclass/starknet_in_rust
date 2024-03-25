@@ -92,6 +92,12 @@ lazy_static! {
             map.insert(Felt252::from_bytes_be(&calculate_sn_keccak("get_block_number".as_bytes())), "get_block_number");
             map.insert(Felt252::from_bytes_be_slice("Keccak".as_bytes()), "keccak");
 
+            // SECP256k1 syscalls
+            let secp_syscalls = ["secp256k1_new", "secp256k1_add", "secp256k1_mul", "secp256k1_get_point_from_x", "secp256k1_get_xy", "secp256r1_new", "secp256r1_add", "secp256r1_mul", "secp256r1_get_point_from_x", "secp256r1_get_xy"];
+
+            for syscall in secp_syscalls {
+                map.insert(Felt252::from_bytes_be(&calculate_sn_keccak(syscall.as_bytes())), syscall);
+            }
             map
     };
 
