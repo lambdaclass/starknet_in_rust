@@ -2280,7 +2280,7 @@ fn test_library_call_with_declare_v2() {
     let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci_dispatcher.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let external_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     let address = Address(6666.into());
     let mut class_hash: ClassHash = ClassHash([0; 32]);
@@ -2307,7 +2307,7 @@ fn test_library_call_with_declare_v2() {
         )
         .unwrap();
 
-    let create_execute_extrypoint = |selector: &BigUint,
+    let create_execute_entrypoint = |selector: &BigUint,
                                      calldata: Vec<Felt252>,
                                      entry_point_type: EntryPointType|
      -> ExecutionEntryPoint {
@@ -2341,7 +2341,7 @@ fn test_library_call_with_declare_v2() {
         1.into(),
         10.into(),
     ];
-    let send_message_exec_entry_point = create_execute_extrypoint(
+    let send_message_exec_entry_point = create_execute_entrypoint(
         external_entrypoint_selector,
         calldata.clone(),
         EntryPointType::External,
