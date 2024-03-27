@@ -40,7 +40,7 @@ fn integration_test() {
     let fib_entrypoint_selector = *entry_points_by_type
         .get(&EntryPointType::External)
         .unwrap()
-        .get(0)
+        .first()
         .unwrap()
         .selector();
 
@@ -153,7 +153,7 @@ fn integration_test_cairo1() {
 
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let fib_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let fib_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
