@@ -125,7 +125,7 @@ pub fn felt_to_hash(value: &Felt252) -> ClassHash {
     let mut output = [0; 32];
 
     let bytes = value.to_bytes_be();
-    output[32 - bytes.len()..].copy_from_slice(&bytes);
+    output[..].copy_from_slice(&bytes);
 
     ClassHash(output)
 }
