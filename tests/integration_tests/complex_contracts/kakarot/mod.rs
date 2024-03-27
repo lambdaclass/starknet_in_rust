@@ -18,6 +18,7 @@ use starknet_in_rust::utils::{calculate_sn_keccak, felt_to_field_element, field_
 use crate::integration_tests::cairo_native::TestStateSetup;
 
 #[test]
+#[ignore = "linked to native issue #499 and #500"]
 fn test_kakarot_contract() {
     // Evm constants
     let private_key: B256 =
@@ -54,6 +55,7 @@ fn test_kakarot_contract() {
         &Felt252::from_bytes_be(&uninitialized_account_class_hash.0),
     );
     let contract_account_address = Address(contract_account_address);
+    // PUSH1 01 PUSH1 00 SSTORE PUSH1 02 PUSH1 00 MSTORE8 PUSH1 01 PUSH1 00 RETURN
     let bytecode = Felt252::from_bytes_be_slice(&[
         0x60, 0x01, 0x60, 0x00, 0x55, 0x60, 0x02, 0x60, 0x00, 0x53, 0x60, 0x01, 0x60, 0x00, 0xf3,
     ]);
