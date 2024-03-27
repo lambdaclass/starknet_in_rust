@@ -149,6 +149,40 @@ cairo-%-macos.tar:
 cairo-%.tar:
 	curl -L -o "$@" "https://github.com/starkware-libs/cairo/releases/download/v$*/release-x86_64-unknown-linux-musl.tar.gz"
 
+# =============================
+# Test Cairo Kakarot Contracts
+# =============================
+
+KAKAROT_VERSION=v0.1.1
+KAKAROT_DIR=starknet_programs/kakarot
+
+KAKAROT_FILES:=$(wildcard $(KAKAROT_DIR)/*.json)
+KAKAROT_COMPILED_SIERRA_CONTRACTS:=$(patsubst $(KAKAROT_DIR)/%.contract_class.json, $(KAKAROT_DIR)/%.sierra, $(KAKAROT_FILES))
+KAKAROT_COMPILED_CASM_CONTRACTS:=$(patsubst $(KAKAROT_DIR)/%.compiled_contract_class.json, $(KAKAROT_DIR)/%.casm, $(KAKAROT_FILES))
+
+build-kakarot: | $(KAKAROT_DIR)
+
+compile-kakarot-sierra: $(KAKAROT_COMPILED_SIERRA_CONTRACTS)
+compile-kakarot-casm: $(KAKAROT_COMPILED_CASM_CONTRACTS)
+
+$(KAKAROT_DIR):
+	rm -fr $(KAKAROT_DIR) \
+	&& mkdir -p $(KAKAROT_DIR) \
+	&& curl -L -o $(KAKAROT_DIR)/artifacts.zip "https://github.com/kkrt-labs/kakarot-ssj/releases/download/$(KAKAROT_VERSION)/dev-artifacts.zip" \
+	&& $(MAKE) decompress-kakarot
+
+decompress-kakarot:
+	unzip $(KAKAROT_DIR)/artifacts.zip -d $(KAKAROT_DIR) \
+	&& rm $(KAKAROT_DIR)/artifacts.zip \
+	&& rm $(KAKAROT_DIR)/*.sierra.json \
+	&& rm $(KAKAROT_DIR)/*.starknet_artifacts.json
+
+$(KAKAROT_DIR)/%.sierra: $(KAKAROT_DIR)/%.contract_class.json
+	mv $< $@
+
+$(KAKAROT_DIR)/%.casm: $(KAKAROT_DIR)/%.compiled_contract_class.json
+	mv $< $@
+
 # =================
 # Normal rules.
 # =================
@@ -209,6 +243,11 @@ test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-
 
 test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --test tests --features=cairo-native integration_tests::cairo_native
+
+deps-kakarot: build-kakarot
+
+test-kakarot: compile-kakarot-sierra compile-kakarot-casm
+	cargo test --test tests --features=cairo-native test_kakarot_contract
 
 test-doctests:
 	cargo test --workspace --doc
