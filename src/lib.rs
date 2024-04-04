@@ -963,7 +963,7 @@ mod test {
     }
 
     fn declarev2_tx() -> Declare {
-        let program_data = include_bytes!("../starknet_programs/cairo1/fibonacci.sierra");
+        let program_data = include_bytes!("../starknet_programs/cairo2/fibonacci.sierra");
         let sierra_contract_class: SierraContractClass =
             serde_json::from_slice(program_data).unwrap();
 

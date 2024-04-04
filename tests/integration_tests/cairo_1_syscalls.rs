@@ -779,12 +779,8 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
     let test_contract_class: ContractClass = ContractClass::from_path(contract_path).unwrap();
 
     // Create the deploy contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/deploy_without_constructor.casm");
-
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/deploy_without_constructor.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -1481,10 +1477,7 @@ fn replace_class_contract_call() {
 
     // Add get_number_b contract to the state (only its contract_class)
 
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_b.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let class_hash_b: ClassHash = ClassHash([2; 32]);
@@ -1500,10 +1493,7 @@ fn replace_class_contract_call() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_number_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
@@ -1641,10 +1631,7 @@ fn replace_class_contract_call_same_transaction() {
 
     // SET GET_NUMBER_A
     // Add get_number_a.cairo to storage
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_a.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_a.casm");
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
@@ -1672,11 +1659,7 @@ fn replace_class_contract_call_same_transaction() {
     // SET GET_NUMBER_B
 
     // Add get_number_b contract to the state (only its contract_class)
-
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_b.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let class_hash_b: ClassHash = ClassHash([2; 32]);
@@ -1692,10 +1675,7 @@ fn replace_class_contract_call_same_transaction() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
@@ -1803,11 +1783,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     // SET GET_NUMBER_B
 
     // Add get_number_b contract to the state (only its contract_class)
-
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_b.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let class_hash_b: ClassHash = ClassHash::from(Felt252::from(2));
@@ -1823,10 +1799,7 @@ fn call_contract_upgrade_cairo_0_to_cairo_1_same_transaction() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
@@ -1925,11 +1898,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     // SET GET_NUMBER_B
 
     // Add get_number_b contract to the state
-
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_b.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_b.casm");
     let contract_class_b: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let class_hash_b: ClassHash = ClassHash::from(Felt252::from(2));
@@ -1952,10 +1921,7 @@ fn call_contract_downgrade_cairo_1_to_cairo_0_same_transaction() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
@@ -2074,10 +2040,7 @@ fn call_contract_replace_class_cairo_0() {
     // SET GET_NUMBER_WRAPPER
 
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_number_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/get_number_wrapper.casm");
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_numbers_entrypoint_selector = &entrypoints.external.get(2).unwrap().selector;
@@ -2153,10 +2116,7 @@ fn call_contract_replace_class_cairo_0() {
 #[test]
 fn test_out_of_gas_failure() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/emit_event.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/emit_event.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2238,12 +2198,8 @@ fn test_out_of_gas_failure() {
 #[test]
 fn deploy_syscall_failure_uninitialized_class_hash() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/deploy_contract_no_args.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/deploy_contract_no_args.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2324,12 +2280,8 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
 #[test]
 fn deploy_syscall_failure_in_constructor() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/deploy_contract_no_args.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/deploy_contract_no_args.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2357,12 +2309,8 @@ fn deploy_syscall_failure_in_constructor() {
         .insert(address.clone(), nonce);
 
     // Add failing constructor contract
-    #[cfg(not(feature = "cairo_1_tests"))]
     let f_c_program_data =
         include_bytes!("../../starknet_programs/cairo2/failing_constructor.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let f_c_program_data =
-        include_bytes!("../../starknet_programs/cairo1/failing_constructor.casm");
     let f_c_contract_class: CasmContractClass = serde_json::from_slice(f_c_program_data).unwrap();
     let f_c_class_hash = Felt252::ONE;
     contract_class_cache.set_contract_class(
@@ -2429,10 +2377,7 @@ fn deploy_syscall_failure_in_constructor() {
 #[test]
 fn storage_read_no_value() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/simple_wallet.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/simple_wallet.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
@@ -2506,12 +2451,8 @@ fn storage_read_no_value() {
 #[test]
 fn storage_read_unavailable_address_domain() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/faulty_low_level_storage_read.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/faulty_low_level_storage_read.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2588,12 +2529,8 @@ fn storage_read_unavailable_address_domain() {
 #[test]
 fn storage_write_unavailable_address_domain() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/faulty_low_level_storage_write.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/faulty_low_level_storage_write.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2670,10 +2607,7 @@ fn storage_write_unavailable_address_domain() {
 #[test]
 fn library_call_failure() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/square_root.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/square_root.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2702,10 +2636,7 @@ fn library_call_failure() {
 
     // Add lib contract to the state
 
-    #[cfg(not(feature = "cairo_1_tests"))]
     let lib_program_data = include_bytes!("../../starknet_programs/cairo2/faulty_math_lib.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let lib_program_data = include_bytes!("../../starknet_programs/cairo1/faulty_math_lib.casm");
     let lib_contract_class: CasmContractClass = serde_json::from_slice(lib_program_data).unwrap();
 
     let lib_address = Address(1112.into());
@@ -2790,12 +2721,8 @@ fn library_call_failure() {
 #[test]
 fn send_messages_to_l1_different_contract_calls() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/send_messages_contract_call.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/send_messages_contract_call.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoint_selector = &contract_class.entry_points_by_type.external[0]
         .selector
@@ -2825,12 +2752,8 @@ fn send_messages_to_l1_different_contract_calls() {
 
     // Add send_message_to_l1 contract to the state
 
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/send_simple_message_to_l1.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/send_simple_message_to_l1.casm");
     let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
@@ -2927,12 +2850,8 @@ fn send_messages_to_l1_different_contract_calls() {
 #[test]
 fn send_messages_to_l1_different_contract_calls_cairo1_to_cairo0() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/send_messages_contract_call.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/send_messages_contract_call.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoint_selector = &contract_class.entry_points_by_type.external[0]
         .selector
@@ -3082,12 +3001,8 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
 
     // Add send_message_to_l1 contract to the state
 
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/cairo2/send_simple_message_to_l1.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data =
-        include_bytes!("../../starknet_programs/cairo1/send_simple_message_to_l1.casm");
     let send_msg_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     let send_msg_address = Address(1.into()); //Hardcoded in contract
@@ -3181,7 +3096,6 @@ fn send_messages_to_l1_different_contract_calls_cairo0_to_cairo1() {
 }
 
 #[test]
-#[cfg(not(feature = "cairo_1_tests"))]
 fn keccak_syscall() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/test_cairo_keccak.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
@@ -3260,11 +3174,7 @@ fn keccak_syscall() {
 #[test]
 fn library_call_recursive_50_calls() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/square_root_recursive.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/square_root_recursive.casm");
-
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -3293,11 +3203,7 @@ fn library_call_recursive_50_calls() {
 
     // Add lib contract to the state
 
-    #[cfg(not(feature = "cairo_1_tests"))]
     let lib_program_data = include_bytes!("../../starknet_programs/cairo2/math_lib.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let lib_program_data = include_bytes!("../../starknet_programs/cairo1/math_lib.casm");
-
     let lib_contract_class: CasmContractClass = serde_json::from_slice(lib_program_data).unwrap();
 
     let lib_address = Address(1112.into());
@@ -3355,10 +3261,7 @@ fn library_call_recursive_50_calls() {
     );
     let mut resources_manager = ExecutionResourcesManager::default();
     let expected_execution_resources_internal_call = ExecutionResources {
-        #[cfg(not(feature = "cairo_1_tests"))]
         n_steps: 78,
-        #[cfg(feature = "cairo_1_tests")]
-        n_steps: 85,
         n_memory_holes: 5,
         builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 7)]),
     };
@@ -3407,11 +3310,7 @@ fn library_call_recursive_50_calls() {
 #[test]
 fn call_contract_storage_write_read_recursive_50_calls() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/wallet_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/wallet_wrapper.casm");
-
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let get_balance_entrypoint_selector =
         &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
@@ -3442,13 +3341,8 @@ fn call_contract_storage_write_read_recursive_50_calls() {
         .insert(address.clone(), nonce);
 
     // Add simple_wallet contract to the state
-    #[cfg(not(feature = "cairo_1_tests"))]
     let simple_wallet_program_data =
         include_bytes!("../../starknet_programs/cairo2/simple_wallet.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let simple_wallet_program_data =
-        include_bytes!("../../starknet_programs/cairo1/simple_wallet.casm");
-
     let simple_wallet_contract_class: CasmContractClass =
         serde_json::from_slice(simple_wallet_program_data).unwrap();
     let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
@@ -3622,11 +3516,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 #[test]
 fn call_contract_storage_write_read_recursive_100_calls() {
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/wallet_wrapper.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/wallet_wrapper.casm");
-
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let get_balance_entrypoint_selector =
         &BigUint::from_bytes_be(&calculate_sn_keccak("get_balance".as_bytes()));
@@ -3657,13 +3547,8 @@ fn call_contract_storage_write_read_recursive_100_calls() {
         .insert(address.clone(), nonce);
 
     // Add simple_wallet contract to the state
-    #[cfg(not(feature = "cairo_1_tests"))]
     let simple_wallet_program_data =
         include_bytes!("../../starknet_programs/cairo2/simple_wallet.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let simple_wallet_program_data =
-        include_bytes!("../../starknet_programs/cairo1/simple_wallet.casm");
-
     let simple_wallet_contract_class: CasmContractClass =
         serde_json::from_slice(simple_wallet_program_data).unwrap();
     let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
@@ -3835,14 +3720,12 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 }
 
 #[test]
-#[cfg(not(feature = "cairo_1_tests"))]
 fn test_get_execution_info_v2() {
     //  Create program and entry point types for contract class
     use starknet_in_rust::transaction::{
         CurrentAccountTxFields, DataAvailabilityMode, ResourceBounds,
         VersionSpecificAccountTxFields,
     };
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_execution_info_v2.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
