@@ -162,10 +162,9 @@ mod tests {
     #[test]
     fn test_compute_casm_class_hash_fibonacci() {
         // Open the file in read-only mode with buffer.
-        let file;
-        let expected_result;
-        file = File::open("starknet_programs/raw_contract_classes/6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89.casm").unwrap();
-        expected_result =
+
+        let file = File::open("starknet_programs/raw_contract_classes/6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89.casm").unwrap();
+        let expected_result =
             Felt252::from_hex("0x6638ce6c9bf336d1781a388668fa2206d928df5d1fa6b92e4cb41004c7e3f89")
                 .unwrap();
 
