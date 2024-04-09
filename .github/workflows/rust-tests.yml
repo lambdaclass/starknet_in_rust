@@ -102,7 +102,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ test-cairo-1, test-cairo-2, test-doctests, test-cairo-native ]
+        target: [ test, test-doctests, test-cairo-native ]
     name: Run tests
     runs-on: ubuntu-latest
     steps:

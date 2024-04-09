@@ -141,11 +141,7 @@ fn internal_deploy_account_cairo1() {
         state_reader,
         Arc::new(PermanentContractClassCache::default()),
     );
-
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/hello_world_account.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/hello_world_account.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     state
@@ -205,15 +201,7 @@ fn internal_deploy_account_cairo1() {
     ]);
     let keys: HashSet<ClassHash> = [accessed_keys].iter().copied().collect();
 
-    let n_steps;
-    #[cfg(not(feature = "cairo_1_tests"))]
-    {
-        n_steps = 4262;
-    }
-    #[cfg(feature = "cairo_1_tests")]
-    {
-        n_steps = 4281;
-    }
+    let n_steps = 4262;
 
     assert_eq!(
         tx_info,
@@ -223,10 +211,7 @@ fn internal_deploy_account_cairo1() {
                 call_type: Some(CallType::Call),
                 contract_address: Address(Felt252::from_dec_str("397149464972449753182583229366244826403270781177748543857889179957856017275").unwrap()),
                 code_address: None,
-                #[cfg(not(feature="cairo_1_tests"))]
                 gas_consumed: 15340,
-                #[cfg(feature="cairo_1_tests")]
-                gas_consumed: 16770,
                 class_hash: Some(ClassHash([
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 1
@@ -242,10 +227,7 @@ fn internal_deploy_account_cairo1() {
                 ],
                 retdata: vec![Felt252::from_dec_str("370462705988").unwrap()],
                 execution_resources: Some(ExecutionResources {
-                    #[cfg(not(feature="cairo_1_tests"))]
                     n_steps: 142,
-                    #[cfg(feature="cairo_1_tests")]
-                    n_steps: 155,
                     n_memory_holes: 2,
                     builtin_instance_counter:
                     [
@@ -267,17 +249,11 @@ fn internal_deploy_account_cairo1() {
                 ),
                 entry_point_selector: Some(Felt252::from_dec_str("1159040026212278395030414237414753050475174923702621880048416706425641521556").unwrap()),
                 entry_point_type: Some(EntryPointType::Constructor),
-                #[cfg(not(feature="cairo_1_tests"))]
                 gas_consumed: 13740,
-                #[cfg(feature="cairo_1_tests")]
-                gas_consumed: 14350,
                 calldata: vec![2.into()],
                 accessed_storage_keys: keys,
                 execution_resources: Some(ExecutionResources {
-                    #[cfg(not(feature="cairo_1_tests"))]
                     n_steps: 87,
-                    #[cfg(feature="cairo_1_tests")]
-                    n_steps: 93,
                     n_memory_holes: 0,
                     builtin_instance_counter:
                     [

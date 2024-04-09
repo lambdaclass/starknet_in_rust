@@ -92,8 +92,7 @@ lazy_static! {
     static ref TEST_CLASS_HASH: ClassHash = ClassHash::from(Felt252::from_dec_str("272").unwrap());
     static ref TEST_EMPTY_CONTRACT_CLASS_HASH: ClassHash = ClassHash::from(Felt252::from_dec_str("274").unwrap());
     static ref TEST_ERC20_CONTRACT_CLASS_HASH: ClassHash = ClassHash::from(Felt252::from_dec_str("4112").unwrap());
-    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1: ClassHash = ClassHash::from(Felt252::from_dec_str("1948962768849191111780391610229754715773924969841143100991524171924131413970").unwrap());
-    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2: ClassHash = ClassHash::from(Felt252::from_dec_str("2889767417435368609058888822622483550637539736178264636938129582300971548553").unwrap());
+    static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: ClassHash = ClassHash::from(Felt252::from_dec_str("2889767417435368609058888822622483550637539736178264636938129582300971548553").unwrap());
 
     // Storage keys.
     // NOTE: this key corresponds to the lower 128 bits of an U256
@@ -817,11 +816,8 @@ fn declare_tx() -> DeclareDeprecated {
 }
 
 fn declarev2_tx() -> Declare {
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data =
         include_bytes!("../../starknet_programs/raw_contract_classes/fibonacci.sierra");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
     let casm_class =
@@ -848,32 +844,19 @@ fn declarev2_tx() -> Declare {
 }
 
 fn deploy_fib_syscall() -> Deploy {
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/fibonacci.sierra");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci.sierra");
     let sierra_contract_class: SierraContractClass = serde_json::from_slice(program_data).unwrap();
     let casm_class = CasmContractClass::from_contract_class(sierra_contract_class, true).unwrap();
     let contract_class = CompiledClass::Casm {
         casm: Arc::new(casm_class),
         sierra: None,
     };
-
-    let contract_hash;
-    #[cfg(not(feature = "cairo_1_tests"))]
-    {
-        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2
-    }
-    #[cfg(feature = "cairo_1_tests")]
-    {
-        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
-    }
     Deploy {
         hash_value: 0.into(),
         version: 1.into(),
         contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
         contract_address_salt: 0.into(),
-        contract_hash,
+        contract_hash: *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH,
         contract_class,
         constructor_calldata: Vec::new(),
         skip_execute: false,
@@ -1126,16 +1109,6 @@ fn test_declarev2_tx() {
         ("l1_gas_usage".to_string(), 2754),
     ]);
     let fee = calculate_tx_fee(&resources, &block_context, &FeeType::Eth).unwrap();
-
-    let contract_hash;
-    #[cfg(not(feature = "cairo_1_tests"))]
-    {
-        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2;
-    }
-    #[cfg(feature = "cairo_1_tests")]
-    {
-        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1;
-    }
     let expected_execution_info = TransactionExecutionInfo::new(
         Some(CallInfo {
             call_type: Some(CallType::Call),
@@ -1143,7 +1116,9 @@ fn test_declarev2_tx() {
             class_hash: Some(*TEST_ACCOUNT_CONTRACT_CLASS_HASH),
             entry_point_selector: Some(*VALIDATE_DECLARE_ENTRY_POINT_SELECTOR),
             entry_point_type: Some(EntryPointType::External),
-            calldata: vec![Felt252::from_bytes_be(&contract_hash.0)],
+            calldata: vec![Felt252::from_bytes_be(
+                &TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.0,
+            )],
             execution_resources: Some(ExecutionResources {
                 n_steps: 12,
                 ..Default::default()
@@ -1214,15 +1189,6 @@ fn expected_execute_call_info() -> CallInfo {
 }
 
 fn expected_fib_execute_call_info() -> CallInfo {
-    let contract_hash;
-    #[cfg(not(feature = "cairo_1_tests"))]
-    {
-        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2;
-    }
-    #[cfg(feature = "cairo_1_tests")]
-    {
-        contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1;
-    }
     CallInfo {
         caller_address: Address(Felt252::ZERO),
         call_type: Some(CallType::Call),
@@ -1241,10 +1207,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
         ],
         retdata: vec![Felt252::from(42)],
         execution_resources: Some(ExecutionResources {
-            #[cfg(not(feature = "cairo_1_tests"))]
             n_steps: 148,
-            #[cfg(feature = "cairo_1_tests")]
-            n_steps: 160,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 4)]),
         }),
@@ -1252,7 +1215,7 @@ fn expected_fib_execute_call_info() -> CallInfo {
         internal_calls: vec![CallInfo {
             caller_address: TEST_ACCOUNT_CONTRACT_ADDRESS.clone(),
             call_type: Some(CallType::Call),
-            class_hash: Some(contract_hash),
+            class_hash: Some(*TEST_FIB_COMPILED_CONTRACT_CLASS_HASH),
             entry_point_selector: Some(Felt252::from_bytes_be(&calculate_sn_keccak(b"fib"))),
             entry_point_type: Some(EntryPointType::External),
             calldata: vec![Felt252::from(42), Felt252::from(0), Felt252::from(0)],
@@ -1262,15 +1225,9 @@ fn expected_fib_execute_call_info() -> CallInfo {
             internal_calls: vec![],
             contract_address: TEST_FIB_CONTRACT_ADDRESS.clone(),
             code_address: None,
-            #[cfg(not(feature = "cairo_1_tests"))]
             gas_consumed: 2980,
-            #[cfg(feature = "cairo_1_tests")]
-            gas_consumed: 4710,
             execution_resources: Some(ExecutionResources {
-                #[cfg(not(feature = "cairo_1_tests"))]
                 n_steps: 109,
-                #[cfg(feature = "cairo_1_tests")]
-                n_steps: 121,
                 n_memory_holes: 0,
                 builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 3)]),
             }),
@@ -1352,15 +1309,7 @@ fn expected_transaction_execution_info(block_context: &BlockContext) -> Transact
 fn expected_fib_transaction_execution_info(
     block_context: &BlockContext,
 ) -> TransactionExecutionInfo {
-    let n_steps;
-    #[cfg(not(feature = "cairo_1_tests"))]
-    {
-        n_steps = 4550;
-    }
-    #[cfg(feature = "cairo_1_tests")]
-    {
-        n_steps = 4562;
-    }
+    let n_steps = 4550;
     let resources = HashMap::from([
         ("n_steps".to_string(), n_steps),
         ("l1_gas_usage".to_string(), 5197),
@@ -2274,10 +2223,7 @@ fn test_library_call_with_declare_v2() {
         .unwrap();
 
     //  Create program and entry point types for contract class
-    #[cfg(not(feature = "cairo_1_tests"))]
     let program_data = include_bytes!("../../starknet_programs/cairo2/fibonacci_dispatcher.casm");
-    #[cfg(feature = "cairo_1_tests")]
-    let program_data = include_bytes!("../../starknet_programs/cairo1/fibonacci_dispatcher.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
     let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
@@ -2323,19 +2269,9 @@ fn test_library_call_with_declare_v2() {
         )
     };
 
-    let casm_contract_hash;
-    #[cfg(not(feature = "cairo_1_tests"))]
-    {
-        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2
-    }
-    #[cfg(feature = "cairo_1_tests")]
-    {
-        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
-    }
-
     // Create an execution entry point
     let calldata = vec![
-        Felt252::from_bytes_be(&casm_contract_hash.0),
+        Felt252::from_bytes_be(&TEST_FIB_COMPILED_CONTRACT_CLASS_HASH.0),
         Felt252::from_bytes_be(&calculate_sn_keccak(b"fib")),
         1.into(),
         1.into(),
@@ -2374,34 +2310,18 @@ fn test_library_call_with_declare_v2() {
         )
         .unwrap();
 
-    let casm_contract_hash;
-    #[cfg(not(feature = "cairo_1_tests"))]
-    {
-        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO2
-    }
-    #[cfg(feature = "cairo_1_tests")]
-    {
-        casm_contract_hash = *TEST_FIB_COMPILED_CONTRACT_CLASS_HASH_CAIRO1
-    }
-
     let expected_internal_call_info = CallInfo {
         caller_address: Address(0.into()),
         call_type: Some(CallType::Delegate),
         contract_address: address.clone(),
-        class_hash: Some(casm_contract_hash),
+        class_hash: Some(*TEST_FIB_COMPILED_CONTRACT_CLASS_HASH),
         entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
-        #[cfg(not(feature = "cairo_1_tests"))]
         gas_consumed: 19680,
-        #[cfg(feature = "cairo_1_tests")]
-        gas_consumed: 30410,
         calldata: vec![1.into(), 1.into(), 10.into()],
         retdata: vec![89.into()], // fib(10)
         execution_resources: Some(ExecutionResources {
-            #[cfg(not(feature = "cairo_1_tests"))]
             n_steps: 269,
-            #[cfg(feature = "cairo_1_tests")]
-            n_steps: 371,
             n_memory_holes: 0,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 13)]),
         }),
@@ -2415,17 +2335,11 @@ fn test_library_call_with_declare_v2() {
         class_hash: Some(class_hash),
         entry_point_selector: Some(Felt252::from(external_entrypoint_selector)),
         entry_point_type: Some(EntryPointType::External),
-        #[cfg(not(feature = "cairo_1_tests"))]
         gas_consumed: 100490,
-        #[cfg(feature = "cairo_1_tests")]
-        gas_consumed: 113480,
         calldata,
         retdata: vec![89.into()], // fib(10)
         execution_resources: Some(ExecutionResources {
-            #[cfg(not(feature = "cairo_1_tests"))]
             n_steps: 463,
-            #[cfg(feature = "cairo_1_tests")]
-            n_steps: 587,
             n_memory_holes: 1,
             builtin_instance_counter: HashMap::from([("range_check_builtin".to_string(), 16)]),
         }),

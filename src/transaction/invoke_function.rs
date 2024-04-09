@@ -1424,7 +1424,7 @@ mod tests {
 
         let mut state_reader = InMemoryStateReader::default();
         let class_hash: ClassHash = ClassHash([1; 32]);
-        let program_data = include_bytes!("../../starknet_programs/cairo1/factorial.casm");
+        let program_data = include_bytes!("../../starknet_programs/cairo2/factorial.casm");
         let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
         let contract_address = Address(0.into());
         let nonce = Felt252::ZERO;

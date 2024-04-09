@@ -656,7 +656,7 @@ pub mod test_utils {
         pub(crate) static ref TEST_CLASS_HASH: Felt252 = Felt252::from_dec_str("272").unwrap();
         pub(crate) static ref TEST_EMPTY_CONTRACT_CLASS_HASH: Felt252 = Felt252::from_dec_str("274").unwrap();
         pub(crate) static ref TEST_ERC20_CONTRACT_CLASS_HASH: Felt252 = Felt252::from_dec_str("4112").unwrap();
-        pub(crate) static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = Felt252::from_dec_str("1948962768849191111780391610229754715773924969841143100991524171924131413970").unwrap();
+        pub(crate) static ref TEST_FIB_COMPILED_CONTRACT_CLASS_HASH: Felt252 = Felt252::from_dec_str("1487038893808052375786208479683257634301884864720663024120716859424551593158").unwrap();
 
         // Storage keys.
         pub(crate) static ref TEST_ERC20_ACCOUNT_BALANCE_KEY: Felt252 =
