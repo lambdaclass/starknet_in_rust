@@ -23,7 +23,7 @@ use std::{sync::Arc, vec};
 #[test]
 fn test_multiple_syscall() {
     //  Create program and entry point types for contract class
-    let program_data = include_bytes!("../../starknet_programs/cairo1/multi_syscall_test.casm");
+    let program_data = include_bytes!("../../starknet_programs/cairo2/multi_syscall_test.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
 
     // Create state reader with class hash data
@@ -191,7 +191,7 @@ fn test_multiple_syscall() {
                 OrderedEvent {
                     order: 0,
                     keys: vec![Felt252::from_dec_str(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
+                        "826422450673657747090149602083997624297692992347360843320687877601002682120"
                     )
                     .unwrap()],
                     data: vec![1.into()]
@@ -199,7 +199,7 @@ fn test_multiple_syscall() {
                 OrderedEvent {
                     order: 1,
                     keys: vec![Felt252::from_dec_str(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
+                        "826422450673657747090149602083997624297692992347360843320687877601002682120"
                     )
                     .unwrap()],
                     data: vec![2.into()]
@@ -207,7 +207,7 @@ fn test_multiple_syscall() {
                 OrderedEvent {
                     order: 2,
                     keys: vec![Felt252::from_dec_str(
-                        "1533133552972353850845856330693290141476612241335297758062928121906575244541"
+                        "826422450673657747090149602083997624297692992347360843320687877601002682120"
                     )
                     .unwrap()],
                     data: vec![3.into()]

@@ -39,14 +39,11 @@ target/
 
 .env
 # the starting `/` assures this matches only on the repo's root
-/cairo1
 /cairo2
 
 starknet-venv/
 **/*.json
 
-starknet_programs/cairo1/*.casm
-starknet_programs/cairo1/*.sierra
 starknet_programs/cairo2/*.casm
 starknet_programs/cairo2/*.sierra
 default.profraw

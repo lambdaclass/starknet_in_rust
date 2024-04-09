@@ -620,19 +620,8 @@ mod tests {
     #[test]
     fn create_declare_v2_without_casm_contract_class_test() {
         // read file to create sierra contract class
-        let version;
-        let path;
-        #[cfg(not(feature = "cairo_1_tests"))]
-        {
-            version = Felt252::from(2);
-            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
-        }
-
-        #[cfg(feature = "cairo_1_tests")]
-        {
-            version = Felt252::from(1);
-            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
-        }
+        let version = Felt252::from(2);
+        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
 
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
@@ -687,19 +676,8 @@ mod tests {
     #[test]
     fn create_declare_v2_with_casm_contract_class_test() {
         // read file to create sierra contract class
-        let version;
-        let path;
-        #[cfg(not(feature = "cairo_1_tests"))]
-        {
-            version = Felt252::from(2);
-            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
-        }
-
-        #[cfg(feature = "cairo_1_tests")]
-        {
-            version = Felt252::from(1);
-            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
-        }
+        let version = Felt252::from(2);
+        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
 
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
@@ -752,19 +730,8 @@ mod tests {
     #[test]
     fn create_declare_v2_test_with_version_query() {
         // read file to create sierra contract class
-        let version;
-        let path;
-        #[cfg(not(feature = "cairo_1_tests"))]
-        {
-            version = *QUERY_VERSION_2;
-            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
-        }
-
-        #[cfg(feature = "cairo_1_tests")]
-        {
-            version = *QUERY_VERSION_2;
-            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
-        }
+        let version = *QUERY_VERSION_2;
+        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
 
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
@@ -819,19 +786,8 @@ mod tests {
     #[test]
     fn create_declare_v2_with_casm_contract_class_none_test() {
         // read file to create sierra contract class
-        let version;
-        let path;
-        #[cfg(not(feature = "cairo_1_tests"))]
-        {
-            version = Felt252::from(2);
-            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
-        }
-
-        #[cfg(feature = "cairo_1_tests")]
-        {
-            version = Felt252::from(1);
-            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
-        }
+        let version = Felt252::from(2);
+        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
 
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
@@ -886,19 +842,8 @@ mod tests {
     #[test]
     fn create_declare_v2_wrong_casm_class_hash_test() {
         // read file to create sierra contract class
-        let version;
-        let path;
-        #[cfg(not(feature = "cairo_1_tests"))]
-        {
-            version = Felt252::from(2);
-            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
-        }
-
-        #[cfg(feature = "cairo_1_tests")]
-        {
-            version = Felt252::from(1);
-            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
-        }
+        let version = Felt252::from(2);
+        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
 
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
@@ -945,17 +890,7 @@ mod tests {
 
     #[test]
     fn declarev2_wrong_version() {
-        let path;
-        #[cfg(not(feature = "cairo_1_tests"))]
-        {
-            path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
-        }
-
-        #[cfg(feature = "cairo_1_tests")]
-        {
-            path = PathBuf::from("starknet_programs/cairo1/fibonacci.sierra");
-        }
-
+        let path = PathBuf::from("starknet_programs/cairo2/fibonacci.sierra");
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
         let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =

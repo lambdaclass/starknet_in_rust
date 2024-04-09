@@ -1,4 +1,4 @@
-.PHONY: usage build check clean clippy compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra \
+.PHONY: usage build check clean clippy compile-cairo compile-starknet \
 		 compile-cairo-2-casm compile-cairo-2-sierra coverage deps test heaptrack check-python-version
 
 export PATH:=$(shell pyenv root)/shims:$(PATH)
@@ -21,9 +21,6 @@ STARKNET_ABI_TARGETS=$(patsubst %.cairo,%_abi.json,$(STARKNET_SOURCES))
 BUILTIN_SOURCES=$(wildcard starknet_programs/*.cairo)
 BUILTIN_TARGETS=$(patsubst %.cairo,%.json,$(BUILTIN_SOURCES))
 
-STARKNET_COMPILE_CAIRO_1:=cairo1/bin/starknet-compile
-STARKNET_SIERRA_COMPILE_CAIRO_1:=cairo1/bin/starknet-sierra-compile
-
 STARKNET_COMPILE_CAIRO_2:=cairo2/bin/starknet-compile
 STARKNET_SIERRA_COMPILE_CAIRO_2:=cairo2/bin/starknet-sierra-compile
 
@@ -36,7 +33,6 @@ usage:
 	@echo '    clean:           Cleans all build artifacts'
 	@echo '    clippy:          Runs clippy'
 	@echo '    test:            Runs all tests'
-	@echo '    test-cairo-1:    Runs the Cairo 1 tests'
 	@echo '    test-cairo-2:    Runs the Cairo 2 tests'
 	@echo '    test-doctests:   Runs the doctests'
 	@echo '    coverage:        Runs everything necessary to generate the coverage report'
@@ -68,42 +64,6 @@ starknet_programs/%.json starknet_programs/%_abi.json: starknet_programs/%.cairo
 	--abi ./$*_abi.json \
 	|| rm ./$*.json ./$*_abi.json
 # Compiles .cairo files into .json files. if the command fails, then it removes all of the .json files
-
-# ======================
-# Test Cairo 1 Contracts
-# ======================
-
-CAIRO_1_CONTRACTS_TEST_DIR=starknet_programs/cairo1
-CAIRO_1_CONTRACTS_TEST_CAIRO_FILES:=$(wildcard $(CAIRO_1_CONTRACTS_TEST_DIR)/*.cairo)
-CAIRO_1_COMPILED_SIERRA_CONTRACTS:=$(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_CAIRO_FILES))
-CAIRO_1_COMPILED_CASM_CONTRACTS:= $(patsubst $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra, $(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm, $(CAIRO_1_COMPILED_SIERRA_CONTRACTS))
-
-$(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.cairo
-	$(STARKNET_COMPILE_CAIRO_1) --allowed-libfuncs-list-name experimental_v0.1.0 $< $@
-
-$(CAIRO_1_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_1_CONTRACTS_TEST_DIR)/%.sierra
-	$(STARKNET_SIERRA_COMPILE_CAIRO_1) --allowed-libfuncs-list-name experimental_v0.1.0 --add-pythonic-hints $< $@
-
-compile-cairo-1-sierra: $(CAIRO_1_COMPILED_SIERRA_CONTRACTS)
-compile-cairo-1-casm: $(CAIRO_1_COMPILED_CASM_CONTRACTS)
-
-
-cairo-repo-1-dir = cairo1
-cairo-repo-1-dir-macos = cairo1-macos
-
-build-cairo-1-compiler-macos: | $(cairo-repo-1-dir-macos)
-
-$(cairo-repo-1-dir-macos):
-	curl -L -o cairo-1.1.1.tar https://github.com/starkware-libs/cairo/releases/download/v1.1.1/release-aarch64-apple-darwin.tar \
-	&& tar -xzvf cairo-1.1.1.tar \
-	&& mv cairo/ cairo1/
-
-build-cairo-1-compiler: | $(cairo-repo-1-dir)
-
-$(cairo-repo-1-dir):
-	curl -L -o cairo-1.1.1.tar https://github.com/starkware-libs/cairo/releases/download/v1.1.1/release-x86_64-unknown-linux-musl.tar.gz \
-	&& tar -xzvf cairo-1.1.1.tar \
-	&& mv cairo/ cairo1/
 
 # ======================
 # Test Cairo 2 Contracts
@@ -153,13 +113,13 @@ cairo-%.tar:
 # Normal rules.
 # =================
 
-build: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
+build: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierra
 	cargo build --release --workspace
 
-check: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
+check: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierra
 	cargo check --workspace --all-targets
 
-deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
+deps: check-python-version build-cairo-2-compiler
 	cargo install flamegraph --version 0.6.2 --locked
 	cargo install cargo-llvm-cov --version 0.5.14 --locked
 	-pyenv && pyenv install -s pypy3.9-7.3.9
@@ -168,7 +128,7 @@ deps: check-python-version build-cairo-2-compiler build-cairo-1-compiler
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
 	cargo install cargo-nextest --version 0.9.49 --locked
 
-deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-compiler-macos
+deps-macos: check-python-version build-cairo-2-compiler-macos
 	cargo install flamegraph --version 0.6.2 --locked
 	cargo install cargo-llvm-cov --version 0.5.14 --locked
 	-pyenv install -s pypy3.9-7.3.9
@@ -180,43 +140,29 @@ deps-macos: check-python-version build-cairo-2-compiler-macos build-cairo-1-comp
 clean:
 	-rm -rf starknet-venv/
 	-rm -f cairo_programs/*.json
-	-rm -f cairo_programs/cairo_1_contracts/*.json
-	-rm -f cairo_programs/cairo_1_contracts/*.casm
 	-rm -f starknet_programs/*.json
-	-rm -f starknet_programs/cairo1/*.casm
-	-rm -f starknet_programs/cairo1/*.sierra
 	-rm -f starknet_programs/cairo2/*.casm
 	-rm -f starknet_programs/cairo2/*.sierra
 	-rm -f tests/*.json
-	-rm -rf cairo1/
 	-rm -rf cairo2/
 	-rm -rf cairo-*.tar
 
-clippy: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
+clippy: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierra
 	cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-test: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	echo "Cairo1 tests"
-	$(MAKE) test-cairo-1
-	echo "Cairo2 tests"
-	$(MAKE) test-cairo-2
-
-test-cairo-1: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
-	cargo nextest run --workspace --all-targets --features=cairo_1_tests,metrics,cairo-native
-
-test-cairo-2: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
+test: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --all-targets --features=metrics,cairo-native
 
-test-cairo-native: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
+test-cairo-native: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierra
 	cargo nextest run --workspace --test tests --features=cairo-native integration_tests::cairo_native
 
 test-doctests:
 	cargo test --workspace --doc
 
-coverage: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-2-casm
+coverage: compile-cairo compile-starknet compile-cairo-2-casm
 	$(MAKE) coverage-report
 
-coverage-report: compile-cairo compile-starknet compile-cairo-1-casm compile-cairo-1-sierra compile-cairo-2-casm compile-cairo-2-sierra
+coverage-report: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierra
 	cargo llvm-cov nextest --lcov --ignore-filename-regex 'main.rs' --output-path lcov.info --release
 
 heaptrack:
