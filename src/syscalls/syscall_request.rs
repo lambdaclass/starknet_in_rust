@@ -48,11 +48,36 @@ pub(crate) enum SyscallRequest {
     ReplaceClass(ReplaceClassRequest),
     /// Computes the Keccak256 hash of the given data.
     Keccak(KeccakRequest),
+    /// secp256 operations
+    Secp256k1New(Secp256k1NewRequest),
+    Secp256k1Add(SecpAddRequest),
+    Secp256k1Mul(Secp256k1MulRequest),
+    Secp256k1GetPointFromX(Secp256k1GetPointFromXRequest),
+    Secp256k1GetXy(Secp256k1GetXyRequest),
+    ///
+    Secp256r1New(Secp256r1NewRequest),
+    Secp256r1Add(SecpAddRequest),
+    Secp256r1Mul(Secp256r1MulRequest),
+    Secp256r1GetPointFromX(Secp256r1GetPointFromXRequest),
+    Secp256r1GetXy(Secp256r1GetXyRequest),
 }
+
+
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  SyscallRequest variants
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SecpAddRequest {
+    pub lhs_id: Felt252,
+    pub rhs_id: Felt252,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SecpOpResponse {
+    pub ec_point_id: usize,
+}
 
 /// Gets the timestamp of the block in which the transaction is executed.
 #[derive(Clone, Debug, PartialEq)]
@@ -261,6 +286,19 @@ pub(crate) trait FromPtr {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError>;
+}
+
+impl FromPtr for SecpAddRequest {
+    fn from_ptr(
+        vm: &VirtualMachine,
+        syscall_ptr: Relocatable,
+    ) -> Result<SyscallRequest, SyscallHandlerError> {
+            let lhs = vm.get_integer(syscall_ptr)?;
+            let rhs = vm.get_integer(syscall_ptr)?;
+            let operation = SecpAddRequest { lhs_id: *lhs, rhs_id: *rhs };
+
+            Ok(SyscallRequest::SecpAdd(operation))
+    }
 }
 
 impl FromPtr for ReplaceClassRequest {
