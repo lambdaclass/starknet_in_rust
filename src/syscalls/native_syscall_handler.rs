@@ -33,7 +33,7 @@ use cairo_native::{
     cache::ProgramCache,
     starknet::{
         BlockInfo, ExecutionInfo, ExecutionInfoV2, ResourceBounds, Secp256k1Point, Secp256r1Point,
-        StarkNetSyscallHandler, SyscallResult, TxInfo, TxV2Info, U256,
+        StarknetSyscallHandler, SyscallResult, TxInfo, TxV2Info, U256,
     },
 };
 use cairo_vm::Felt252;
@@ -85,8 +85,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> NativeSyscallHandler<'a,
     }
 }
 
-impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarkNetSyscallHandler
-    for NativeSyscallHandler<'a, 'cache, S, C>
+impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
+    for &mut NativeSyscallHandler<'a, 'cache, S, C>
 {
     fn get_block_hash(
         &mut self,

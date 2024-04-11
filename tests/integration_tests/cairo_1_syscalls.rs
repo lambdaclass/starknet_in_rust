@@ -31,7 +31,7 @@ use std::{
     sync::Arc,
 };
 
-fn create_execute_extrypoint(
+fn create_execute_entrypoint(
     address: Address,
     class_hash: ClassHash,
     selector: &BigUint,
@@ -56,9 +56,9 @@ fn storage_write_read() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/simple_wallet.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let constructor_entrypoint_selector = &entrypoints.constructor.get(0).unwrap().selector;
+    let constructor_entrypoint_selector = &entrypoints.constructor.first().unwrap().selector;
     let get_balance_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
-    let increase_balance_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let increase_balance_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -101,7 +101,7 @@ fn storage_write_read() {
     // RUN CONSTRUCTOR
     // Create an execution entry point
     let calldata = [25.into()].to_vec();
-    let constructor_exec_entry_point = create_execute_extrypoint(
+    let constructor_exec_entry_point = create_execute_entrypoint(
         address.clone(),
         class_hash,
         constructor_entrypoint_selector,
@@ -126,7 +126,7 @@ fn storage_write_read() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         address.clone(),
         class_hash,
         get_balance_entrypoint_selector,
@@ -152,7 +152,7 @@ fn storage_write_read() {
     // RUN INCREASE_BALANCE
     // Create an execution entry point
     let calldata = [100.into()].to_vec();
-    let increase_balance_entry_point = create_execute_extrypoint(
+    let increase_balance_entry_point = create_execute_entrypoint(
         address.clone(),
         class_hash,
         increase_balance_entrypoint_selector,
@@ -177,7 +177,7 @@ fn storage_write_read() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         address,
         class_hash,
         get_balance_entrypoint_selector,
@@ -207,7 +207,7 @@ fn library_call() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/square_root.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -395,7 +395,7 @@ fn call_contract_storage_write_read() {
     let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
         .entry_points_by_type
         .constructor
-        .get(0)
+        .first()
         .unwrap()
         .selector
         .clone();
@@ -434,7 +434,7 @@ fn call_contract_storage_write_read() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let create_execute_extrypoint = |selector: &BigUint,
+    let create_execute_entrypoint = |selector: &BigUint,
                                      calldata: Vec<Felt252>,
                                      entry_point_type: EntryPointType,
                                      class_hash: [u8; 32],
@@ -455,7 +455,7 @@ fn call_contract_storage_write_read() {
     // RUN SIMPLE_WALLET CONSTRUCTOR
     // Create an execution entry point
     let calldata = [25.into()].to_vec();
-    let constructor_exec_entry_point = create_execute_extrypoint(
+    let constructor_exec_entry_point = create_execute_entrypoint(
         &simple_wallet_constructor_entrypoint_selector,
         calldata,
         EntryPointType::Constructor,
@@ -480,7 +480,7 @@ fn call_contract_storage_write_read() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [simple_wallet_address.0].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -506,7 +506,7 @@ fn call_contract_storage_write_read() {
     // RUN INCREASE_BALANCE
     // Create an execution entry point
     let calldata = [100.into(), simple_wallet_address.0].to_vec();
-    let increase_balance_entry_point = create_execute_extrypoint(
+    let increase_balance_entry_point = create_execute_entrypoint(
         increase_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -531,7 +531,7 @@ fn call_contract_storage_write_read() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [simple_wallet_address.0].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -561,7 +561,7 @@ fn emit_event() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/emit_event.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -673,7 +673,7 @@ fn deploy_cairo1_from_cairo1() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/deploy.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -783,7 +783,7 @@ fn deploy_cairo0_from_cairo1_without_constructor() {
         include_bytes!("../../starknet_programs/cairo2/deploy_without_constructor.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -890,7 +890,7 @@ fn deploy_cairo0_from_cairo1_with_constructor() {
         include_bytes!("../../starknet_programs/cairo2/deploy_with_constructor.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -998,7 +998,7 @@ fn deploy_cairo0_and_invoke() {
         include_bytes!("../../starknet_programs/cairo2/deploy_without_constructor.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -1136,7 +1136,7 @@ fn test_send_message_to_l1_syscall() {
 
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let external_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -1166,7 +1166,7 @@ fn test_send_message_to_l1_syscall() {
 
     // RUN SEND_MSG
     // Create an execution entry point
-    let send_message_exec_entry_point = create_execute_extrypoint(
+    let send_message_exec_entry_point = create_execute_entrypoint(
         address.clone(),
         class_hash,
         external_entrypoint_selector,
@@ -1239,7 +1239,7 @@ fn test_get_execution_info() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_execution_info.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let external_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -1281,7 +1281,7 @@ fn test_get_execution_info() {
 
     // RUN GET_INFO
     // Create an execution entry point
-    let get_info_exec_entry_point = create_execute_extrypoint(
+    let get_info_exec_entry_point = create_execute_entrypoint(
         address.clone(),
         class_hash,
         external_entrypoint_selector,
@@ -1342,7 +1342,7 @@ fn replace_class_internal() {
     let program_data_a = include_bytes!("../../starknet_programs/cairo2/get_number_a.casm");
     let contract_class_a: CasmContractClass = serde_json::from_slice(program_data_a).unwrap();
     let entrypoints_a = contract_class_a.clone().entry_points_by_type;
-    let upgrade_selector = &entrypoints_a.external.get(0).unwrap().selector;
+    let upgrade_selector = &entrypoints_a.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -1497,7 +1497,7 @@ fn replace_class_contract_call() {
     let wrapper_contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = wrapper_contract_class.clone().entry_points_by_type;
     let get_number_entrypoint_selector = &entrypoints.external.get(1).unwrap().selector;
-    let upgrade_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let upgrade_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     let wrapper_address = Address(Felt252::from(2));
     let wrapper_class_hash: ClassHash = ClassHash([3; 32]);
@@ -2119,7 +2119,7 @@ fn test_out_of_gas_failure() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/emit_event.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -2202,7 +2202,7 @@ fn deploy_syscall_failure_uninitialized_class_hash() {
         include_bytes!("../../starknet_programs/cairo2/deploy_contract_no_args.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -2284,7 +2284,7 @@ fn deploy_syscall_failure_in_constructor() {
         include_bytes!("../../starknet_programs/cairo2/deploy_contract_no_args.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -2423,7 +2423,7 @@ fn storage_read_no_value() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         address,
         class_hash,
         get_balance_entrypoint_selector,
@@ -2455,7 +2455,7 @@ fn storage_read_unavailable_address_domain() {
         include_bytes!("../../starknet_programs/cairo2/faulty_low_level_storage_read.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let read_storage_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -2498,7 +2498,7 @@ fn storage_read_unavailable_address_domain() {
     // RUN READ_STORAGE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let read_storage_exec_entry_point = create_execute_extrypoint(
+    let read_storage_exec_entry_point = create_execute_entrypoint(
         address,
         class_hash,
         read_storage_entrypoint_selector,
@@ -2533,7 +2533,7 @@ fn storage_write_unavailable_address_domain() {
         include_bytes!("../../starknet_programs/cairo2/faulty_low_level_storage_write.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let read_storage_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -2576,7 +2576,7 @@ fn storage_write_unavailable_address_domain() {
     // RUN READ_STORAGE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let read_storage_exec_entry_point = create_execute_extrypoint(
+    let read_storage_exec_entry_point = create_execute_entrypoint(
         address,
         class_hash,
         read_storage_entrypoint_selector,
@@ -2610,7 +2610,7 @@ fn library_call_failure() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/square_root.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -3100,7 +3100,7 @@ fn keccak_syscall() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/test_cairo_keccak.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let read_storage_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let read_storage_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -3143,7 +3143,7 @@ fn keccak_syscall() {
     // RUN READ_STORAGE
     // Create an execution entry point
     let calldata = [].to_vec();
-    let read_storage_exec_entry_point = create_execute_extrypoint(
+    let read_storage_exec_entry_point = create_execute_entrypoint(
         address,
         class_hash,
         read_storage_entrypoint_selector,
@@ -3177,7 +3177,7 @@ fn library_call_recursive_50_calls() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/square_root_recursive.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -3348,7 +3348,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
         .entry_points_by_type
         .constructor
-        .get(0)
+        .first()
         .unwrap()
         .selector
         .clone();
@@ -3387,7 +3387,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let create_execute_extrypoint = |selector: &BigUint,
+    let create_execute_entrypoint = |selector: &BigUint,
                                      calldata: Vec<Felt252>,
                                      entry_point_type: EntryPointType,
                                      class_hash: [u8; 32],
@@ -3408,7 +3408,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     // RUN SIMPLE_WALLET CONSTRUCTOR
     // Create an execution entry point
     let calldata = [25.into()].to_vec();
-    let constructor_exec_entry_point = create_execute_extrypoint(
+    let constructor_exec_entry_point = create_execute_entrypoint(
         &simple_wallet_constructor_entrypoint_selector,
         calldata,
         EntryPointType::Constructor,
@@ -3433,7 +3433,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [simple_wallet_address.0].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -3459,7 +3459,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     // RUN INCREASE_BALANCE
     // Create an execution entry point
     let calldata = [50.into(), simple_wallet_address.0].to_vec();
-    let increase_balance_entry_point = create_execute_extrypoint(
+    let increase_balance_entry_point = create_execute_entrypoint(
         increase_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -3489,7 +3489,7 @@ fn call_contract_storage_write_read_recursive_50_calls() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [simple_wallet_address.0].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -3554,7 +3554,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     let simple_wallet_constructor_entrypoint_selector = simple_wallet_contract_class
         .entry_points_by_type
         .constructor
-        .get(0)
+        .first()
         .unwrap()
         .selector
         .clone();
@@ -3593,7 +3593,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
 
     let mut resources_manager = ExecutionResourcesManager::default();
 
-    let create_execute_extrypoint = |selector: &BigUint,
+    let create_execute_entrypoint = |selector: &BigUint,
                                      calldata: Vec<Felt252>,
                                      entry_point_type: EntryPointType,
                                      class_hash: [u8; 32],
@@ -3614,7 +3614,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     // RUN SIMPLE_WALLET CONSTRUCTOR
     // Create an execution entry point
     let calldata = [25.into()].to_vec();
-    let constructor_exec_entry_point = create_execute_extrypoint(
+    let constructor_exec_entry_point = create_execute_entrypoint(
         &simple_wallet_constructor_entrypoint_selector,
         calldata,
         EntryPointType::Constructor,
@@ -3639,7 +3639,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [simple_wallet_address.0].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -3665,7 +3665,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     // RUN INCREASE_BALANCE
     // Create an execution entry point
     let calldata = [100.into(), simple_wallet_address.0].to_vec();
-    let increase_balance_entry_point = create_execute_extrypoint(
+    let increase_balance_entry_point = create_execute_entrypoint(
         increase_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -3695,7 +3695,7 @@ fn call_contract_storage_write_read_recursive_100_calls() {
     // RUN GET_BALANCE
     // Create an execution entry point
     let calldata = [simple_wallet_address.0].to_vec();
-    let get_balance_exec_entry_point = create_execute_extrypoint(
+    let get_balance_exec_entry_point = create_execute_entrypoint(
         get_balance_entrypoint_selector,
         calldata,
         EntryPointType::External,
@@ -3729,7 +3729,7 @@ fn test_get_execution_info_v2() {
     let program_data = include_bytes!("../../starknet_programs/cairo2/get_execution_info_v2.casm");
     let contract_class: CasmContractClass = serde_json::from_slice(program_data).unwrap();
     let entrypoints = contract_class.clone().entry_points_by_type;
-    let external_entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let external_entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     // Create state reader with class hash data
     let contract_class_cache = PermanentContractClassCache::default();
@@ -3787,7 +3787,7 @@ fn test_get_execution_info_v2() {
 
     // RUN GET_INFO
     // Create an execution entry point
-    let get_info_exec_entry_point = create_execute_extrypoint(
+    let get_info_exec_entry_point = create_execute_entrypoint(
         address.clone(),
         class_hash,
         external_entrypoint_selector,

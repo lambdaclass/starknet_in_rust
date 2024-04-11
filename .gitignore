@@ -46,6 +46,8 @@ starknet-venv/
 
 starknet_programs/cairo2/*.casm
 starknet_programs/cairo2/*.sierra
+starknet_programs/kakarot/*.casm
+starknet_programs/kakarot/*.sierra
 default.profraw
 **.DS_Store
 /scripts/reports
