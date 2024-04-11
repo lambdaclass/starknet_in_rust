@@ -18,7 +18,7 @@ use starknet_in_rust::utils::{calculate_sn_keccak, felt_to_field_element, field_
 use crate::integration_tests::cairo_native::TestStateSetup;
 
 #[test]
-#[ignore = "linked to native issue #499 and #500"]
+// #[ignore = "linked to native issue #499 and #500"]
 fn test_kakarot_contract() {
     // Evm constants
     let private_key: B256 =

@@ -1317,7 +1317,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=8fddcd3914badfe3f89752fe7a22befeaffc17f9#8fddcd3914badfe3f89752fe7a22befeaffc17f9"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=60ed062a3d6d40cd8688a580f440af525f40d437#60ed062a3d6d40cd8688a580f440af525f40d437"
 dependencies = [
  "anyhow",
  "bumpalo",
@@ -1361,7 +1361,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=8fddcd3914badfe3f89752fe7a22befeaffc17f9#8fddcd3914badfe3f89752fe7a22befeaffc17f9"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=60ed062a3d6d40cd8688a580f440af525f40d437#60ed062a3d6d40cd8688a580f440af525f40d437"
 dependencies = [
  "cairo-lang-runner",
  "lazy_static",
@@ -1438,10 +1438,11 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.88"
+version = "1.0.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02f341c093d19155a6e41631ce5971aac4e9a868262212153124c15fa22d1cdc"
+checksum = "2678b2e3449475e95b0aa6f9b506a28e61b3dc8996592b983695e8ebb58a8b41"
 dependencies = [
+ "jobserver",
  "libc",
 ]
 
@@ -2859,6 +2860,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 
 [[package]]
+name = "jobserver"
+version = "0.1.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab46a6e9526ddef3ae7f787c06f0f2600639ba80ea3eade3d8e670a2230f51d6"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3115,9 +3125,9 @@ dependencies = [
 
 [[package]]
 name = "melior"
-version = "0.16.2"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e76dd7ff903474595023aebb93f8287667a2fe95132c65e1c77efdb99c64a973"
+checksum = "672be978c3550fd9c329987c9457e60e4452049b24518a5acb2d3f14cf6d2777"
 dependencies = [
  "dashmap",
  "melior-macro",
@@ -5578,18 +5588,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.57"
+version = "1.0.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e45bcbe8ed29775f228095caf2cd67af7a4ccf756ebff23a306bf3e8b47b24b"
+checksum = "03468839009160513471e86a034bb2c5c0e4baae3b43f79ffc55c4a5427b3297"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.57"
+version = "1.0.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a953cb265bef375dae3de6663da4d3804eee9682ea80d8e2542529b73c531c81"
+checksum = "c61f3ba182994efc43764a46c018c347bc492c79f024e705f46567b418f6d4f7"
 dependencies = [
  "proc-macro2",
  "quote",

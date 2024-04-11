@@ -122,12 +122,7 @@ pub fn field_element_to_felt(felt: &FieldElement) -> Felt252 {
 }
 
 pub fn felt_to_hash(value: &Felt252) -> ClassHash {
-    let mut output = [0; 32];
-
-    let bytes = value.to_bytes_be();
-    output[..].copy_from_slice(&bytes);
-
-    ClassHash(output)
+    ClassHash(value.to_bytes_be())
 }
 
 pub fn string_to_hash(class_string: &str) -> ClassHash {
