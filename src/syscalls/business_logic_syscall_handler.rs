@@ -2,7 +2,10 @@ use super::{
     syscall_handler_errors::SyscallHandlerError,
     syscall_info::get_syscall_size_from_name,
     syscall_request::{
-        CallContractRequest, DeployRequest, EmitEventRequest, FromPtr, GetBlockHashRequest, GetBlockTimestampRequest, KeccakRequest, LibraryCallRequest, ReplaceClassRequest, SecpAddRequest, SendMessageToL1Request, StorageReadRequest, StorageWriteRequest, SyscallRequest
+        CallContractRequest, DeployRequest, EmitEventRequest, FromPtr, GetBlockHashRequest,
+        GetBlockTimestampRequest, KeccakRequest, LibraryCallRequest, ReplaceClassRequest,
+        SecpAddRequest, SendMessageToL1Request, StorageReadRequest, StorageWriteRequest,
+        SyscallRequest,
     },
     syscall_response::{
         CallContractResponse, DeployResponse, FailureReason, GetBlockHashResponse,
@@ -61,12 +64,6 @@ use {
     std::{cell::RefCell, rc::Rc},
 };
 
-pub(crate) const STEP: u128 = 100;
-pub(crate) const SYSCALL_BASE: u128 = 100 * STEP;
-pub(crate) const KECCAK_ROUND_COST: u128 = 180000;
-pub(crate) const RANGE_CHECK: u128 = 70;
-pub(crate) const MEMORY_HOLE: u128 = 10;
-
 lazy_static! {
     static ref SYSCALLS: Vec<String> = Vec::from([
         "emit_event".to_string(),
@@ -78,16 +75,6 @@ lazy_static! {
         "get_contract_address".to_string(),
         "get_sequencer_address".to_string(),
         "get_block_timestamp".to_string(),
-        "secp256k1_add".to_string(),
-        "secp256r1_add".to_string(),
-        "secp256k1_get_xy".to_string(),
-        "secp256r1_get_xy".to_string(),
-        "secp256k1_mul".to_string(),
-        "secp256r1_mul".to_string(),
-        "secp256k1_new".to_string(),
-        "secp256r1_new".to_string(),
-        "secp256r1_get_point_from_x".to_string(),
-        "secp256k1_get_point_from_x".to_string(),        
     ]);
 
     /// Felt->syscall map that was extracted from new_syscalls.json (Cairo 1.0 syscalls)
@@ -167,14 +154,14 @@ lazy_static! {
         map.insert("secp256k1_get_xy", 239 * STEP + 11 * RANGE_CHECK + 40 * MEMORY_HOLE);
         map.insert("secp256k1_mul", 76501 * STEP + 7045 * RANGE_CHECK + 2 * MEMORY_HOLE);
         map.insert("secp256k1_new", 475 * STEP + 35 * RANGE_CHECK + 40 * MEMORY_HOLE);
-    
+
         // Secp256r1
         map.insert("secp256r1_add", 589 * STEP + 57 * RANGE_CHECK);
         map.insert("secp256r1_get_point_from_x", 510 * STEP + 44 * RANGE_CHECK + 20 * MEMORY_HOLE);
         map.insert("secp256r1_get_xy", 241 * STEP + 11 * RANGE_CHECK + 40 * MEMORY_HOLE);
         map.insert("secp256r1_mul", 125340 * STEP + 13961 * RANGE_CHECK + 2 * MEMORY_HOLE);
         map.insert("secp256r1_new", 594 * STEP + 49 * RANGE_CHECK + 40 * MEMORY_HOLE);
-        
+
         map
     };
 }
@@ -274,7 +261,8 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
         let events = Vec::new();
         let tx_execution_context = Default::default();
         let read_only_segments = Vec::new();
-        let resources_manager = ExecutionResourcesManager::new(SYSCALLS.clone(), Default::default());
+        let resources_manager =
+            ExecutionResourcesManager::new(SYSCALLS.clone(), Default::default());
         let contract_address = Address(1.into());
         let caller_address = Address(0.into());
         let l2_to_l1_messages = Vec::new();
@@ -1113,12 +1101,12 @@ impl<'a, S: StateReader, C: ContractClassCache> BusinessLogicSyscallHandler<'a, 
             "replace_class" => ReplaceClassRequest::from_ptr(vm, syscall_ptr),
             "keccak" => KeccakRequest::from_ptr(vm, syscall_ptr),
             "secp256k1_add" => SecpAddRequest::from_ptr(vm, syscall_ptr),
+            "secp256r1_add" => SecpAddRequest::from_ptr(vm, syscall_ptr),
             // "secp256k1_get_point_from_x" => Secp256,
             // "secp256k1_get_xy".to_string(),
             // "secp256k1_get_xy".to_string(),
             // "secp256k1_mul".to_string(),
             // "secp256k1_new".to_string(),
-            // "secp256r1_add".to_string(),
             // "secp256r1_get_point_from_x".to_string(),
             // "secp256r1_get_xy".to_string(),
             // "secp256r1_mul".to_string(),

@@ -50,19 +50,16 @@ pub(crate) enum SyscallRequest {
     Keccak(KeccakRequest),
     /// secp256 operations
     Secp256k1New(Secp256k1NewRequest),
-    Secp256k1Add(SecpAddRequest),
+    Secp256Add(SecpAddRequest),
     Secp256k1Mul(Secp256k1MulRequest),
     Secp256k1GetPointFromX(Secp256k1GetPointFromXRequest),
     Secp256k1GetXy(Secp256k1GetXyRequest),
     ///
     Secp256r1New(Secp256r1NewRequest),
-    Secp256r1Add(SecpAddRequest),
     Secp256r1Mul(Secp256r1MulRequest),
     Secp256r1GetPointFromX(Secp256r1GetPointFromXRequest),
     Secp256r1GetXy(Secp256r1GetXyRequest),
 }
-
-
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~
 //  SyscallRequest variants
@@ -293,11 +290,13 @@ impl FromPtr for SecpAddRequest {
         vm: &VirtualMachine,
         syscall_ptr: Relocatable,
     ) -> Result<SyscallRequest, SyscallHandlerError> {
-            let lhs = vm.get_integer(syscall_ptr)?;
-            let rhs = vm.get_integer(syscall_ptr)?;
-            let operation = SecpAddRequest { lhs_id: *lhs, rhs_id: *rhs };
-
-            Ok(SyscallRequest::SecpAdd(operation))
+        let lhs = vm.get_integer(syscall_ptr)?;
+        let rhs = vm.get_integer(syscall_ptr)?;
+        let operation = SecpAddRequest {
+            lhs_id: *lhs,
+            rhs_id: *rhs,
+        };
+        Ok(SyscallRequest::Secp256Add(operation))
     }
 }
 
