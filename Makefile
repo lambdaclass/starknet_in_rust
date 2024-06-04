@@ -83,7 +83,7 @@ $(CAIRO_2_CONTRACTS_TEST_DIR)/%.casm: $(CAIRO_2_CONTRACTS_TEST_DIR)/%.sierra
 compile-cairo-2-sierra: $(CAIRO_2_COMPILED_SIERRA_CONTRACTS)
 compile-cairo-2-casm: $(CAIRO_2_COMPILED_CASM_CONTRACTS)
 
-CAIRO_2_VERSION=2.5.4
+CAIRO_2_VERSION=2.6.3
 
 cairo-repo-2-dir = cairo2
 cairo-repo-2-dir-macos = cairo2-macos
@@ -113,7 +113,7 @@ cairo-%.tar:
 # Test Cairo Kakarot Contracts
 # =============================
 
-KAKAROT_VERSION=v0.1.1
+KAKAROT_VERSION=v0.1.8
 KAKAROT_DIR=starknet_programs/kakarot
 
 KAKAROT_FILES:=$(wildcard $(KAKAROT_DIR)/*.json)
@@ -154,17 +154,17 @@ check: compile-cairo compile-starknet compile-cairo-2-casm compile-cairo-2-sierr
 	cargo check --workspace --all-targets
 
 deps: check-python-version build-cairo-2-compiler
-	cargo install flamegraph --version 0.6.2 --locked
-	cargo install cargo-llvm-cov --version 0.5.14 --locked
+	cargo install flamegraph --version 0.6.5 --locked
+	cargo install cargo-llvm-cov --version 0.6.10 --locked
 	-pyenv && pyenv install -s pypy3.9-7.3.9
 	-pyenv && pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
 	. starknet-venv/bin/activate && $(MAKE) deps-venv
-	cargo install cargo-nextest --version 0.9.49 --locked
+	cargo install cargo-nextest --version 0.9.72 --locked
 
 deps-macos: check-python-version build-cairo-2-compiler-macos
-	cargo install flamegraph --version 0.6.2 --locked
-	cargo install cargo-llvm-cov --version 0.5.14 --locked
+	cargo install flamegraph --version 0.6.5 --locked
+	cargo install cargo-llvm-cov --version 0.6.10 --locked
 	-pyenv install -s pypy3.9-7.3.9
 	-pyenv install -s 3.9.15
 	python3.9 -m venv starknet-venv
