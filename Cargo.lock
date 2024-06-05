@@ -4447,7 +4447,7 @@ dependencies = [
  "serde_json",
  "serde_with 3.8.1",
  "starknet",
- "starknet_api 0.7.0-dev.0",
+ "starknet_api 0.11.0",
  "starknet_in_rust",
  "test-case",
  "thiserror",

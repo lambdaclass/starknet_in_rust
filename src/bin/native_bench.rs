@@ -109,7 +109,7 @@ fn bench_fibo(executions: usize, bench_type: BenchType) {
         }
         _ => {
             let sierra_data = include_bytes!("../../starknet_programs/cairo2/fibonacci.sierra");
-            let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            let sierra_contract_class: cairo_lang_starknet_classes::contract_class::ContractClass =
                 serde_json::from_slice(sierra_data).unwrap();
 
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
@@ -195,7 +195,7 @@ fn bench_fact(executions: usize, bench_type: BenchType) {
         }
         _ => {
             let sierra_data = include_bytes!("../../starknet_programs/cairo2/factorial_tr.sierra");
-            let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            let sierra_contract_class: cairo_lang_starknet_classes::contract_class::ContractClass =
                 serde_json::from_slice(sierra_data).unwrap();
 
             let entrypoints = sierra_contract_class.clone().entry_points_by_type;
@@ -389,7 +389,7 @@ fn bench_erc20(executions: usize, bench_type: BenchType) {
         }
         _ => {
             let erc20_sierra_class = include_bytes!("../../starknet_programs/cairo2/erc20.sierra");
-            let sierra_contract_class: cairo_lang_starknet::contract_class::ContractClass =
+            let sierra_contract_class: cairo_lang_starknet_classes::contract_class::ContractClass =
                 serde_json::from_slice(erc20_sierra_class).unwrap();
             let sierra_program = sierra_contract_class.extract_sierra_program().unwrap();
             let entrypoints = sierra_contract_class.entry_points_by_type;

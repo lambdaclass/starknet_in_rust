@@ -1,9 +1,7 @@
 use std::str::FromStr;
 
 use cairo_vm::Felt252;
-use reth_primitives::{
-    sign_message, AccessList, Bytes, Signature, TransactionSigned, TxValue, B256, U256,
-};
+use reth_primitives::{sign_message, AccessList, Bytes, Signature, TransactionSigned, B256, U256};
 use starknet::core::utils::{get_contract_address, get_storage_var_address, starknet_keccak};
 use starknet_api::core::L2_ADDRESS_UPPER_BOUND;
 use starknet_crypto::{poseidon_hash_many, FieldElement};
@@ -251,7 +249,7 @@ fn test_kakarot_contract() {
             max_fee_per_gas: 0,
             max_priority_fee_per_gas: 0,
             to: reth_primitives::TransactionKind::Call(contract_address),
-            value: TxValue::from(u8::MIN),
+            value: u8::MIN.try_into().unwrap(),
             access_list: AccessList::default(),
             input: Bytes::default(),
         }),
