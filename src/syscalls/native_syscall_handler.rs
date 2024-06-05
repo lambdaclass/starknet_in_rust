@@ -701,7 +701,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
             buf
         })
         .map_err(|_| {
-            vec![Felt::from_bytes_be(
+            vec![Felt252::from_bytes_be(
                 b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0invalid scalar",
             )]
         })?
@@ -931,7 +931,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
             buf
         })
         .map_err(|_| {
-            vec![Felt::from_bytes_be(
+            vec![Felt252::from_bytes_be(
                 b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0invalid scalar",
             )]
         })?
