@@ -16,7 +16,7 @@ use starknet_in_rust::utils::{calculate_sn_keccak, felt_to_field_element, field_
 use crate::integration_tests::cairo_native::TestStateSetup;
 
 #[test]
-// #[ignore = "linked to native issue #499 and #500"]
+// #[ignore = "Failed to deserialize param #1: see PR `https://github.com/lambdaclass/cairo_native/pull/630`"]
 fn test_kakarot_contract() {
     // Evm constants
     let private_key: B256 =
@@ -35,6 +35,7 @@ fn test_kakarot_contract() {
     let uninitialized_account_class_hash = ClassHash([3; 32]);
 
     // EOA
+    let eoa_nonce = Felt252::ZERO;
     let eoa_evm_address = Felt252::from_bytes_be_slice(public_key.0.as_slice());
     let eoa_class_hash = ClassHash([2; 32]);
     let eoa_address = compute_starknet_address(
@@ -45,6 +46,7 @@ fn test_kakarot_contract() {
     let eoa_address = Address(eoa_address);
 
     // Contract Account
+    let contract_nonce = Felt252::ZERO;
     let contract_account_evm_address = Felt252::from_bytes_be_slice(contract_address.0.as_slice());
     let contract_account_class_hash = ClassHash([3; 32]);
     let contract_account_address = compute_starknet_address(
@@ -57,7 +59,8 @@ fn test_kakarot_contract() {
     let bytecode = Felt252::from_bytes_be_slice(&[
         0x60, 0x01, 0x60, 0x00, 0x55, 0x60, 0x02, 0x60, 0x00, 0x53, 0x60, 0x01, 0x60, 0x00, 0xf3,
     ]);
-    let bytecode_base_address = compute_storage_key("contract_account_bytecode", &[]);
+    let bytecode_base_address = compute_storage_key("Account_bytecode", &[]);
+
     let bytecode_storage_key = field_element_to_felt(&poseidon_hash_many(&[
         felt_to_field_element(&bytecode_base_address).unwrap(),
         FieldElement::ZERO,
@@ -83,7 +86,7 @@ fn test_kakarot_contract() {
         .load_contract_at_address(
             eoa_class_hash,
             eoa_address.clone(),
-            "starknet_programs/kakarot/contracts_ExternallyOwnedAccount.cairo",
+            "starknet_programs/kakarot/contracts_AccountContract.cairo",
         )
         .unwrap();
     // Deploy Contract Account
@@ -91,7 +94,7 @@ fn test_kakarot_contract() {
         .load_contract_at_address(
             contract_account_class_hash,
             contract_account_address.clone(),
-            "starknet_programs/kakarot/contracts_ContractAccount.cairo",
+            "starknet_programs/kakarot/contracts_AccountContract.cairo",
         )
         .unwrap();
 
@@ -105,124 +108,179 @@ fn test_kakarot_contract() {
 
     // Prepare storage for Kakarot
     let kakarot_storage = vec![
+        // Add the EOA to the address registry
         (
-            (kakarot_address.clone(), compute_storage_key("owner", &[])),
+            (
+                kakarot_address.clone(),
+                compute_storage_key("Kakarot_evm_to_starknet_address", &[eoa_evm_address]),
+            ),
             eoa_address.0,
         ),
         (
+            // Add the contract account to the address registry
             (
                 kakarot_address.clone(),
-                compute_storage_key("chain_id", &[]),
+                compute_storage_key(
+                    "Kakarot_evm_to_starknet_address",
+                    &[contract_account_evm_address],
+                ),
             ),
-            chain_id,
+            contract_account_address.0,
         ),
         (
             (
                 kakarot_address.clone(),
-                compute_storage_key("native_token", &[]),
+                compute_storage_key("Kakarot_uninitialized_account_class_hash", &[]),
             ),
-            fee_token_address.0,
+            Felt252::from_bytes_be(&uninitialized_account_class_hash.0),
         ),
         (
             (
                 kakarot_address.clone(),
-                compute_storage_key("ca_class_hash", &[]),
+                compute_storage_key("Kakarot_account_contract_class_hash", &[]),
             ),
             Felt252::from_bytes_be(&contract_account_class_hash.0),
         ),
         (
             (
                 kakarot_address.clone(),
-                compute_storage_key("eoa_class_hash", &[]),
+                compute_storage_key("Kakarot_native_token_address", &[]),
             ),
-            Felt252::from_bytes_be(&eoa_class_hash.0),
+            fee_token_address.0,
         ),
         (
             (
                 kakarot_address.clone(),
-                compute_storage_key("account_class_hash", &[]),
-            ),
-            Felt252::from_bytes_be(&uninitialized_account_class_hash.0),
-        ),
-        // Add the EOA to the address registry
-        (
-            (
-                kakarot_address.clone(),
-                compute_storage_key("address_registry", &[eoa_evm_address]),
-            ),
-            Felt252::ONE, // Set account type to 1 (EOA)
-        ),
-        (
-            (
-                kakarot_address.clone(),
-                compute_storage_key("address_registry", &[eoa_evm_address]) + Felt252::ONE,
+                compute_storage_key("Kakarot_coinbase", &[]),
             ),
             eoa_address.0,
         ),
-        // Add the contract account to the address registry
         (
             (
                 kakarot_address.clone(),
-                compute_storage_key("address_registry", &[contract_account_evm_address]),
+                compute_storage_key("Kakarot_base_fee", &[]),
             ),
-            Felt252::TWO, // Set account type to 1 (CA)
+            Felt252::ONE,
         ),
         (
             (
                 kakarot_address.clone(),
-                compute_storage_key("address_registry", &[contract_account_evm_address])
-                    + Felt252::ONE,
+                compute_storage_key("Kakarot_prev_randao", &[]),
             ),
-            contract_account_address.0,
+            Felt252::ZERO,
+        ),
+        (
+            (
+                kakarot_address.clone(),
+                compute_storage_key("Kakarot_block_gas_limit", &[]),
+            ),
+            Felt252::MAX,
+        ),
+        (
+            (
+                kakarot_address.clone(),
+                compute_storage_key("Ownable_owner", &[]),
+            ),
+            eoa_address.0,
         ),
     ];
 
     // Prepare storage for EOA
     let eoa_storage = vec![
+        // Set the bytecode
+        ((eoa_address.clone(), bytecode_storage_key), Felt252::ZERO),
         (
-            (eoa_address.clone(), compute_storage_key("evm_address", &[])),
-            eoa_evm_address,
-        ),
-        (
-            (eoa_address.clone(), compute_storage_key("chain_id", &[])),
-            chain_id,
+            (
+                eoa_address.clone(),
+                compute_storage_key("Account_storage", &[]),
+            ),
+            Felt252::ZERO,
         ),
         (
             (
                 eoa_address.clone(),
-                compute_storage_key("kakarot_core_address", &[]),
+                compute_storage_key("Account_is_initialized", &[]),
             ),
-            kakarot_address.clone().0,
+            Felt252::ONE,
+        ),
+        (
+            (
+                eoa_address.clone(),
+                compute_storage_key("Account_nonce", &[]),
+            ),
+            eoa_nonce,
+        ),
+        (
+            (
+                eoa_address.clone(),
+                compute_storage_key("Account_implementation", &[]),
+            ),
+            Felt252::from_bytes_be(&eoa_class_hash.0),
+        ),
+        (
+            (
+                eoa_address.clone(),
+                compute_storage_key("Account_evm_address", &[]),
+            ),
+            eoa_address.0,
+        ),
+        (
+            (
+                eoa_address.clone(),
+                compute_storage_key("Ownable_owner", &[]),
+            ),
+            kakarot_address.0,
         ),
     ];
 
     // Prepare storage for Contract Account
     let contract_account_storage = vec![
+        // Set the bytecode
+        (
+            (contract_account_address.clone(), bytecode_storage_key),
+            bytecode,
+        ),
         (
             (
                 contract_account_address.clone(),
-                compute_storage_key("evm_address", &[]),
+                compute_storage_key("Account_storage", &[]),
+            ),
+            Felt252::ZERO,
+        ),
+        (
+            (
+                contract_account_address.clone(),
+                compute_storage_key("Account_is_initialized", &[]),
+            ),
+            Felt252::ONE,
+        ),
+        (
+            (
+                contract_account_address.clone(),
+                compute_storage_key("Account_nonce", &[]),
+            ),
+            contract_nonce,
+        ),
+        (
+            (
+                contract_account_address.clone(),
+                compute_storage_key("Account_implementation", &[]),
+            ),
+            Felt252::from_bytes_be(&kakarot_class_hash.0),
+        ),
+        (
+            (
+                contract_account_address.clone(),
+                compute_storage_key("Account_evm_address", &[]),
             ),
             contract_account_evm_address,
         ),
         (
             (
                 contract_account_address.clone(),
-                compute_storage_key("chain_id", &[]),
-            ),
-            chain_id,
-        ),
-        (
-            (
-                contract_account_address.clone(),
-                compute_storage_key("kakarot_core_address", &[]),
+                compute_storage_key("Ownable_owner", &[]),
             ),
             kakarot_address.0,
-        ),
-        // Set the bytecode
-        (
-            (contract_account_address.clone(), bytecode_storage_key),
-            bytecode,
         ),
     ];
 
@@ -249,7 +307,7 @@ fn test_kakarot_contract() {
             max_fee_per_gas: 0,
             max_priority_fee_per_gas: 0,
             to: reth_primitives::TransactionKind::Call(contract_address),
-            value: u8::MIN.try_into().unwrap(),
+            value: U256::from(u8::MIN),
             access_list: AccessList::default(),
             input: Bytes::default(),
         }),
@@ -303,6 +361,7 @@ fn test_kakarot_contract() {
         &[Felt252::ZERO, Felt252::ZERO],
     );
     let (_, value) = state.storage_writes_at((contract_account_address, low_key.to_bytes_be()));
+    assert!(value.is_some());
     assert_eq!(value.unwrap(), Felt252::ONE);
 }
 
