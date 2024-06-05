@@ -568,18 +568,18 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         &mut self,
         x: U256,
         y: U256,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<Option<Secp256k1Point>> {
         // The following unwraps should be unreachable because the iterator we provide has the
         // expected number of bytes.
         let point = k256::ProjectivePoint::from_encoded_point(
             &k256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
-                    x.hi.to_be_bytes().into_iter().chain(x.lo.to_be_bytes()),
+                    x.lo.to_be_bytes().into_iter().chain(x.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 &GenericArray::from_exact_iter(
-                    y.hi.to_be_bytes().into_iter().chain(y.lo.to_be_bytes()),
+                    y.lo.to_be_bytes().into_iter().chain(y.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 false,
@@ -597,7 +597,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         &mut self,
         p0: Secp256k1Point,
         p1: Secp256k1Point,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<Secp256k1Point> {
         // The inner unwraps should be unreachable because the iterator we provide has the expected
         // number of bytes. The outer unwraps depend on the felt values, which should be valid since
@@ -605,17 +605,17 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let p0 = k256::ProjectivePoint::from_encoded_point(
             &k256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
-                    p0.x.hi
+                    p0.x.lo
                         .to_be_bytes()
                         .into_iter()
-                        .chain(p0.x.lo.to_be_bytes()),
+                        .chain(p0.x.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 &GenericArray::from_exact_iter(
-                    p0.y.hi
+                    p0.y.lo
                         .to_be_bytes()
                         .into_iter()
-                        .chain(p0.y.lo.to_be_bytes()),
+                        .chain(p0.y.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 false,
@@ -625,17 +625,17 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let p1 = k256::ProjectivePoint::from_encoded_point(
             &k256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
-                    p1.x.hi
+                    p1.x.lo
                         .to_be_bytes()
                         .into_iter()
-                        .chain(p1.x.lo.to_be_bytes()),
+                        .chain(p1.x.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 &GenericArray::from_exact_iter(
-                    p1.y.hi
+                    p1.y.lo
                         .to_be_bytes()
                         .into_iter()
-                        .chain(p1.y.lo.to_be_bytes()),
+                        .chain(p1.y.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 false,
@@ -661,12 +661,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let y: [u8; 32] = y.as_slice().try_into().unwrap();
         Ok(Secp256k1Point {
             x: U256 {
-                hi: u128::from_be_bytes(x[0..16].try_into().unwrap()),
-                lo: u128::from_be_bytes(x[16..32].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[0..16].try_into().unwrap()),
+                hi: u128::from_be_bytes(x[16..32].try_into().unwrap()),
             },
             y: U256 {
-                hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
-                lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                hi: u128::from_be_bytes(y[16..32].try_into().unwrap()),
             },
         })
     }
@@ -675,7 +675,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         &mut self,
         p: Secp256k1Point,
         m: U256,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<Secp256k1Point> {
         // The inner unwrap should be unreachable because the iterator we provide has the expected
         // number of bytes. The outer unwrap depends on the felt values, which should be valid since
@@ -683,11 +683,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let p = k256::ProjectivePoint::from_encoded_point(
             &k256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
-                    p.x.hi.to_be_bytes().into_iter().chain(p.x.lo.to_be_bytes()),
+                    p.x.lo.to_be_bytes().into_iter().chain(p.x.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 &GenericArray::from_exact_iter(
-                    p.y.hi.to_be_bytes().into_iter().chain(p.y.lo.to_be_bytes()),
+                    p.y.lo.to_be_bytes().into_iter().chain(p.y.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 false,
@@ -696,12 +696,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         .unwrap();
         let m: k256::Scalar = k256::elliptic_curve::ScalarPrimitive::from_slice(&{
             let mut buf = [0u8; 32];
-            buf[0..16].copy_from_slice(&m.hi.to_be_bytes());
-            buf[16..32].copy_from_slice(&m.lo.to_be_bytes());
+            buf[0..16].copy_from_slice(&m.lo.to_be_bytes());
+            buf[16..32].copy_from_slice(&m.hi.to_be_bytes());
             buf
         })
         .map_err(|_| {
-            vec![Felt252::from_bytes_be(
+            vec![Felt::from_bytes_be(
                 b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0invalid scalar",
             )]
         })?
@@ -725,12 +725,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let y: [u8; 32] = y.as_slice().try_into().unwrap();
         Ok(Secp256k1Point {
             x: U256 {
-                hi: u128::from_be_bytes(x[0..16].try_into().unwrap()),
-                lo: u128::from_be_bytes(x[16..32].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[0..16].try_into().unwrap()),
+                hi: u128::from_be_bytes(x[16..32].try_into().unwrap()),
             },
             y: U256 {
-                hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
-                lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                hi: u128::from_be_bytes(y[16..32].try_into().unwrap()),
             },
         })
     }
@@ -739,7 +739,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         &mut self,
         x: U256,
         y_parity: bool,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<Option<Secp256k1Point>> {
         // The inner unwrap should be unreachable because the iterator we provide has the expected
         // number of bytes. The outer unwrap depends on the encoding format, which should be valid
@@ -748,8 +748,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
             &k256::EncodedPoint::from_bytes(
                 k256::CompressedPoint::from_exact_iter(
                     once(0x02 | y_parity as u8)
-                        .chain(x.hi.to_be_bytes())
-                        .chain(x.lo.to_be_bytes()),
+                        .chain(x.lo.to_be_bytes())
+                        .chain(x.hi.to_be_bytes()),
                 )
                 .unwrap(),
             )
@@ -777,8 +777,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
             Ok(Some(Secp256k1Point {
                 x,
                 y: U256 {
-                    hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
-                    lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+                    lo: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                    hi: u128::from_be_bytes(y[16..32].try_into().unwrap()),
                 },
             }))
         } else {
@@ -789,7 +789,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
     fn secp256k1_get_xy(
         &mut self,
         p: Secp256k1Point,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<(U256, U256)> {
         Ok((p.x, p.y))
     }
@@ -798,18 +798,18 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         &mut self,
         x: U256,
         y: U256,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<Option<Secp256r1Point>> {
         // The following unwraps should be unreachable because the iterator we provide has the
         // expected number of bytes.
         let point = p256::ProjectivePoint::from_encoded_point(
             &k256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
-                    x.hi.to_be_bytes().into_iter().chain(x.lo.to_be_bytes()),
+                    x.lo.to_be_bytes().into_iter().chain(x.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 &GenericArray::from_exact_iter(
-                    y.hi.to_be_bytes().into_iter().chain(y.lo.to_be_bytes()),
+                    y.lo.to_be_bytes().into_iter().chain(y.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 false,
@@ -827,7 +827,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         &mut self,
         p0: Secp256r1Point,
         p1: Secp256r1Point,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<Secp256r1Point> {
         // The inner unwraps should be unreachable because the iterator we provide has the expected
         // number of bytes. The outer unwraps depend on the felt values, which should be valid since
@@ -835,17 +835,17 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let p0 = p256::ProjectivePoint::from_encoded_point(
             &p256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
-                    p0.x.hi
+                    p0.x.lo
                         .to_be_bytes()
                         .into_iter()
-                        .chain(p0.x.lo.to_be_bytes()),
+                        .chain(p0.x.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 &GenericArray::from_exact_iter(
-                    p0.y.hi
+                    p0.y.lo
                         .to_be_bytes()
                         .into_iter()
-                        .chain(p0.y.lo.to_be_bytes()),
+                        .chain(p0.y.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 false,
@@ -855,17 +855,17 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let p1 = p256::ProjectivePoint::from_encoded_point(
             &p256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
-                    p1.x.hi
+                    p1.x.lo
                         .to_be_bytes()
                         .into_iter()
-                        .chain(p1.x.lo.to_be_bytes()),
+                        .chain(p1.x.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 &GenericArray::from_exact_iter(
-                    p1.y.hi
+                    p1.y.lo
                         .to_be_bytes()
                         .into_iter()
-                        .chain(p1.y.lo.to_be_bytes()),
+                        .chain(p1.y.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 false,
@@ -891,12 +891,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let y: [u8; 32] = y.as_slice().try_into().unwrap();
         Ok(Secp256r1Point {
             x: U256 {
-                hi: u128::from_be_bytes(x[0..16].try_into().unwrap()),
-                lo: u128::from_be_bytes(x[16..32].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[0..16].try_into().unwrap()),
+                hi: u128::from_be_bytes(x[16..32].try_into().unwrap()),
             },
             y: U256 {
-                hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
-                lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                hi: u128::from_be_bytes(y[16..32].try_into().unwrap()),
             },
         })
     }
@@ -905,7 +905,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         &mut self,
         p: Secp256r1Point,
         m: U256,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<Secp256r1Point> {
         // The inner unwrap should be unreachable because the iterator we provide has the expected
         // number of bytes. The outer unwrap depends on the felt values, which should be valid since
@@ -913,11 +913,11 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let p = p256::ProjectivePoint::from_encoded_point(
             &p256::EncodedPoint::from_affine_coordinates(
                 &GenericArray::from_exact_iter(
-                    p.x.hi.to_be_bytes().into_iter().chain(p.x.lo.to_be_bytes()),
+                    p.x.lo.to_be_bytes().into_iter().chain(p.x.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 &GenericArray::from_exact_iter(
-                    p.y.hi.to_be_bytes().into_iter().chain(p.y.lo.to_be_bytes()),
+                    p.y.lo.to_be_bytes().into_iter().chain(p.y.hi.to_be_bytes()),
                 )
                 .unwrap(),
                 false,
@@ -926,19 +926,18 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         .unwrap();
         let m: p256::Scalar = p256::elliptic_curve::ScalarPrimitive::from_slice(&{
             let mut buf = [0u8; 32];
-            buf[0..16].copy_from_slice(&m.hi.to_be_bytes());
-            buf[16..32].copy_from_slice(&m.lo.to_be_bytes());
+            buf[0..16].copy_from_slice(&m.lo.to_be_bytes());
+            buf[16..32].copy_from_slice(&m.hi.to_be_bytes());
             buf
         })
         .map_err(|_| {
-            vec![Felt252::from_bytes_be(
+            vec![Felt::from_bytes_be(
                 b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0invalid scalar",
             )]
         })?
         .into();
 
         let p = p * m;
-
         let p = p.to_encoded_point(false);
         let (x, y) = match p.coordinates() {
             Coordinates::Uncompressed { x, y } => (x, y),
@@ -955,12 +954,12 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         let y: [u8; 32] = y.as_slice().try_into().unwrap();
         Ok(Secp256r1Point {
             x: U256 {
-                hi: u128::from_be_bytes(x[0..16].try_into().unwrap()),
-                lo: u128::from_be_bytes(x[16..32].try_into().unwrap()),
+                lo: u128::from_be_bytes(x[0..16].try_into().unwrap()),
+                hi: u128::from_be_bytes(x[16..32].try_into().unwrap()),
             },
             y: U256 {
-                hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
-                lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+                lo: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                hi: u128::from_be_bytes(y[16..32].try_into().unwrap()),
             },
         })
     }
@@ -969,14 +968,14 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         &mut self,
         x: U256,
         y_parity: bool,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<Option<Secp256r1Point>> {
         let point = p256::ProjectivePoint::from_encoded_point(
             &p256::EncodedPoint::from_bytes(
                 p256::CompressedPoint::from_exact_iter(
                     once(0x02 | y_parity as u8)
-                        .chain(x.hi.to_be_bytes())
-                        .chain(x.lo.to_be_bytes()),
+                        .chain(x.lo.to_be_bytes())
+                        .chain(x.hi.to_be_bytes()),
                 )
                 .unwrap(),
             )
@@ -996,8 +995,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
             Ok(Some(Secp256r1Point {
                 x,
                 y: U256 {
-                    hi: u128::from_be_bytes(y[0..16].try_into().unwrap()),
-                    lo: u128::from_be_bytes(y[16..32].try_into().unwrap()),
+                    lo: u128::from_be_bytes(y[0..16].try_into().unwrap()),
+                    hi: u128::from_be_bytes(y[16..32].try_into().unwrap()),
                 },
             }))
         } else {
@@ -1008,7 +1007,7 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
     fn secp256r1_get_xy(
         &mut self,
         p: Secp256r1Point,
-        _gas: &mut u128,
+        _remaining_gas: &mut u128,
     ) -> SyscallResult<(U256, U256)> {
         Ok((p.x, p.y))
     }
