@@ -1,7 +1,6 @@
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
-    Felt252,
+    types::builtin_name::BuiltinName, vm::runners::cairo_runner::ExecutionResources, Felt252,
 };
 use num_bigint::BigUint;
 
@@ -288,12 +287,12 @@ fn library_call() {
     let expected_execution_resources = ExecutionResources {
         n_steps: 238,
         n_memory_holes: 8,
-        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 12)]),
+        builtin_instance_counter: HashMap::from([(BuiltinName::range_check, 12)]),
     };
     let expected_execution_resources_internal_call = ExecutionResources {
         n_steps: 78,
         n_memory_holes: 5,
-        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 7)]),
+        builtin_instance_counter: HashMap::from([(BuiltinName::range_check, 7)]),
     };
 
     // expected results
@@ -1214,7 +1213,7 @@ fn test_send_message_to_l1_syscall() {
     let expected_execution_resources = ExecutionResources {
         n_steps: expected_n_steps,
         n_memory_holes: expected_n_memory_holes,
-        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 2)]),
+        builtin_instance_counter: HashMap::from([(BuiltinName::range_check, 2)]),
     };
 
     let expected_call_info = CallInfo {
@@ -1316,7 +1315,7 @@ fn test_get_execution_info() {
     let expected_execution_resources = ExecutionResources {
         n_steps: expected_n_steps,
         n_memory_holes: 4,
-        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 4)]),
+        builtin_instance_counter: HashMap::from([(BuiltinName::range_check, 4)]),
     };
 
     let expected_call_info = CallInfo {
@@ -2691,7 +2690,7 @@ fn library_call_failure() {
     let mut expected_execution_resources = ExecutionResources::default();
     expected_execution_resources
         .builtin_instance_counter
-        .insert(RANGE_CHECK_BUILTIN_NAME.to_string(), 7);
+        .insert(BuiltinName::range_check, 7);
     expected_execution_resources.n_memory_holes = 6;
 
     let call_info = exec_entry_point
@@ -3263,7 +3262,7 @@ fn library_call_recursive_50_calls() {
     let expected_execution_resources_internal_call = ExecutionResources {
         n_steps: 78,
         n_memory_holes: 5,
-        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 7)]),
+        builtin_instance_counter: HashMap::from([(BuiltinName::range_check, 7)]),
     };
 
     let call_info = exec_entry_point
@@ -3823,7 +3822,7 @@ fn test_get_execution_info_v2() {
     let expected_execution_resources = ExecutionResources {
         n_steps: expected_n_steps,
         n_memory_holes: 14,
-        builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 14)]),
+        builtin_instance_counter: HashMap::from([(BuiltinName::range_check, 14)]),
     };
 
     let expected_call_info = CallInfo {

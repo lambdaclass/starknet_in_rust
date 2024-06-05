@@ -1,9 +1,8 @@
 // #![deny(warnings)]
 
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    vm::runners::{builtin_runner::RANGE_CHECK_BUILTIN_NAME, cairo_runner::ExecutionResources},
-    Felt252,
+    types::builtin_name::BuiltinName, vm::runners::cairo_runner::ExecutionResources, Felt252,
 };
 
 use pretty_assertions_sorted::assert_eq;
@@ -216,7 +215,7 @@ fn integration_test_cairo1() {
         execution_resources: Some(ExecutionResources {
             n_steps: 301,
             n_memory_holes: 0,
-            builtin_instance_counter: HashMap::from([(RANGE_CHECK_BUILTIN_NAME.to_string(), 15)]),
+            builtin_instance_counter: HashMap::from([(BuiltinName::range_check, 15)]),
         }),
         class_hash: Some(class_hash),
         gas_consumed: 23020,

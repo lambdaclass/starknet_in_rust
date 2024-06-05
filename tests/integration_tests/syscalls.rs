@@ -1,12 +1,8 @@
 #![deny(warnings)]
 
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_vm::{
-    vm::runners::{
-        builtin_runner::{BITWISE_BUILTIN_NAME, HASH_BUILTIN_NAME, RANGE_CHECK_BUILTIN_NAME},
-        cairo_runner::ExecutionResources,
-    },
-    Felt252,
+    types::builtin_name::BuiltinName, vm::runners::cairo_runner::ExecutionResources, Felt252,
 };
 use pretty_assertions_sorted::{assert_eq, assert_eq_sorted};
 use starknet_in_rust::{
@@ -1665,9 +1661,9 @@ fn run_rabbitx_withdraw() {
         n_steps: 1115,
         n_memory_holes: 77,
         builtin_instance_counter: HashMap::from([
-            (RANGE_CHECK_BUILTIN_NAME.to_owned(), 87),
-            (BITWISE_BUILTIN_NAME.to_owned(), 2),
-            (HASH_BUILTIN_NAME.to_owned(), 1),
+            (BuiltinName::range_check, 87),
+            (BuiltinName::bitwise, 2),
+            (BuiltinName::keccak, 1),
         ]),
     };
 
