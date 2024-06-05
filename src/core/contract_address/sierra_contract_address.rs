@@ -4,9 +4,7 @@ use cairo_lang_starknet_classes::{
     keccak::starknet_keccak,
 };
 use cairo_vm::Felt252;
-use serde_json::ser::Formatter;
 use starknet_crypto::{poseidon_hash_many, FieldElement, PoseidonHasher};
-use std::io::{self};
 
 const CONTRACT_CLASS_VERSION: &[u8] = b"CONTRACT_CLASS_V0.1.0";
 
@@ -137,59 +135,6 @@ fn get_contract_entry_points(
     }
 
     Ok(entry_points)
-}
-
-struct PythonJsonFormatter;
-
-impl Formatter for PythonJsonFormatter {
-    fn begin_array_value<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
-    where
-        W: ?Sized + io::Write,
-    {
-        if first {
-            Ok(())
-        } else {
-            writer.write_all(b", ")
-        }
-    }
-
-    fn begin_object_key<W>(&mut self, writer: &mut W, first: bool) -> io::Result<()>
-    where
-        W: ?Sized + io::Write,
-    {
-        if first {
-            Ok(())
-        } else {
-            writer.write_all(b", ")
-        }
-    }
-
-    fn begin_object_value<W>(&mut self, writer: &mut W) -> io::Result<()>
-    where
-        W: ?Sized + io::Write,
-    {
-        writer.write_all(b": ")
-    }
-
-    fn write_string_fragment<W>(&mut self, writer: &mut W, fragment: &str) -> io::Result<()>
-    where
-        W: ?Sized + io::Write,
-    {
-        let mut buf = [0, 0];
-
-        for c in fragment.chars() {
-            if c.is_ascii() {
-                writer.write_all(&[c as u8])?;
-            } else {
-                let buf = c.encode_utf16(&mut buf);
-                for i in buf {
-                    write!(writer, r"\u{i:04x}")?;
-                }
-            }
-        }
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]

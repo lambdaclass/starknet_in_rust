@@ -528,8 +528,8 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
                 });
             }
             tip = fields.tip as u128;
-            paymaster_data = fields.paymaster_data.clone();
-            account_deployment_data = fields.account_deployment_data.clone();
+            paymaster_data.clone_from(&fields.paymaster_data);
+            account_deployment_data.clone_from(&fields.account_deployment_data);
             nonce_data_availability_mode = fields.nonce_data_availability_mode.into();
             fee_data_availability_mode = fields.fee_data_availability_mode.into();
         }
