@@ -284,7 +284,7 @@ mod test {
             },
         },
     };
-    use cairo_lang_starknet::{
+    use cairo_lang_starknet_classes::{
         casm_contract_class::CasmContractClass,
         contract_class::ContractClass as SierraContractClass,
     };

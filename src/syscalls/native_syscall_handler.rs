@@ -1275,6 +1275,7 @@ mod test {
     fn secp256k1_new() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let p = syscall_handler
@@ -1301,6 +1302,7 @@ mod test {
     fn secp256k1_add() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let p = syscall_handler
@@ -1339,6 +1341,7 @@ mod test {
     fn secp256k1_mul() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let p = syscall_handler
@@ -1371,6 +1374,7 @@ mod test {
     fn secp256k1_get_point_from_x() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let p = syscall_handler
@@ -1394,6 +1398,7 @@ mod test {
     fn secp256k1_get_xy() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let (x, y) = syscall_handler
@@ -1421,6 +1426,7 @@ mod test {
     fn secp256r1_new() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let p = syscall_handler
@@ -1447,6 +1453,7 @@ mod test {
     fn secp256r1_add() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let p = syscall_handler
@@ -1485,6 +1492,7 @@ mod test {
     fn secp256r1_mul() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let p = syscall_handler
@@ -1517,6 +1525,7 @@ mod test {
     fn secp256r1_get_point_from_x() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let p = syscall_handler
@@ -1540,6 +1549,7 @@ mod test {
     fn secp256r1_get_xy() {
         let mut test_ctx = TestContext::default();
         let mut syscall_handler = test_ctx.new_syscall_handler();
+        let mut syscall_handler = &mut syscall_handler;
         let mut gas = 0;
 
         let (x, y) = syscall_handler

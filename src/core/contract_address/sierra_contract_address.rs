@@ -140,7 +140,7 @@ fn get_contract_entry_points(
 #[cfg(test)]
 mod tests {
     use crate::core::contract_address::compute_sierra_class_hash;
-    use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+    use cairo_lang_starknet_classes::contract_class::ContractClass as SierraContractClass;
     use cairo_vm::Felt252;
     use std::{fs::File, io::BufReader};
 
