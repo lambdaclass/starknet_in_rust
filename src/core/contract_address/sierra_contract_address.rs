@@ -1,7 +1,7 @@
 use crate::{core::errors::contract_address_errors::ContractAddressError, EntryPointType};
-use cairo_lang_starknet::{
-    contract::starknet_keccak,
+use cairo_lang_starknet_classes::{
     contract_class::{ContractClass as SierraContractClass, ContractEntryPoint},
+    keccak::starknet_keccak,
 };
 use cairo_vm::Felt252;
 use serde_json::ser::Formatter;
