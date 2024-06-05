@@ -1281,21 +1281,21 @@ mod test {
         let p = syscall_handler
             .secp256k1_new(
                 U256 {
-                    hi: 0,
-                    lo: 0x6d921cc3a0edd,
+                    lo: 0,
+                    hi: 0x6d921cc3a0edd,
                 },
                 U256 {
-                    hi: 0xb7f551d9700e05d0979e993163abc1e2,
-                    lo: 0xa46c825e7de30402be99422be4d4032a,
+                    lo: 0xb7f551d9700e05d0979e993163abc1e2,
+                    hi: 0xa46c825e7de30402be99422be4d4032a,
                 },
                 &mut gas,
             )
             .unwrap()
             .unwrap();
-        assert_eq!(p.x.hi, 0);
-        assert_eq!(p.x.lo, 0x6d921cc3a0edd);
-        assert_eq!(p.y.hi, 0xb7f551d9700e05d0979e993163abc1e2);
-        assert_eq!(p.y.lo, 0xa46c825e7de30402be99422be4d4032a);
+        assert_eq!(p.x.lo, 0);
+        assert_eq!(p.x.hi, 0x6d921cc3a0edd);
+        assert_eq!(p.y.lo, 0xb7f551d9700e05d0979e993163abc1e2);
+        assert_eq!(p.y.hi, 0xa46c825e7de30402be99422be4d4032a);
     }
 
     #[test]
@@ -1309,32 +1309,32 @@ mod test {
             .secp256k1_add(
                 Secp256k1Point {
                     x: U256 {
-                        hi: 0,
-                        lo: 0x6d921cc3a0edd,
+                        lo: 0,
+                        hi: 0x6d921cc3a0edd,
                     },
                     y: U256 {
-                        hi: 0xb7f551d9700e05d0979e993163abc1e2,
-                        lo: 0xa46c825e7de30402be99422be4d4032a,
+                        lo: 0xb7f551d9700e05d0979e993163abc1e2,
+                        hi: 0xa46c825e7de30402be99422be4d4032a,
                     },
                 },
                 Secp256k1Point {
                     x: U256 {
-                        hi: 0,
-                        lo: 0x6d921cc3a0edd,
+                        lo: 0,
+                        hi: 0x6d921cc3a0edd,
                     },
                     y: U256 {
-                        hi: 0xb7f551d9700e05d0979e993163abc1e2,
-                        lo: 0xa46c825e7de30402be99422be4d4032a,
+                        lo: 0xb7f551d9700e05d0979e993163abc1e2,
+                        hi: 0xa46c825e7de30402be99422be4d4032a,
                     },
                 },
                 &mut gas,
             )
             .unwrap();
 
-        assert_eq!(p.x.hi, 0x517455bb91f3fa3e97fa7bc38c922808);
-        assert_eq!(p.x.lo, 0xd00aff7b006af92bf118ae3ca4565898);
-        assert_eq!(p.y.hi, 0x783f0ba4eff238a1d67b4afc0f203095);
-        assert_eq!(p.y.lo, 0x4a67fed3709e9a8fc799fd55b8701b0c);
+        assert_eq!(p.x.lo, 0x517455bb91f3fa3e97fa7bc38c922808);
+        assert_eq!(p.x.hi, 0xd00aff7b006af92bf118ae3ca4565898);
+        assert_eq!(p.y.lo, 0x783f0ba4eff238a1d67b4afc0f203095);
+        assert_eq!(p.y.hi, 0x4a67fed3709e9a8fc799fd55b8701b0c);
     }
 
     #[test]
@@ -1348,26 +1348,26 @@ mod test {
             .secp256k1_mul(
                 Secp256k1Point {
                     x: U256 {
-                        hi: 0,
-                        lo: 0x6d921cc3a0edd,
+                        lo: 0,
+                        hi: 0x6d921cc3a0edd,
                     },
                     y: U256 {
-                        hi: 0xb7f551d9700e05d0979e993163abc1e2,
-                        lo: 0xa46c825e7de30402be99422be4d4032a,
+                        lo: 0xb7f551d9700e05d0979e993163abc1e2,
+                        hi: 0xa46c825e7de30402be99422be4d4032a,
                     },
                 },
                 U256 {
-                    hi: 0,
-                    lo: 0xa46c825e7de30402be99422be4d4032a,
+                    lo: 0,
+                    hi: 0xa46c825e7de30402be99422be4d4032a,
                 },
                 &mut gas,
             )
             .unwrap();
 
-        assert_eq!(p.x.hi, 0xf040ddde809857907bfd2f0236a0aca7);
-        assert_eq!(p.x.lo, 0x43a58b0924199ac714383765c011812c);
-        assert_eq!(p.y.hi, 0xaae02eaf3c58415a5daeccdeea05bd6a);
-        assert_eq!(p.y.lo, 0xf27938618d56e68e01b4d473b3ebff63);
+        assert_eq!(p.x.lo, 0xf040ddde809857907bfd2f0236a0aca7);
+        assert_eq!(p.x.hi, 0x43a58b0924199ac714383765c011812c);
+        assert_eq!(p.y.lo, 0xaae02eaf3c58415a5daeccdeea05bd6a);
+        assert_eq!(p.y.hi, 0xf27938618d56e68e01b4d473b3ebff63);
     }
 
     #[test]
@@ -1380,18 +1380,18 @@ mod test {
         let p = syscall_handler
             .secp256k1_get_point_from_x(
                 U256 {
-                    hi: 0,
-                    lo: 0x6d921cc3a0edd,
+                    lo: 0,
+                    hi: 0x6d921cc3a0edd,
                 },
                 false,
                 &mut gas,
             )
             .unwrap()
             .unwrap();
-        assert_eq!(p.x.hi, 0);
-        assert_eq!(p.x.lo, 0x6d921cc3a0edd);
-        assert_eq!(p.y.hi, 0xb7f551d9700e05d0979e993163abc1e2);
-        assert_eq!(p.y.lo, 0xa46c825e7de30402be99422be4d4032a);
+        assert_eq!(p.x.lo, 0);
+        assert_eq!(p.x.hi, 0x6d921cc3a0edd);
+        assert_eq!(p.y.lo, 0xb7f551d9700e05d0979e993163abc1e2);
+        assert_eq!(p.y.hi, 0xa46c825e7de30402be99422be4d4032a);
     }
 
     #[test]
@@ -1405,21 +1405,21 @@ mod test {
             .secp256k1_get_xy(
                 Secp256k1Point {
                     x: U256 {
-                        hi: 0,
-                        lo: 0x6d921cc3a0edd,
+                        lo: 0,
+                        hi: 0x6d921cc3a0edd,
                     },
                     y: U256 {
-                        hi: 0xb7f551d9700e05d0979e993163abc1e2,
-                        lo: 0xa46c825e7de30402be99422be4d4032a,
+                        lo: 0xb7f551d9700e05d0979e993163abc1e2,
+                        hi: 0xa46c825e7de30402be99422be4d4032a,
                     },
                 },
                 &mut gas,
             )
             .unwrap();
-        assert_eq!(x.hi, 0);
-        assert_eq!(x.lo, 0x6d921cc3a0edd);
-        assert_eq!(y.hi, 0xb7f551d9700e05d0979e993163abc1e2);
-        assert_eq!(y.lo, 0xa46c825e7de30402be99422be4d4032a);
+        assert_eq!(x.lo, 0);
+        assert_eq!(x.hi, 0x6d921cc3a0edd);
+        assert_eq!(y.lo, 0xb7f551d9700e05d0979e993163abc1e2);
+        assert_eq!(y.hi, 0xa46c825e7de30402be99422be4d4032a);
     }
 
     #[test]
@@ -1432,21 +1432,21 @@ mod test {
         let p = syscall_handler
             .secp256r1_new(
                 U256 {
-                    hi: 0,
-                    lo: 0x6d921cc3a0edd,
+                    lo: 0,
+                    hi: 0x6d921cc3a0edd,
                 },
                 U256 {
-                    hi: 0xd9119d47792367d7d9333941abd39cd5,
-                    lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                    lo: 0xd9119d47792367d7d9333941abd39cd5,
+                    hi: 0xe6152655e4230f0cb905fd549eb5f7d2,
                 },
                 &mut gas,
             )
             .unwrap()
             .unwrap();
-        assert_eq!(p.x.hi, 0);
-        assert_eq!(p.x.lo, 0x6d921cc3a0edd);
-        assert_eq!(p.y.hi, 0xd9119d47792367d7d9333941abd39cd5);
-        assert_eq!(p.y.lo, 0xe6152655e4230f0cb905fd549eb5f7d2);
+        assert_eq!(p.x.lo, 0);
+        assert_eq!(p.x.hi, 0x6d921cc3a0edd);
+        assert_eq!(p.y.lo, 0xd9119d47792367d7d9333941abd39cd5);
+        assert_eq!(p.y.hi, 0xe6152655e4230f0cb905fd549eb5f7d2);
     }
 
     #[test]
@@ -1460,32 +1460,32 @@ mod test {
             .secp256r1_add(
                 Secp256r1Point {
                     x: U256 {
-                        hi: 0,
-                        lo: 0x6d921cc3a0edd,
+                        lo: 0,
+                        hi: 0x6d921cc3a0edd,
                     },
                     y: U256 {
-                        hi: 0xd9119d47792367d7d9333941abd39cd5,
-                        lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                        lo: 0xd9119d47792367d7d9333941abd39cd5,
+                        hi: 0xe6152655e4230f0cb905fd549eb5f7d2,
                     },
                 },
                 Secp256r1Point {
                     x: U256 {
-                        hi: 0,
-                        lo: 0x6d921cc3a0edd,
+                        lo: 0,
+                        hi: 0x6d921cc3a0edd,
                     },
                     y: U256 {
-                        hi: 0xd9119d47792367d7d9333941abd39cd5,
-                        lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                        lo: 0xd9119d47792367d7d9333941abd39cd5,
+                        hi: 0xe6152655e4230f0cb905fd549eb5f7d2,
                     },
                 },
                 &mut gas,
             )
             .unwrap();
 
-        assert_eq!(p.x.hi, 0x9fe25a0c399b16a4709557a5031fb25c);
-        assert_eq!(p.x.lo, 0x8fb69432718f1933ef8b61c5b57c3e57);
-        assert_eq!(p.y.hi, 0x5ba485aea97f150919109745af2bf644);
-        assert_eq!(p.y.lo, 0x1d00013db17f1f1862ef5462d62f7fe8);
+        assert_eq!(p.x.lo, 0x9fe25a0c399b16a4709557a5031fb25c);
+        assert_eq!(p.x.hi, 0x8fb69432718f1933ef8b61c5b57c3e57);
+        assert_eq!(p.y.lo, 0x5ba485aea97f150919109745af2bf644);
+        assert_eq!(p.y.hi, 0x1d00013db17f1f1862ef5462d62f7fe8);
     }
 
     #[test]
@@ -1499,26 +1499,26 @@ mod test {
             .secp256r1_mul(
                 Secp256r1Point {
                     x: U256 {
-                        hi: 0,
-                        lo: 0x6d921cc3a0edd,
+                        lo: 0,
+                        hi: 0x6d921cc3a0edd,
                     },
                     y: U256 {
-                        hi: 0xd9119d47792367d7d9333941abd39cd5,
-                        lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                        lo: 0xd9119d47792367d7d9333941abd39cd5,
+                        hi: 0xe6152655e4230f0cb905fd549eb5f7d2,
                     },
                 },
                 U256 {
-                    hi: 0,
-                    lo: 0xa46c825e7de30402be99422be4d4032a,
+                    lo: 0,
+                    hi: 0xa46c825e7de30402be99422be4d4032a,
                 },
                 &mut gas,
             )
             .unwrap();
 
-        assert_eq!(p.x.hi, 0x4b34ef65707b6a8e369879aaee576c2c);
-        assert_eq!(p.x.lo, 0x3f1579c6bb240409fcd7b96311e81b07);
-        assert_eq!(p.y.hi, 0xf3bf5221ac6f4363287f9c34c706026f);
-        assert_eq!(p.y.lo, 0x4458cbd0a9af49eb5526765ba31fad15);
+        assert_eq!(p.x.lo, 0x4b34ef65707b6a8e369879aaee576c2c);
+        assert_eq!(p.x.hi, 0x3f1579c6bb240409fcd7b96311e81b07);
+        assert_eq!(p.y.lo, 0xf3bf5221ac6f4363287f9c34c706026f);
+        assert_eq!(p.y.hi, 0x4458cbd0a9af49eb5526765ba31fad15);
     }
 
     #[test]
@@ -1531,18 +1531,18 @@ mod test {
         let p = syscall_handler
             .secp256r1_get_point_from_x(
                 U256 {
-                    hi: 0,
-                    lo: 0x6d921cc3a0edd,
+                    lo: 0,
+                    hi: 0x6d921cc3a0edd,
                 },
                 false,
                 &mut gas,
             )
             .unwrap()
             .unwrap();
-        assert_eq!(p.x.hi, 0);
-        assert_eq!(p.x.lo, 0x6d921cc3a0edd);
-        assert_eq!(p.y.hi, 0xd9119d47792367d7d9333941abd39cd5);
-        assert_eq!(p.y.lo, 0xe6152655e4230f0cb905fd549eb5f7d2);
+        assert_eq!(p.x.lo, 0);
+        assert_eq!(p.x.hi, 0x6d921cc3a0edd);
+        assert_eq!(p.y.lo, 0xd9119d47792367d7d9333941abd39cd5);
+        assert_eq!(p.y.hi, 0xe6152655e4230f0cb905fd549eb5f7d2);
     }
 
     #[test]
@@ -1556,20 +1556,20 @@ mod test {
             .secp256r1_get_xy(
                 Secp256r1Point {
                     x: U256 {
-                        hi: 0,
-                        lo: 0x6d921cc3a0edd,
+                        lo: 0,
+                        hi: 0x6d921cc3a0edd,
                     },
                     y: U256 {
-                        hi: 0xd9119d47792367d7d9333941abd39cd5,
-                        lo: 0xe6152655e4230f0cb905fd549eb5f7d2,
+                        lo: 0xd9119d47792367d7d9333941abd39cd5,
+                        hi: 0xe6152655e4230f0cb905fd549eb5f7d2,
                     },
                 },
                 &mut gas,
             )
             .unwrap();
-        assert_eq!(x.hi, 0);
-        assert_eq!(x.lo, 0x6d921cc3a0edd);
-        assert_eq!(y.hi, 0xd9119d47792367d7d9333941abd39cd5);
-        assert_eq!(y.lo, 0xe6152655e4230f0cb905fd549eb5f7d2);
+        assert_eq!(x.lo, 0);
+        assert_eq!(x.hi, 0x6d921cc3a0edd);
+        assert_eq!(y.lo, 0xd9119d47792367d7d9333941abd39cd5);
+        assert_eq!(y.hi, 0xe6152655e4230f0cb905fd549eb5f7d2);
     }
 }

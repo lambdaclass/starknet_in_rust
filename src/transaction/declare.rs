@@ -630,7 +630,8 @@ mod tests {
             serde_json::from_reader(reader).unwrap();
         let sender_address = Address(1.into());
         let casm_class =
-            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX).unwrap();
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX)
+                .unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         // create declare
@@ -660,7 +661,7 @@ mod tests {
         let expected_casm_class = CasmContractClass::from_contract_class(
             declare.sierra_contract_class.unwrap().clone(),
             true,
-            usize::MAX
+            usize::MAX,
         )
         .unwrap();
         let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
@@ -687,7 +688,8 @@ mod tests {
             serde_json::from_reader(reader).unwrap();
         let sender_address = Address(1.into());
         let casm_class =
-            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX).unwrap();
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX)
+                .unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         // create declare
@@ -714,9 +716,12 @@ mod tests {
         assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
 
         // test we  can retreive the data
-        let expected_casm_class =
-            CasmContractClass::from_contract_class(declare.sierra_contract_class.unwrap(), true, usize::MAX)
-                .unwrap();
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            declare.sierra_contract_class.unwrap(),
+            true,
+            usize::MAX,
+        )
+        .unwrap();
         let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
             .get_contract_class(&declare_compiled_class_hash)
@@ -742,7 +747,8 @@ mod tests {
         let sierra_class_hash = compute_sierra_class_hash(&sierra_contract_class).unwrap();
         let sender_address = Address(1.into());
         let casm_class =
-            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX).unwrap();
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX)
+                .unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         // create declare tx
@@ -770,9 +776,12 @@ mod tests {
         assert!(declare.compile_and_store_casm_class(&mut state).is_ok());
 
         // test we  can retreive the data
-        let expected_casm_class =
-            CasmContractClass::from_contract_class(declare.sierra_contract_class.unwrap(), true, usize::MAX)
-                .unwrap();
+        let expected_casm_class = CasmContractClass::from_contract_class(
+            declare.sierra_contract_class.unwrap(),
+            true,
+            usize::MAX,
+        )
+        .unwrap();
         let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
         let casm_class = match state
             .get_contract_class(&declare_compiled_class_hash)
@@ -797,7 +806,8 @@ mod tests {
             serde_json::from_reader(reader).unwrap();
         let sender_address = Address(1.into());
         let casm_class =
-            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX).unwrap();
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX)
+                .unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         // create declare tx
@@ -827,7 +837,7 @@ mod tests {
         let expected_casm_class = CasmContractClass::from_contract_class(
             declare.sierra_contract_class.unwrap().clone(),
             true,
-            usize::MAX
+            usize::MAX,
         )
         .unwrap();
         let declare_compiled_class_hash = ClassHash::from(declare.compiled_class_hash);
@@ -854,7 +864,8 @@ mod tests {
             serde_json::from_reader(reader).unwrap();
         let sender_address = Address(1.into());
         let casm_class =
-            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX).unwrap();
+            CasmContractClass::from_contract_class(sierra_contract_class.clone(), true, usize::MAX)
+                .unwrap();
         let casm_class_hash = compute_casm_class_hash(&casm_class).unwrap();
 
         let sended_class_hash = Felt252::from(5);

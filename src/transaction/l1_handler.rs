@@ -270,7 +270,9 @@ mod test {
         sync::Arc,
     };
 
-    use cairo_vm::{types::builtin_name::BuiltinName, vm::runners::cairo_runner::ExecutionResources, Felt252};
+    use cairo_vm::{
+        types::builtin_name::BuiltinName, vm::runners::cairo_runner::ExecutionResources, Felt252,
+    };
 
     /// Test the correct execution of the L1Handler.
     #[test]
