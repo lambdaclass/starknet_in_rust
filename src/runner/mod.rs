@@ -423,10 +423,7 @@ mod test {
             layout_name::LayoutName,
             relocatable::{MaybeRelocatable, Relocatable},
         },
-        vm::{
-            runners::cairo_runner::{CairoRunner, RunResources},
-            vm_core::VirtualMachine,
-        },
+        vm::runners::cairo_runner::{CairoRunner, RunResources},
     };
 
     #[test]

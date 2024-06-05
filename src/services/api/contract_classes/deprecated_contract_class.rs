@@ -262,7 +262,7 @@ mod tests {
     use crate::core::contract_address::compute_deprecated_class_hash;
 
     use super::*;
-    use cairo_vm::{serde::deserialize_program::BuiltinName, Felt252};
+    use cairo_vm::Felt252;
     use starknet_api::deprecated_contract_class::{FunctionAbiEntry, TypedParameter};
 
     #[test]
