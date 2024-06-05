@@ -32,8 +32,8 @@ use crate::{
     },
     utils::calculate_tx_resources,
 };
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass as SierraContractClass;
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
+use cairo_lang_starknet_classes::contract_class::ContractClass as SierraContractClass;
 use cairo_vm::Felt252;
 use num_traits::Zero;
 use std::fmt::Debug;
@@ -446,6 +446,7 @@ impl Declare {
                     .clone()
                     .ok_or(TransactionError::DeclareNoSierraOrCasm)?,
                 true,
+                usize::MAX, // todo check if usize MAX is good here
             )
             .map_err(|e| TransactionError::SierraCompileError(e.to_string()))?,
             Some(casm_contract_class) => casm_contract_class.clone(),
