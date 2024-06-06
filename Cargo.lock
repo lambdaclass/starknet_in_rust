@@ -1423,6 +1423,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.2.0"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=e90c4ce0a7d5cea856c6b0c4e7e8a04078de323b#e90c4ce0a7d5cea856c6b0c4e7e8a04078de323b"
 dependencies = [
  "anyhow",
  "bumpalo",
@@ -1471,6 +1472,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.2.0"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=e90c4ce0a7d5cea856c6b0c4e7e8a04078de323b#e90c4ce0a7d5cea856c6b0c4e7e8a04078de323b"
 dependencies = [
  "cairo-lang-runner",
  "cairo-lang-sierra-gas",
@@ -5365,7 +5367,6 @@ dependencies = [
  "flate2",
  "getset",
  "hex",
- "itertools 0.13.0",
  "k256",
  "keccak",
  "lazy_static",
