@@ -1422,8 +1422,7 @@ dependencies = [
 
 [[package]]
 name = "cairo-native"
-version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=15bd4b9e672a0c1a196de4b613ee72befaf08b28#15bd4b9e672a0c1a196de4b613ee72befaf08b28"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "bumpalo",
@@ -1449,7 +1448,7 @@ dependencies = [
  "colored",
  "educe",
  "id-arena",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "k256",
  "keccak",
  "lazy_static",
@@ -1471,8 +1470,7 @@ dependencies = [
 
 [[package]]
 name = "cairo-native-runtime"
-version = "0.1.0"
-source = "git+https://github.com/lambdaclass/cairo_native?rev=15bd4b9e672a0c1a196de4b613ee72befaf08b28#15bd4b9e672a0c1a196de4b613ee72befaf08b28"
+version = "0.2.0"
 dependencies = [
  "cairo-lang-runner",
  "cairo-lang-sierra-gas",
@@ -2961,6 +2959,15 @@ name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -5358,6 +5365,7 @@ dependencies = [
  "flate2",
  "getset",
  "hex",
+ "itertools 0.13.0",
  "k256",
  "keccak",
  "lazy_static",

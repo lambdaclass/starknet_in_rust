@@ -1012,62 +1012,10 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
         Ok((p.x, p.y))
     }
 
-    fn pop_log(&mut self) {
-        todo!()
-    }
-
-    fn set_account_contract_address(&mut self, contract_address: Felt252) {
-        self.tx_execution_context.account_contract_address = Address(contract_address);
-    }
-
-    fn set_block_number(&mut self, block_number: u64) {
-        self.block_context.block_info.block_number = block_number;
-    }
-
-    fn set_block_timestamp(&mut self, block_timestamp: u64) {
-        self.block_context.block_info.block_timestamp = block_timestamp;
-    }
-
-    fn set_caller_address(&mut self, address: Felt252) {
-        self.caller_address = Address(address);
-    }
-
-    fn set_chain_id(&mut self, chain_id: Felt252) {
-        self.block_context.starknet_os_config.chain_id = chain_id;
-    }
-
-    fn set_contract_address(&mut self, address: Felt252) {
-        self.contract_address = Address(address);
-    }
-
-    fn set_max_fee(&mut self, max_fee: u128) {
-        if matches!(
-            self.tx_execution_context.account_tx_fields,
-            VersionSpecificAccountTxFields::Deprecated(_)
-        ) {
-            self.tx_execution_context.account_tx_fields =
-                VersionSpecificAccountTxFields::new_deprecated(max_fee)
-        };
-    }
-
-    fn set_nonce(&mut self, nonce: Felt252) {
-        self.tx_execution_context.nonce = nonce;
-    }
-
-    fn set_sequencer_address(&mut self, _address: Felt252) {
-        todo!()
-    }
-
-    fn set_signature(&mut self, signature: &[Felt252]) {
-        self.tx_execution_context.signature = signature.to_vec();
-    }
-
-    fn set_transaction_hash(&mut self, transaction_hash: Felt252) {
-        self.tx_execution_context.transaction_hash = transaction_hash;
-    }
-
-    fn set_version(&mut self, version: Felt252) {
-        self.tx_execution_context.version = version;
+    fn cheatcode(&mut self, _selector: Felt252, _input: &[Felt252]) -> Vec<Felt252> {
+        dbg!(_selector);
+        dbg!(_input);
+        vec![Felt252::ONE]
     }
 }
 

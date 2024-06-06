@@ -138,6 +138,7 @@ impl ExecutionEntryPoint {
 
         match contract_class {
             CompiledClass::Deprecated(contract_class) => {
+                dbg!("deprecated");
                 let call_info = self._execute_version0_class(
                     state,
                     resources_manager,
@@ -157,6 +158,7 @@ impl ExecutionEntryPoint {
                 sierra: Some(sierra_program_and_entrypoints),
                 ..
             } => {
+                dbg!("casm");
                 let mut transactional_state = state.create_transactional()?;
 
                 let program_cache = program_cache.unwrap_or_else(|| {
@@ -716,6 +718,7 @@ impl ExecutionEntryPoint {
         .iter()
         .find(|entry_point| entry_point.selector == self.entry_point_selector.to_biguint())
         .unwrap();
+    dbg!(&entry_point);
         let native_executor: NativeExecutor = {
             let mut cache = program_cache.borrow_mut();
             let cache = &mut *cache;
@@ -759,6 +762,10 @@ impl ExecutionEntryPoint {
             .iter()
             .find(|x| x.id.id == (entry_point.function_idx as u64))
             .unwrap();
+
+        dbg!(&entry_point_fn.id.debug_name.as_ref());
+        dbg!(&entry_point_fn.params);
+        std::fs::write("hello.sierra", sierra_program.to_string()).unwrap();
 
         let entry_point_id = &entry_point_fn.id;
 

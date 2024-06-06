@@ -73,6 +73,8 @@ fn test_kakarot_contract() {
 
     let mut state = TestStateSetup::default();
 
+    dbg!("deploy");
+
     // Deploy Kakarot
     state
         .load_contract_at_address(
@@ -81,6 +83,7 @@ fn test_kakarot_contract() {
             "starknet_programs/kakarot/contracts_KakarotCore.cairo",
         )
         .unwrap();
+    dbg!("deploy eoa");
     // Deploy EOA
     state
         .load_contract_at_address(
@@ -89,6 +92,7 @@ fn test_kakarot_contract() {
             "starknet_programs/kakarot/contracts_AccountContract.cairo",
         )
         .unwrap();
+    dbg!("deploy contract account");
     // Deploy Contract Account
     state
         .load_contract_at_address(
@@ -98,6 +102,7 @@ fn test_kakarot_contract() {
         )
         .unwrap();
 
+        dbg!("uninit account");
     // Declare uninitialized account class hash
     state
         .load_contract(
@@ -106,6 +111,7 @@ fn test_kakarot_contract() {
         )
         .unwrap();
 
+        dbg!("perepare storage");
     // Prepare storage for Kakarot
     let kakarot_storage = vec![
         // Add the EOA to the address registry
@@ -316,11 +322,11 @@ fn test_kakarot_contract() {
     transaction.signature = signature;
 
     // Prepare the starknet transaction
-    let mut calldata = vec![];
+    let mut calldata: Vec<u8> = vec![];
     transaction
         .transaction
         .encode_without_signature(&mut calldata);
-    let mut calldata = calldata.into_iter().map(Felt252::from).collect::<Vec<_>>();
+    let mut calldata: Vec<Felt252> = calldata.into_iter().map(Felt252::from).collect::<Vec<_>>();
     let mut execute_calldata = vec![
         Felt252::ONE,      // call array length
         kakarot_address.0, // contract address
@@ -352,7 +358,9 @@ fn test_kakarot_contract() {
 
     let tx = tx.create_for_simulation(false, false, true, true, true);
 
+    dbg!("executing tx");
     let execution_result = state.execute_transaction(tx).unwrap();
+    dbg!("after executing tx");
     assert!(execution_result.revert_error.is_none());
 
     // Check that the storage var was updated (contract bytecode should update storage var at key 0u256 to 1)
