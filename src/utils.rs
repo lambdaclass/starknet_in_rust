@@ -207,7 +207,7 @@ pub fn calculate_tx_resources(
         n_steps + filtered_builtins.n_memory_holes,
     );
     for (builtin, value) in filtered_builtins.builtin_instance_counter {
-        resources.insert(builtin.to_str().to_string(), value);
+        resources.insert(builtin.to_str_with_suffix().to_string(), value);
     }
 
     Ok(resources)
