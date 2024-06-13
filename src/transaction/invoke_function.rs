@@ -297,13 +297,7 @@ impl InvokeFunction {
             // return `VALID`.
             if !call_info
                 .as_ref()
-                .map(|ci| {
-                    dbg!(ci.retdata[0].to_hex_string());
-                    dbg!(ci.retdata[0].to_string());
-                    dbg!(ci.retdata[0].to_bigint());
-
-                    dbg!(&ci.retdata) == &vec![*VALIDATE_RETDATA]
-                })
+                .map(|ci| &ci.retdata == &vec![*VALIDATE_RETDATA])
                 .unwrap_or_default()
             {
                 return Err(TransactionError::WrongValidateRetdata);
@@ -445,7 +439,6 @@ impl InvokeFunction {
             Rc<RefCell<ProgramCache<'_, ClassHash>>>,
         >,
     ) -> Result<TransactionExecutionInfo, TransactionError> {
-        dbg!("execute transaction native");
         if !(self.version == Felt252::ZERO
             || self.version == Felt252::ONE
             || self.version == Felt252::THREE)
