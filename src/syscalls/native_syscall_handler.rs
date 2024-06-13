@@ -1011,12 +1011,6 @@ impl<'a, 'cache, S: StateReader, C: ContractClassCache> StarknetSyscallHandler
     ) -> SyscallResult<(U256, U256)> {
         Ok((p.x, p.y))
     }
-
-    fn cheatcode(&mut self, _selector: Felt252, _input: &[Felt252]) -> Vec<Felt252> {
-        dbg!(_selector);
-        dbg!(_input);
-        vec![Felt252::ONE]
-    }
 }
 
 impl<'a, 'cache, S, C> NativeSyscallHandler<'a, 'cache, S, C>
