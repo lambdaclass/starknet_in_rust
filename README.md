@@ -20,7 +20,7 @@ Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https
 
 ## Table of Contents
 - [Table of Contents](#table-of-contents)
-- [⚠️ Disclaimer](#️-disclaimer)
+- [📦 Archival Notice](#️-archival-notice)
 - [📖 About](#-about)
 - [🌅 Getting Started](#-getting-started)
   - [Dependencies](#dependencies)
@@ -38,9 +38,15 @@ Starknet transaction execution library in Rust, featuring [⚡cairo-vm⚡](https
   - [Starknet](#starknet)
 - [⚖️ License](#️-license)
 
-## ⚠️ Disclaimer
 
-🚧 This project is a work-in-progress and is not ready for production yet. Use at your own risk. 🚧
+## 📦 Archival Notice
+
+**Starknet in Rust is now archived.**
+
+We have decided to archive this repository. Starknet in Rust supports Starknet up to version 0.13.0. Maintaining and updating this project requires substantial effort, and with Blockifier already in production and consistently updated, we will no longer add support for newer Starknet versions. We prefer to focus our efforts on other Starknet projects that can provide greater value to the community. See: [Related Projects](#-related-projects)
+
+If you were using Starknet in Rust, we recommend transitioning to [Blockifier](https://github.com/starkware-libs/blockifier).
+
 
 ## 📖 About
 
@@ -252,6 +258,7 @@ And don't forget to give the project a star! ⭐ Thank you again for your suppor
 ## 🌞 Related Projects
 
 - [cairo-vm](https://github.com/lambdaclass/cairo-vm): A fast implementation of the Cairo VM in Rust.
+- [cairo-native](https://github.com/lambdaclass/cairo_native): A compiler to convert Cairo's intermediate representation "Sierra" code to machine code via MLIR and LLVM.
 - [cairo-vm-py](https://github.com/lambdaclass/cairo-vm-py): Bindings for using cairo-vm from Python code.
 
 ## 📚 Documentation
