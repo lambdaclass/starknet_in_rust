@@ -303,6 +303,7 @@ impl<'de> Deserialize<'de> for CallInfo {
 // CallResult structure
 // ----------------------
 
+#[derive(Debug)]
 pub struct CallResult {
     pub gas_consumed: u128,
     pub is_success: bool,

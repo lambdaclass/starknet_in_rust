@@ -1444,7 +1444,7 @@ fn deploy_cairo1_and_invoke() {
 
     let calldata = [3.into()].to_vec();
     let entrypoints = test_contract_class.entry_points_by_type;
-    let entrypoint_selector = &entrypoints.external.get(0).unwrap().selector;
+    let entrypoint_selector = &entrypoints.external.first().unwrap().selector;
 
     let exec_entry_point = ExecutionEntryPoint::new(
         ret_address,
